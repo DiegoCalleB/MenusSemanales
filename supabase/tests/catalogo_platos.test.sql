@@ -173,7 +173,7 @@ select pg_temp.fin();
 select pg_temp.como('aaaaaaaa-0000-0000-0000-00000000000a');
 with p as (
   insert into public.plato (hogar_id, nombre, rol, grupo, tiempo_total_min, pasos)
-  select id, 'Receta de una web', 'principal', 'carne_roja', 90, 'Mira la receta en https://ejemplo.com/receta'
+  select id, 'Receta de una web', 'principal', 'carne', 90, 'Mira la receta en https://ejemplo.com/receta'
   from _ids where clave = 'HA' returning id)
 insert into _ids select 'platoMalo', id from p;
 insert into public.plato_ingrediente (hogar_id, plato_id, ingrediente_id, cantidad_por_racion)

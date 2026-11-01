@@ -126,7 +126,7 @@ select pg_temp.fin();
 
 select pg_temp.como('bbbbbbbb-0000-0000-0000-00000000000b');
 insert into public.menu_cole_dia (centro_id, fecha, primero, segundo, grupo_primero, grupo_segundo)
-  select id, date '2026-11-03', 'Crema de calabacín', 'Pollo asado', 'verdura', 'carne_blanca'
+  select id, date '2026-11-03', 'Crema de calabacín', 'Pollo asado', 'verdura', 'carne'
   from _ids where clave = 'X';
 do $$ declare n bigint; begin
   update public.menu_cole_dia set postre = 'Fruta' where fecha = date '2026-11-02'; get diagnostics n = row_count;
