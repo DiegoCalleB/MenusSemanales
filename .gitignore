@@ -1,10 +1,29 @@
-node_modules/
-.next/
-out/
-coverage/
+# Dependencias
+/node_modules
+/.pnp
+.pnp.*
+
+# Tests
+/coverage
+
+# Next.js
+/.next/
+/out/
+/build
+next-env.d.ts
+*.tsbuildinfo
+
+# Variables de entorno: nunca se suben. Solo la plantilla.
 .env
 .env.*
 !.env.example
-.vercel/
+
+# Vercel / Supabase
+.vercel
 supabase/.temp/
+
+# Varios
 .DS_Store
+*.pem
+npm-debug.log*
+.pnpm-debug.log*
