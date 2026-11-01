@@ -376,3 +376,9 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **Flujo:** «Cocinar ahora» elige la cena de hoy y descuenta la despensa en una operación que se puede deshacer; si falta algo, «Elegir para hoy y apuntar lo que falta» la elige y la compra automática añade lo que falte. Accesos desde la portada («Hoy llego tarde») y desde el menú.
 - **Por qué:** ataca el problema central (falta de tiempo) en el momento crítico: evitar comer «rápido y mal de lo que hay en la nevera».
 - **Límite:** el catálogo de demostración es pequeño; con el catálogo comunitario de platos rápidos (D-016, moderación) habrá muchas más opciones.
+
+## D-048 · Migración `menu_planificado` aplicada en producción
+
+- **Estado:** aplicada (2026-11-01), versión `20261101200000`.
+- **Cómo:** se ejecutó a mano en el editor SQL de Supabase porque la herramienta de migraciones pedía una confirmación interactiva que caducaba. Como el editor SQL no registra el historial, la versión se anotó a mano en `supabase_migrations.schema_migrations` para que el repositorio y producción coincidan.
+- **Verificación:** las tres tablas (`comida_planificada`, `dia_hogar`, `valoracion_plato`) tienen RLS activada y forzada, una política cada una y `anon` sin acceso; la restricción de grupos tiene el vocabulario nuevo. Advisors de seguridad: solo los 15 avisos aceptados (D-018); de rendimiento: solo avisos informativos de índices aún sin uso (las tablas no tienen datos) y el de conexiones de Auth (D-011).
