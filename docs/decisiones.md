@@ -399,3 +399,11 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 ## D-051 · Personas del hogar de demostración
 
 - Las niñas de la familia son **Alba (9 años) y Emma (5 años)**; los datos de demostración usan sus nombres. Factor de ración 0,5 a ambas de momento (D-012); la edad permitirá ajustarlo y adaptar las propuestas (p. ej. texturas, raciones) más adelante.
+
+## D-052 · Vista de calendario
+
+- **Estado:** aceptada (2026-11-01)
+- **Referencias:** las apps de menús familiares más conocidas (Mealime, Plan to Eat, Paprika, Cozi, Yummly) comparten un patrón: el **mes o la semana como cuadrícula**, con la comida de cada día visible sin abrir nada, un **detalle al tocar un día** y planificar hacia delante. Tomamos eso y añadimos lo que nos diferencia: lo que comen las niñas en el cole (🎒) con la cena que lo complementa, quién cocina cada día y las opciones ya filtradas por tiempo.
+- **Decisión:** `/calendario` («Agenda» en la barra) muestra el mes con el emoji del tipo de plato de la cena elegida y 🎒 si hay menú del cole; al tocar un día: menú del cole del día, qué conviene cenar, quién cocina, «ese día llego tarde», la cena elegida y las opciones para elegirla o cambiarla. Se puede planificar hasta **60 días por delante** y recorrer los meses.
+- **Responsive:** con 7 columnas no caben 44 px de zona táctil por debajo de 400 px de ancho; en pantallas más estrechas el mes se muestra como **lista de días** (cada día es una fila de 56 px). La cuadrícula completa aparece desde 400 px.
+- **Pendiente:** vista de semana con arrastrar y soltar, y copiar una semana a otra (muy usado en otras apps).

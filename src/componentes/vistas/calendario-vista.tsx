@@ -1,0 +1,305 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { diaMenuDe, fechaPlanificable, nombreDia, opcionesParaFecha } from "@/aplicacion/estado";
+import { diaSemanaIso, sumarDias, type FechaIso } from "@/dominio/fechas";
+import { recomendadosParaCenar } from "@/dominio/menu";
+import { EMOJI_GRUPO } from "../formato";
+import { useHogar } from "../proveedor-hogar";
+
+const MESES = [
+  "enero",
+  "febrero",
+  "marzo",
+  "abril",
+  "mayo",
+  "junio",
+  "julio",
+  "agosto",
+  "septiembre",
+  "octubre",
+  "noviembre",
+  "diciembre",
+];
+const CABECERA = ["L", "M", "X", "J", "V", "S", "D"];
+const NOMBRE_GRUPO: Record<string, string> = {
+  verdura: "verdura",
+  legumbre: "legumbres",
+  pasta: "pasta",
+  arroz: "arroz",
+  pescado: "pescado",
+  carne: "carne",
+  huevo: "huevo",
+  otro: "otro",
+};
+const mayuscula = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+const largo = (f: FechaIso) => {
+  const [, m, d] = f.split("-").map(Number);
+  return `${mayuscula(nombreDia(f))} ${d} de ${MESES[(m ?? 1) - 1]}`;
+};
+
+/** Cambia de mes sin salirse de rango: «2026-11-01» → «2026-12-01». */
+function mesSiguiente(primero: FechaIso, delta: number): FechaIso {
+  const [a, m] = primero.split("-").map(Number);
+  const d = new Date(Date.UTC(a ?? 2026, (m ?? 1) - 1 + delta, 1));
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Calendario del mes: de un vistazo, qué se cena cada día, qué comen las niñas en el cole y quién
+ * cocina. Tocar un día abre su detalle para elegir o cambiar la cena, también semanas por delante.
+ */
+export function CalendarioVista() {
+  const { estado, despachar } = useHogar();
+  const [mes, setMes] = useState<FechaIso>(`${estado.hoy.slice(0, 7)}-01`);
+  const [sel, setSel] = useState<FechaIso>(estado.hoy);
+
+  const [anio, nMes] = mes.split("-").map(Number);
+  const diasEnMes = new Date(Date.UTC(anio ?? 2026, nMes ?? 1, 0)).getUTCDate();
+  const huecos = diaSemanaIso(mes) - 1;
+  const celdas: Array<FechaIso | null> = [
+    ...Array.from({ length: huecos }, () => null),
+    ...Array.from({ length: diasEnMes }, (_, i) => sumarDias(mes, i)),
+  ];
+
+  const cenaDe = (f: FechaIso) => estado.comidas.find((c) => c.fecha === f);
+  const cocinaDe = (f: FechaIso) => {
+    const turno = estado.turnos.find((t) => t.cargaId === "cenas" && t.fecha === f);
+    return turno ? estado.personas.find((p) => p.id === turno.personaId)?.nombre : undefined;
+  };
+
+  const elegida = cenaDe(sel);
+  const cole = estado.colegio[sel] ?? null;
+  const recomendados = recomendadosParaCenar(cole);
+  const dia = diaMenuDe(estado, sel);
+  const planificable = fechaPlanificable(estado, sel);
+  const opciones = useMemo(
+    () => opcionesParaFecha(estado, sel).filter((o) => o.plato.id !== elegida?.plato.id),
+    [estado, sel, elegida],
+  );
+  const tarde = estado.llegoTarde.includes(sel);
+  const cocina = cocinaDe(sel);
+
+  return (
+    <div className="flex flex-col gap-6">
+      <header className="flex flex-col gap-2">
+        <h1 className="text-3xl font-extrabold tracking-tight">
+          Calendario <span aria-hidden="true">📅</span>
+        </h1>
+        <p className="text-tinta-suave max-w-prose text-base">
+          Todo el mes de un vistazo: la cena de cada día, lo que comen las niñas en el cole (🎒) y
+          quién cocina. Toca un día para ver su detalle o elegir la cena.
+        </p>
+      </header>
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+        <section className="tarjeta flex flex-col gap-3" aria-labelledby="mes">
+          <div className="flex items-center justify-between gap-2">
+            <button
+              type="button"
+              className="boton-suave"
+              aria-label="Mes anterior"
+              onClick={() => setMes(mesSiguiente(mes, -1))}
+            >
+              ‹
+            </button>
+            <h2 id="mes" className="text-xl font-extrabold">
+              {mayuscula(MESES[(nMes ?? 1) - 1] ?? "")} {anio}
+            </h2>
+            <button
+              type="button"
+              className="boton-suave"
+              aria-label="Mes siguiente"
+              onClick={() => setMes(mesSiguiente(mes, 1))}
+            >
+              ›
+            </button>
+          </div>
+
+          {/* En pantallas muy estrechas siete columnas no dejan 44 px por día: se muestra como lista. */}
+          <ul className="flex flex-col gap-1 min-[400px]:hidden">
+            {celdas.map((f) => {
+              if (!f) return null;
+              const cena = cenaDe(f);
+              const esHoy = f === estado.hoy;
+              const esSel = f === sel;
+              return (
+                <li key={f}>
+                  <button
+                    type="button"
+                    aria-pressed={esSel}
+                    onClick={() => setSel(f)}
+                    className={`flex min-h-14 w-full flex-col justify-center rounded-2xl border px-4 py-1 text-left text-base ${
+                      esSel
+                        ? "bg-marca text-sobre-marca border-marca font-bold"
+                        : esHoy
+                          ? "border-marca bg-suave-1 font-bold"
+                          : "border-borde bg-superficie"
+                    }`}
+                  >
+                    <span>
+                      {largo(f)}
+                      {esHoy && " (hoy)"}
+                      {estado.colegio[f] && <span> 🎒</span>}
+                    </span>
+                    <span className="truncate text-sm font-normal">
+                      {cena
+                        ? `${EMOJI_GRUPO[(cena.plato as { grupo?: string }).grupo ?? "otro"] ?? "🍽️"} ${cena.plato.nombre}`
+                        : "Sin cena elegida"}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+
+          <div className="hidden grid-cols-7 gap-1 text-center min-[400px]:grid">
+            {CABECERA.map((c) => (
+              <div key={c} aria-hidden="true" className="text-tinta-suave py-1 text-sm font-bold">
+                {c}
+              </div>
+            ))}
+            {celdas.map((f, i) => {
+              if (!f) return <div key={`h${i}`} aria-hidden="true" />;
+              const cena = cenaDe(f);
+              const hayCole = estado.colegio[f] !== undefined;
+              const esHoy = f === estado.hoy;
+              const esSel = f === sel;
+              const pasado = f < estado.hoy;
+              const etiqueta = `${largo(f)}${cena ? `: cena ${cena.plato.nombre}` : ": sin cena elegida"}${hayCole ? ", hay menú del cole" : ""}${esHoy ? ", hoy" : ""}`;
+              return (
+                <div key={f}>
+                  <button
+                    type="button"
+                    aria-label={etiqueta}
+                    aria-pressed={esSel}
+                    onClick={() => setSel(f)}
+                    className={`flex min-h-16 w-full flex-col items-center justify-start gap-0.5 rounded-2xl border p-1 text-base ${
+                      esSel
+                        ? "bg-marca text-sobre-marca border-marca font-bold"
+                        : esHoy
+                          ? "border-marca bg-suave-1 font-bold"
+                          : `border-borde bg-superficie hover:bg-suave-1 ${pasado ? "opacity-70" : ""}`
+                    }`}
+                  >
+                    <span>{Number(f.slice(8))}</span>
+                    <span aria-hidden="true" className="text-xl leading-none">
+                      {cena
+                        ? (EMOJI_GRUPO[(cena.plato as { grupo?: string }).grupo ?? "otro"] ?? "🍽️")
+                        : ""}
+                    </span>
+                    {hayCole && (
+                      <span aria-hidden="true" className="text-xs leading-none">
+                        🎒
+                      </span>
+                    )}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-tinta-suave text-sm">
+            🎒 hay menú del cole · el emoji es el tipo de plato de la cena elegida
+          </p>
+        </section>
+
+        <section className="tarjeta flex flex-col gap-4" aria-labelledby="detalle">
+          <div>
+            <h2 id="detalle" className="text-xl font-extrabold">
+              {largo(sel)}
+            </h2>
+            {planificable && (
+              <p className="text-tinta-suave text-base">
+                Hasta {dia.minutosMax} min{cocina ? ` · cocina ${cocina}` : ""}
+              </p>
+            )}
+          </div>
+
+          <div className="bg-suave-3 rounded-2xl p-3 text-base">
+            <p className="font-bold">🎒 En el cole</p>
+            {cole ? (
+              <>
+                <p>{cole.textoPrimero ?? (cole.primero ? NOMBRE_GRUPO[cole.primero] : "—")}</p>
+                <p>{cole.textoSegundo ?? (cole.segundo ? NOMBRE_GRUPO[cole.segundo] : "—")}</p>
+                {recomendados && (
+                  <p className="text-tinta-suave mt-1 text-sm">
+                    Para cenar conviene: {[...recomendados].map((g) => NOMBRE_GRUPO[g]).join(", ")}.
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-tinta-suave">Sin menú del cole este día.</p>
+            )}
+          </div>
+
+          {elegida ? (
+            <div className="bg-ok-fondo text-ok-texto flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4">
+              <div>
+                <p className="text-sm font-bold">✓ Cena elegida</p>
+                <p className="text-lg font-bold">{elegida.plato.nombre}</p>
+              </div>
+              {planificable && (
+                <button
+                  type="button"
+                  className="boton-suave"
+                  onClick={() => despachar({ tipo: "menu/quitar", fecha: sel })}
+                >
+                  Quitar
+                </button>
+              )}
+            </div>
+          ) : (
+            <p className="text-tinta-suave text-base">
+              {planificable ? "Aún no hay cena elegida." : "Este día ya ha pasado."}
+            </p>
+          )}
+
+          {planificable && (
+            <button
+              type="button"
+              className={tarde ? "boton" : "boton-suave"}
+              aria-pressed={tarde}
+              onClick={() => despachar({ tipo: "menu/llegoTarde", fecha: sel })}
+            >
+              Ese día llego tarde
+            </button>
+          )}
+
+          {planificable && opciones.length > 0 && (
+            <div>
+              <h3 className="text-tinta-suave mb-2 text-sm font-bold">
+                {elegida ? "Otras opciones" : "Opciones"}
+              </h3>
+              <ul className="flex flex-col gap-2">
+                {opciones.map((o) => (
+                  <li
+                    key={o.plato.id}
+                    className="border-borde bg-fondo flex items-center justify-between gap-3 rounded-2xl border p-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-base font-bold">
+                        <span aria-hidden="true">{EMOJI_GRUPO[o.plato.grupo]} </span>
+                        {o.plato.nombre}
+                      </p>
+                      <p className="text-tinta-suave text-sm">{o.plato.minutosActivos} min</p>
+                    </div>
+                    <button
+                      type="button"
+                      className="boton"
+                      aria-label={`${elegida ? "Cambiar por" : "Elegir"} ${o.plato.nombre} para el ${largo(sel)}`}
+                      onClick={() =>
+                        despachar({ tipo: "menu/elegir", fecha: sel, platoId: o.plato.id })
+                      }
+                    >
+                      {elegida ? "Cambiar" : "Elegir"}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
+      </div>
+    </div>
+  );
+}

@@ -80,3 +80,14 @@ export const IconoMenu = (p: SVGProps<SVGSVGElement>) => (
     <path d="M3 9h18M8 2v4M16 2v4M8 14h3M8 17.5h6" />
   </Icono>
 );
+export const IconoAgenda = (p: SVGProps<SVGSVGElement>) => (
+  <Icono {...p}>
+    <rect x="3" y="4" width="18" height="17" rx="2" />
+    <path d="M3 9h18M8 2v4M16 2v4" />
+    <circle cx="8" cy="14" r="1" />
+    <circle cx="12" cy="14" r="1" />
+    <circle cx="16" cy="14" r="1" />
+    <circle cx="8" cy="18" r="1" />
+    <circle cx="12" cy="18" r="1" />
+  </Icono>
+);

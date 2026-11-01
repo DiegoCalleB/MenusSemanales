@@ -24,7 +24,9 @@ const RUTAS = [
   "/",
   "/menu",
   "/menu/cole",
+  "/calendario",
   "/menu/emergencia",
+  "/menu/platos",
   "/compra",
   "/despensa",
   "/reparto",
@@ -299,6 +301,27 @@ test.describe("flujos en móvil", () => {
     await expect(
       pagina.getByRole("alert").filter({ hasText: "Añade al menos un ingrediente" }),
     ).toBeVisible();
+    await contexto.close();
+  });
+
+  test("calendario: ver el mes, elegir una cena semanas por delante y cambiar de mes", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/calendario");
+    await expect(pagina.getByRole("heading", { level: 2, name: "Noviembre 2026" })).toBeVisible();
+    await pagina.getByRole("button", { name: /Jueves 19 de noviembre/ }).click();
+    await expect(pagina.getByText(/Sopa|Para cenar conviene/).first()).toBeVisible();
+    await pagina
+      .getByRole("button", { name: /^Elegir / })
+      .first()
+      .click();
+    await expect(pagina.getByRole("status")).toContainText("Elegido para el jueves");
+    await expect(pagina.getByRole("button", { name: /^Jueves 19 de noviembre/ })).not.toContainText(
+      "Sin cena elegida",
+    );
+    await pagina.getByRole("button", { name: "Mes siguiente" }).click();
+    await expect(pagina.getByRole("heading", { level: 2, name: "Diciembre 2026" })).toBeVisible();
     await contexto.close();
   });
 

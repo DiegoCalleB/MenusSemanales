@@ -7,6 +7,7 @@ import {
   cenaDeEmergenciaHoy,
   diasDelMenu,
   menuDeLaSemana,
+  opcionesParaFecha,
   reducir,
   repartoDeLaSemana,
   ubicacionDeCompra,
@@ -405,7 +406,9 @@ describe("menú semanal", () => {
   it("ignora platos o días que no existen", () => {
     const e = estadoInicialDemo();
     expect(reducir(e, { tipo: "menu/elegir", fecha: "2026-11-07", platoId: "nada" })).toBe(e);
-    expect(reducir(e, { tipo: "menu/elegir", fecha: "2026-12-25", platoId: "tortilla" })).toBe(e);
+    expect(reducir(e, { tipo: "menu/elegir", fecha: "2027-06-01", platoId: "tortilla" })).toBe(e);
+    expect(reducir(e, { tipo: "menu/elegir", fecha: "2026-11-01", platoId: "tortilla" })).toBe(e); // ya pasó
+    expect(opcionesParaFecha(e, "2027-06-01")).toEqual([]);
   });
 });
 
@@ -549,6 +552,28 @@ describe("catálogo de platos", () => {
     });
     expect(mal.aviso?.tipo).toBe("error");
     expect(mal.ingredientes).toBe(e1.ingredientes);
+  });
+});
+
+describe("calendario", () => {
+  it("se puede planificar más allá de la semana (hasta 60 días) y hay opciones", () => {
+    const e0 = estadoInicialDemo();
+    const opciones = opcionesParaFecha(e0, "2026-12-10");
+    expect(opciones.length).toBeGreaterThan(0);
+    const e1 = aplicar(e0, {
+      tipo: "menu/elegir",
+      fecha: "2026-12-10",
+      platoId: opciones[0]?.plato.id ?? "",
+    });
+    expect(e1.comidas.some((c) => c.fecha === "2026-12-10")).toBe(true);
+  });
+
+  it("respeta el menú del cole de cualquier día del mes", () => {
+    const e = estadoInicialDemo();
+    // 12 de noviembre: legumbre + huevo → conviene verdura, pasta, arroz, carne o pescado.
+    const grupos = opcionesParaFecha(e, "2026-11-12").map((o) => o.plato.grupo);
+    expect(grupos.length).toBeGreaterThan(0);
+    for (const g of grupos) expect(["verdura", "pasta", "arroz", "carne", "pescado"]).toContain(g);
   });
 });
 

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ComponentType, SVGProps } from "react";
 import { BotonTema } from "./tema";
-import { IconoCompra, IconoDespensa, IconoMenu, IconoReparto } from "./iconos";
+import { IconoAgenda, IconoCompra, IconoDespensa, IconoMenu, IconoReparto } from "./iconos";
 
 const ENLACES: ReadonlyArray<{
   href: string;
@@ -12,6 +12,7 @@ const ENLACES: ReadonlyArray<{
   Icono: ComponentType<SVGProps<SVGSVGElement>>;
 }> = [
   { href: "/menu", texto: "Menú", Icono: IconoMenu },
+  { href: "/calendario", texto: "Agenda", Icono: IconoAgenda },
   { href: "/compra", texto: "Compra", Icono: IconoCompra },
   { href: "/despensa", texto: "Despensa", Icono: IconoDespensa },
   { href: "/reparto", texto: "Reparto", Icono: IconoReparto },
@@ -27,7 +28,7 @@ export function NavegacionInferior() {
       aria-label="Principal"
       className="border-borde bg-superficie fixed inset-x-0 bottom-0 z-30 border-t pb-[env(safe-area-inset-bottom)] md:hidden"
     >
-      <ul className="mx-auto grid max-w-lg grid-cols-4">
+      <ul className="mx-auto grid max-w-lg grid-cols-5">
         {ENLACES.map(({ href, texto, Icono }) => {
           const esActivo = activo(ruta, href);
           return (
@@ -35,7 +36,7 @@ export function NavegacionInferior() {
               <Link
                 href={href}
                 aria-current={esActivo ? "page" : undefined}
-                className={`flex min-h-16 flex-col items-center justify-center gap-0.5 px-2 text-[0.8125rem] leading-tight ${
+                className={`flex min-h-16 flex-col items-center justify-center gap-0.5 px-0.5 text-xs leading-tight ${
                   esActivo ? "text-marca font-bold" : "text-tinta-suave font-medium"
                 }`}
               >

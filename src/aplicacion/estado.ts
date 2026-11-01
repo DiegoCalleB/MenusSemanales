@@ -168,16 +168,42 @@ export function repartoDeLaSemana(e: EstadoHogar): Reparto {
 }
 
 /** Cenas que se planifican: desde hoy hasta el domingo (o 15 días). Entre semana, 30 min; el fin de semana, 60. */
+/** Condiciones de una cena concreta: tiempo disponible y lo que comieron las niñas en el cole. */
+export function diaMenuDe(e: EstadoHogar, fecha: FechaIso): DiaMenu {
+  const laborable = diaSemanaIso(fecha) <= 5;
+  return {
+    fecha,
+    minutosMax: e.llegoTarde.includes(fecha) ? 15 : laborable ? 30 : 60,
+    cole: e.colegio[fecha] ?? null,
+  };
+}
+
+/** ¿Se puede planificar esa fecha? Desde hoy y hasta 60 días por delante. */
+export const fechaPlanificable = (e: EstadoHogar, fecha: FechaIso): boolean =>
+  fecha >= e.hoy && fecha <= sumarDias(e.hoy, 60);
+
+/** Opciones para una fecha cualquiera (la elegida no cuenta: así se ven alternativas). */
+export function opcionesParaFecha(e: EstadoHogar, fecha: FechaIso) {
+  if (!fechaPlanificable(e, fecha)) return [];
+  const elegidos: Record<FechaIso, string> = {};
+  for (const c of e.comidas) if (c.fecha !== fecha) elegidos[c.fecha] = c.plato.id;
+  return (
+    proponerMenu({
+      hoy: e.hoy,
+      dias: [diaMenuDe(e, fecha)],
+      catalogo: e.platos.filter((p) => !p.noProponer),
+      despensa: e.despensa,
+      excluirIngredientes: e.excluirIngredientes,
+      elegidos,
+    }).dias[0]?.opciones ?? []
+  );
+}
+
 export function diasDelMenu(e: EstadoHogar): DiaMenu[] {
   const hasta = e.horizonte === "quincena" ? sumarDias(e.hoy, 14) : semanaDe(e.hoy).hasta;
   const dias: DiaMenu[] = [];
   for (let f = e.hoy; f <= hasta; f = sumarDias(f, 1)) {
-    const laborable = diaSemanaIso(f) <= 5;
-    dias.push({
-      fecha: f,
-      minutosMax: e.llegoTarde.includes(f) ? 15 : laborable ? 30 : 60,
-      cole: e.colegio[f] ?? null,
-    });
+    dias.push(diaMenuDe(e, f));
   }
   return dias;
 }
@@ -418,7 +444,7 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
 
     case "menu/elegir": {
       const plato = e.platos.find((p) => p.id === accion.platoId);
-      if (!plato || !diasDelMenu(e).some((d) => d.fecha === accion.fecha)) return e;
+      if (!plato || !fechaPlanificable(e, accion.fecha)) return e;
       const raciones = e.personas
         .filter((p) => p.activa)
         .reduce((suma, p) => suma + p.factorRacion, 0);
