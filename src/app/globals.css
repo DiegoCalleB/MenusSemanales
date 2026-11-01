@@ -1,28 +1,140 @@
 @import "tailwindcss";
 
+/*
+ * Sistema de diseño: tokens de color con tema claro y oscuro. Los colores de las series de los
+ * gráficos (--serie-*) salen de la paleta validada (ver docs/diseno.md) y pasan las comprobaciones
+ * de contraste y de daltonismo en los dos temas.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #1c1917;
+  color-scheme: light;
+  --fondo: #f6f4f1;
+  --superficie: #fcfcfb;
+  --borde: #d6d1c9;
+  --tinta: #1c1917;
+  --tinta-suave: #57534e;
   --marca: #9e4f4f;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-marca: var(--marca);
-  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --marca-fuerte: #84393b;
+  --sobre-marca: #ffffff;
+  --aviso-fondo: #fff4d6;
+  --aviso-texto: #6b4a00;
+  --peligro-fondo: #fde8e8;
+  --peligro-texto: #8a1c1c;
+  --ok-fondo: #e3f4e6;
+  --ok-texto: #1b5e2a;
+  --serie-1: #2a78d6;
+  --serie-2: #eb6834;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0c0a09;
-    --foreground: #f5f5f4;
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --fondo: #121211;
+    --superficie: #1a1a19;
+    --borde: #3a3835;
+    --tinta: #f0efec;
+    --tinta-suave: #c3c2b7;
     --marca: #e08a8a;
+    --marca-fuerte: #f0a3a3;
+    --sobre-marca: #1a1a19;
+    --aviso-fondo: #3a2f10;
+    --aviso-texto: #f5d98a;
+    --peligro-fondo: #3d1d1d;
+    --peligro-texto: #f5b5b5;
+    --ok-fondo: #17301c;
+    --ok-texto: #a9dfb4;
+    --serie-1: #3987e5;
+    --serie-2: #d95926;
   }
 }
 
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --fondo: #121211;
+  --superficie: #1a1a19;
+  --borde: #3a3835;
+  --tinta: #f0efec;
+  --tinta-suave: #c3c2b7;
+  --marca: #e08a8a;
+  --marca-fuerte: #f0a3a3;
+  --sobre-marca: #1a1a19;
+  --aviso-fondo: #3a2f10;
+  --aviso-texto: #f5d98a;
+  --peligro-fondo: #3d1d1d;
+  --peligro-texto: #f5b5b5;
+  --ok-fondo: #17301c;
+  --ok-texto: #a9dfb4;
+  --serie-1: #3987e5;
+  --serie-2: #d95926;
+}
+
+@theme inline {
+  --color-fondo: var(--fondo);
+  --color-superficie: var(--superficie);
+  --color-borde: var(--borde);
+  --color-tinta: var(--tinta);
+  --color-tinta-suave: var(--tinta-suave);
+  --color-marca: var(--marca);
+  --color-marca-fuerte: var(--marca-fuerte);
+  --color-sobre-marca: var(--sobre-marca);
+  --color-aviso-fondo: var(--aviso-fondo);
+  --color-aviso-texto: var(--aviso-texto);
+  --color-peligro-fondo: var(--peligro-fondo);
+  --color-peligro-texto: var(--peligro-texto);
+  --color-ok-fondo: var(--ok-fondo);
+  --color-ok-texto: var(--ok-texto);
+  --color-serie-1: var(--serie-1);
+  --color-serie-2: var(--serie-2);
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+html {
+  /* Respeta el tamaño de letra que el usuario haya elegido en su dispositivo. */
+  font-size: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--fondo);
+  color: var(--tinta);
   font-family: var(--font-sans);
+  /* Palabras largas nunca desbordan la pantalla: a 320 px también se lee todo. */
+  overflow-wrap: anywhere;
+}
+
+/* El foco siempre se ve, también para quien navega con teclado o lector de pantalla. */
+:focus-visible {
+  outline: 3px solid var(--marca);
+  outline-offset: 2px;
+  border-radius: 0.375rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@layer components {
+  .tarjeta {
+    @apply border-borde bg-superficie rounded-2xl border p-4 sm:p-5;
+  }
+  /* Todo lo que se toca mide al menos 44 × 44 px (WCAG 2.5.5, recomendación de Apple y Google). */
+  .boton {
+    @apply bg-marca text-sobre-marca hover:bg-marca-fuerte inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-xl px-4 text-base font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .boton-suave {
+    @apply border-borde bg-superficie text-tinta hover:bg-fondo inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-xl border px-4 text-base font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  /* 16 px como mínimo: iOS no amplía la pantalla al enfocar un campo. */
+  .campo {
+    @apply border-borde bg-superficie text-tinta placeholder:text-tinta-suave min-h-11 w-full rounded-xl border px-3 text-base;
+  }
+  .etiqueta {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-medium;
+  }
 }

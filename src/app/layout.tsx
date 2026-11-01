@@ -13,9 +13,15 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#9e4f4f",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f6f4f1" },
+    { media: "(prefers-color-scheme: dark)", color: "#121211" },
+  ],
   width: "device-width",
   initialScale: 1,
+  // Ocupa también la zona de la muesca del iPhone; la interfaz respeta las áreas seguras.
+  viewportFit: "cover",
+  // No se bloquea el zoom: quien lo necesita puede ampliar (WCAG 1.4.4).
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
