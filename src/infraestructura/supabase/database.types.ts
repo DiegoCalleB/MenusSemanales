@@ -282,6 +282,7 @@ export type Database = {
       }
       despensa_movimiento: {
         Row: {
+          caduca_antes: string | null
           delta: number
           hogar_id: string
           id: number
@@ -290,6 +291,7 @@ export type Database = {
           ubicacion: string
         }
         Insert: {
+          caduca_antes?: string | null
           delta: number
           hogar_id: string
           id?: never
@@ -298,6 +300,7 @@ export type Database = {
           ubicacion: string
         }
         Update: {
+          caduca_antes?: string | null
           delta?: number
           hogar_id?: string
           id?: never
