@@ -82,6 +82,8 @@ export interface EstadoHogar {
   colegio: Record<FechaIso, MenuCole>;
   /** Días en que se llega tarde: el tiempo máximo baja a 15 minutos. */
   llegoTarde: FechaIso[];
+  /** Cuánto se planifica: lo que queda de semana o los próximos 15 días (para adelantar la compra). */
+  horizonte: "semana" | "quincena";
   personas: Persona[];
   despensa: ItemDespensa[];
   comidas: ComidaPlanificada[];
@@ -107,6 +109,8 @@ export type Accion =
   | { tipo: "menu/elegir"; fecha: FechaIso; platoId: string }
   | { tipo: "menu/quitar"; fecha: FechaIso }
   | { tipo: "menu/llegoTarde"; fecha: FechaIso }
+  | { tipo: "menu/horizonte"; horizonte: EstadoHogar["horizonte"] }
+  | { tipo: "cole/importar"; dias: Record<FechaIso, MenuCole> }
   | { tipo: "hogar/sustituir"; estado: EstadoHogar }
   | { tipo: "cerrarAviso" }
   | { tipo: "reparto/asignarResponsable"; cargaId: string; personaId: string | null }
@@ -146,9 +150,9 @@ export function repartoDeLaSemana(e: EstadoHogar): Reparto {
   });
 }
 
-/** Cenas que se planifican: desde hoy hasta el domingo. Entre semana, 30 min; el fin de semana, 60. */
+/** Cenas que se planifican: desde hoy hasta el domingo (o 15 días). Entre semana, 30 min; el fin de semana, 60. */
 export function diasDelMenu(e: EstadoHogar): DiaMenu[] {
-  const { hasta } = semanaDe(e.hoy);
+  const hasta = e.horizonte === "quincena" ? sumarDias(e.hoy, 14) : semanaDe(e.hoy).hasta;
   const dias: DiaMenu[] = [];
   for (let f = e.hoy; f <= hasta; f = sumarDias(f, 1)) {
     const laborable = diaSemanaIso(f) <= 5;
@@ -421,6 +425,17 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
         llegoTarde: e.llegoTarde.includes(accion.fecha)
           ? e.llegoTarde.filter((f) => f !== accion.fecha)
           : [...e.llegoTarde, accion.fecha],
+      };
+
+    case "menu/horizonte":
+      return { ...e, horizonte: accion.horizonte };
+
+    case "cole/importar":
+      return {
+        ...e,
+        colegio: { ...e.colegio, ...accion.dias },
+        siguienteId: e.siguienteId + 1,
+        aviso: ok(e, `Menú del cole guardado: ${Object.keys(accion.dias).length} días.`),
       };
 
     case "hogar/sustituir":

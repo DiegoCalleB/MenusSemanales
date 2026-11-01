@@ -8,6 +8,8 @@ import type {
 } from "@/dominio/tipos";
 import { racionesDe } from "@/dominio/tipos";
 import type { PlatoMenu } from "@/dominio/menu";
+import { aMenuCole, leerMenuCole } from "@/dominio/menu-cole";
+import { TEXTO_MENU_COLE_NOVIEMBRE_2026 } from "@/dominio/menu-cole-ejemplo";
 import type { Ocurrencia } from "@/dominio/reparto";
 import type { EstadoHogar } from "./estado";
 
@@ -202,6 +204,108 @@ const platos: PlatoMenu[] = [
       { ingredienteId: "zanahoria", cantidadPorRacion: 40, opcional: false },
     ],
   },
+  {
+    id: "pisto-huevo",
+    nombre: "Pisto con huevo",
+    grupo: "verdura",
+    minutosActivos: 25,
+    ultimaVez: "2026-10-02",
+    valoracion: 4,
+    ingredientes: [
+      { ingredienteId: "calabacin", cantidadPorRacion: 150, opcional: false },
+      { ingredienteId: "tomate", cantidadPorRacion: 100, opcional: false },
+      { ingredienteId: "huevo", cantidadPorRacion: 1, opcional: false },
+    ],
+  },
+  {
+    id: "tortilla-patata",
+    nombre: "Tortilla de patata",
+    grupo: "huevo",
+    minutosActivos: 25,
+    ultimaVez: "2026-09-30",
+    valoracion: 5,
+    ingredientes: [
+      { ingredienteId: "huevo", cantidadPorRacion: 2, opcional: false },
+      { ingredienteId: "patata", cantidadPorRacion: 150, opcional: false },
+      { ingredienteId: "cebolla", cantidadPorRacion: 30, opcional: false },
+    ],
+  },
+  {
+    id: "bolonesa",
+    nombre: "Pasta a la boloñesa",
+    grupo: "pasta",
+    minutosActivos: 25,
+    ultimaVez: "2026-10-15",
+    valoracion: 5,
+    ingredientes: [
+      { ingredienteId: "pasta", cantidadPorRacion: 80, opcional: false },
+      { ingredienteId: "ternera", cantidadPorRacion: 80, opcional: false },
+      { ingredienteId: "tomate", cantidadPorRacion: 80, opcional: false },
+    ],
+  },
+  {
+    id: "merluza-verduras",
+    nombre: "Merluza a la plancha con verduras",
+    grupo: "pescado",
+    minutosActivos: 15,
+    ultimaVez: "2026-10-10",
+    valoracion: 4,
+    ingredientes: [
+      { ingredienteId: "merluza", cantidadPorRacion: 150, opcional: false },
+      { ingredienteId: "calabacin", cantidadPorRacion: 100, opcional: false },
+    ],
+  },
+  {
+    id: "pollo-empanado",
+    nombre: "Pollo empanado",
+    grupo: "carne",
+    minutosActivos: 25,
+    ultimaVez: "2026-10-03",
+    valoracion: 4,
+    ingredientes: [
+      { ingredienteId: "pollo", cantidadPorRacion: 120, opcional: false },
+      { ingredienteId: "huevo", cantidadPorRacion: 0.5, opcional: false },
+      { ingredienteId: "pan", cantidadPorRacion: 0.5, opcional: false },
+    ],
+  },
+  {
+    id: "arroz-atun",
+    nombre: "Arroz con atún y tomate",
+    grupo: "arroz",
+    minutosActivos: 15,
+    ultimaVez: null,
+    valoracion: null,
+    ingredientes: [
+      { ingredienteId: "arroz", cantidadPorRacion: 70, opcional: false },
+      { ingredienteId: "atun", cantidadPorRacion: 1, opcional: false },
+      { ingredienteId: "tomate", cantidadPorRacion: 80, opcional: false },
+    ],
+  },
+  {
+    id: "revuelto-espinacas",
+    nombre: "Revuelto de espinacas",
+    grupo: "huevo",
+    minutosActivos: 10,
+    ultimaVez: "2026-10-06",
+    valoracion: 3,
+    ingredientes: [
+      { ingredienteId: "huevo", cantidadPorRacion: 2, opcional: false },
+      { ingredienteId: "espinacas", cantidadPorRacion: 80, opcional: false },
+    ],
+  },
+  {
+    id: "crema-zanahoria",
+    nombre: "Crema de zanahoria",
+    grupo: "verdura",
+    minutosActivos: 20,
+    ultimaVez: "2026-10-08",
+    valoracion: 4,
+    ingredientes: [
+      { ingredienteId: "zanahoria", cantidadPorRacion: 200, opcional: false },
+      { ingredienteId: "patata", cantidadPorRacion: 50, opcional: false },
+      { ingredienteId: "cebolla", cantidadPorRacion: 30, opcional: false },
+    ],
+  },
 ];
 
 const personas: Persona[] = [
@@ -336,12 +440,9 @@ export function estadoInicialDemo(): EstadoHogar {
     ingredientes,
     platos,
     excluirIngredientes: [],
-    // Menú real del cole (Basal, noviembre 2026), docs/contexto/menu-cole-noviembre-2026.pdf
-    colegio: {
-      "2026-11-04": { primero: "verdura", segundo: "carne" }, // crema de calabacín + lomo
-      "2026-11-05": { primero: "pasta", segundo: "legumbre" }, // sopa de cocido + cocido
-      "2026-11-06": { primero: "arroz", segundo: "pescado" }, // arroz caldoso + dorado
-    },
+    // Menú real del cole (Basal, noviembre 2026): se lee del texto del PDF con el mismo lector que la app.
+    colegio: aMenuCole(leerMenuCole(TEXTO_MENU_COLE_NOVIEMBRE_2026).dias),
+    horizonte: "semana",
     llegoTarde: [],
     personas,
     despensa,

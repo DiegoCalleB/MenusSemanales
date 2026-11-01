@@ -20,7 +20,7 @@ const PANTALLAS = [
   { nombre: "pantalla ancha (1920)", ancho: 1920, alto: 1080 },
 ] as const;
 
-const RUTAS = ["/", "/menu", "/compra", "/despensa", "/reparto"] as const;
+const RUTAS = ["/", "/menu", "/menu/cole", "/compra", "/despensa", "/reparto"] as const;
 const PUNTO_DE_CORTE = 768; // md de Tailwind
 
 async function abrir(
@@ -215,6 +215,24 @@ test.describe("flujos en móvil", () => {
     await expect(pagina.getByRole("checkbox", { name: /Velas/ })).toHaveCount(0);
     await pagina.reload({ waitUntil: "networkidle" });
     await expect(pagina.getByRole("checkbox", { name: /Velas/ })).toHaveCount(0);
+    await contexto.close();
+  });
+
+  test("menú: 15 días y menú del cole leído desde texto", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/menu");
+    await pagina.getByRole("button", { name: "Próximos 15 días" }).click();
+    await expect(pagina.getByRole("heading", { level: 2, name: /18 de noviembre/i })).toBeVisible();
+
+    await pagina.getByRole("link", { name: "Menú del cole" }).click();
+    await expect(pagina.getByRole("heading", { level: 1, name: "Menú del cole" })).toBeVisible();
+    await pagina.getByRole("button", { name: "Usar el ejemplo de noviembre" }).click();
+    await pagina.getByRole("button", { name: "Leer menú" }).click();
+    await expect(
+      pagina.getByRole("heading", { level: 2, name: /Revisa lo leído \(19 días\)/ }),
+    ).toBeVisible();
+    await pagina.getByRole("button", { name: "Guardar menú del cole" }).click();
+    await expect(pagina.getByRole("status")).toContainText("Menú del cole guardado: 19 días");
     await contexto.close();
   });
 

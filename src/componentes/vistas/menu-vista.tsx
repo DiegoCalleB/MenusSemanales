@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo } from "react";
 import { diasDelMenu, menuDeLaSemana, nombreDia } from "@/aplicacion/estado";
 import type { Motivo, Opcion } from "@/dominio/menu";
@@ -49,6 +50,35 @@ export function MenuVista() {
         </p>
       </header>
 
+      <div className="flex flex-wrap items-center gap-3">
+        <div role="group" aria-label="Cuánto planificar" className="flex gap-2">
+          {(
+            [
+              ["semana", "Esta semana"],
+              ["quincena", "Próximos 15 días"],
+            ] as const
+          ).map(([valor, texto]) => (
+            <button
+              key={valor}
+              type="button"
+              aria-pressed={estado.horizonte === valor}
+              className={estado.horizonte === valor ? "boton" : "boton-suave"}
+              onClick={() => despachar({ tipo: "menu/horizonte", horizonte: valor })}
+            >
+              {texto}
+            </button>
+          ))}
+        </div>
+        <Link href="/menu/cole" className="boton-suave">
+          Menú del cole
+        </Link>
+      </div>
+      {estado.horizonte === "quincena" && (
+        <p className="text-tinta-suave max-w-prose text-base">
+          Eligiendo varias cenas puedes adelantar la compra de 15 días: la lista suma lo de todas.
+        </p>
+      )}
+
       <ul className="grid gap-4 lg:grid-cols-2">
         {dias.map((dia) => {
           const elegida = eleccion(dia.fecha);
@@ -73,6 +103,12 @@ export function MenuVista() {
                         .map((g) => NOMBRE_GRUPO[g as string])
                         .join(" y ")}`}
                   </p>
+                  {dia.cole?.textoPrimero && (
+                    <p className="text-tinta-suave mt-1 text-sm">
+                      Cole: {dia.cole.textoPrimero}
+                      {dia.cole.textoSegundo && ` / ${dia.cole.textoSegundo}`}
+                    </p>
+                  )}
                 </div>
                 <button
                   type="button"

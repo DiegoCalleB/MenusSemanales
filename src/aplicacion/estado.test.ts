@@ -349,6 +349,58 @@ describe("menú semanal", () => {
     expect(aplicar(e, { tipo: "menu/llegoTarde", fecha: "2026-11-06" }).llegoTarde).toEqual([]);
   });
 
+  it("la quincena planifica 15 días y ofrece algo cada día sin agotar el catálogo", () => {
+    const e = aplicar(estadoInicialDemo(), { tipo: "menu/horizonte", horizonte: "quincena" });
+    const dias = diasDelMenu(e);
+    expect(dias).toHaveLength(15);
+    expect(dias[0]?.fecha).toBe("2026-11-04");
+    expect(dias[14]?.fecha).toBe("2026-11-18");
+    const m = menuDeLaSemana(e);
+    expect(m.dias.every((d) => d.opciones.length > 0)).toBe(true);
+  });
+
+  it("elegir toda la quincena adelanta la compra con las cantidades sumadas", () => {
+    let e = aplicar(estadoInicialDemo(), { tipo: "menu/horizonte", horizonte: "quincena" });
+    const antes = pendientes(e);
+    // Misma cena (salmón) con 7 días de separación: se suman las dos necesidades.
+    e = aplicar(
+      e,
+      { tipo: "menu/elegir", fecha: "2026-11-07", platoId: "salmon-plancha" },
+      { tipo: "menu/elegir", fecha: "2026-11-14", platoId: "salmon-plancha" },
+    );
+    expect(antes.salmon).toBeUndefined();
+    expect(pendientes(e).salmon).toBe(750); // 2 × 360 g = 720 g, a pasos de 50
+  });
+
+  it("un plato elegido no se vuelve a ofrecer en los 7 días siguientes, pero sí después", () => {
+    let e = aplicar(estadoInicialDemo(), { tipo: "menu/horizonte", horizonte: "quincena" });
+    e = aplicar(e, { tipo: "menu/elegir", fecha: "2026-11-07", platoId: "salmon-plancha" });
+    const ofrecidoEn = (fecha: string) =>
+      menuDeLaSemana(e)
+        .dias.find((d) => d.fecha === fecha)
+        ?.opciones.map((o) => o.plato.id) ?? [];
+    for (const f of ["2026-11-08", "2026-11-10", "2026-11-13"]) {
+      expect(ofrecidoEn(f)).not.toContain("salmon-plancha");
+    }
+  });
+
+  it("importar el menú del cole añade días sin borrar los anteriores", () => {
+    const e0 = estadoInicialDemo();
+    const e1 = aplicar(e0, {
+      tipo: "cole/importar",
+      dias: { "2026-12-01": { primero: "pasta", segundo: "carne" } },
+    });
+    expect(e1.colegio["2026-12-01"]).toEqual({ primero: "pasta", segundo: "carne" });
+    expect(e1.colegio["2026-11-04"]).toEqual(e0.colegio["2026-11-04"]);
+    expect(e1.aviso?.texto).toContain("1 días");
+  });
+
+  it("el menú del cole de demo sale del lector y cubre todo noviembre", () => {
+    const e = estadoInicialDemo();
+    expect(Object.keys(e.colegio)).toHaveLength(19);
+    expect(e.colegio["2026-11-12"]).toMatchObject({ primero: "legumbre", segundo: "huevo" });
+  });
+
   it("ignora platos o días que no existen", () => {
     const e = estadoInicialDemo();
     expect(reducir(e, { tipo: "menu/elegir", fecha: "2026-11-07", platoId: "nada" })).toBe(e);

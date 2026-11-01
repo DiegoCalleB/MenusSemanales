@@ -2,7 +2,7 @@ import type { AlmacenHogar } from "@/aplicacion/almacen";
 import type { EstadoHogar } from "@/aplicacion/estado";
 
 /** Súbela cuando cambie la forma del estado: lo guardado con otra versión se descarta. */
-export const VERSION_ALMACEN = 1;
+export const VERSION_ALMACEN = 2;
 const CLAVE = "menus-semanales:prueba";
 
 const COLECCIONES = [
@@ -28,6 +28,7 @@ export function esEstadoValido(dato: unknown): dato is EstadoHogar {
   return (
     typeof e.hoy === "string" &&
     typeof e.siguienteId === "number" &&
+    (e.horizonte === "semana" || e.horizonte === "quincena") &&
     typeof e.colegio === "object" &&
     e.colegio !== null &&
     COLECCIONES.every((c) => Array.isArray(e[c]))

@@ -11,8 +11,9 @@ import { type ItemDespensa, fechaIsoSchema, platoSchema } from "./tipos";
  * puede probar con propiedades y explicar cada opción.
  *
  * Reglas duras (nunca se rompen): ingredientes excluidos (alergias, sabores raros), tiempo máximo
- * del día, complementar el menú del cole según su recomendador de cenas (ver `recomendadosParaCenar`), no repetir un plato ya elegido en la semana
- * y no repetir grupo con el día anterior o el siguiente ya elegidos.
+ * del día, complementar el menú del cole según su recomendador de cenas (ver `recomendadosParaCenar`), no repetir un plato elegido en los 7 días cercanos
+ * y no repetir grupo con el día anterior o el siguiente ya elegidos. Un plato ya elegido no vuelve a
+ * ofrecerse hasta pasados 7 días, así que se puede planificar una quincena sin agotar el catálogo.
  * Reglas blandas (puntúan): valoración, tiempo desde la última vez, aprovechar caducidades y lo que
  * ya hay en casa, rapidez y variedad entre las opciones.
  */
@@ -44,6 +45,10 @@ export type PlatoMenu = z.infer<typeof platoMenuSchema>;
 export interface MenuCole {
   primero: GrupoPlato | null;
   segundo: GrupoPlato | null;
+  /** Nombres de los platos tal como los publica el cole (para mostrarlos). */
+  textoPrimero?: string | null;
+  textoSegundo?: string | null;
+  postre?: string | null;
 }
 
 /**
@@ -112,6 +117,8 @@ export interface MenuPropuesto {
 }
 
 const DIAS_REPETICION_FUERTE = 7;
+/** Un plato elegido no se vuelve a ofrecer a menos de esta distancia (en días). */
+const DISTANCIA_MINIMA_REPETIR = 7;
 const DIAS_ANTIGUEDAD_MAX = 21;
 
 /** ¿Cumple el plato las reglas duras de ese día? */
@@ -210,7 +217,7 @@ export function proponerMenu(ctx: ContextoMenu): MenuPropuesto {
   const caducan = new Set(proximosACaducar(ctx.despensa, ctx.hoy, 3).map((i) => i.ingredienteId));
   const porId = new Map(ctx.catalogo.map((p) => [p.id, p]));
   const elegidos = ctx.elegidos ?? {};
-  const idsElegidos = new Set(Object.values(elegidos));
+  const elegidosLista = Object.entries(elegidos);
   const ofrecidos = new Set<string>();
 
   const dias = ctx.dias.map((dia) => {
@@ -226,7 +233,13 @@ export function proponerMenu(ctx: ContextoMenu): MenuPropuesto {
     }
 
     const candidatas = ctx.catalogo
-      .filter((p) => !idsElegidos.has(p.id) && cumpleReglasDuras(p, dia, excluidos, vecinos))
+      .filter(
+        (p) =>
+          !elegidosLista.some(
+            ([f, id]) =>
+              id === p.id && Math.abs(diasEntre(f, dia.fecha)) < DISTANCIA_MINIMA_REPETIR,
+          ) && cumpleReglasDuras(p, dia, excluidos, vecinos),
+      )
       .map((p) => puntuar(p, dia, ctx, stock, caducan, ofrecidos));
     const opciones = elegirVariadas(candidatas, n);
     for (const o of opciones) ofrecidos.add(o.plato.id);
