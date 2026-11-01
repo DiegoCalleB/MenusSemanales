@@ -55,11 +55,13 @@ Nunca en git. Plantilla en `.env.example`.
 
 ## Migraciones aplicadas
 
-| Versión          | Nombre                    | Contenido                                                                         |
-| ---------------- | ------------------------- | --------------------------------------------------------------------------------- |
-| `20261101131702` | `fundacion_hogares`       | Hogares, miembros, invitaciones, personas y asistencia, con RLS                   |
-| `20261101131747` | `indices_claves_foraneas` | Índices de claves foráneas                                                        |
-| `20261101135511` | `centro_compartido`       | Centro, códigos, menú del cole con historial; corrección del derecho de supresión |
+| Versión          | Nombre                             | Contenido                                                                         |
+| ---------------- | ---------------------------------- | --------------------------------------------------------------------------------- |
+| `20261101131702` | `fundacion_hogares`                | Hogares, miembros, invitaciones, personas y asistencia, con RLS                   |
+| `20261101131747` | `indices_claves_foraneas`          | Índices de claves foráneas                                                        |
+| `20261101135511` | `centro_compartido`                | Centro, códigos, menú del cole con historial; corrección del derecho de supresión |
+| `20261101143913` | `catalogo_platos`                  | Ingredientes, platos del hogar, biblioteca comunitaria y moderación               |
+| `20261101143940` | `administrador_politica_explicita` | Política que deniega todo acceso a la lista de administradores                    |
 
 ## Flujo de migraciones
 

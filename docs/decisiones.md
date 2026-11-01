@@ -279,3 +279,21 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **Problema detectado:** `hogar.creado_por` tenía `ON DELETE RESTRICT`, lo que impedía borrar la cuenta de quien creó un hogar, incompatible con el derecho de supresión del RGPD. Detectado al diseñar el producto para otras familias.
 - **Corrección:** `ON DELETE SET NULL`; el hogar permanece, sin autoría, y se elimina la pertenencia de la persona. Probado.
 - **Pendiente:** limpieza periódica de hogares sin miembros (`pg_cron`) y exportación de datos desde la app.
+
+## D-036 · Catálogo de platos: diseño implementado
+
+- **Estado:** aceptada (2026-11-01) — aplicada en producción (migraciones `20261101143913` y `20261101143940`)
+- **Implementado:** `ingrediente` (global, normalizado), `plato` y `plato_ingrediente` (privados por hogar), `plato_compartido` (+ ingredientes y autoría) y `administrador_plataforma`. Cinco funciones: `crear_ingrediente`, `enviar_plato_a_catalogo`, `adoptar_plato_compartido`, `bandeja_revision` y `revisar_plato_compartido`. 162 comprobaciones de RLS en total.
+- **Decisiones de diseño:**
+  1. _Una unidad por ingrediente_ (g, ml o ud): simplifica sumar la compra entre platos y familias. El importador del seed convertirá las unidades.
+  2. _Ingredientes normalizados_ (minúsculas, sin tildes, conservando la ñ) con unicidad: «Tomate» y «tomaté» son el mismo. Los nuevos nacen sin verificar y publicar un plato los verifica.
+  3. _La autoría vive en una tabla aparte_ que solo ven el hogar autor y el administrador: ninguna otra familia puede saber quién envió un plato.
+  4. _`origen` y `plato_compartido_id` no se pueden fijar a mano_ (privilegios por columna): solo la adopción y el importador los asignan, así nadie falsea que un plato venga de la biblioteca.
+  5. _Revisión de un toque:_ la bandeja calcula avisos automáticos (sin pasos, tiempo alto, enlace en el texto, ingrediente nuevo, posible duplicado, sin ingredientes). Ver [moderacion.md](moderacion.md).
+  6. _Adoptar copia el plato_ al hogar: se puede adaptar sin afectar a los demás, y sobrevive si el original se retira.
+  7. _Aportar es voluntario y pasa por revisión_; el plato adoptado no se puede reenviar (evita bucles).
+- **Anti-abuso:** máximo 5 pendientes por hogar y 50 ingredientes nuevos por usuario y día; un plato no se envía dos veces.
+- **Verificación:** 9 mutaciones que rompen la seguridad (pendientes visibles, autoría visible, revisión sin ser administrador, origen falseable, adopción de no publicados, verificación abierta, bandeja abierta, sin límite de ingredientes, doble envío): las 9 se detectan. Prueba de humo en producción con UTF-8 real.
+- **Bug del entorno de pruebas detectado:** la normalización de tildes fallaba en local porque el Postgres de pruebas no era UTF-8 (producción y CI sí). El script fija ahora `UTF8`, de modo que local y CI coinciden.
+- **Aviso resuelto:** `administrador_plataforma` tenía RLS sin políticas (aviso INFO). Se añadió una política explícita que deniega todo.
+- **Pendiente:** valoraciones agregadas, reportes y notificación al autor; importación del seed (necesita ver su formato).

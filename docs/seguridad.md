@@ -93,6 +93,17 @@ Es la única tabla compartida entre hogares, por eso concentra los controles má
 | Spam de centros                               | Máximo 3 por usuario; solo administradores                           | Test                                           |
 | Mover datos a un centro ajeno                 | `WITH CHECK`                                                         | Test                                           |
 
+## Catálogo comunitario
+
+| Riesgo                                      | Control                                                                                  | Verificación     |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------- | ---------------- |
+| Saber qué familia envió un plato            | La autoría está en una tabla aparte, visible solo para el hogar autor y el administrador | Test + mutación  |
+| Ver platos pendientes o rechazados de otros | Política con función interna: solo publicados, el hogar autor y el administrador         | Test + mutación  |
+| Publicar sin revisión o hacerse moderador   | Escritura solo por funciones; `administrador_plataforma` no es accesible desde la API    | Tests + mutación |
+| Falsear que un plato viene de la biblioteca | Privilegios por columna sobre `origen` y `plato_compartido_id`                           | Test + mutación  |
+| Contenido copiado o con enlaces             | Aviso automático `enlace_en_texto` y revisión manual                                     | Test             |
+| Spam de platos o ingredientes               | 5 pendientes por hogar, 50 ingredientes por usuario y día                                | Tests + mutación |
+
 ## Privacidad (RGPD)
 
 - Datos alojados en la UE (Supabase eu-west-1, Railway EU West).
