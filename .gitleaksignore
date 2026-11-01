@@ -1,0 +1,7 @@
+# Excepciones de gitleaks, SOLO por huella exacta (commit:archivo:regla:línea) y siempre justificadas.
+# Nunca se ignora una regla ni un archivo completo.
+
+# Valor de prueba inventado ("sb_publishable_abc123") en un test de validación de variables de
+# entorno. No es una clave real. Está en el historial (commit 4b78145) y no se reescribe; el código
+# actual ya usa un valor obviamente falso de baja entropía.
+4b7814592038da7643d11ae9d07170a6651907ff:src/lib/env.test.ts:generic-api-key:6

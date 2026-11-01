@@ -3,7 +3,7 @@ import { parsearEnvPublico } from "./env";
 
 const validas = {
   NEXT_PUBLIC_SUPABASE_URL: "https://ejemplo.supabase.co",
-  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_abc123",
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_xxxxxxxxxxxxxxxx",
 };
 
 describe("parsearEnvPublico", () => {

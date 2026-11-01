@@ -68,3 +68,9 @@ Registro de prompts que funcionaron o fallaron, con lo aprendido. Material para 
 ### ℹ️ Límites del entorno del agente
 
 - El entorno denegó descargar y ejecutar un binario externo (gitleaks) en local. El agente no buscó un rodeo: movió el escaneo a la CI, donde el binario se verifica por checksum.
+
+### ❌ Diagnóstico adelantado sin datos (y rectificado)
+
+- **Qué pasó:** gitleaks falló con "leaks found: 1" sin decir dónde. El agente **sospechó** de un falso positivo en el archivo de tipos generado (`foreignKeyName: "..._fkey"`), lo dijo como sospecha y activó el modo detallado en lugar de ignorarlo. El hallazgo real era otro: un valor de prueba del propio agente (`sb_publishable_abc123`) en un test.
+- **Aprendizaje:** una sospecha razonable no es un diagnóstico. Acertar de casualidad habría llevado a silenciar la regla equivocada. Se resolvió con una excepción por huella exacta y cambiando el valor de prueba por uno obviamente falso.
+- **Corolario:** los valores de prueba con forma de secreto (`sb_publishable_abc123`) generan ruido y entrenan a ignorar alertas; usar valores claramente falsos.
