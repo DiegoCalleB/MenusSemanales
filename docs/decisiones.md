@@ -45,7 +45,7 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **Decisión:** etiquetas `frito` / `procesado` con tope semanal configurable (inicial: 2 cenas), sin eliminar platos del catálogo.
 
 ## D-008 · Infraestructura Supabase
-- **Estado:** aceptada (2026-11-01) — creación del proyecto pendiente
+- **Estado:** aceptada (2026-11-01) — proyecto creado: ref `inzyvqffesgjhvdrgdgg`
 - **Decisión:**
   - Proyecto `menus-semanales` en **eu-west-1 (Irlanda)**: datos en la UE (RGPD), baja latencia desde España. Vercel en región `dub1`.
   - Entornos: local (CLI/Docker o Postgres efímero en CI) + producción. Branching de Supabase cuando se pase a Pro.
@@ -58,3 +58,13 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 ## D-009 · Gestor de paquetes y runtime
 - **Estado:** propuesta
 - **Decisión:** pnpm y Node 22 LTS (disponibles en el entorno de desarrollo y en CI).
+
+## D-010 · Postgres 17 en todos los entornos
+- **Estado:** aceptada (2026-11-01)
+- **Contexto:** el proyecto de producción usa Postgres 17.
+- **Decisión:** `supabase/config.toml` con `major_version = 17` y CI con un contenedor `postgres:17`. Así local, CI y producción ejecutan las migraciones y los tests de RLS sobre la misma versión mayor.
+
+## D-011 · Aviso de advisor aceptado: conexiones de Auth en valor absoluto
+- **Estado:** aceptada (2026-11-01)
+- **Contexto:** con el proyecto vacío, el advisor de rendimiento da un aviso de nivel INFO (`auth_db_connections_absolute`): Auth usa 10 conexiones fijas en lugar de un porcentaje.
+- **Decisión:** no cambiarlo por ahora. Solo importa si se amplía la instancia; se revisará al pasar a Pro o al cambiar de tamaño. El advisor de seguridad sale sin avisos.

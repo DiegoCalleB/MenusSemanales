@@ -1,5 +1,19 @@
 # Infraestructura
 
+## Proyecto de producción
+
+| Dato | Valor |
+|---|---|
+| Nombre | Menus Semanales |
+| Ref | `inzyvqffesgjhvdrgdgg` |
+| URL de la API | https://inzyvqffesgjhvdrgdgg.supabase.co |
+| Región | eu-west-1 (Irlanda) |
+| Postgres | 17 |
+| Creado | 2026-11-01 |
+| Estado inicial | Sin tablas ni migraciones · advisor de seguridad sin avisos · 1 aviso INFO de rendimiento aceptado (D-011) |
+
+La ref y la URL no son secretas: la URL viaja al navegador en cualquier app de Supabase. Las claves sí lo son y nunca se guardan en el repositorio.
+
 ## Entornos
 
 | Entorno | Uso | Base de datos | Despliegue |
