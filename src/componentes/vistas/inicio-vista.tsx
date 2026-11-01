@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { EMOJI_GRUPO } from "../formato";
 import { IconoCompra, IconoDespensa, IconoMenu, IconoReparto } from "../iconos";
+import { proximoDiaConCole } from "@/aplicacion/estado";
 import { diasEntre } from "@/dominio/fechas";
+import { TarjetaCole, fechaCorta } from "../cole";
 import { MODO_DATOS, useHogar } from "../proveedor-hogar";
 
 const MODULOS = [
@@ -44,6 +46,7 @@ export function InicioVista() {
     .filter(([f]) => f >= estado.hoy && diasEntre(estado.hoy, f) <= 14)
     .sort(([a], [b]) => a.localeCompare(b))[0];
   const faltan = proximo ? diasEntre(estado.hoy, proximo[0]) : 0;
+  const diaCole = proximoDiaConCole(estado, estado.hoy);
 
   return (
     <div className="flex flex-col gap-8">
@@ -89,6 +92,17 @@ export function InicioVista() {
           </Link>
         </div>
       </section>
+
+      {diaCole && (
+        <section aria-labelledby="cole-hoy" className="flex flex-col gap-2">
+          <h2 id="cole-hoy" className="text-xl font-extrabold">
+            {diaCole === estado.hoy
+              ? "Hoy en el cole"
+              : `Próximo menú del cole · ${fechaCorta(diaCole)}`}
+          </h2>
+          <TarjetaCole cole={estado.colegio[diaCole] ?? null} fecha={diaCole} />
+        </section>
+      )}
 
       {MODO_DATOS === "diego" && (
         <Link

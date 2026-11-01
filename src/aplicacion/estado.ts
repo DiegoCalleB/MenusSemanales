@@ -295,6 +295,32 @@ export function cenaDeEmergenciaHoy(e: EstadoHogar): OpcionEmergencia[] {
   });
 }
 
+const NOMBRE_MES = [
+  "enero",
+  "febrero",
+  "marzo",
+  "abril",
+  "mayo",
+  "junio",
+  "julio",
+  "agosto",
+  "septiembre",
+  "octubre",
+  "noviembre",
+  "diciembre",
+];
+export const nombreMes = (fecha: FechaIso): string =>
+  NOMBRE_MES[Number(fecha.slice(5, 7)) - 1] ?? "";
+
+/** Primer día desde `fecha` (incluida) con menú del cole, hasta 10 días por delante. */
+export function proximoDiaConCole(e: EstadoHogar, fecha: FechaIso): FechaIso | null {
+  for (let i = 0; i <= 10; i++) {
+    const f = sumarDias(fecha, i);
+    if (e.colegio[f]) return f;
+  }
+  return null;
+}
+
 const NOMBRE_DIA = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"];
 export const nombreDia = (fecha: FechaIso): string => NOMBRE_DIA[diaSemanaIso(fecha) - 1] ?? "";
 

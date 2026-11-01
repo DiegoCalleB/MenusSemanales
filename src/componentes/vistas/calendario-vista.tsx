@@ -3,8 +3,8 @@
 import { useMemo, useState } from "react";
 import { diaMenuDe, fechaPlanificable, nombreDia, opcionesParaFecha } from "@/aplicacion/estado";
 import { diaSemanaIso, sumarDias, type FechaIso } from "@/dominio/fechas";
-import { recomendadosParaCenar } from "@/dominio/menu";
 import { EMOJI_GRUPO } from "../formato";
+import { TarjetaCole } from "../cole";
 import { Razones } from "../razones";
 import { useHogar } from "../proveedor-hogar";
 
@@ -23,16 +23,6 @@ const MESES = [
   "diciembre",
 ];
 const CABECERA = ["L", "M", "X", "J", "V", "S", "D"];
-const NOMBRE_GRUPO: Record<string, string> = {
-  verdura: "verdura",
-  legumbre: "legumbres",
-  pasta: "pasta",
-  arroz: "arroz",
-  pescado: "pescado",
-  carne: "carne",
-  huevo: "huevo",
-  otro: "otro",
-};
 const mayuscula = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 const largo = (f: FechaIso) => {
   const [, m, d] = f.split("-").map(Number);
@@ -71,7 +61,6 @@ export function CalendarioVista() {
 
   const elegida = cenaDe(sel);
   const cole = estado.colegio[sel] ?? null;
-  const recomendados = recomendadosParaCenar(cole);
   const dia = diaMenuDe(estado, sel);
   const planificable = fechaPlanificable(estado, sel);
   const opciones = useMemo(
@@ -226,22 +215,7 @@ export function CalendarioVista() {
             </p>
           )}
 
-          <div className="bg-suave-3 rounded-2xl p-3 text-base">
-            <p className="font-bold">🎒 En el cole</p>
-            {cole ? (
-              <>
-                <p>{cole.textoPrimero ?? (cole.primero ? NOMBRE_GRUPO[cole.primero] : "—")}</p>
-                <p>{cole.textoSegundo ?? (cole.segundo ? NOMBRE_GRUPO[cole.segundo] : "—")}</p>
-                {recomendados && (
-                  <p className="text-tinta-suave mt-1 text-sm">
-                    Para cenar conviene: {[...recomendados].map((g) => NOMBRE_GRUPO[g]).join(", ")}.
-                  </p>
-                )}
-              </>
-            ) : (
-              <p className="text-tinta-suave">Sin menú del cole este día.</p>
-            )}
-          </div>
+          <TarjetaCole cole={cole} fecha={sel} />
 
           {elegida ? (
             <div className="bg-ok-fondo text-ok-texto flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4">

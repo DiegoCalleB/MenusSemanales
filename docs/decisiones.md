@@ -438,3 +438,10 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **Estado:** aceptada (2026-11-01)
 - **Decisión:** `/regalo` permite escribir un mensaje y copiar un enlace; quien lo abre ve una pantalla de felicitación y accede a la app. El mensaje viaja en el **fragmento** de la URL (tras `#`), que el navegador nunca envía al servidor: no se guarda ni queda en registros. Se valida con zod (nombres ≤ 40, mensaje ≤ 600, sin caracteres de control, base64url ≤ 4000), se muestra siempre como **texto** (React lo escapa; hay prueba E2E con HTML inyectado) y un enlace roto cae en la pantalla de preparar. El mensaje por defecto es un **borrador** que Diego debe cambiar por sus palabras.
 - **Límite:** el regalo no lleva datos de la app; los datos siguen siendo por dispositivo hasta que haya acceso con cuenta (pendiente) y publicación en Railway.
+
+## D-057 · El menú del cole, siempre a la vista
+
+- **Estado:** aceptada (2026-11-01)
+- **Petición de Diego:** ver rápidamente, cada día, lo que han comido en el cole para contrastarlo con la cena.
+- **Decisión:** una pieza común (`src/componentes/cole.tsx`) con dos vistas: **«En el cole»** (primero y segundo con su emoji de grupo, guarnición, postre, kilocalorías y «Para cenar conviene: …») y **«Cole y cena, de un vistazo»** (cada día con el cole y la cena elegida, uno debajo de otro). Aparecen en la **portada** («Hoy en el cole», o el próximo día con menú si hoy no hay), en el **menú** (resumen de la semana arriba y la tarjeta en cada día) y en el **detalle del calendario**.
+- **Datos:** la guarnición se guarda ahora también con el menú del cole (antes solo se usaba al revisar).

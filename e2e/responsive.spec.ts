@@ -338,6 +338,23 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 
+  test("cole: se ve de un vistazo lo que comieron y se contrasta con la cena", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/");
+    // La portada enseña el menú del cole de hoy.
+    await expect(pagina.getByRole("heading", { level: 2, name: "Hoy en el cole" })).toBeVisible();
+    await expect(pagina.getByText("Crema suave de calabacín, zanahoria y calabaza")).toBeVisible();
+    await expect(pagina.getByText("Para cenar conviene:").first()).toBeVisible();
+    // El menú junta cole y cena de cada día.
+    await pagina.goto("/menu", { waitUntil: "networkidle" });
+    const resumen = pagina.getByRole("region", { name: "Cole y cena, de un vistazo" });
+    await expect(resumen).toContainText("Cinta de lomo a la plancha");
+    await expect(resumen).toContainText("Arroz con pollo al curry");
+    await contexto.close();
+  });
+
   test("añadir un artículo a mano y marcarlo", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/compra");

@@ -284,6 +284,7 @@ export function aMenuCole(dias: readonly DiaCole[]): Record<FechaIso, MenuCole> 
       textoPrimero: d.primero,
       textoSegundo: d.segundo,
       postre: d.postre,
+      guarnicion: d.guarnicion,
       kcal: d.kcal ?? null,
     };
   }

@@ -56,6 +56,8 @@ export interface MenuCole {
   textoPrimero?: string | null;
   textoSegundo?: string | null;
   postre?: string | null;
+  /** Guarnición o ensalada que acompaña al segundo. */
+  guarnicion?: string | null;
   kcal?: number | null;
 }
 

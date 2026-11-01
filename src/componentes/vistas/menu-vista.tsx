@@ -6,6 +6,7 @@ import { diasDelMenu, menuDeLaSemana, nombreDia } from "@/aplicacion/estado";
 import type { Motivo, Opcion } from "@/dominio/menu";
 import { EMOJI_GRUPO, formatearNumero } from "../formato";
 import { IconoReloj } from "../iconos";
+import { ColeVsCena, TarjetaCole } from "../cole";
 import { Razones } from "../razones";
 import { useHogar } from "../proveedor-hogar";
 
@@ -135,6 +136,8 @@ export function MenuVista() {
         </p>
       )}
 
+      <ColeVsCena />
+
       <ul className="grid gap-4 lg:grid-cols-2">
         {dias.map((dia) => {
           const elegida = eleccion(dia.fecha);
@@ -181,18 +184,7 @@ export function MenuVista() {
                   <p className="text-tinta-suave flex items-center gap-1.5 text-base">
                     <IconoReloj width={18} height={18} />
                     Hasta {dia.minutosMax} min
-                    {dia.cole &&
-                      ` · en el cole: ${[dia.cole.primero, dia.cole.segundo]
-                        .filter(Boolean)
-                        .map((g) => NOMBRE_GRUPO[g as string])
-                        .join(" y ")}`}
                   </p>
-                  {dia.cole?.textoPrimero && (
-                    <p className="text-tinta-suave mt-1 text-sm">
-                      Cole: {dia.cole.textoPrimero}
-                      {dia.cole.textoSegundo && ` / ${dia.cole.textoSegundo}`}
-                    </p>
-                  )}
                 </div>
                 <button
                   type="button"
@@ -210,6 +202,8 @@ export function MenuVista() {
               >
                 No cenamos en casa este día
               </button>
+
+              <TarjetaCole cole={dia.cole} fecha={dia.fecha} />
 
               {elegida && (
                 <div className="bg-ok-fondo text-ok-texto flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4">
