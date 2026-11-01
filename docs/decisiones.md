@@ -213,3 +213,25 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **Estado:** aceptada (2026-11-01)
 - **Decisión:** principios de mínimo privilegio, defensa en profundidad, seguro por defecto, minimización de datos y verificabilidad. Modelo de amenazas STRIDE y controles por capa en [seguridad.md](seguridad.md). Cada control tiene un test automático y los de seguridad se validan con mutaciones.
 - **Autorización:** en la capa de acceso a datos y en cada Server Action, nunca solo en el proxy (recomendación de la guía de seguridad de datos de Next 16).
+
+## D-028 · Producto para todas las familias del cole: el menú del comedor es compartido
+
+- **Estado:** propuesta (pendiente de la confirmación del autor)
+- **Contexto:** el objetivo pasa de "una familia" a "todas las familias del colegio". El menú del comedor es idéntico para todas.
+- **Decisión:** introducir el concepto de **centro** (colegio). El menú del comedor y, más adelante, el calendario escolar se guardan una sola vez por centro y los ven los hogares vinculados. El resto de datos sigue siendo privado por hogar.
+- **Salvaguardas:** vínculo a nivel de hogar (nunca de niño); versionado y autoría de cada cambio; rol de curador por centro; aviso de error; tests de RLS que demuestran que compartir el centro no abre datos privados de otros hogares.
+- **Alta:** por código de centro compartido en el grupo de la clase; sin registro abierto.
+- **Alternativas:** cada hogar teclea su menú (descartada: friccion alta y sin efecto red); menú público sin cuenta (descartada: sin control de calidad ni de abusos).
+- Detalle en [producto.md](producto.md).
+
+## D-029 · Responsabilidad sobre datos de otras familias (RGPD)
+
+- **Estado:** propuesta (requiere decisión del autor)
+- **Contexto:** al abrir la app a otras familias, el autor pasa a ser responsable del tratamiento de datos de terceros, incluidos menores.
+- **Decisión propuesta:** minimización estricta (solo alias, tipo y factor de ración de los niños); política de privacidad y condiciones antes del piloto; exportación y borrado de datos desde la app; piloto con 3-5 familias con consentimiento; consulta legal breve y aviso al centro antes de abrirlo a todo el colegio.
+- **Fuera de alcance del código:** asesoramiento jurídico. Se señala como riesgo en la memoria.
+
+## D-030 · Orden de módulos de "organizar la vida"
+
+- **Estado:** propuesta
+- **Decisión:** MVP = menú con opciones + compra + despensa + menú del cole compartido. Después tareas del hogar, calendario escolar y recordatorios; luego IA para leer el menú desde foto y módulos menores. Regla: no se añade un módulo hasta que el anterior se usa de verdad en casa.
