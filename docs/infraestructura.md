@@ -18,8 +18,8 @@ La ref y la URL no son secretas: la URL viaja al navegador en cualquier app de S
 
 | Entorno | Uso | Base de datos | Despliegue |
 |---|---|---|---|
-| Local | Desarrollo y tests | `supabase start` (Docker) o Postgres 16 efímero con shim de `auth` | `pnpm dev` |
-| CI | Lint, tipos, tests unitarios y de RLS | Postgres efímero en GitHub Actions | — |
+| Local | Desarrollo y tests | `supabase start` (Docker) o Postgres 17 efímero con shim de `auth` | `pnpm dev` |
+| CI | Lint, tipos, tests unitarios y de RLS | Contenedor `postgres:17` en GitHub Actions | — |
 | Producción | Uso real de la familia | Supabase `menus-semanales` (eu-west-1) | Vercel (`dub1`) |
 
 Staging/previews: Supabase Branching cuando el proyecto pase a plan Pro.
