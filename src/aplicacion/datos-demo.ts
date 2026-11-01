@@ -311,8 +311,8 @@ const platos: PlatoMenu[] = [
 const personas: Persona[] = [
   { id: "diego", nombre: "Diego", tipo: "adulto", activa: true, factorRacion: 1 },
   { id: "ana", nombre: "Ana", tipo: "adulto", activa: true, factorRacion: 1 },
-  { id: "lucia", nombre: "Lucía", tipo: "nino", activa: true, factorRacion: 0.5 },
-  { id: "carla", nombre: "Carla", tipo: "nino", activa: true, factorRacion: 0.5 },
+  { id: "alba", nombre: "Alba", tipo: "nino", activa: true, factorRacion: 0.5 },
+  { id: "emma", nombre: "Emma", tipo: "nino", activa: true, factorRacion: 0.5 },
 ];
 
 const item = (

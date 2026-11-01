@@ -110,6 +110,9 @@ export function MenuVista() {
             </button>
           ))}
         </div>
+        <Link href="/menu/platos" className="boton-suave">
+          Mis platos
+        </Link>
         <Link href="/menu/emergencia" className="boton-suave">
           Cena de emergencia
         </Link>

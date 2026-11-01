@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { BannerPrueba } from "@/componentes/banner-prueba";
 import { AvisoGlobal } from "@/componentes/aviso";
 import { NavegacionInferior, NavegacionLateral } from "@/componentes/navegacion";
+import { BotonTema, ProveedorTema } from "@/componentes/tema";
 import { ProveedorHogar } from "@/componentes/proveedor-hogar";
 
 /**
@@ -12,38 +13,41 @@ import { ProveedorHogar } from "@/componentes/proveedor-hogar";
  */
 export default function LayoutApp({ children }: { children: ReactNode }) {
   return (
-    <ProveedorHogar>
-      <a
-        href="#contenido"
-        className="focus:bg-marca focus:text-sobre-marca sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-xl focus:px-4 focus:py-3"
-      >
-        Saltar al contenido
-      </a>
-      <div className="min-h-dvh md:flex">
-        <NavegacionLateral />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <header className="border-borde bg-superficie/95 sticky top-0 z-20 flex items-center gap-3 border-b px-4 py-3 backdrop-blur md:hidden">
-            <span
-              aria-hidden="true"
-              className="bg-suave-1 flex size-9 items-center justify-center rounded-xl text-xl"
+    <ProveedorTema>
+      <ProveedorHogar>
+        <a
+          href="#contenido"
+          className="focus:bg-marca focus:text-sobre-marca sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-xl focus:px-4 focus:py-3"
+        >
+          Saltar al contenido
+        </a>
+        <div className="min-h-dvh md:flex">
+          <NavegacionLateral />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <header className="border-borde bg-superficie/95 sticky top-0 z-20 flex items-center gap-3 border-b px-4 py-3 backdrop-blur md:hidden">
+              <span
+                aria-hidden="true"
+                className="bg-suave-1 flex size-9 items-center justify-center rounded-xl text-xl"
+              >
+                🍽️
+              </span>
+              <span className="text-marca flex-1 text-lg font-extrabold tracking-tight">
+                Menús Semanales
+              </span>
+              <BotonTema />
+            </header>
+            <BannerPrueba />
+            <main
+              id="contenido"
+              className="mx-auto w-full max-w-5xl flex-1 px-4 pt-5 pb-32 md:px-8 md:pt-8 md:pb-12"
             >
-              🍽️
-            </span>
-            <span className="text-marca text-lg font-extrabold tracking-tight">
-              Menús Semanales
-            </span>
-          </header>
-          <BannerPrueba />
-          <main
-            id="contenido"
-            className="mx-auto w-full max-w-5xl flex-1 px-4 pt-5 pb-32 md:px-8 md:pt-8 md:pb-12"
-          >
-            {children}
-          </main>
+              {children}
+            </main>
+          </div>
         </div>
-      </div>
-      <NavegacionInferior />
-      <AvisoGlobal />
-    </ProveedorHogar>
+        <NavegacionInferior />
+        <AvisoGlobal />
+      </ProveedorHogar>
+    </ProveedorTema>
   );
 }

@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
- * Sistema de diseño: tokens de color con tema claro y oscuro. Los colores de las series de los
+ * Sistema de diseño: tokens de color. El tema es CLARO siempre; el oscuro solo si la persona lo elige (D-049). Los colores de las series de los
  * gráficos (--serie-*) salen de la paleta validada (ver docs/diseno.md) y pasan las comprobaciones
  * de contraste y de daltonismo en los dos temas.
  */
@@ -26,31 +26,6 @@
   --suave-3: #e1f4ee;
   --serie-1: #2a78d6;
   --serie-2: #eb6834;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --fondo: #2a2027;
-    --superficie: #35292f;
-    --borde: #52414b;
-    --tinta: #fbeff0;
-    --tinta-suave: #dcc9cf;
-    --marca: #ff8fb0;
-    --marca-fuerte: #ffb1c9;
-    --sobre-marca: #2a2027;
-    --aviso-fondo: #4a3a14;
-    --aviso-texto: #ffe08a;
-    --peligro-fondo: #4f2330;
-    --peligro-texto: #ffc2cc;
-    --ok-fondo: #1f4030;
-    --ok-texto: #b4ecc8;
-    --suave-1: #4a2f3b;
-    --suave-2: #4a3a2f;
-    --suave-3: #2c4440;
-    --serie-1: #3987e5;
-    --serie-2: #d95926;
-  }
 }
 
 :root[data-theme="dark"] {

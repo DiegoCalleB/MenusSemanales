@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ComponentType, SVGProps } from "react";
+import { BotonTema } from "./tema";
 import { IconoCompra, IconoDespensa, IconoMenu, IconoReparto } from "./iconos";
 
 const ENLACES: ReadonlyArray<{
@@ -93,7 +94,10 @@ export function NavegacionLateral() {
           })}
         </ul>
       </nav>
-      <p className="text-tinta-suave mt-auto px-2 text-sm">
+      <div className="mt-auto px-2">
+        <BotonTema />
+      </div>
+      <p className="text-tinta-suave px-2 text-sm">
         Modo prueba: datos de ejemplo guardados solo en este dispositivo.
       </p>
     </aside>

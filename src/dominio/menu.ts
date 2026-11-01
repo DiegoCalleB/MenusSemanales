@@ -38,6 +38,10 @@ export const platoMenuSchema = platoSchema.extend({
   ultimaVez: fechaIsoSchema.nullable().default(null),
   /** Valoración media de la familia, de 1 a 5. */
   valoracion: z.number().min(1).max(5).nullable().default(null),
+  /** Receta, en pasos cortos (opcional). */
+  pasos: z.string().max(4000).nullable().optional(),
+  /** La familia no quiere que se proponga (pero se conserva en el catálogo). */
+  noProponer: z.boolean().optional(),
 });
 export type PlatoMenu = z.infer<typeof platoMenuSchema>;
 

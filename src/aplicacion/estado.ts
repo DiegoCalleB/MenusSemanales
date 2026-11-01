@@ -7,6 +7,13 @@ import {
   invertirMovimientos,
   planificarCocinado,
 } from "@/dominio/despensa";
+import {
+  ingredienteNuevoSchema,
+  normalizarNombre,
+  validarPlato,
+  type IngredienteNuevo,
+  type PlatoEditable,
+} from "@/dominio/catalogo";
 import { cenaDeEmergencia, type OpcionEmergencia } from "@/dominio/emergencia";
 import { redondear } from "@/dominio/numeros";
 import { type FechaIso, semanaDe, sumarDias, diaSemanaIso } from "@/dominio/fechas";
@@ -113,6 +120,10 @@ export type Accion =
   | { tipo: "menu/elegir"; fecha: FechaIso; platoId: string }
   | { tipo: "menu/quitar"; fecha: FechaIso }
   | { tipo: "menu/llegoTarde"; fecha: FechaIso }
+  | { tipo: "plato/guardar"; id?: string; plato: PlatoEditable }
+  | { tipo: "plato/proponer"; id: string; proponer: boolean }
+  | { tipo: "plato/borrar"; id: string }
+  | { tipo: "ingrediente/crear"; ingrediente: IngredienteNuevo }
   | { tipo: "emergencia/cocinar"; platoId: string }
   | { tipo: "valorar"; platoId: string; personaId: string; puntos: number }
   | { tipo: "menu/horizonte"; horizonte: EstadoHogar["horizonte"] }
@@ -182,7 +193,7 @@ export function menuDeLaSemana(e: EstadoHogar, liberar?: FechaIso): MenuPropuest
   return proponerMenu({
     hoy: e.hoy,
     dias,
-    catalogo: e.platos,
+    catalogo: e.platos.filter((p) => !p.noProponer),
     despensa: e.despensa,
     excluirIngredientes: e.excluirIngredientes,
     elegidos,
@@ -196,7 +207,7 @@ export const racionesDelHogar = (e: EstadoHogar): number =>
 /** Qué cenar hoy con lo que hay en casa, rápido (D-033). */
 export function cenaDeEmergenciaHoy(e: EstadoHogar): OpcionEmergencia[] {
   return cenaDeEmergencia({
-    catalogo: e.platos,
+    catalogo: e.platos.filter((p) => !p.noProponer),
     despensa: e.despensa,
     hoy: e.hoy,
     raciones: racionesDelHogar(e),
@@ -448,6 +459,117 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
           ? e.llegoTarde.filter((f) => f !== accion.fecha)
           : [...e.llegoTarde, accion.fecha],
       };
+
+    case "plato/guardar": {
+      const r = validarPlato(accion.plato, new Set(e.ingredientes.map((i) => i.id)));
+      if (!r.ok) {
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: error(e, r.errores[0] ?? "El plato no es válido."),
+        };
+      }
+      const nombre = normalizarNombre(r.valor.nombre);
+      if (e.platos.some((p) => p.id !== accion.id && normalizarNombre(p.nombre) === nombre)) {
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: error(e, "Ya tienes un plato con ese nombre."),
+        };
+      }
+      const existente = accion.id ? e.platos.find((p) => p.id === accion.id) : undefined;
+      if (accion.id && !existente) return e;
+      const guardado: PlatoMenu = {
+        ...r.valor,
+        id: existente?.id ?? `p-${e.siguienteId}`,
+        ultimaVez: existente?.ultimaVez ?? null,
+        valoracion: existente?.valoracion ?? null,
+        ...(existente?.noProponer ? { noProponer: true } : {}),
+      };
+      const platos = existente
+        ? e.platos.map((p) => (p.id === existente.id ? guardado : p))
+        : [...e.platos, guardado];
+      return {
+        ...e,
+        platos,
+        // Las cenas ya elegidas con este plato se actualizan para que la compra refleje los cambios.
+        comidas: e.comidas.map((c) => (c.plato.id === guardado.id ? { ...c, plato: guardado } : c)),
+        siguienteId: e.siguienteId + 1,
+        aviso: ok(
+          e,
+          existente ? `Plato guardado: ${guardado.nombre}.` : `Plato añadido: ${guardado.nombre}.`,
+        ),
+      };
+    }
+
+    case "plato/proponer": {
+      const plato = e.platos.find((p) => p.id === accion.id);
+      if (!plato) return e;
+      return {
+        ...e,
+        platos: e.platos.map((p) =>
+          p.id === plato.id ? { ...p, noProponer: !accion.proponer } : p,
+        ),
+        siguienteId: e.siguienteId + 1,
+        aviso: ok(
+          e,
+          accion.proponer
+            ? `«${plato.nombre}» volverá a aparecer en las propuestas.`
+            : `«${plato.nombre}» no se volverá a proponer.`,
+        ),
+      };
+    }
+
+    case "plato/borrar": {
+      const plato = e.platos.find((p) => p.id === accion.id);
+      if (!plato) return e;
+      if (e.comidas.some((c) => c.plato.id === plato.id)) {
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: error(
+            e,
+            "Está elegido en el menú: quítalo de ahí primero (o deja de proponerlo).",
+          ),
+        };
+      }
+      const valoraciones = Object.fromEntries(
+        Object.entries(e.valoraciones).filter(([id]) => id !== plato.id),
+      );
+      return {
+        ...e,
+        platos: e.platos.filter((p) => p.id !== plato.id),
+        valoraciones,
+        siguienteId: e.siguienteId + 1,
+        aviso: ok(e, `Plato borrado: ${plato.nombre}.`),
+      };
+    }
+
+    case "ingrediente/crear": {
+      const r = ingredienteNuevoSchema.safeParse(accion.ingrediente);
+      if (!r.success) {
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: error(e, r.error.issues[0]?.message ?? "Ingrediente no válido."),
+        };
+      }
+      if (
+        e.ingredientes.some((i) => normalizarNombre(i.nombre) === normalizarNombre(r.data.nombre))
+      ) {
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: error(e, "Ese ingrediente ya existe."),
+        };
+      }
+      return {
+        ...e,
+        ingredientes: [...e.ingredientes, { id: `i-${e.siguienteId}`, ...r.data }],
+        siguienteId: e.siguienteId + 1,
+        aviso: ok(e, `Ingrediente añadido: ${r.data.nombre}.`),
+      };
+    }
 
     case "emergencia/cocinar": {
       // Elige el plato para hoy y lo cocina: se descuenta de la despensa y se puede deshacer.

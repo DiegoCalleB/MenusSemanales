@@ -438,6 +438,120 @@ describe("cena de emergencia", () => {
   });
 });
 
+describe("catálogo de platos", () => {
+  const nuevo = {
+    nombre: "Pan con tomate",
+    grupo: "otro" as const,
+    minutosActivos: 5,
+    pasos: null,
+    ingredientes: [
+      { ingredienteId: "pan", cantidadPorRacion: 1, opcional: false },
+      { ingredienteId: "tomate", cantidadPorRacion: 80, opcional: false },
+    ],
+  };
+
+  it("añade un plato nuevo, lo edita conservando valoración y lo propone", () => {
+    const e1 = aplicar(estadoInicialDemo(), { tipo: "plato/guardar", plato: nuevo });
+    const creado = e1.platos.at(-1);
+    expect(creado).toMatchObject({ nombre: "Pan con tomate", ultimaVez: null, valoracion: null });
+    expect(e1.aviso?.texto).toContain("Plato añadido");
+    const e2 = aplicar(
+      e1,
+      { tipo: "valorar", platoId: creado?.id ?? "", personaId: "ana", puntos: 4 },
+      { tipo: "plato/guardar", id: creado?.id, plato: { ...nuevo, minutosActivos: 10 } },
+    );
+    expect(e2.platos.find((p) => p.id === creado?.id)).toMatchObject({
+      minutosActivos: 10,
+      valoracion: 4,
+    });
+    expect(e2.platos).toHaveLength(e1.platos.length);
+  });
+
+  it("rechaza platos inválidos y nombres repetidos (sin tildes ni mayúsculas)", () => {
+    const e = estadoInicialDemo();
+    const malo = reducir(e, { tipo: "plato/guardar", plato: { ...nuevo, ingredientes: [] } });
+    expect(malo.platos).toBe(e.platos);
+    expect(malo.aviso?.tipo).toBe("error");
+    const repetido = reducir(e, {
+      tipo: "plato/guardar",
+      plato: { ...nuevo, nombre: "TORTILLA FRANCESA" },
+    });
+    expect(repetido.aviso?.texto).toContain("Ya tienes un plato");
+    expect(repetido.platos).toBe(e.platos);
+    expect(reducir(e, { tipo: "plato/guardar", id: "no-existe", plato: nuevo })).toBe(e);
+  });
+
+  it("un plato editado actualiza las cenas elegidas y la compra", () => {
+    const e0 = estadoInicialDemo();
+    const antes = pendientes(e0);
+    const tortilla = e0.platos.find((p) => p.id === "tortilla");
+    const e1 = aplicar(e0, {
+      tipo: "plato/guardar",
+      id: "tortilla",
+      plato: {
+        nombre: "Tortilla francesa",
+        grupo: "huevo",
+        minutosActivos: 10,
+        pasos: null,
+        ingredientes: [{ ingredienteId: "huevo", cantidadPorRacion: 6, opcional: false }],
+      },
+    });
+    expect(tortilla).toBeDefined();
+    expect(
+      e1.comidas.find((c) => c.plato.id === "tortilla")?.plato.ingredientes[0]?.cantidadPorRacion,
+    ).toBe(6);
+    expect(pendientes(e1).huevo).toBeGreaterThan(antes.huevo ?? 0);
+  });
+
+  it("«no proponer» saca el plato del motor y de la emergencia, y se revierte", () => {
+    const e = aplicar(estadoInicialDemo(), { tipo: "menu/quitar", fecha: "2026-11-06" });
+    const ids = (x: EstadoHogar) =>
+      menuDeLaSemana(x).dias.flatMap((d) => d.opciones.map((o) => o.plato.id));
+    const objetivo = ids(e)[0] ?? "";
+    const oculto = aplicar(e, { tipo: "plato/proponer", id: objetivo, proponer: false });
+    expect(ids(oculto)).not.toContain(objetivo);
+    expect(cenaDeEmergenciaHoy(oculto).map((o) => o.plato.id)).not.toContain(objetivo);
+    expect(
+      ids(aplicar(oculto, { tipo: "plato/proponer", id: objetivo, proponer: true })),
+    ).toContain(objetivo);
+    expect(reducir(e, { tipo: "plato/proponer", id: "nada", proponer: true })).toBe(e);
+  });
+
+  it("borra un plato libre pero no uno elegido en el menú", () => {
+    const e = estadoInicialDemo();
+    const elegido = reducir(e, { tipo: "plato/borrar", id: "tortilla" });
+    expect(elegido.platos).toBe(e.platos);
+    expect(elegido.aviso?.tipo).toBe("error");
+    const libre = aplicar(
+      e,
+      { tipo: "valorar", platoId: "pisto-huevo", personaId: "ana", puntos: 3 },
+      { tipo: "plato/borrar", id: "pisto-huevo" },
+    );
+    expect(libre.platos.some((p) => p.id === "pisto-huevo")).toBe(false);
+    expect(libre.valoraciones["pisto-huevo"]).toBeUndefined();
+    expect(reducir(e, { tipo: "plato/borrar", id: "nada" })).toBe(e);
+  });
+
+  it("crea ingredientes nuevos y rechaza repetidos o inválidos", () => {
+    const e1 = aplicar(estadoInicialDemo(), {
+      tipo: "ingrediente/crear",
+      ingrediente: { nombre: "Lima", unidad: "ud", seccion: "fruta_verdura" },
+    });
+    expect(e1.ingredientes.at(-1)).toMatchObject({ nombre: "Lima", unidad: "ud" });
+    const dup = reducir(e1, {
+      tipo: "ingrediente/crear",
+      ingrediente: { nombre: "calabacin", unidad: "g", seccion: "fruta_verdura" },
+    });
+    expect(dup.aviso?.texto).toBe("Ese ingrediente ya existe.");
+    const mal = reducir(e1, {
+      tipo: "ingrediente/crear",
+      ingrediente: { nombre: "L", unidad: "g", seccion: "otros" },
+    });
+    expect(mal.aviso?.tipo).toBe("error");
+    expect(mal.ingredientes).toBe(e1.ingredientes);
+  });
+});
+
 describe("valoraciones", () => {
   it("la media de las valoraciones por persona se guarda en el plato y la usa el motor", () => {
     let e = aplicar(
@@ -456,20 +570,20 @@ describe("valoraciones", () => {
     const base = aplicar(estadoInicialDemo(), {
       tipo: "valorar",
       platoId: "tortilla",
-      personaId: "lucia",
+      personaId: "alba",
       puntos: 5,
     });
     const quitada = aplicar(base, {
       tipo: "valorar",
       platoId: "tortilla",
-      personaId: "lucia",
+      personaId: "alba",
       puntos: 5,
     });
     expect(quitada.platos.find((p) => p.id === "tortilla")?.valoracion).toBeNull();
     const cero = aplicar(base, {
       tipo: "valorar",
       platoId: "tortilla",
-      personaId: "lucia",
+      personaId: "alba",
       puntos: 0,
     });
     expect(cero.valoraciones.tortilla).toEqual({});

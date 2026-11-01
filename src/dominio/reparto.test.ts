@@ -36,7 +36,7 @@ const turno = (
 
 const diego = persona("diego");
 const ana = persona("ana");
-const nina = persona("lucia", { tipo: "nino", factorRacion: 0.5 });
+const nina = persona("alba", { tipo: "nino", factorRacion: 0.5 });
 
 describe("calcularReparto", () => {
   it("cuenta la ejecución de los turnos de la semana", () => {
@@ -100,7 +100,7 @@ describe("calcularReparto", () => {
         turno("a", "2026-11-03", "diego", "saltado"),
         turno("a", "2026-11-09", "diego"), // semana siguiente
         turno("b", "2026-11-03", "diego"), // carga inactiva
-        turno("a", "2026-11-03", "lucia"), // no es adulta
+        turno("a", "2026-11-03", "alba"), // no es adulta
         turno("a", "2026-11-03", "abuelo"), // inactivo
         turno("desconocida", "2026-11-03", "diego"),
         turno("a", "2026-11-03", "ana", "hecho"),
@@ -118,7 +118,7 @@ describe("calcularReparto", () => {
       personas: [diego, nina],
       cargas: [
         carga("huerfana", 10),
-        carga("de-una-niña", 10, { responsableId: "lucia" }),
+        carga("de-una-niña", 10, { responsableId: "alba" }),
         carga("ok", 10, { responsableId: "diego" }),
         carga("inactiva", 10, { activa: false }),
       ],

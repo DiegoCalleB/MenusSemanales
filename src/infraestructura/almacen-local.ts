@@ -2,7 +2,7 @@ import type { AlmacenHogar } from "@/aplicacion/almacen";
 import type { EstadoHogar } from "@/aplicacion/estado";
 
 /** Súbela cuando cambie la forma del estado: lo guardado con otra versión se descarta. */
-export const VERSION_ALMACEN = 3;
+export const VERSION_ALMACEN = 4;
 const CLAVE = "menus-semanales:prueba";
 
 const COLECCIONES = [

@@ -13,10 +13,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#fff7f2" },
-    { media: "(prefers-color-scheme: dark)", color: "#2a2027" },
-  ],
+  themeColor: "#fff7f2",
   width: "device-width",
   initialScale: 1,
   // Ocupa también la zona de la muesca del iPhone; la interfaz respeta las áreas seguras.

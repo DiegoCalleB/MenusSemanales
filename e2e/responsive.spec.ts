@@ -44,7 +44,12 @@ async function abrir(
     hasTouch: tactil,
     colorScheme: tema,
   });
-  return { contexto, pagina: await contexto.newPage() };
+  const pagina = await contexto.newPage();
+  // El tema es claro siempre; el oscuro solo si la persona lo elige (se guarda en el dispositivo).
+  if (tema === "dark") {
+    await pagina.addInitScript(() => window.localStorage.setItem("menus-semanales:tema", "oscuro"));
+  }
+  return { contexto, pagina };
 }
 
 async function cargar(pagina: Page, ruta: string) {
@@ -269,6 +274,31 @@ test.describe("flujos en móvil", () => {
     await expect(pagina.getByRole("status")).toContainText("Cocinado");
     await pagina.getByRole("button", { name: /Deshacer/ }).click();
     await expect(pagina.getByRole("status")).toContainText("Deshecho");
+    await contexto.close();
+  });
+
+  test("catálogo: crear un plato con un ingrediente nuevo y encontrarlo", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/menu/platos");
+    await pagina.getByRole("button", { name: "Nuevo plato" }).click();
+    await pagina.getByLabel("Nombre", { exact: true }).fill("Tostada de aguacate");
+    await pagina.getByRole("button", { name: /Crear ingrediente/ }).click();
+    await pagina.getByLabel("Nombre del ingrediente").fill("Aguacate");
+    await pagina.getByRole("button", { name: "Guardar ingrediente" }).click();
+    await pagina.getByLabel("Ingrediente 1").selectOption({ label: "Aguacate" });
+    await pagina.getByLabel("Cantidad", { exact: false }).first().fill("100");
+    await pagina.getByRole("button", { name: "Guardar plato" }).click();
+    await expect(
+      pagina.getByRole("heading", { level: 2, name: /Tostada de aguacate/ }),
+    ).toBeVisible();
+
+    // Un plato sin ingredientes no se guarda y explica por qué.
+    await pagina.getByRole("button", { name: "Nuevo plato" }).click();
+    await pagina.getByLabel("Nombre", { exact: true }).fill("Vacío");
+    await pagina.getByRole("button", { name: "Guardar plato" }).click();
+    await expect(
+      pagina.getByRole("alert").filter({ hasText: "Añade al menos un ingrediente" }),
+    ).toBeVisible();
     await contexto.close();
   });
 

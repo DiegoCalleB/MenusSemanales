@@ -382,3 +382,20 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **Estado:** aplicada (2026-11-01), versión `20261101200000`.
 - **Cómo:** se ejecutó a mano en el editor SQL de Supabase porque la herramienta de migraciones pedía una confirmación interactiva que caducaba. Como el editor SQL no registra el historial, la versión se anotó a mano en `supabase_migrations.schema_migrations` para que el repositorio y producción coincidan.
 - **Verificación:** las tres tablas (`comida_planificada`, `dia_hogar`, `valoracion_plato`) tienen RLS activada y forzada, una política cada una y `anon` sin acceso; la restricción de grupos tiene el vocabulario nuevo. Advisors de seguridad: solo los 15 avisos aceptados (D-018); de rendimiento: solo avisos informativos de índices aún sin uso (las tablas no tienen datos) y el de conexiones de Auth (D-011).
+
+## D-049 · Tema claro siempre (el oscuro solo si se elige)
+
+- **Estado:** aceptada (2026-11-01)
+- **Contexto:** la app seguía el modo oscuro del móvil y, en el teléfono de la familia, se veía muy oscura (captura de Diego), lo contrario de lo buscado en D-045.
+- **Decisión:** el tema es **claro por defecto** aunque el sistema esté en oscuro. Hay un botón «Tema oscuro/claro» (cabecera en móvil, barra lateral en escritorio) y la elección se recuerda en el dispositivo. Los tests de accesibilidad prueban los dos temas.
+
+## D-050 · Catálogo de platos de la familia
+
+- **Estado:** aceptada (2026-11-01)
+- **Decisión:** `/menu/platos` permite añadir, editar, buscar por nombre o grupo, dejar de proponer y borrar los platos de la familia, con sus ingredientes por ración y los pasos. La validación vive en el dominio (`src/dominio/catalogo.ts`, mismas reglas que la tabla `plato` y `plato_ingrediente`): nombre 2–120, minutos 1–240, al menos un ingrediente obligatorio, sin repetidos, cantidades positivas, nombres únicos ignorando tildes y mayúsculas. Los **avisos de calidad** (sin pasos, más de 45 minutos, enlaces en los pasos) son los mismos que verá quien modere el catálogo comunitario (D-019). Se pueden crear ingredientes nuevos (nombre normalizado, una sola unidad, sección del súper).
+- **Integridad:** editar un plato actualiza las cenas ya elegidas y la compra; borrar uno que está elegido en el menú se rechaza (se puede «dejar de proponer»); «no proponer» lo saca del motor del menú y de la cena de emergencia sin perderlo.
+- **Pendiente:** enviar un plato al catálogo comunitario y adoptar los de otras familias (moderación ya diseñada en D-019); importar el seed de platos de la familia.
+
+## D-051 · Personas del hogar de demostración
+
+- Las niñas de la familia son **Alba (9 años) y Emma (5 años)**; los datos de demostración usan sus nombres. Factor de ración 0,5 a ambas de momento (D-012); la edad permitirá ajustarlo y adaptar las propuestas (p. ej. texturas, raciones) más adelante.
