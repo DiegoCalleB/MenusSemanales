@@ -40,7 +40,7 @@ Staging/previews: Supabase Branching cuando el proyecto pase a plan Pro.
 | Storage | Bucket privado por hogar para menús del cole (foto/PDF) | 4 |
 | Edge Functions | Extracción con IA; clave de API como secreto | 4 |
 | pg_cron | Recordatorios de tareas de casa | 3 |
-| Copias | Diarias con plan Pro (recomendado antes de uso real prolongado) | — |
+| Copias | Activas desde el primer día (el panel muestra copias de seguridad realizadas) | — |
 
 ## Secretos
 

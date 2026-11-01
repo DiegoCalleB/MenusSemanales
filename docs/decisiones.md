@@ -68,3 +68,9 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **Estado:** aceptada (2026-11-01)
 - **Contexto:** con el proyecto vacío, el advisor de rendimiento da un aviso de nivel INFO (`auth_db_connections_absolute`): Auth usa 10 conexiones fijas en lugar de un porcentaje.
 - **Decisión:** no cambiarlo por ahora. Solo importa si se amplía la instancia; se revisará al pasar a Pro o al cambiar de tamaño. El advisor de seguridad sale sin avisos.
+
+## D-012 · Factor de ración por persona
+- **Estado:** aceptada (2026-11-01)
+- **Contexto:** las niñas comen "como medio adulto, a veces": la cantidad varía.
+- **Decisión:** cada persona tiene un `factor_racion` (adulto 1, niñas 0,5 al inicio), editable desde la app. La compra multiplica la cantidad por persona del seed por la suma de factores de los comensales y **redondea hacia arriba a unidades de compra**, para que no falte comida.
+- **Futuro:** tras cocinar, una pregunta opcional "¿sobró o faltó?" permitirá sugerir ajustes del factor.
