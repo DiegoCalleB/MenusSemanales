@@ -322,3 +322,11 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **Estado:** aceptada (2026-11-01)
 - **Contexto:** al llevar el dominio al navegador, el test de seguridad de la CSP falló: zod 4 comprueba al arrancar si se permite `eval`, y con nuestra CSP (sin `unsafe-eval`, D-025) esa comprobación se registra como violación aunque zod la capture.
 - **Decisión:** `z.config({ jitless: true })` al inicio del dominio. Los datos son pequeños y no hay pérdida apreciable de velocidad. **No se relaja la CSP.**
+
+## D-041 · La IA propone, el motor decide
+
+- **Estado:** aceptada (2026-11-01). El TFM no exige IA en el producto; se usa donde aporta valor real.
+- **Decisión:** el planificador es un **motor determinista** (`src/dominio/menu.ts`) que aplica las reglas duras (alergias y exclusiones, tiempo máximo del día, grupo del menú del cole, no repetir, no repetir grupo con días vecinos) y puntúa con reglas blandas explicables (valoración, antigüedad, caducidades, despensa, rapidez, variedad). Sin azar: mismos datos, mismo resultado. Si las reglas no dejan opciones, el día queda vacío en vez de relajarlas en silencio.
+- **La IA, solo donde aporta:** (1) borradores de platos nuevos «del estilo de la casa» (D-016, máx. 1 de cada 3 opciones); (2) leer el menú del cole desde foto o PDF, con revisión humana; (3) lenguaje natural («hoy llego tarde», «sin horno») convertido en filtros estructurados; (4) explicaciones de cada opción redactadas a partir de los motivos que da el motor. **Nunca** para cantidades, compra, despensa ni reparto.
+- **Controles:** salida estructurada validada con zod; todo borrador pasa por el motor igual que un plato del catálogo y no entra al menú sin aprobación; alergias filtradas en código, no en el prompt; la IA no recibe datos personales; cuota por hogar y caché; el planificador funciona sin IA; casos de evaluación fijos (cumplimiento de reglas duras = 100 %).
+- **Orden de construcción:** motor (hecho en esta decisión, 10 pruebas incl. propiedades) → valoraciones y perfil de gusto → lectura del menú del cole → descubrimientos y lenguaje natural → evaluación.
