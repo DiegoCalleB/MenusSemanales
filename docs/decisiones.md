@@ -74,3 +74,18 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **Contexto:** las niñas comen "como medio adulto, a veces": la cantidad varía.
 - **Decisión:** cada persona tiene un `factor_racion` (adulto 1, niñas 0,5 al inicio), editable desde la app. La compra multiplica la cantidad por persona del seed por la suma de factores de los comensales y **redondea hacia arriba a unidades de compra**, para que no falte comida.
 - **Futuro:** tras cocinar, una pregunta opcional "¿sobró o faltó?" permitirá sugerir ajustes del factor.
+
+## D-013 · Comidas de adultos entre semana: sobras planificadas y "fondo de nevera"
+- **Estado:** aceptada (2026-11-01)
+- **Contexto:** los días que Diego come en casa suele comer "rápido y mal de lo que encuentra", porque no suele haber comida preparada.
+- **Decisión:**
+  1. **Sobras planificadas:** la cena de la víspera se propone con ración extra y la comida queda marcada como "sobras de…". Es una excepción explícita a la regla de no repetir plato.
+  2. **Fondo de nevera:** lista de básicos rápidos y sanos con stock mínimo; si bajan del mínimo, entran solos en la lista de la compra.
+  3. **Modo rápido:** sin sobras, las opciones de esa comida se limitan a platos de ≤ 15 min hechos con stock disponible.
+- **Consecuencias:** los platos necesitan `tiempo_preparacion_min`; el generador distingue comidas "rápidas" de las normales.
+
+## D-014 · Objetivos nutricionales por persona
+- **Estado:** aceptada (2026-11-01)
+- **Contexto:** la comida del cole solo la comen las niñas; la comida de mediodía de los adultos varía por persona.
+- **Decisión:** los objetivos semanales por grupo alimenticio se evalúan **por persona**. Cada comida suma a quienes la comen (cole → niñas; comida de Diego → Diego; cenas compartidas → todos). El generador optimiza la suma ponderada de déficits, y ante empate prioriza a las niñas.
+- **Alternativa descartada:** objetivos por familia, porque el pescado del cole "compensaría" que un adulto no lo comiera.
