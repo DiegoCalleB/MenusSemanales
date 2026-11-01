@@ -17,6 +17,110 @@ export type Database = {
   }
   public: {
     Tables: {
+      centro: {
+        Row: {
+          creado_en: string
+          creado_por: string | null
+          id: string
+          localidad: string | null
+          nombre: string
+        }
+        Insert: {
+          creado_en?: string
+          creado_por?: string | null
+          id?: string
+          localidad?: string | null
+          nombre: string
+        }
+        Update: {
+          creado_en?: string
+          creado_por?: string | null
+          id?: string
+          localidad?: string | null
+          nombre?: string
+        }
+        Relationships: []
+      }
+      centro_codigo: {
+        Row: {
+          caduca_en: string
+          centro_id: string
+          codigo_hash: string
+          creado_en: string
+          creado_por: string | null
+          id: string
+          max_usos: number
+          revocado: boolean
+          usos: number
+        }
+        Insert: {
+          caduca_en?: string
+          centro_id: string
+          codigo_hash: string
+          creado_en?: string
+          creado_por?: string | null
+          id?: string
+          max_usos?: number
+          revocado?: boolean
+          usos?: number
+        }
+        Update: {
+          caduca_en?: string
+          centro_id?: string
+          codigo_hash?: string
+          creado_en?: string
+          creado_por?: string | null
+          id?: string
+          max_usos?: number
+          revocado?: boolean
+          usos?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "centro_codigo_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centro"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      centro_hogar: {
+        Row: {
+          centro_id: string
+          hogar_id: string
+          rol: string
+          unido_en: string
+        }
+        Insert: {
+          centro_id: string
+          hogar_id: string
+          rol?: string
+          unido_en?: string
+        }
+        Update: {
+          centro_id?: string
+          hogar_id?: string
+          rol?: string
+          unido_en?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "centro_hogar_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centro"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "centro_hogar_hogar_id_fkey"
+            columns: ["hogar_id"]
+            isOneToOne: false
+            referencedRelation: "hogar"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       excepcion_asistencia: {
         Row: {
           comida: string
@@ -58,19 +162,19 @@ export type Database = {
       hogar: {
         Row: {
           creado_en: string
-          creado_por: string
+          creado_por: string | null
           id: string
           nombre: string
         }
         Insert: {
           creado_en?: string
-          creado_por?: string
+          creado_por?: string | null
           id?: string
           nombre: string
         }
         Update: {
           creado_en?: string
-          creado_por?: string
+          creado_por?: string | null
           id?: string
           nombre?: string
         }
@@ -116,6 +220,88 @@ export type Database = {
             columns: ["hogar_id"]
             isOneToOne: false
             referencedRelation: "hogar"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      menu_cole_dia: {
+        Row: {
+          actualizado_en: string
+          centro_id: string
+          fecha: string
+          grupo_primero: string | null
+          grupo_segundo: string | null
+          postre: string | null
+          primero: string | null
+          segundo: string | null
+        }
+        Insert: {
+          actualizado_en?: string
+          centro_id: string
+          fecha: string
+          grupo_primero?: string | null
+          grupo_segundo?: string | null
+          postre?: string | null
+          primero?: string | null
+          segundo?: string | null
+        }
+        Update: {
+          actualizado_en?: string
+          centro_id?: string
+          fecha?: string
+          grupo_primero?: string | null
+          grupo_segundo?: string | null
+          postre?: string | null
+          primero?: string | null
+          segundo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_cole_dia_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centro"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      menu_cole_dia_historial: {
+        Row: {
+          anterior: Json | null
+          centro_id: string
+          en: string
+          fecha: string
+          id: number
+          nuevo: Json | null
+          operacion: string
+          usuario: string | null
+        }
+        Insert: {
+          anterior?: Json | null
+          centro_id: string
+          en?: string
+          fecha: string
+          id?: never
+          nuevo?: Json | null
+          operacion: string
+          usuario?: string | null
+        }
+        Update: {
+          anterior?: Json | null
+          centro_id?: string
+          en?: string
+          fecha?: string
+          id?: never
+          nuevo?: Json | null
+          operacion?: string
+          usuario?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_cole_dia_historial_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centro"
             referencedColumns: ["id"]
           },
         ]
@@ -227,9 +413,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      crear_centro: {
+        Args: { p_hogar_id: string; p_localidad?: string; p_nombre: string }
+        Returns: string
+      }
+      crear_codigo_centro: {
+        Args: { p_centro_id: string; p_dias?: number; p_max_usos?: number }
+        Returns: string
+      }
       crear_hogar: { Args: { p_nombre: string }; Returns: string }
       crear_invitacion: {
         Args: { p_hogar_id: string; p_rol?: string }
+        Returns: string
+      }
+      unirse_a_centro: {
+        Args: { p_codigo: string; p_hogar_id: string }
         Returns: string
       }
       unirse_a_hogar: { Args: { p_codigo: string }; Returns: string }
