@@ -90,6 +90,23 @@ export function InicioVista() {
         </div>
       </section>
 
+      {MODO_DATOS === "diego" && (
+        <Link
+          href="/regalo"
+          className="tarjeta hover:border-marca/40 flex items-center gap-3 transition-colors"
+        >
+          <span aria-hidden="true" className="text-3xl">
+            🎁
+          </span>
+          <span>
+            <span className="block text-lg font-extrabold">Preparar un regalo con la app</span>
+            <span className="text-tinta-suave block text-base">
+              Escribe un mensaje y comparte el enlace.
+            </span>
+          </span>
+        </Link>
+      )}
+
       <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {MODULOS.map(({ href, titulo, texto, Icono, fondo }) => (
           <li key={href}>

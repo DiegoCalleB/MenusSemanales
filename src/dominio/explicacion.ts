@@ -1,3 +1,4 @@
+import { type Componente, SUGERENCIA_COMPONENTE } from "./componentes";
 import { estadoDelGrupo } from "./equilibrio";
 import { type FechaIso, diasEntre } from "./fechas";
 import {
@@ -46,8 +47,10 @@ export function explicarOpcion(args: {
   semana: Readonly<Partial<Record<GrupoPlato, number>>>;
   /** Ingredientes de este plato que caducan pronto, con su nombre y fecha. */
   caducan: ReadonlyArray<{ nombre: string; caducaEn: FechaIso }>;
+  /** Componentes de la «regla de oro» que el plato no aporta por sí solo. */
+  faltan?: readonly Componente[];
 }): ExplicacionOpcion {
-  const { plato, motivos, dia, hoy, semana, caducan } = args;
+  const { plato, motivos, dia, hoy, semana, caducan, faltan = [] } = args;
   const lineas: string[] = [];
   const cole = dia.cole;
   const gp = GRUPO[plato.grupo];
@@ -145,6 +148,15 @@ export function explicarOpcion(args: {
     );
   }
   if (motivos.includes("novedad")) lineas.push("Aún no lo habéis cenado desde que usáis la app.");
+  // 5. Cómo completar la cena (regla de oro) y el postre que recomienda el cole.
+  if (faltan.length > 0) {
+    lineas.push(
+      `Para que sea una cena completa, añadid ${formatearLista(faltan.map((c) => SUGERENCIA_COMPONENTE[c]))}.`,
+    );
+  }
+  if (cole && (cole.primero || cole.segundo)) {
+    lineas.push("De postre, como aconseja el cole: fruta o un lácteo.");
+  }
   if (!resumen) resumen = `${plato.nombre} es una buena opción para ese día.`;
 
   return { resumen, lineas };

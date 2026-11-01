@@ -110,6 +110,27 @@ describe("explicarOpcion", () => {
   });
 });
 
+describe("regla de oro y postre", () => {
+  it("indica cómo completar la cena y el postre del cole", () => {
+    const e = explicarOpcion({ ...base, plato: plato(), dia: dia(), faltan: ["hidrato", "grasa"] });
+    const t = e.lineas.join(" ");
+    expect(t).toContain("Para que sea una cena completa, añadid un hidrato");
+    expect(t).toContain("una grasa saludable");
+    expect(t).toContain("De postre, como aconseja el cole: fruta o un lácteo.");
+  });
+
+  it("si el plato ya es completo y no hay cole, no añade nada", () => {
+    const e = explicarOpcion({
+      ...base,
+      plato: plato({ grupo: "otro" }),
+      dia: dia({ cole: null }),
+      faltan: [],
+    });
+    expect(e.lineas.join(" ")).not.toContain("completa");
+    expect(e.lineas.join(" ")).not.toContain("postre");
+  });
+});
+
 describe("equilibrio semanal", () => {
   it("cuenta cole y cenas de la semana, sin la cena del propio día", () => {
     const colegio = {

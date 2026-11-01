@@ -425,3 +425,16 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **Fuentes y honestidad:** [fuentes.md](fuentes.md) documenta de dónde sale cada regla y lo que no se ha podido comprobar (no se pudo abrir la página de la AEP desde la sesión; sus cifras vienen de un resumen de búsqueda y hay que contrastarlas). Las fuentes no coinciden exactamente, así que se usan rangos prudentes. Es orientación, no consejo médico.
 - **Cuaderno externo (NotebookLM):** no hay conexión posible desde la sesión; el procedimiento para incorporar su contenido (exportar texto → reglas con fuente y prueba) está en `fuentes.md`.
 - **Resultado en el modo Diego:** la propuesta de martes a viernes pasó a ser carne (tras legumbre y huevo en el cole), pescado, huevo y carne, y deja la semana en 2 de legumbres, 2 de pescado y 2 de huevo entre cole y cenas.
+
+## D-055 · Regla de oro de la cena y postre (segunda fuente)
+
+- **Estado:** aceptada (2026-11-01)
+- **Contexto:** Diego aportó una segunda fuente (infografía «Tripita en apuros») y la versión web del recomendador del cole.
+- **Decisión:** además del grupo de cada plato, la explicación indica **qué le falta para ser una cena completa** según la regla de oro (proteína, hidrato, verdura o fruta, grasa saludable), deducido de sus ingredientes (`src/dominio/componentes.ts`), y recuerda el **postre** (fruta o lácteo). Es una sugerencia para completar el plato, nunca una razón para rechazarlo. Las dos fuentes están en [fuentes.md](fuentes.md) con su límite: la infografía es divulgativa, no oficial.
+- **Pendiente:** que la lista de la compra ofrezca añadir esos complementos (patata, ensalada, aguacate, AOVE) con un toque.
+
+## D-056 · Regalo en un enlace
+
+- **Estado:** aceptada (2026-11-01)
+- **Decisión:** `/regalo` permite escribir un mensaje y copiar un enlace; quien lo abre ve una pantalla de felicitación y accede a la app. El mensaje viaja en el **fragmento** de la URL (tras `#`), que el navegador nunca envía al servidor: no se guarda ni queda en registros. Se valida con zod (nombres ≤ 40, mensaje ≤ 600, sin caracteres de control, base64url ≤ 4000), se muestra siempre como **texto** (React lo escapa; hay prueba E2E con HTML inyectado) y un enlace roto cae en la pantalla de preparar. El mensaje por defecto es un **borrador** que Diego debe cambiar por sus palabras.
+- **Límite:** el regalo no lleva datos de la app; los datos siguen siendo por dispositivo hasta que haya acceso con cuenta (pendiente) y publicación en Railway.

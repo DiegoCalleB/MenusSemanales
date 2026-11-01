@@ -15,6 +15,7 @@ import {
   type PlatoEditable,
 } from "@/dominio/catalogo";
 import { contarSemana } from "@/dominio/equilibrio";
+import { faltanComponentes } from "@/dominio/componentes";
 import { explicarOpcion, type ExplicacionOpcion } from "@/dominio/explicacion";
 import { cenaDeEmergencia, type OpcionEmergencia } from "@/dominio/emergencia";
 import { proximosACaducar } from "@/dominio/despensa";
@@ -267,6 +268,14 @@ export function explicacionDe(e: EstadoHogar, fecha: FechaIso, opcion: Opcion): 
     hoy: e.hoy,
     semana: contarSemana(fecha, e.colegio, cenas),
     caducan,
+    faltan: faltanComponentes(
+      opcion.plato.ingredientes
+        .filter((i) => !i.opcional)
+        .flatMap((i) => {
+          const ing = e.ingredientes.find((x) => x.id === i.ingredienteId);
+          return ing ? [ing] : [];
+        }),
+    ),
   });
 }
 

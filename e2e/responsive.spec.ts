@@ -401,3 +401,44 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 });
+
+test.describe("regalo en un enlace", () => {
+  test("se prepara, el enlace se abre y muestra la felicitación sin ejecutar HTML", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await pagina.goto("/regalo", { waitUntil: "networkidle" });
+    await expect(
+      pagina.getByRole("heading", { level: 1, name: /Preparar el regalo/ }),
+    ).toBeVisible();
+    await pagina.getByLabel("Para", { exact: true }).fill("Ana");
+    await pagina.getByLabel(/Mensaje/).fill("Feliz cumple <img src=x onerror=window.__xss=1>");
+    const enlace = await pagina.getByLabel("Enlace del regalo").inputValue();
+    expect(enlace).toContain("/regalo#p=");
+
+    await pagina.goto(new URL(enlace).pathname + new URL(enlace).hash, {
+      waitUntil: "networkidle",
+    });
+    await expect(
+      pagina.getByRole("heading", { level: 1, name: "¡Feliz cumpleaños, Ana!" }),
+    ).toBeVisible();
+    await expect(pagina.getByText("Feliz cumple <img src=x onerror=window.__xss=1>")).toBeVisible();
+    expect(await pagina.evaluate(() => (window as { __xss?: number }).__xss)).toBeUndefined();
+    await expect(pagina.getByRole("link", { name: "Ver la aplicación" })).toBeVisible();
+
+    const resultado = await new AxeBuilder({ page: pagina })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+      .analyze();
+    expect(resultado.violations.map((v) => v.id)).toEqual([]);
+    await contexto.close();
+  });
+
+  test("un enlace de regalo roto vuelve a la pantalla de preparar", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await pagina.goto("/regalo#p=esto-no-vale", { waitUntil: "networkidle" });
+    await expect(
+      pagina.getByRole("heading", { level: 1, name: /Preparar el regalo/ }),
+    ).toBeVisible();
+    await contexto.close();
+  });
+});
