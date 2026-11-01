@@ -19,7 +19,7 @@ if [[ -z "${PGHOST:-}" ]]; then
   else
     RUN=()
   fi
-  "${RUN[@]}" "$PGBIN/initdb" -D "$DATA" -U postgres --auth=trust >/dev/null
+  "${RUN[@]}" "$PGBIN/initdb" -D "$DATA" -U postgres --auth=trust -E UTF8 --locale=C.UTF-8 >/dev/null
   "${RUN[@]}" "$PGBIN/pg_ctl" -D "$DATA" -o "-k $SOCK -c listen_addresses=''" -l "$DATA/log" -w start >/dev/null
   cleanup() { "${RUN[@]}" "$PGBIN/pg_ctl" -D "$DATA" -m immediate stop >/dev/null 2>&1 || true; rm -rf "$DATA" "$SOCK"; }
   trap cleanup EXIT
@@ -27,7 +27,7 @@ if [[ -z "${PGHOST:-}" ]]; then
 fi
 
 createdb_name="menus_test_$$"
-psql "${PSQL_OPTS[@]}" -d postgres -c "create database $createdb_name" >/dev/null
+psql "${PSQL_OPTS[@]}" -d postgres -c "create database $createdb_name template template0 encoding 'UTF8'" >/dev/null
 export PGDATABASE="$createdb_name"
 
 psql "${PSQL_OPTS[@]}" -f supabase/tests/00_shim_auth.sql

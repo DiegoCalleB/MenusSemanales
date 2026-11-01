@@ -17,6 +17,21 @@ export type Database = {
   }
   public: {
     Tables: {
+      administrador_plataforma: {
+        Row: {
+          creado_en: string
+          user_id: string
+        }
+        Insert: {
+          creado_en?: string
+          user_id: string
+        }
+        Update: {
+          creado_en?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       centro: {
         Row: {
           creado_en: string
@@ -177,6 +192,39 @@ export type Database = {
           creado_por?: string | null
           id?: string
           nombre?: string
+        }
+        Relationships: []
+      }
+      ingrediente: {
+        Row: {
+          creado_en: string
+          creado_por: string | null
+          id: string
+          nombre: string
+          nombre_normalizado: string | null
+          seccion: string
+          unidad: string
+          verificado: boolean
+        }
+        Insert: {
+          creado_en?: string
+          creado_por?: string | null
+          id?: string
+          nombre: string
+          nombre_normalizado?: string | null
+          seccion?: string
+          unidad: string
+          verificado?: boolean
+        }
+        Update: {
+          creado_en?: string
+          creado_por?: string | null
+          id?: string
+          nombre?: string
+          nombre_normalizado?: string | null
+          seccion?: string
+          unidad?: string
+          verificado?: boolean
         }
         Relationships: []
       }
@@ -408,11 +456,266 @@ export type Database = {
           },
         ]
       }
+      plato: {
+        Row: {
+          activo: boolean
+          creado_en: string
+          creado_por: string | null
+          etiquetas: string[]
+          grupo: string | null
+          hogar_id: string
+          id: string
+          no_proponer: boolean
+          nombre: string
+          origen: string
+          pasos: string | null
+          plato_compartido_id: string | null
+          rol: string
+          tiempo_activo_min: number | null
+          tiempo_total_min: number | null
+        }
+        Insert: {
+          activo?: boolean
+          creado_en?: string
+          creado_por?: string | null
+          etiquetas?: string[]
+          grupo?: string | null
+          hogar_id: string
+          id?: string
+          no_proponer?: boolean
+          nombre: string
+          origen?: string
+          pasos?: string | null
+          plato_compartido_id?: string | null
+          rol: string
+          tiempo_activo_min?: number | null
+          tiempo_total_min?: number | null
+        }
+        Update: {
+          activo?: boolean
+          creado_en?: string
+          creado_por?: string | null
+          etiquetas?: string[]
+          grupo?: string | null
+          hogar_id?: string
+          id?: string
+          no_proponer?: boolean
+          nombre?: string
+          origen?: string
+          pasos?: string | null
+          plato_compartido_id?: string | null
+          rol?: string
+          tiempo_activo_min?: number | null
+          tiempo_total_min?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plato_hogar_id_fkey"
+            columns: ["hogar_id"]
+            isOneToOne: false
+            referencedRelation: "hogar"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plato_plato_compartido_id_fkey"
+            columns: ["plato_compartido_id"]
+            isOneToOne: false
+            referencedRelation: "plato_compartido"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plato_compartido: {
+        Row: {
+          adopciones: number
+          alias_autor: string | null
+          enviado_en: string
+          estado: string
+          etiquetas: string[]
+          grupo: string
+          id: string
+          motivo_rechazo: string | null
+          nombre: string
+          pasos: string | null
+          revisado_en: string | null
+          revisado_por: string | null
+          rol: string
+          tiempo_activo_min: number | null
+          tiempo_total_min: number
+        }
+        Insert: {
+          adopciones?: number
+          alias_autor?: string | null
+          enviado_en?: string
+          estado?: string
+          etiquetas?: string[]
+          grupo: string
+          id?: string
+          motivo_rechazo?: string | null
+          nombre: string
+          pasos?: string | null
+          revisado_en?: string | null
+          revisado_por?: string | null
+          rol: string
+          tiempo_activo_min?: number | null
+          tiempo_total_min: number
+        }
+        Update: {
+          adopciones?: number
+          alias_autor?: string | null
+          enviado_en?: string
+          estado?: string
+          etiquetas?: string[]
+          grupo?: string
+          id?: string
+          motivo_rechazo?: string | null
+          nombre?: string
+          pasos?: string | null
+          revisado_en?: string | null
+          revisado_por?: string | null
+          rol?: string
+          tiempo_activo_min?: number | null
+          tiempo_total_min?: number
+        }
+        Relationships: []
+      }
+      plato_compartido_autor: {
+        Row: {
+          creado_en: string
+          hogar_id: string | null
+          plato_compartido_id: string
+          plato_id: string | null
+        }
+        Insert: {
+          creado_en?: string
+          hogar_id?: string | null
+          plato_compartido_id: string
+          plato_id?: string | null
+        }
+        Update: {
+          creado_en?: string
+          hogar_id?: string | null
+          plato_compartido_id?: string
+          plato_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plato_compartido_autor_hogar_id_fkey"
+            columns: ["hogar_id"]
+            isOneToOne: false
+            referencedRelation: "hogar"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plato_compartido_autor_plato_compartido_id_fkey"
+            columns: ["plato_compartido_id"]
+            isOneToOne: true
+            referencedRelation: "plato_compartido"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plato_compartido_ingrediente: {
+        Row: {
+          cantidad_por_racion: number
+          ingrediente_id: string
+          opcional: boolean
+          plato_compartido_id: string
+        }
+        Insert: {
+          cantidad_por_racion: number
+          ingrediente_id: string
+          opcional?: boolean
+          plato_compartido_id: string
+        }
+        Update: {
+          cantidad_por_racion?: number
+          ingrediente_id?: string
+          opcional?: boolean
+          plato_compartido_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plato_compartido_ingrediente_ingrediente_id_fkey"
+            columns: ["ingrediente_id"]
+            isOneToOne: false
+            referencedRelation: "ingrediente"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plato_compartido_ingrediente_plato_compartido_id_fkey"
+            columns: ["plato_compartido_id"]
+            isOneToOne: false
+            referencedRelation: "plato_compartido"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plato_ingrediente: {
+        Row: {
+          cantidad_por_racion: number
+          hogar_id: string
+          ingrediente_id: string
+          opcional: boolean
+          plato_id: string
+        }
+        Insert: {
+          cantidad_por_racion: number
+          hogar_id: string
+          ingrediente_id: string
+          opcional?: boolean
+          plato_id: string
+        }
+        Update: {
+          cantidad_por_racion?: number
+          hogar_id?: string
+          ingrediente_id?: string
+          opcional?: boolean
+          plato_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plato_ingrediente_ingrediente_id_fkey"
+            columns: ["ingrediente_id"]
+            isOneToOne: false
+            referencedRelation: "ingrediente"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plato_ingrediente_plato_id_hogar_id_fkey"
+            columns: ["plato_id", "hogar_id"]
+            isOneToOne: false
+            referencedRelation: "plato"
+            referencedColumns: ["id", "hogar_id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      adoptar_plato_compartido: {
+        Args: { p_hogar_id: string; p_plato_compartido_id: string }
+        Returns: string
+      }
+      bandeja_revision: {
+        Args: never
+        Returns: {
+          alias_autor: string
+          avisos: string[]
+          enviado_en: string
+          etiquetas: string[]
+          grupo: unknown
+          id: string
+          ingredientes: Json
+          nombre: string
+          pasos: string
+          rol: string
+          tiempo_activo_min: number
+          tiempo_total_min: number
+        }[]
+      }
       crear_centro: {
         Args: { p_hogar_id: string; p_localidad?: string; p_nombre: string }
         Returns: string
@@ -422,9 +725,21 @@ export type Database = {
         Returns: string
       }
       crear_hogar: { Args: { p_nombre: string }; Returns: string }
+      crear_ingrediente: {
+        Args: { p_nombre: string; p_seccion?: string; p_unidad: string }
+        Returns: string
+      }
       crear_invitacion: {
         Args: { p_hogar_id: string; p_rol?: string }
         Returns: string
+      }
+      enviar_plato_a_catalogo: {
+        Args: { p_alias?: string; p_plato_id: string }
+        Returns: string
+      }
+      revisar_plato_compartido: {
+        Args: { p_decision: string; p_id: string; p_motivo?: string }
+        Returns: undefined
       }
       unirse_a_centro: {
         Args: { p_codigo: string; p_hogar_id: string }
