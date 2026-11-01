@@ -40,13 +40,16 @@ pnpm dev                     # http://localhost:3000
 .github/workflows/   CI (calidad + base de datos)
 docs/                Decisiones, infraestructura y uso de IA (material de la memoria)
 scripts/             Utilidades (tests de base de datos, importación del seed)
-src/app/             Rutas (App Router)
-src/lib/             Dominio puro (menu, compra, despensa) y clientes de Supabase
+src/app/             UI: rutas (App Router) y Server Actions finas
+src/aplicacion/      Casos de uso y puertos (interfaces de repositorio)
+src/dominio/         Reglas de negocio puras: menú, compra, despensa
+src/infraestructura/ Supabase (clientes, tipos, repositorios) y variables de entorno
 supabase/            Configuración, migraciones y tests SQL
 ```
 
 ## Documentación
 
+- [Arquitectura](docs/arquitectura.md)
 - [Decisiones técnicas](docs/decisiones.md)
 - [Infraestructura](docs/infraestructura.md)
 - [Uso de IA en el desarrollo](docs/uso-de-ia.md)
