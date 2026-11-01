@@ -49,6 +49,8 @@ create table public.invitacion (
   usada_en     timestamptz
 );
 create index invitacion_hogar_id_idx on public.invitacion (hogar_id);
+create index invitacion_creada_por_idx on public.invitacion (creada_por);
+create index invitacion_usada_por_idx on public.invitacion (usada_por);
 
 create table public.persona (
   id            uuid primary key default gen_random_uuid(),
@@ -63,6 +65,7 @@ create table public.persona (
 );
 create index persona_hogar_id_idx on public.persona (hogar_id);
 create unique index persona_user_por_hogar_uidx on public.persona (hogar_id, user_id) where user_id is not null;
+create index persona_user_id_idx on public.persona (user_id);
 
 -- Patrón semanal: dónde come cada persona cada día y comida.
 -- dia_semana sigue ISO 8601 (1 = lunes ... 7 = domingo).
