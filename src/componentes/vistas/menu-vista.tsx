@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { diasDelMenu, menuDeLaSemana, nombreDia } from "@/aplicacion/estado";
 import type { Motivo, Opcion } from "@/dominio/menu";
-import { EMOJI_GRUPO } from "../formato";
+import { EMOJI_GRUPO, formatearNumero } from "../formato";
 import { IconoReloj } from "../iconos";
 import { useHogar } from "../proveedor-hogar";
 
@@ -34,6 +34,44 @@ const formatoFecha = new Intl.DateTimeFormat("es-ES", {
   timeZone: "UTC",
 });
 const mayuscula = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+
+function Valoracion({ platoId, nombre }: { platoId: string; nombre: string }) {
+  const { estado, despachar } = useHogar();
+  const notas = estado.valoraciones[platoId] ?? {};
+  return (
+    <fieldset className="border-borde rounded-2xl border p-3">
+      <legend className="px-1 text-sm font-bold">¿Qué tal estuvo? {nombre}</legend>
+      <ul className="flex flex-col gap-2">
+        {estado.personas
+          .filter((p) => p.activa)
+          .map((persona) => (
+            <li key={persona.id} className="flex flex-wrap items-center gap-x-3">
+              <span className="w-16 text-base font-semibold">{persona.nombre}</span>
+              <span className="flex" role="group" aria-label={`Valoración de ${persona.nombre}`}>
+                {[1, 2, 3, 4, 5].map((n) => {
+                  const marcada = (notas[persona.id] ?? 0) >= n;
+                  return (
+                    <button
+                      key={n}
+                      type="button"
+                      aria-pressed={notas[persona.id] === n}
+                      aria-label={`${persona.nombre}: ${n} ${n === 1 ? "estrella" : "estrellas"}`}
+                      className="text-marca flex size-11 items-center justify-center text-2xl"
+                      onClick={() =>
+                        despachar({ tipo: "valorar", platoId, personaId: persona.id, puntos: n })
+                      }
+                    >
+                      <span aria-hidden="true">{marcada ? "★" : "☆"}</span>
+                    </button>
+                  );
+                })}
+              </span>
+            </li>
+          ))}
+      </ul>
+    </fieldset>
+  );
+}
 
 export function MenuVista() {
   const { estado, despachar } = useHogar();
@@ -144,6 +182,10 @@ export function MenuVista() {
                 </div>
               )}
 
+              {elegida && dia.fecha <= estado.hoy && (
+                <Valoracion platoId={elegida.plato.id} nombre={elegida.plato.nombre} />
+              )}
+
               {opciones.length === 0 && !elegida && (
                 <p className="text-tinta-suave text-base">
                   Ningún plato cumple las reglas de este día (tiempo, cole o ingredientes). Prueba a
@@ -169,6 +211,14 @@ export function MenuVista() {
                           </p>
                           <p className="text-tinta-suave text-sm">
                             {o.plato.minutosActivos} min · {NOMBRE_GRUPO[o.plato.grupo]}
+                            {o.plato.valoracion !== null && (
+                              <span
+                                aria-label={`valoración media ${formatearNumero(o.plato.valoracion)} de 5`}
+                              >
+                                {" "}
+                                · ★ {formatearNumero(o.plato.valoracion)}
+                              </span>
+                            )}
                           </p>
                           {o.motivos.length > 0 && (
                             <ul className="mt-1 flex flex-wrap gap-1.5">

@@ -443,6 +443,7 @@ export function estadoInicialDemo(): EstadoHogar {
     // Menú real del cole (Basal, noviembre 2026): se lee del texto del PDF con el mismo lector que la app.
     colegio: aMenuCole(leerMenuCole(TEXTO_MENU_COLE_NOVIEMBRE_2026).dias),
     horizonte: "semana",
+    valoraciones: {},
     llegoTarde: [],
     personas,
     despensa,

@@ -236,6 +236,23 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 
+  test("menú: valorar la cena de hoy por persona", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/menu");
+    await expect(pagina.getByText(/¿Qué tal estuvo\?/)).toBeVisible();
+    await pagina.getByRole("button", { name: "Ana: 5 estrellas" }).click();
+    await expect(pagina.getByRole("button", { name: "Ana: 5 estrellas" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await pagina.reload({ waitUntil: "networkidle" });
+    await expect(pagina.getByRole("button", { name: "Ana: 5 estrellas" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await contexto.close();
+  });
+
   test("añadir un artículo a mano y marcarlo", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/compra");

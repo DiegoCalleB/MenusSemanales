@@ -7,6 +7,7 @@ import {
   invertirMovimientos,
   planificarCocinado,
 } from "@/dominio/despensa";
+import { redondear } from "@/dominio/numeros";
 import { type FechaIso, semanaDe, sumarDias, diaSemanaIso } from "@/dominio/fechas";
 import {
   proponerMenu,
@@ -84,6 +85,8 @@ export interface EstadoHogar {
   llegoTarde: FechaIso[];
   /** Cuánto se planifica: lo que queda de semana o los próximos 15 días (para adelantar la compra). */
   horizonte: "semana" | "quincena";
+  /** Valoraciones de 1 a 5: plato → persona → puntos. La media alimenta al motor del menú. */
+  valoraciones: Record<string, Record<string, number>>;
   personas: Persona[];
   despensa: ItemDespensa[];
   comidas: ComidaPlanificada[];
@@ -109,6 +112,7 @@ export type Accion =
   | { tipo: "menu/elegir"; fecha: FechaIso; platoId: string }
   | { tipo: "menu/quitar"; fecha: FechaIso }
   | { tipo: "menu/llegoTarde"; fecha: FechaIso }
+  | { tipo: "valorar"; platoId: string; personaId: string; puntos: number }
   | { tipo: "menu/horizonte"; horizonte: EstadoHogar["horizonte"] }
   | { tipo: "cole/importar"; dias: Record<FechaIso, MenuCole> }
   | { tipo: "hogar/sustituir"; estado: EstadoHogar }
@@ -426,6 +430,28 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
           ? e.llegoTarde.filter((f) => f !== accion.fecha)
           : [...e.llegoTarde, accion.fecha],
       };
+
+    case "valorar": {
+      const plato = e.platos.find((p) => p.id === accion.platoId);
+      const persona = e.personas.find((p) => p.id === accion.personaId && p.activa);
+      if (!plato || !persona || !Number.isInteger(accion.puntos)) return e;
+      if (accion.puntos < 0 || accion.puntos > 5) return e;
+      const delPlato = { ...(e.valoraciones[plato.id] ?? {}) };
+      // Pulsar de nuevo la misma puntuación (o 0) la quita.
+      if (accion.puntos === 0 || delPlato[persona.id] === accion.puntos)
+        delete delPlato[persona.id];
+      else delPlato[persona.id] = accion.puntos;
+      const valores = Object.values(delPlato);
+      const media =
+        valores.length === 0
+          ? null
+          : redondear(valores.reduce((a, b) => a + b, 0) / valores.length, 2);
+      return {
+        ...e,
+        valoraciones: { ...e.valoraciones, [plato.id]: delPlato },
+        platos: e.platos.map((p) => (p.id === plato.id ? { ...p, valoracion: media } : p)),
+      };
+    }
 
     case "menu/horizonte":
       return { ...e, horizonte: accion.horizonte };

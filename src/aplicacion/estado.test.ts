@@ -408,6 +408,57 @@ describe("menú semanal", () => {
   });
 });
 
+describe("valoraciones", () => {
+  it("la media de las valoraciones por persona se guarda en el plato y la usa el motor", () => {
+    let e = aplicar(
+      estadoInicialDemo(),
+      { tipo: "valorar", platoId: "crema-calabacin", personaId: "diego", puntos: 2 },
+      { tipo: "valorar", platoId: "crema-calabacin", personaId: "ana", puntos: 5 },
+    );
+    expect(e.platos.find((p) => p.id === "crema-calabacin")?.valoracion).toBe(3.5);
+    expect(e.valoraciones["crema-calabacin"]).toEqual({ diego: 2, ana: 5 });
+    // Cambiar la puntuación de una persona sustituye la suya.
+    e = aplicar(e, { tipo: "valorar", platoId: "crema-calabacin", personaId: "diego", puntos: 4 });
+    expect(e.platos.find((p) => p.id === "crema-calabacin")?.valoracion).toBe(4.5);
+  });
+
+  it("repetir la misma puntuación o poner 0 la quita; sin valoraciones no hay media", () => {
+    const base = aplicar(estadoInicialDemo(), {
+      tipo: "valorar",
+      platoId: "tortilla",
+      personaId: "lucia",
+      puntos: 5,
+    });
+    const quitada = aplicar(base, {
+      tipo: "valorar",
+      platoId: "tortilla",
+      personaId: "lucia",
+      puntos: 5,
+    });
+    expect(quitada.platos.find((p) => p.id === "tortilla")?.valoracion).toBeNull();
+    const cero = aplicar(base, {
+      tipo: "valorar",
+      platoId: "tortilla",
+      personaId: "lucia",
+      puntos: 0,
+    });
+    expect(cero.valoraciones.tortilla).toEqual({});
+  });
+
+  it("ignora valoraciones inválidas", () => {
+    const e = estadoInicialDemo();
+    for (const accion of [
+      { tipo: "valorar", platoId: "nada", personaId: "ana", puntos: 3 },
+      { tipo: "valorar", platoId: "tortilla", personaId: "nadie", puntos: 3 },
+      { tipo: "valorar", platoId: "tortilla", personaId: "ana", puntos: 6 },
+      { tipo: "valorar", platoId: "tortilla", personaId: "ana", puntos: 2.5 },
+      { tipo: "valorar", platoId: "tortilla", personaId: "ana", puntos: -1 },
+    ] as const) {
+      expect(reducir(e, accion)).toBe(e);
+    }
+  });
+});
+
 describe("pureza", () => {
   it("el reductor nunca modifica el estado anterior", () => {
     const inicial = estadoInicialDemo();

@@ -361,3 +361,10 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **Contexto:** la primera interfaz resultaba apagada y seria; el producto debe gustar a cualquier persona de la familia y ser atractivo a primera vista (Diego: «le tiene que entrar por los ojos a mi mujer y a cualquier mujer»).
 - **Decisión:** paleta luminosa (crema, frambuesa, pastel), formas redondeadas, tipografía Nunito, emojis decorativos por grupo de plato y portada personalizada con la cena de hoy. El contraste AA y todas las pruebas de responsive y accesibilidad se mantienen. Detalle en [diseno.md](diseno.md).
 - **Pendiente:** validar con Ana y con otras familias del cole; ilustraciones propias y animaciones sutiles en una fase posterior.
+
+## D-046 · Valoraciones por persona que alimentan al motor
+
+- **Estado:** aceptada (2026-11-01)
+- **Decisión:** cada persona del hogar valora de 1 a 5 las cenas ya hechas (pulsar de nuevo la misma nota la quita). La **media** se guarda en el plato y es la que usa el motor (`valoracion` en `src/dominio/menu.ts`: sube lo bien valorado y baja lo mal valorado). Las opciones muestran la media con una estrella; los botones son de 44 px y funcionan con teclado y lector de pantalla.
+- **Por qué por persona:** las niñas y los adultos no comen igual de a gusto lo mismo; así se ve quién no ha puesto nota y se puede ponderar por persona en el futuro (perfil de gusto, D-041).
+- **Base de datos:** la tabla `valoracion_plato` (en la migración `menu_planificado`) ya guarda una nota por persona y plato, con aislamiento entre hogares.
