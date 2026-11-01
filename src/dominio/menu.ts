@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { proximosACaducar, stockUtilizable } from "./despensa";
+import { contarSemana, estadoDelGrupo } from "./equilibrio";
 import { type FechaIso, diasEntre, sumarDias } from "./fechas";
 import { redondear } from "./numeros";
 import { type ItemDespensa, fechaIsoSchema, platoSchema } from "./tipos";
@@ -55,6 +56,7 @@ export interface MenuCole {
   textoPrimero?: string | null;
   textoSegundo?: string | null;
   postre?: string | null;
+  kcal?: number | null;
 }
 
 /**
@@ -73,6 +75,17 @@ const RECOMENDADO_TRAS_SEGUNDO: Partial<Record<GrupoPlato, readonly GrupoPlato[]
   legumbre: ["verdura", "huevo"],
   carne: ["huevo", "pescado"],
 };
+
+/** Qué recomienda el cole cenar tras cada plato (por separado), para poder explicarlo. */
+export function recomendacionesPorPlato(cole: MenuCole | null): {
+  trasPrimero: readonly GrupoPlato[];
+  trasSegundo: readonly GrupoPlato[];
+} {
+  return {
+    trasPrimero: (cole?.primero && RECOMENDADO_TRAS_PRIMERO[cole.primero]) || [],
+    trasSegundo: (cole?.segundo && RECOMENDADO_TRAS_SEGUNDO[cole.segundo]) || [],
+  };
+}
 
 /**
  * Grupos que complementan lo que se comió en el cole, o `null` si no se sabe (no hay restricción).
@@ -97,7 +110,13 @@ export interface DiaMenu {
 }
 
 export type Motivo =
-  "usa_caducidad" | "usa_despensa" | "bien_valorado" | "hace_tiempo" | "novedad" | "rapido";
+  | "usa_caducidad"
+  | "usa_despensa"
+  | "bien_valorado"
+  | "hace_tiempo"
+  | "novedad"
+  | "falta_en_semana"
+  | "rapido";
 
 export interface Opcion {
   plato: PlatoMenu;
@@ -112,6 +131,8 @@ export interface ContextoMenu {
   despensa: readonly ItemDespensa[];
   /** Ingredientes que nadie quiere o que no se pueden comer. */
   excluirIngredientes: readonly string[];
+  /** Menú del cole de todos los días (para el equilibrio de la semana, también los pasados). */
+  colegio?: Readonly<Record<FechaIso, MenuCole>>;
   /** Fecha → plato ya elegido (se respeta y condiciona a los días vecinos). */
   elegidos?: Readonly<Record<FechaIso, string>>;
   /** Opciones por día (por defecto 3). */
@@ -159,6 +180,7 @@ function puntuar(
   stock: Map<string, number>,
   caducan: ReadonlySet<string>,
   ofrecidos: ReadonlySet<string>,
+  semana: Readonly<Partial<Record<GrupoPlato, number>>>,
 ): Opcion {
   const motivos: Motivo[] = [];
   let p = 0;
@@ -194,6 +216,15 @@ function puntuar(
   const holgura = 1 - plato.minutosActivos / dia.minutosMax;
   p += holgura;
   if (plato.minutosActivos <= 15) motivos.push("rapido");
+
+  // Equilibrio de la semana (cole + cenas): sube lo que falta, baja lo que ya se ha pasado.
+  const eq = estadoDelGrupo(plato.grupo, semana);
+  if (eq?.estado === "falta") {
+    p += 1.5;
+    motivos.push("falta_en_semana");
+  } else if (eq?.estado === "completo") {
+    p -= 2.5;
+  }
 
   if (ofrecidos.has(plato.id)) p -= 3;
   p += desempate(plato.id, dia.fecha);
@@ -237,11 +268,22 @@ export function proponerMenu(ctx: ContextoMenu): MenuPropuesto {
   const elegidos = ctx.elegidos ?? {};
   const elegidosLista = Object.entries(elegidos);
   const ofrecidos = new Set<string>();
+  const colegio: Record<FechaIso, MenuCole> =
+    ctx.colegio ?? Object.fromEntries(ctx.dias.flatMap((d) => (d.cole ? [[d.fecha, d.cole]] : [])));
+  const cenasPorGrupo: Record<FechaIso, GrupoPlato> = {};
+  for (const [f, id] of elegidosLista) {
+    const g = porId.get(id)?.grupo;
+    if (g) cenasPorGrupo[f] = g;
+  }
 
   const dias = ctx.dias.map((dia) => {
+    const semana = contarSemana(dia.fecha, colegio, cenasPorGrupo);
     const fijo = elegidos[dia.fecha] ? porId.get(elegidos[dia.fecha] as string) : undefined;
     if (fijo) {
-      return { fecha: dia.fecha, opciones: [puntuar(fijo, dia, ctx, stock, caducan, new Set())] };
+      return {
+        fecha: dia.fecha,
+        opciones: [puntuar(fijo, dia, ctx, stock, caducan, new Set(), semana)],
+      };
     }
 
     const vecinos = new Set<GrupoPlato>();
@@ -258,7 +300,7 @@ export function proponerMenu(ctx: ContextoMenu): MenuPropuesto {
               id === p.id && Math.abs(diasEntre(f, dia.fecha)) < DISTANCIA_MINIMA_REPETIR,
           ) && cumpleReglasDuras(p, dia, excluidos, vecinos),
       )
-      .map((p) => puntuar(p, dia, ctx, stock, caducan, ofrecidos));
+      .map((p) => puntuar(p, dia, ctx, stock, caducan, ofrecidos, semana));
     const opciones = elegirVariadas(candidatas, n);
     for (const o of opciones) ofrecidos.add(o.plato.id);
     return { fecha: dia.fecha, opciones };

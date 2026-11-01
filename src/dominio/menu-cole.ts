@@ -16,6 +16,8 @@ export const diaColeSchema = z.object({
   /** Guarniciones y ensaladas que acompañan al segundo. */
   guarnicion: z.string().nullable(),
   postre: z.string().nullable(),
+  /** Kilocalorías del menú del día, si el cole las publica. */
+  kcal: z.number().nullable().optional(),
   grupoPrimero: grupoPlatoSchema.nullable(),
   grupoSegundo: grupoPlatoSchema.nullable(),
 });
@@ -214,8 +216,8 @@ export function leerMenuCole(
   }
 
   // Bloques: cada línea de números abre el día (o los días vacíos y uno con contenido).
-  const bloques: Array<{ dia: number; lineas: string[] }> = [];
-  let actual: { dia: number; lineas: string[] } | null = null;
+  const bloques: Array<{ dia: number; lineas: string[]; kcal?: number }> = [];
+  let actual: { dia: number; lineas: string[]; kcal?: number } | null = null;
   const cerrar = () => {
     if (actual) bloques.push(actual);
     actual = null;
@@ -229,13 +231,15 @@ export function leerMenuCole(
     } else if (actual && !ES_KCAL.test(linea)) {
       (actual as { lineas: string[] }).lineas.push(linea);
     } else if (actual) {
+      const m = /kcal:\s*([\d.,]+)/i.exec(linea);
+      if (m) (actual as { kcal?: number }).kcal = Number((m[1] ?? "").replace(",", "."));
       cerrar();
     }
   }
   cerrar();
 
   const dias: DiaCole[] = [];
-  for (const { dia, lineas: bruto } of bloques) {
+  for (const { dia, lineas: bruto, kcal } of bloques) {
     if (bruto.length === 0) continue; // sin menú ese día
     const fecha = fechaIso(anio, mes, dia);
     if (!fecha) {
@@ -259,6 +263,7 @@ export function leerMenuCole(
       segundo,
       guarnicion: guarniciones.length > 0 ? guarniciones.join(" · ") : null,
       postre: postres[0] ?? null,
+      kcal: kcal !== undefined && Number.isFinite(kcal) ? Math.round(kcal) : null,
       grupoPrimero,
       grupoSegundo,
     });
@@ -279,6 +284,7 @@ export function aMenuCole(dias: readonly DiaCole[]): Record<FechaIso, MenuCole> 
       textoPrimero: d.primero,
       textoSegundo: d.segundo,
       postre: d.postre,
+      kcal: d.kcal ?? null,
     };
   }
   return salida;

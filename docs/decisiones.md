@@ -416,3 +416,12 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **Planificación de la semana:** «Proponer los días sin cena» rellena de lunes a viernes los días sin cena, sin evento y no saltados, eligiendo la mejor opción de cada día de uno en uno (cada elección condiciona las siguientes). Los fines de semana y los días con evento (el cumpleaños) se deciden a mano. «No cenamos en casa este día» saca un día de la planificación. Un sábado o domingo, «la semana» es la siguiente.
 - **Desempate:** con notas iguales, el orden alfabético de los identificadores sesgaba las propuestas; ahora desempata un valor determinista por plato y día (mismos datos, mismo resultado).
 - **Cumpleaños:** el calendario y la portada muestran 🎂 y la cuenta atrás; el día del cumpleaños la cena de la familia la cocina Diego (Ana, día libre de cocina).
+
+## D-054 · Explicaciones y equilibrio semanal cole + cena, con fuentes
+
+- **Estado:** aceptada (2026-11-01)
+- **Decisión:** cada cena propuesta lleva una **explicación** (`src/dominio/explicacion.ts`): una frase visible («Hoy las niñas han comido verdura y carne en el cole; para compensar, Salmón a la plancha (pescado)») y, desplegable, todas las razones: qué aconseja el recomendador del cole, el equilibrio de la semana, las calorías del cole (se leen del PDF), el tiempo, lo que caduca, lo que os gusta y la novedad. Cada frase sale de un dato; no hay texto inventado.
+- **Equilibrio semanal:** la comida del cole y la cena se cuentan **juntas** (`src/dominio/equilibrio.ts`). El motor sube lo que falta en la semana (+1,5) y baja lo que ya ha llegado al máximo (−2,5). Rangos orientativos: legumbres 2–3, pescado 2–4, huevo 2–4, carne 2–4, apoyados en la AESAN y la AEP.
+- **Fuentes y honestidad:** [fuentes.md](fuentes.md) documenta de dónde sale cada regla y lo que no se ha podido comprobar (no se pudo abrir la página de la AEP desde la sesión; sus cifras vienen de un resumen de búsqueda y hay que contrastarlas). Las fuentes no coinciden exactamente, así que se usan rangos prudentes. Es orientación, no consejo médico.
+- **Cuaderno externo (NotebookLM):** no hay conexión posible desde la sesión; el procedimiento para incorporar su contenido (exportar texto → reglas con fuente y prueba) está en `fuentes.md`.
+- **Resultado en el modo Diego:** la propuesta de martes a viernes pasó a ser carne (tras legumbre y huevo en el cole), pescado, huevo y carne, y deja la semana en 2 de legumbres, 2 de pescado y 2 de huevo entre cole y cenas.

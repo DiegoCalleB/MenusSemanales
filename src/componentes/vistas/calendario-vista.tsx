@@ -5,6 +5,7 @@ import { diaMenuDe, fechaPlanificable, nombreDia, opcionesParaFecha } from "@/ap
 import { diaSemanaIso, sumarDias, type FechaIso } from "@/dominio/fechas";
 import { recomendadosParaCenar } from "@/dominio/menu";
 import { EMOJI_GRUPO } from "../formato";
+import { Razones } from "../razones";
 import { useHogar } from "../proveedor-hogar";
 
 const MESES = [
@@ -292,6 +293,7 @@ export function CalendarioVista() {
                         {o.plato.nombre}
                       </p>
                       <p className="text-tinta-suave text-sm">{o.plato.minutosActivos} min</p>
+                      <Razones fecha={sel} opcion={o} />
                     </div>
                     <button
                       type="button"

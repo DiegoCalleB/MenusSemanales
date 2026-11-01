@@ -6,6 +6,7 @@ import { diasDelMenu, menuDeLaSemana, nombreDia } from "@/aplicacion/estado";
 import type { Motivo, Opcion } from "@/dominio/menu";
 import { EMOJI_GRUPO, formatearNumero } from "../formato";
 import { IconoReloj } from "../iconos";
+import { Razones } from "../razones";
 import { useHogar } from "../proveedor-hogar";
 
 const TEXTO_MOTIVO: Record<Motivo, string> = {
@@ -14,6 +15,7 @@ const TEXTO_MOTIVO: Record<Motivo, string> = {
   bien_valorado: "Os gusta",
   hace_tiempo: "Hace tiempo que no lo coméis",
   novedad: "Nuevo para vosotros",
+  falta_en_semana: "Os falta esta semana",
   rapido: "Rápido",
 };
 
@@ -230,6 +232,13 @@ export function MenuVista() {
                 </div>
               )}
 
+              {elegida && propuesta.dias.find((d) => d.fecha === dia.fecha)?.opciones[0] && (
+                <Razones
+                  fecha={dia.fecha}
+                  opcion={propuesta.dias.find((d) => d.fecha === dia.fecha)!.opciones[0]!}
+                />
+              )}
+
               {elegida && dia.fecha <= estado.hoy && (
                 <Valoracion platoId={elegida.plato.id} nombre={elegida.plato.nombre} />
               )}
@@ -268,6 +277,7 @@ export function MenuVista() {
                               </span>
                             )}
                           </p>
+                          <Razones fecha={dia.fecha} opcion={o} />
                           {o.motivos.length > 0 && (
                             <ul className="mt-1 flex flex-wrap gap-1.5">
                               {o.motivos.map((m) => (

@@ -325,6 +325,19 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 
+  test("menú: cada opción explica por qué se recomienda (cole y equilibrio de la semana)", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/menu");
+    await expect(
+      pagina.getByText(/han comido verdura y carne en el cole; para compensar/).first(),
+    ).toBeVisible();
+    await pagina.getByText("Ver por qué").first().click();
+    await expect(pagina.getByText(/de trabajo, dentro de los 30 min/).first()).toBeVisible();
+    await contexto.close();
+  });
+
   test("añadir un artículo a mano y marcarlo", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/compra");

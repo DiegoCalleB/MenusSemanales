@@ -68,6 +68,12 @@ describe("leerMenuCole · menú real de noviembre de 2026", () => {
     expect(dia("2026-11-06")).toMatchObject({ grupoPrimero: "arroz", grupoSegundo: "pescado" });
   });
 
+  it("lee las kilocalorías de cada día", () => {
+    expect(dia("2026-11-03")?.kcal).toBe(601);
+    expect(dia("2026-11-13")?.kcal).toBe(838);
+    expect(aMenuCole(leido.dias)["2026-11-04"]?.kcal).toBe(503);
+  });
+
   it("la salida cumple el esquema y todo se ha podido clasificar", () => {
     expect(menuColeLeidoSchema.safeParse(leido).success).toBe(true);
     expect(leido.avisos).toEqual([]);

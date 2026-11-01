@@ -14,13 +14,18 @@ import {
   type IngredienteNuevo,
   type PlatoEditable,
 } from "@/dominio/catalogo";
+import { contarSemana } from "@/dominio/equilibrio";
+import { explicarOpcion, type ExplicacionOpcion } from "@/dominio/explicacion";
 import { cenaDeEmergencia, type OpcionEmergencia } from "@/dominio/emergencia";
+import { proximosACaducar } from "@/dominio/despensa";
 import { redondear } from "@/dominio/numeros";
 import { type FechaIso, semanaDe, sumarDias, diaSemanaIso } from "@/dominio/fechas";
 import {
   proponerMenu,
   type DiaMenu,
+  type GrupoPlato,
   type MenuCole,
+  type Opcion,
   type MenuPropuesto,
   type PlatoMenu,
 } from "@/dominio/menu";
@@ -201,6 +206,7 @@ export function opcionesParaFecha(e: EstadoHogar, fecha: FechaIso) {
       catalogo: e.platos.filter((p) => !p.noProponer),
       despensa: e.despensa,
       excluirIngredientes: e.excluirIngredientes,
+      colegio: e.colegio,
       elegidos,
     }).dias[0]?.opciones ?? []
   );
@@ -232,7 +238,35 @@ export function menuDeLaSemana(e: EstadoHogar, liberar?: FechaIso): MenuPropuest
     catalogo: e.platos.filter((p) => !p.noProponer),
     despensa: e.despensa,
     excluirIngredientes: e.excluirIngredientes,
+    colegio: e.colegio,
     elegidos,
+  });
+}
+
+/** Por qué se recomienda esa opción para ese día: cole, equilibrio de la semana, tiempo, caducidad, gusto. */
+export function explicacionDe(e: EstadoHogar, fecha: FechaIso, opcion: Opcion): ExplicacionOpcion {
+  const cenas: Record<FechaIso, GrupoPlato> = {};
+  for (const c of e.comidas) {
+    const grupo = e.platos.find((p) => p.id === c.plato.id)?.grupo;
+    if (c.fecha !== fecha && grupo) cenas[c.fecha] = grupo;
+  }
+  const nombres = new Map(e.ingredientes.map((i) => [i.id, i.nombre]));
+  const usa = new Set(
+    opcion.plato.ingredientes.filter((i) => !i.opcional).map((i) => i.ingredienteId),
+  );
+  const caducan = proximosACaducar(e.despensa, e.hoy, 3)
+    .filter((i) => usa.has(i.ingredienteId) && i.caducaEn)
+    .map((i) => ({
+      nombre: nombres.get(i.ingredienteId) ?? i.ingredienteId,
+      caducaEn: i.caducaEn as FechaIso,
+    }));
+  return explicarOpcion({
+    plato: opcion.plato,
+    motivos: opcion.motivos,
+    dia: diaMenuDe(e, fecha),
+    hoy: e.hoy,
+    semana: contarSemana(fecha, e.colegio, cenas),
+    caducan,
   });
 }
 

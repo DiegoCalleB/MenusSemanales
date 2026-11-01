@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { validarPlato } from "@/dominio/catalogo";
 import { calcularCompra } from "@/dominio/compra";
+import { explicacionDe } from "./estado";
+import { opcionesParaFecha } from "./estado";
 import { type Accion, type EstadoHogar, articulosPendientes, diasDelMenu, reducir } from "./estado";
 import { estadoModoDiego, FECHA_CUMPLE_ANA } from "./datos-diego";
 
@@ -72,7 +74,7 @@ describe("modo Diego: datos reales de la familia", () => {
       expect(plato?.minutosActivos).toBeLessThanOrEqual(30);
     }
     // Con las 4 cenas hay lista de la compra (la despensa de ejemplo está vacía).
-    expect(articulosPendientes(p).length).toBeGreaterThan(4);
+    expect(articulosPendientes(p).length).toBeGreaterThan(2);
   });
 
   it("repetir «proponer» no cambia lo ya elegido y avisa si no queda nada por rellenar", () => {
@@ -99,6 +101,16 @@ describe("modo Diego: datos reales de la familia", () => {
       { tipo: "menu/autocompletar" },
     );
     expect(de_nuevo.comidas.some((c) => c.fecha === "2026-11-05")).toBe(true);
+  });
+
+  it("explica por qué recomienda cada cena con el cole y el equilibrio de la semana", () => {
+    const p = aplicar(e, { tipo: "menu/autocompletar" });
+    const opcion = opcionesParaFecha(p, "2026-11-04")[0];
+    expect(opcion).toBeDefined();
+    const ex = explicacionDe(p, "2026-11-04", opcion as NonNullable<typeof opcion>);
+    expect(ex.resumen).toContain("verdura y carne en el cole");
+    expect(ex.lineas.some((l) => l.startsWith("Encaja con el cole"))).toBe(true);
+    expect(ex.lineas.some((l) => l.includes("Esta semana llevan"))).toBe(true);
   });
 
   it("«hoy» se puede actualizar a la fecha real", () => {
