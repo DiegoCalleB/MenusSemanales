@@ -5,3 +5,5 @@ pnpm-lock.yaml
 supabase/.temp
 src/infraestructura/supabase/database.types.ts
 docs/contexto
+test-results
+playwright-report

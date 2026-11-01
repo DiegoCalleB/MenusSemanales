@@ -27,3 +27,7 @@ supabase/.temp/
 *.pem
 npm-debug.log*
 .pnpm-debug.log*
+
+# Playwright
+/test-results/
+/playwright-report/

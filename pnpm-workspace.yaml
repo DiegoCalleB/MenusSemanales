@@ -1,3 +1,12 @@
 ignoredBuiltDependencies:
   - sharp
   - unrs-resolver
+
+# Cadena de suministro: no instalar versiones publicadas hace menos de 24 h. La mayoría de
+# paquetes comprometidos se detectan y retiran en ese plazo (ver docs/seguridad.md).
+minimumReleaseAge: 1440
+
+# Fijado temporalmente: 1.13.0 se publicó hace menos de 24 h y no cumple minimumReleaseAge.
+# Quitar cuando Dependabot proponga una versión madura (ver docs/decisiones.md, D-026).
+overrides:
+  unrs-resolver: 1.12.2
