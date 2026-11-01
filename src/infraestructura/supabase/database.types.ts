@@ -32,6 +32,102 @@ export type Database = {
         }
         Relationships: []
       }
+      carga: {
+        Row: {
+          activa: boolean
+          creado_en: string
+          esfuerzo_min: number
+          frecuencia: string
+          hogar_id: string
+          id: string
+          nombre: string
+          planificacion_min: number
+          responsable_id: string | null
+          tipo: string
+        }
+        Insert: {
+          activa?: boolean
+          creado_en?: string
+          esfuerzo_min: number
+          frecuencia?: string
+          hogar_id: string
+          id?: string
+          nombre: string
+          planificacion_min?: number
+          responsable_id?: string | null
+          tipo: string
+        }
+        Update: {
+          activa?: boolean
+          creado_en?: string
+          esfuerzo_min?: number
+          frecuencia?: string
+          hogar_id?: string
+          id?: string
+          nombre?: string
+          planificacion_min?: number
+          responsable_id?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "carga_hogar_id_fkey"
+            columns: ["hogar_id"]
+            isOneToOne: false
+            referencedRelation: "hogar"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "carga_responsable_id_hogar_id_fkey"
+            columns: ["responsable_id", "hogar_id"]
+            isOneToOne: false
+            referencedRelation: "persona"
+            referencedColumns: ["id", "hogar_id"]
+          },
+        ]
+      }
+      carga_turno: {
+        Row: {
+          carga_id: string
+          estado: string
+          fecha: string
+          hecho_en: string | null
+          hogar_id: string
+          persona_id: string
+        }
+        Insert: {
+          carga_id: string
+          estado?: string
+          fecha: string
+          hecho_en?: string | null
+          hogar_id: string
+          persona_id: string
+        }
+        Update: {
+          carga_id?: string
+          estado?: string
+          fecha?: string
+          hecho_en?: string | null
+          hogar_id?: string
+          persona_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "carga_turno_carga_id_hogar_id_fkey"
+            columns: ["carga_id", "hogar_id"]
+            isOneToOne: false
+            referencedRelation: "carga"
+            referencedColumns: ["id", "hogar_id"]
+          },
+          {
+            foreignKeyName: "carga_turno_persona_id_hogar_id_fkey"
+            columns: ["persona_id", "hogar_id"]
+            isOneToOne: false
+            referencedRelation: "persona"
+            referencedColumns: ["id", "hogar_id"]
+          },
+        ]
+      }
       centro: {
         Row: {
           creado_en: string
@@ -132,6 +228,147 @@ export type Database = {
             columns: ["hogar_id"]
             isOneToOne: false
             referencedRelation: "hogar"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      despensa_item: {
+        Row: {
+          actualizado_en: string
+          caduca_en: string | null
+          cantidad: number
+          hogar_id: string
+          id: string
+          ingrediente_id: string
+          minimo: number | null
+          ubicacion: string
+        }
+        Insert: {
+          actualizado_en?: string
+          caduca_en?: string | null
+          cantidad?: number
+          hogar_id: string
+          id?: string
+          ingrediente_id: string
+          minimo?: number | null
+          ubicacion: string
+        }
+        Update: {
+          actualizado_en?: string
+          caduca_en?: string | null
+          cantidad?: number
+          hogar_id?: string
+          id?: string
+          ingrediente_id?: string
+          minimo?: number | null
+          ubicacion?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "despensa_item_hogar_id_fkey"
+            columns: ["hogar_id"]
+            isOneToOne: false
+            referencedRelation: "hogar"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "despensa_item_ingrediente_id_fkey"
+            columns: ["ingrediente_id"]
+            isOneToOne: false
+            referencedRelation: "ingrediente"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      despensa_movimiento: {
+        Row: {
+          delta: number
+          hogar_id: string
+          id: number
+          ingrediente_id: string
+          operacion_id: string
+          ubicacion: string
+        }
+        Insert: {
+          delta: number
+          hogar_id: string
+          id?: never
+          ingrediente_id: string
+          operacion_id: string
+          ubicacion: string
+        }
+        Update: {
+          delta?: number
+          hogar_id?: string
+          id?: never
+          ingrediente_id?: string
+          operacion_id?: string
+          ubicacion?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "despensa_movimiento_ingrediente_id_fkey"
+            columns: ["ingrediente_id"]
+            isOneToOne: false
+            referencedRelation: "ingrediente"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "despensa_movimiento_operacion_id_hogar_id_fkey"
+            columns: ["operacion_id", "hogar_id"]
+            isOneToOne: false
+            referencedRelation: "despensa_operacion"
+            referencedColumns: ["id", "hogar_id"]
+          },
+        ]
+      }
+      despensa_operacion: {
+        Row: {
+          articulo_id: string | null
+          creada_en: string
+          creada_por: string | null
+          deshecha_en: string | null
+          descripcion: string | null
+          hogar_id: string
+          id: string
+          revierte_id: string | null
+          tipo: string
+        }
+        Insert: {
+          articulo_id?: string | null
+          creada_en?: string
+          creada_por?: string | null
+          deshecha_en?: string | null
+          descripcion?: string | null
+          hogar_id: string
+          id?: string
+          revierte_id?: string | null
+          tipo: string
+        }
+        Update: {
+          articulo_id?: string | null
+          creada_en?: string
+          creada_por?: string | null
+          deshecha_en?: string | null
+          descripcion?: string | null
+          hogar_id?: string
+          id?: string
+          revierte_id?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "despensa_operacion_hogar_id_fkey"
+            columns: ["hogar_id"]
+            isOneToOne: false
+            referencedRelation: "hogar"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "despensa_operacion_revierte_id_fkey"
+            columns: ["revierte_id"]
+            isOneToOne: false
+            referencedRelation: "despensa_operacion"
             referencedColumns: ["id"]
           },
         ]
@@ -268,6 +505,69 @@ export type Database = {
             columns: ["hogar_id"]
             isOneToOne: false
             referencedRelation: "hogar"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lista_compra_articulo: {
+        Row: {
+          cantidad: number | null
+          comprado: boolean
+          comprado_en: string | null
+          comprado_por: string | null
+          creado_en: string
+          creado_por: string | null
+          hogar_id: string
+          id: string
+          ingrediente_id: string | null
+          motivo: string | null
+          nombre: string
+          origen: string
+          seccion: string
+        }
+        Insert: {
+          cantidad?: number | null
+          comprado?: boolean
+          comprado_en?: string | null
+          comprado_por?: string | null
+          creado_en?: string
+          creado_por?: string | null
+          hogar_id: string
+          id?: string
+          ingrediente_id?: string | null
+          motivo?: string | null
+          nombre: string
+          origen?: string
+          seccion?: string
+        }
+        Update: {
+          cantidad?: number | null
+          comprado?: boolean
+          comprado_en?: string | null
+          comprado_por?: string | null
+          creado_en?: string
+          creado_por?: string | null
+          hogar_id?: string
+          id?: string
+          ingrediente_id?: string | null
+          motivo?: string | null
+          nombre?: string
+          origen?: string
+          seccion?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lista_compra_articulo_hogar_id_fkey"
+            columns: ["hogar_id"]
+            isOneToOne: false
+            referencedRelation: "hogar"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lista_compra_articulo_ingrediente_id_fkey"
+            columns: ["ingrediente_id"]
+            isOneToOne: false
+            referencedRelation: "ingrediente"
             referencedColumns: ["id"]
           },
         ]
@@ -695,6 +995,27 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      aplicar_operacion_despensa: {
+        Args: {
+          p_descripcion: string
+          p_hogar_id: string
+          p_movimientos: Json
+          p_tipo: string
+        }
+        Returns: string
+      }
+      deshacer_operacion_despensa: {
+        Args: { p_operacion_id: string }
+        Returns: string
+      }
+      marcar_comprado: {
+        Args: { p_articulo_id: string; p_ubicacion?: string }
+        Returns: string
+      }
+      sincronizar_compra_auto: {
+        Args: { p_articulos: Json; p_hogar_id: string }
+        Returns: number
+      }
       adoptar_plato_compartido: {
         Args: { p_hogar_id: string; p_plato_compartido_id: string }
         Returns: string
