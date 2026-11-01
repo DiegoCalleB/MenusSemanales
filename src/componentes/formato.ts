@@ -50,3 +50,16 @@ export const NOMBRE_UBICACION: Record<Ubicacion, string> = {
 
 /** Paso de los botones − y +: 50 g o ml, o 1 unidad. */
 export const pasoDe = (unidad: Unidad): number => (unidad === "ud" ? 1 : 50);
+
+/** Un emoji por grupo de plato: se reconoce de un vistazo y le da calidez a las listas. */
+export const EMOJI_GRUPO: Record<string, string> = {
+  verdura: "🥦",
+  legumbre: "🫘",
+  pasta: "🍝",
+  arroz: "🍚",
+  pescado: "🐟",
+  carne: "🍗",
+  huevo: "🍳",
+  lacteo: "🥛",
+  otro: "🍽️",
+};

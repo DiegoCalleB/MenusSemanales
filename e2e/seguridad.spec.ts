@@ -45,7 +45,7 @@ test("la app funciona con la CSP: Next arranca sin violaciones ni errores", asyn
 
   await page.goto("/", { waitUntil: "networkidle" });
 
-  await expect(page.getByRole("heading", { name: "Menús Semanales" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   expect(await page.evaluate(() => typeof (window as { next?: unknown }).next)).toBe("object");
   expect(violaciones).toEqual([]);
   expect(errores).toEqual([]);

@@ -23,7 +23,15 @@ export default function LayoutApp({ children }: { children: ReactNode }) {
         <NavegacionLateral />
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="border-borde bg-superficie/95 sticky top-0 z-20 flex items-center gap-3 border-b px-4 py-3 backdrop-blur md:hidden">
-            <span className="text-marca text-lg font-semibold tracking-tight">Menús Semanales</span>
+            <span
+              aria-hidden="true"
+              className="bg-suave-1 flex size-9 items-center justify-center rounded-xl text-xl"
+            >
+              🍽️
+            </span>
+            <span className="text-marca text-lg font-extrabold tracking-tight">
+              Menús Semanales
+            </span>
           </header>
           <BannerPrueba />
           <main

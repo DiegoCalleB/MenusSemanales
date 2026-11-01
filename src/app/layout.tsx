@@ -1,9 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Geist } from "next/font/google";
+import { Nunito } from "next/font/google";
 import { connection } from "next/server";
 import "./globals.css";
 
-const geist = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
+const nunito = Nunito({ variable: "--font-nunito", subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: { default: "Menús Semanales", template: "%s · Menús Semanales" },
@@ -14,8 +14,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f6f4f1" },
-    { media: "(prefers-color-scheme: dark)", color: "#121211" },
+    { media: "(prefers-color-scheme: light)", color: "#fff7f2" },
+    { media: "(prefers-color-scheme: dark)", color: "#2a2027" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -29,7 +29,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   // puede aplicarlo al renderizar en el servidor (ver D-025).
   await connection();
   return (
-    <html lang="es" className={`${geist.variable} h-full antialiased`}>
+    <html lang="es" className={`${nunito.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">{children}</body>
     </html>
   );

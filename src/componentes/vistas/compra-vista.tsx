@@ -74,7 +74,9 @@ export function CompraVista() {
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-3">
-        <h1 className="text-3xl font-semibold tracking-tight">Lista de la compra</h1>
+        <h1 className="text-3xl font-extrabold tracking-tight">
+          Lista de la compra <span aria-hidden="true">🛒</span>
+        </h1>
         <p className="text-tinta-suave max-w-prose text-base">
           Se calcula sola con las cenas elegidas, lo que ya hay en casa y lo que se está acabando.
         </p>

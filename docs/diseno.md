@@ -46,3 +46,12 @@ Es una comparación de **dos series sobre un mismo eje** (ejecutar y organizar, 
 ## Tono del panel de reparto
 
 Es **descriptivo y neutral** (D-032): muestra minutos y porcentajes, nunca puntuaciones ni reproches. Cuando hay diferencia, el texto dice que «puede ser lo que habéis acordado» y ofrece repartir de otra forma, para abrir la conversación, no para zanjarla.
+
+## Aspecto: cálido y amable (D-045)
+
+La primera versión era sobria y apagada. Ahora la interfaz es **luminosa y cercana**, pensada para que apetezca abrirla:
+
+- **Paleta:** fondo crema-melocotón, tarjetas blancas con sombra suave rosada, color de marca frambuesa (`#c72a63`) y tonos pastel (rosa, melocotón y menta) para acentos. Los verdes se reservan para «elegido» y «hecho». El tema oscuro es un berenjena cálido, no negro.
+- **Forma:** esquinas muy redondeadas, botones en píldora y tipografía redondeada (Nunito).
+- **Calidez:** un emoji por grupo de plato (🥦 🍝 🍚 🐟 🍗 🍳 🫘), una portada que dice qué se cena hoy y un saludo, y textos en segunda persona del plural.
+- **Sigue siendo accesible:** todos los pares de color cumplen WCAG 2.2 AA en claro y oscuro (verificado con axe en 10 tamaños) y los emojis son decorativos (`aria-hidden`).

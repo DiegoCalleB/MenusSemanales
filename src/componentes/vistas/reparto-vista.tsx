@@ -174,7 +174,9 @@ export function RepartoVista() {
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-2">
-        <h1 className="text-3xl font-semibold tracking-tight">Reparto de la semana</h1>
+        <h1 className="text-3xl font-extrabold tracking-tight">
+          Reparto de la semana <span aria-hidden="true">🤝</span>
+        </h1>
         <p className="text-tinta-suave max-w-prose text-base">
           Quién se encarga de qué, contando también lo que no se ve: acordarse, decidir y organizar.
           Es una foto para hablarlo juntos, no una puntuación.

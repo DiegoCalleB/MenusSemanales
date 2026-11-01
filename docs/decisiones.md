@@ -354,3 +354,10 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **Planificación adelantada:** el menú puede abarcar lo que queda de semana o 15 días. Un plato elegido no se vuelve a ofrecer hasta pasados 7 días (en vez de excluirse de toda la ventana), así una quincena no agota el catálogo. La lista de la compra suma las necesidades de todas las cenas elegidas, así que se puede comprar de una vez para 15 días.
 - **Límite conocido:** al comprar para 15 días no se considera aún que lo muy perecedero (pescado fresco, verdura de hoja) no aguanta tanto; hay que combinarlo con la caducidad y el congelador. Queda como mejora.
 - **Seguridad:** el texto pegado solo se procesa en el navegador, con un máximo de 30 000 caracteres y sin interpretarse como HTML.
+
+## D-045 · Aspecto cálido y amable
+
+- **Estado:** aceptada (2026-11-01)
+- **Contexto:** la primera interfaz resultaba apagada y seria; el producto debe gustar a cualquier persona de la familia y ser atractivo a primera vista (Diego: «le tiene que entrar por los ojos a mi mujer y a cualquier mujer»).
+- **Decisión:** paleta luminosa (crema, frambuesa, pastel), formas redondeadas, tipografía Nunito, emojis decorativos por grupo de plato y portada personalizada con la cena de hoy. El contraste AA y todas las pruebas de responsive y accesibilidad se mantienen. Detalle en [diseno.md](diseno.md).
+- **Pendiente:** validar con Ana y con otras familias del cole; ilustraciones propias y animaciones sutiles en una fase posterior.

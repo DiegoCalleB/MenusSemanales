@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { diasDelMenu, menuDeLaSemana, nombreDia } from "@/aplicacion/estado";
 import type { Motivo, Opcion } from "@/dominio/menu";
+import { EMOJI_GRUPO } from "../formato";
 import { IconoReloj } from "../iconos";
 import { useHogar } from "../proveedor-hogar";
 
@@ -43,7 +44,9 @@ export function MenuVista() {
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-2">
-        <h1 className="text-3xl font-semibold tracking-tight">Menú de la semana</h1>
+        <h1 className="text-3xl font-extrabold tracking-tight">
+          Menú de la semana <span aria-hidden="true">🍽️</span>
+        </h1>
         <p className="text-tinta-suave max-w-prose text-base">
           Para cada cena, unas pocas opciones que encajan con el tiempo de ese día y con el menú del
           cole. Elegid la que más os cuadre y la lista de la compra se actualiza sola.
@@ -93,7 +96,7 @@ export function MenuVista() {
             <li key={dia.fecha} className="tarjeta flex flex-col gap-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h2 className="text-xl font-semibold">{titulo}</h2>
+                  <h2 className="text-xl font-extrabold">{titulo}</h2>
                   <p className="text-tinta-suave flex items-center gap-1.5 text-base">
                     <IconoReloj width={18} height={18} />
                     Hasta {dia.minutosMax} min
@@ -121,10 +124,15 @@ export function MenuVista() {
               </div>
 
               {elegida && (
-                <div className="bg-marca/10 border-marca/30 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3">
+                <div className="bg-ok-fondo text-ok-texto flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4">
                   <div>
-                    <p className="text-tinta-suave text-sm font-medium">Elegido</p>
-                    <p className="text-lg font-semibold">{elegida.plato.nombre}</p>
+                    <p className="text-sm font-bold">✓ Elegido</p>
+                    <p className="text-lg font-bold">
+                      <span aria-hidden="true">
+                        {EMOJI_GRUPO[(elegida.plato as { grupo?: string }).grupo ?? "otro"]}{" "}
+                      </span>
+                      {elegida.plato.nombre}
+                    </p>
                   </div>
                   <button
                     type="button"
@@ -152,17 +160,20 @@ export function MenuVista() {
                     {opciones.map((o) => (
                       <li
                         key={o.plato.id}
-                        className="border-borde flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3"
+                        className="border-borde bg-fondo flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-3"
                       >
                         <div className="min-w-0 flex-1">
-                          <p className="text-base font-semibold">{o.plato.nombre}</p>
+                          <p className="text-base font-bold">
+                            <span aria-hidden="true">{EMOJI_GRUPO[o.plato.grupo]} </span>
+                            {o.plato.nombre}
+                          </p>
                           <p className="text-tinta-suave text-sm">
                             {o.plato.minutosActivos} min · {NOMBRE_GRUPO[o.plato.grupo]}
                           </p>
                           {o.motivos.length > 0 && (
                             <ul className="mt-1 flex flex-wrap gap-1.5">
                               {o.motivos.map((m) => (
-                                <li key={m} className="etiqueta bg-fondo text-tinta">
+                                <li key={m} className="etiqueta bg-suave-1 text-tinta">
                                   {TEXTO_MOTIVO[m]}
                                 </li>
                               ))}

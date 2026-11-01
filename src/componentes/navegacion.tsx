@@ -39,7 +39,7 @@ export function NavegacionInferior() {
                 }`}
               >
                 <span
-                  className={`flex h-8 w-14 items-center justify-center rounded-full ${esActivo ? "bg-marca/15" : ""}`}
+                  className={`flex h-8 w-14 items-center justify-center rounded-full ${esActivo ? "bg-suave-1" : ""}`}
                 >
                   <Icono />
                 </span>
@@ -58,8 +58,17 @@ export function NavegacionLateral() {
   const ruta = usePathname();
   return (
     <aside className="border-borde bg-superficie sticky top-0 hidden h-dvh w-56 shrink-0 flex-col gap-6 border-r p-4 md:flex lg:w-64">
-      <Link href="/" className="text-marca mt-2 px-2 text-xl font-semibold tracking-tight">
-        Menús Semanales
+      <Link
+        href="/"
+        className="mt-2 flex items-center gap-3 px-2 text-xl font-extrabold tracking-tight"
+      >
+        <span
+          aria-hidden="true"
+          className="bg-suave-1 flex size-10 items-center justify-center rounded-2xl text-2xl"
+        >
+          🍽️
+        </span>
+        <span className="text-marca">Menús Semanales</span>
       </Link>
       <nav aria-label="Principal">
         <ul className="flex flex-col gap-1">
@@ -70,9 +79,9 @@ export function NavegacionLateral() {
                 <Link
                   href={href}
                   aria-current={esActivo ? "page" : undefined}
-                  className={`flex min-h-11 items-center gap-3 rounded-xl px-3 text-base ${
+                  className={`flex min-h-11 items-center gap-3 rounded-full px-4 text-base ${
                     esActivo
-                      ? "bg-marca/15 text-marca font-bold"
+                      ? "bg-suave-1 text-marca-fuerte font-bold"
                       : "text-tinta hover:bg-fondo font-medium"
                   }`}
                 >
@@ -85,7 +94,7 @@ export function NavegacionLateral() {
         </ul>
       </nav>
       <p className="text-tinta-suave mt-auto px-2 text-sm">
-        Versión de demostración: los datos no se guardan.
+        Modo prueba: datos de ejemplo guardados solo en este dispositivo.
       </p>
     </aside>
   );

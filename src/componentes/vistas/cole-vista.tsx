@@ -86,7 +86,9 @@ export function ColeVista() {
         <Link href="/menu" className="boton-suave w-fit">
           ← Volver al menú
         </Link>
-        <h1 className="text-3xl font-semibold tracking-tight">Menú del cole</h1>
+        <h1 className="text-3xl font-extrabold tracking-tight">
+          Menú del cole <span aria-hidden="true">🎒</span>
+        </h1>
         <p className="text-tinta-suave max-w-prose text-base">
           Con lo que comen las niñas en el cole, el planificador propone la cena que lo complementa
           (según el recomendador de cenas del colegio) y puedes adelantar la compra. Ahora hay{" "}
