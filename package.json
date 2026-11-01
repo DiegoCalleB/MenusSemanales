@@ -16,7 +16,7 @@
     "test:db": "bash scripts/db-test.sh",
     "check": "pnpm lint && pnpm typecheck && pnpm format:check && pnpm test",
     "build:standalone": "next build && cp -r public .next/standalone/ && cp -r .next/static .next/standalone/.next/",
-    "e2e": "pnpm build:standalone && playwright test"
+    "e2e": "NEXT_PUBLIC_DATOS=ejemplo pnpm build:standalone && playwright test"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

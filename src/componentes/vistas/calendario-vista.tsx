@@ -141,6 +141,7 @@ export function CalendarioVista() {
                       {largo(f)}
                       {esHoy && " (hoy)"}
                       {estado.colegio[f] && <span> 🎒</span>}
+                      {estado.eventos[f] && <span> {estado.eventos[f]?.emoji}</span>}
                     </span>
                     <span className="truncate text-sm font-normal">
                       {cena
@@ -163,10 +164,11 @@ export function CalendarioVista() {
               if (!f) return <div key={`h${i}`} aria-hidden="true" />;
               const cena = cenaDe(f);
               const hayCole = estado.colegio[f] !== undefined;
+              const evento = estado.eventos[f];
               const esHoy = f === estado.hoy;
               const esSel = f === sel;
               const pasado = f < estado.hoy;
-              const etiqueta = `${largo(f)}${cena ? `: cena ${cena.plato.nombre}` : ": sin cena elegida"}${hayCole ? ", hay menú del cole" : ""}${esHoy ? ", hoy" : ""}`;
+              const etiqueta = `${largo(f)}${cena ? `: cena ${cena.plato.nombre}` : ": sin cena elegida"}${hayCole ? ", hay menú del cole" : ""}${evento ? `, ${evento.titulo}` : ""}${esHoy ? ", hoy" : ""}`;
               return (
                 <div key={f}>
                   <button
@@ -188,9 +190,10 @@ export function CalendarioVista() {
                         ? (EMOJI_GRUPO[(cena.plato as { grupo?: string }).grupo ?? "otro"] ?? "🍽️")
                         : ""}
                     </span>
-                    {hayCole && (
+                    {(hayCole || evento) && (
                       <span aria-hidden="true" className="text-xs leading-none">
-                        🎒
+                        {evento ? evento.emoji : ""}
+                        {hayCole ? "🎒" : ""}
                       </span>
                     )}
                   </button>
@@ -214,6 +217,13 @@ export function CalendarioVista() {
               </p>
             )}
           </div>
+
+          {estado.eventos[sel] && (
+            <p className="bg-suave-1 rounded-2xl p-3 text-base font-bold">
+              <span aria-hidden="true">{estado.eventos[sel]?.emoji} </span>
+              {estado.eventos[sel]?.titulo}
+            </p>
+          )}
 
           <div className="bg-suave-3 rounded-2xl p-3 text-base">
             <p className="font-bold">🎒 En el cole</p>

@@ -12,8 +12,23 @@ import {
 } from "react";
 import type { AlmacenHogar } from "@/aplicacion/almacen";
 import { estadoInicialDemo } from "@/aplicacion/datos-demo";
+import { estadoModoDiego } from "@/aplicacion/datos-diego";
 import { type Accion, type EstadoHogar, reducir } from "@/aplicacion/estado";
 import { crearAlmacenLocal } from "@/infraestructura/almacen-local";
+
+/**
+ * Qué datos de prueba se usan. Por defecto, el «modo Diego» (la familia real de Diego, D-053). Los
+ * tests E2E construyen con `NEXT_PUBLIC_DATOS=ejemplo` para tener datos fijos y repetibles.
+ */
+export const MODO_DATOS: "diego" | "ejemplo" =
+  process.env.NEXT_PUBLIC_DATOS === "ejemplo" ? "ejemplo" : "diego";
+
+/** Fecha de hoy en el dispositivo (AAAA-MM-DD, hora local). */
+const hoyLocal = (): string => new Intl.DateTimeFormat("sv-SE").format(new Date());
+const FECHA_BASE = "2026-11-01";
+
+const estadoInicial = () =>
+  MODO_DATOS === "ejemplo" ? estadoInicialDemo() : estadoModoDiego(FECHA_BASE);
 
 interface ContextoHogar {
   estado: EstadoHogar;
@@ -36,7 +51,7 @@ export function ProveedorHogar({
   children: ReactNode;
   almacen?: AlmacenHogar;
 }) {
-  const [estado, despachar] = useReducer(reducir, undefined, estadoInicialDemo);
+  const [estado, despachar] = useReducer(reducir, undefined, estadoInicial);
   const primera = useRef(true);
   const almacenActual = useRef<AlmacenHogar | null>(null);
 
@@ -45,6 +60,7 @@ export function ProveedorHogar({
     almacenActual.current = a;
     const guardado = a.cargar();
     if (guardado) despachar({ tipo: "hogar/sustituir", estado: guardado });
+    if (MODO_DATOS === "diego") despachar({ tipo: "hogar/hoy", fecha: hoyLocal() });
   }, [almacen]);
 
   useEffect(() => {
@@ -62,7 +78,8 @@ export function ProveedorHogar({
       despachar,
       restablecer: () => {
         almacenActual.current?.borrar();
-        despachar({ tipo: "hogar/sustituir", estado: estadoInicialDemo() });
+        despachar({ tipo: "hogar/sustituir", estado: estadoInicial() });
+        if (MODO_DATOS === "diego") despachar({ tipo: "hogar/hoy", fecha: hoyLocal() });
       },
     }),
     [estado],

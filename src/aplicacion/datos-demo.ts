@@ -444,6 +444,8 @@ export function estadoInicialDemo(): EstadoHogar {
     colegio: aMenuCole(leerMenuCole(TEXTO_MENU_COLE_NOVIEMBRE_2026).dias),
     horizonte: "semana",
     valoraciones: {},
+    eventos: {},
+    saltados: [],
     llegoTarde: [],
     personas,
     despensa,

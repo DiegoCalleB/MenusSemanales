@@ -92,6 +92,13 @@ export function MenuVista() {
       </header>
 
       <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          className="boton"
+          onClick={() => despachar({ tipo: "menu/autocompletar" })}
+        >
+          ✨ Proponer los días sin cena
+        </button>
         <div role="group" aria-label="Cuánto planificar" className="flex gap-2">
           {(
             [
@@ -136,11 +143,39 @@ export function MenuVista() {
             : (propuesta.dias.find((d) => d.fecha === dia.fecha)?.opciones ?? []);
           const tarde = estado.llegoTarde.includes(dia.fecha);
           const titulo = `${mayuscula(nombreDia(dia.fecha))} ${formatoFecha.format(new Date(`${dia.fecha}T00:00:00Z`))}`;
+          const evento = estado.eventos[dia.fecha];
+          const saltado = estado.saltados.includes(dia.fecha);
+          if (saltado) {
+            return (
+              <li
+                key={dia.fecha}
+                className="tarjeta flex flex-wrap items-center justify-between gap-3 opacity-80"
+              >
+                <div>
+                  <h2 className="text-xl font-extrabold">{titulo}</h2>
+                  <p className="text-tinta-suave text-base">Sin cena en casa este día.</p>
+                </div>
+                <button
+                  type="button"
+                  className="boton-suave"
+                  onClick={() => despachar({ tipo: "menu/saltar", fecha: dia.fecha })}
+                >
+                  Planificar este día
+                </button>
+              </li>
+            );
+          }
           return (
             <li key={dia.fecha} className="tarjeta flex flex-col gap-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h2 className="text-xl font-extrabold">{titulo}</h2>
+                  {evento && (
+                    <p className="bg-suave-1 mt-1 w-fit rounded-full px-3 py-1 text-base font-bold">
+                      <span aria-hidden="true">{evento.emoji} </span>
+                      {evento.titulo}
+                    </p>
+                  )}
                   <p className="text-tinta-suave flex items-center gap-1.5 text-base">
                     <IconoReloj width={18} height={18} />
                     Hasta {dia.minutosMax} min
@@ -166,6 +201,13 @@ export function MenuVista() {
                   Hoy llego tarde
                 </button>
               </div>
+              <button
+                type="button"
+                className="text-tinta-suave min-h-11 w-fit text-base font-semibold underline"
+                onClick={() => despachar({ tipo: "menu/saltar", fecha: dia.fecha })}
+              >
+                No cenamos en casa este día
+              </button>
 
               {elegida && (
                 <div className="bg-ok-fondo text-ok-texto flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4">

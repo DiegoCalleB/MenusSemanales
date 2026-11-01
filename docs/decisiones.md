@@ -407,3 +407,12 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **Decisión:** `/calendario` («Agenda» en la barra) muestra el mes con el emoji del tipo de plato de la cena elegida y 🎒 si hay menú del cole; al tocar un día: menú del cole del día, qué conviene cenar, quién cocina, «ese día llego tarde», la cena elegida y las opciones para elegirla o cambiarla. Se puede planificar hasta **60 días por delante** y recorrer los meses.
 - **Responsive:** con 7 columnas no caben 44 px de zona táctil por debajo de 400 px de ancho; en pantallas más estrechas el mes se muestra como **lista de días** (cada día es una fila de 56 px). La cuadrícula completa aparece desde 400 px.
 - **Pendiente:** vista de semana con arrastrar y soltar, y copiar una semana a otra (muy usado en otras apps).
+
+## D-053 · Modo Diego: la familia real como modo de prueba
+
+- **Estado:** aceptada (2026-11-01)
+- **Decisión:** el modo de prueba usa los datos reales de la familia (`src/aplicacion/datos-diego.ts`): Diego, Ana, Alba (9) y Emma (5); los ~55 platos de la app anterior de Diego (capturas en `docs/contexto/`); el menú real del cole de noviembre y su recomendador de cenas; y el cumpleaños de Ana (sábado 7 de noviembre). «Hoy» es la fecha real del dispositivo. Los tests E2E construyen con `NEXT_PUBLIC_DATOS=ejemplo` (datos fijos de D-038).
+- **Honestidad sobre los datos:** de los platos solo es real el **nombre**. Los ingredientes, cantidades y tiempos son una **estimación mía** y cada plato lleva la marca «Por revisar» hasta que se edite. No hay despensa (no la conocemos), así que la primera compra lista todo. No se cargaron anotaciones de la app antigua («falta», «en el trabajo papá y mamá»), ni guarniciones sueltas (fuet, chorizo, zanahorias).
+- **Planificación de la semana:** «Proponer los días sin cena» rellena de lunes a viernes los días sin cena, sin evento y no saltados, eligiendo la mejor opción de cada día de uno en uno (cada elección condiciona las siguientes). Los fines de semana y los días con evento (el cumpleaños) se deciden a mano. «No cenamos en casa este día» saca un día de la planificación. Un sábado o domingo, «la semana» es la siguiente.
+- **Desempate:** con notas iguales, el orden alfabético de los identificadores sesgaba las propuestas; ahora desempata un valor determinista por plato y día (mismos datos, mismo resultado).
+- **Cumpleaños:** el calendario y la portada muestran 🎂 y la cuenta atrás; el día del cumpleaños la cena de la familia la cocina Diego (Ana, día libre de cocina).

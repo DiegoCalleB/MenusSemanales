@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { EMOJI_GRUPO } from "../formato";
 import { IconoCompra, IconoDespensa, IconoMenu, IconoReparto } from "../iconos";
-import { useHogar } from "../proveedor-hogar";
+import { diasEntre } from "@/dominio/fechas";
+import { MODO_DATOS, useHogar } from "../proveedor-hogar";
 
 const MODULOS = [
   {
@@ -39,6 +40,10 @@ const MODULOS = [
 export function InicioVista() {
   const { estado } = useHogar();
   const cena = estado.comidas.find((c) => c.fecha === estado.hoy);
+  const proximo = Object.entries(estado.eventos)
+    .filter(([f]) => f >= estado.hoy && diasEntre(estado.hoy, f) <= 14)
+    .sort(([a], [b]) => a.localeCompare(b))[0];
+  const faltan = proximo ? diasEntre(estado.hoy, proximo[0]) : 0;
 
   return (
     <div className="flex flex-col gap-8">
@@ -46,7 +51,9 @@ export function InicioVista() {
         aria-labelledby="hoy"
         className="from-suave-1 to-suave-2 border-borde flex flex-col gap-4 rounded-[2rem] border bg-linear-to-br p-6 sm:p-8"
       >
-        <p className="text-tinta-suave text-lg font-semibold">¡Hola! 👋</p>
+        <p className="text-tinta-suave text-lg font-semibold">
+          {MODO_DATOS === "diego" ? "¡Hola, Diego! 👋" : "¡Hola! 👋"}
+        </p>
         <h1 id="hoy" className="text-3xl font-extrabold tracking-tight sm:text-4xl">
           {cena ? "Hoy cenáis…" : "¿Qué cenamos hoy?"}
         </h1>
@@ -61,6 +68,13 @@ export function InicioVista() {
           <p className="text-tinta-suave max-w-prose text-lg">
             Aún no hay cena elegida. Mira las opciones: ya tienen en cuenta el tiempo que tenéis y
             lo que han comido las niñas en el cole.
+          </p>
+        )}
+        {proximo && (
+          <p className="bg-superficie/80 w-fit rounded-full px-4 py-2 text-base font-bold">
+            <span aria-hidden="true">{proximo[1].emoji} </span>
+            {proximo[1].titulo} ·{" "}
+            {faltan === 0 ? "¡hoy!" : faltan === 1 ? "mañana" : `en ${faltan} días`}
           </p>
         )}
         <div className="flex flex-wrap gap-3">

@@ -42,6 +42,8 @@ export const platoMenuSchema = platoSchema.extend({
   pasos: z.string().max(4000).nullable().optional(),
   /** La familia no quiere que se proponga (pero se conserva en el catálogo). */
   noProponer: z.boolean().optional(),
+  /** Ingredientes y tiempos estimados al importarlo: la familia debe revisarlos. */
+  porRevisar: z.boolean().optional(),
 });
 export type PlatoMenu = z.infer<typeof platoMenuSchema>;
 
@@ -139,6 +141,17 @@ export function cumpleReglasDuras(
   return !plato.ingredientes.some((i) => !i.opcional && excluidos.has(i.ingredienteId));
 }
 
+/**
+ * Desempate determinista (0 a 0,1): con las mismas notas, el orden alfabético de los identificadores
+ * no debe decidir el menú. Depende del plato y del día, así que cada día desempata distinto, pero
+ * mismos datos → mismo resultado.
+ */
+function desempate(platoId: string, fecha: string): number {
+  let h = 2166136261;
+  for (const c of `${platoId}|${fecha}`) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+  return ((h >>> 0) % 1000) / 10000;
+}
+
 function puntuar(
   plato: PlatoMenu,
   dia: DiaMenu,
@@ -183,6 +196,7 @@ function puntuar(
   if (plato.minutosActivos <= 15) motivos.push("rapido");
 
   if (ofrecidos.has(plato.id)) p -= 3;
+  p += desempate(plato.id, dia.fecha);
 
   return { plato, puntuacion: redondear(p, 3), motivos };
 }

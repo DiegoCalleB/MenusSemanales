@@ -95,6 +95,10 @@ export interface EstadoHogar {
   horizonte: "semana" | "quincena";
   /** Valoraciones de 1 a 5: plato → persona → puntos. La media alimenta al motor del menú. */
   valoraciones: Record<string, Record<string, number>>;
+  /** Fechas señaladas (cumpleaños, fiestas): se ven en el calendario y no se autocompletan. */
+  eventos: Record<FechaIso, { titulo: string; emoji: string }>;
+  /** Días en que no se planifica cena en casa (salir, comer fuera, no hace falta). */
+  saltados: FechaIso[];
   personas: Persona[];
   despensa: ItemDespensa[];
   comidas: ComidaPlanificada[];
@@ -125,6 +129,9 @@ export type Accion =
   | { tipo: "plato/borrar"; id: string }
   | { tipo: "ingrediente/crear"; ingrediente: IngredienteNuevo }
   | { tipo: "emergencia/cocinar"; platoId: string }
+  | { tipo: "hogar/hoy"; fecha: FechaIso }
+  | { tipo: "menu/saltar"; fecha: FechaIso }
+  | { tipo: "menu/autocompletar" }
   | { tipo: "valorar"; platoId: string; personaId: string; puntos: number }
   | { tipo: "menu/horizonte"; horizonte: EstadoHogar["horizonte"] }
   | { tipo: "cole/importar"; dias: Record<FechaIso, MenuCole> }
@@ -200,9 +207,12 @@ export function opcionesParaFecha(e: EstadoHogar, fecha: FechaIso) {
 }
 
 export function diasDelMenu(e: EstadoHogar): DiaMenu[] {
-  const hasta = e.horizonte === "quincena" ? sumarDias(e.hoy, 14) : semanaDe(e.hoy).hasta;
+  // Sábado o domingo: la «semana» que interesa es la siguiente, no los dos días que quedan.
+  const iso = diaSemanaIso(e.hoy);
+  const desde = e.horizonte === "semana" && iso >= 6 ? sumarDias(e.hoy, 8 - iso) : e.hoy;
+  const hasta = e.horizonte === "quincena" ? sumarDias(e.hoy, 14) : semanaDe(desde).hasta;
   const dias: DiaMenu[] = [];
-  for (let f = e.hoy; f <= hasta; f = sumarDias(f, 1)) {
+  for (let f = desde; f <= hasta; f = sumarDias(f, 1)) {
     dias.push(diaMenuDe(e, f));
   }
   return dias;
@@ -606,6 +616,53 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
         platoId: accion.platoId,
         raciones: racionesDelHogar(e),
       });
+    }
+
+    case "hogar/hoy":
+      return e.hoy === accion.fecha ? e : { ...e, hoy: accion.fecha };
+
+    case "menu/saltar":
+      return {
+        ...e,
+        saltados: e.saltados.includes(accion.fecha)
+          ? e.saltados.filter((f) => f !== accion.fecha)
+          : [...e.saltados, accion.fecha],
+        // Un día sin cena en casa no puede tener cena elegida.
+        comidas: e.saltados.includes(accion.fecha)
+          ? e.comidas
+          : e.comidas.filter((c) => c.fecha !== accion.fecha),
+      };
+
+    case "menu/autocompletar": {
+      // Rellena los días laborables sin cena (ni evento, ni saltados) con la mejor opción de cada
+      // día, de uno en uno: cada elección condiciona las siguientes (no repetir, no mismo grupo).
+      let actual = e;
+      let rellenados = 0;
+      for (const dia of diasDelMenu(e)) {
+        const f = dia.fecha;
+        if (diaSemanaIso(f) > 5 || e.saltados.includes(f) || e.eventos[f]) continue;
+        if (actual.comidas.some((c) => c.fecha === f)) continue;
+        const mejor = opcionesParaFecha(actual, f)[0];
+        if (!mejor) continue;
+        const siguiente = reducir(actual, {
+          tipo: "menu/elegir",
+          fecha: f,
+          platoId: mejor.plato.id,
+        });
+        if (siguiente !== actual) rellenados++;
+        actual = siguiente;
+      }
+      return {
+        ...actual,
+        siguienteId: actual.siguienteId + 1,
+        aviso:
+          rellenados > 0
+            ? ok(
+                actual,
+                `He propuesto ${rellenados} ${rellenados === 1 ? "cena" : "cenas"}. Cambia las que quieras.`,
+              )
+            : error(actual, "No hay días sin cena que rellenar."),
+      };
     }
 
     case "valorar": {

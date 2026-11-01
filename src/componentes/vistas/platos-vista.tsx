@@ -452,6 +452,11 @@ export function PlatosVista() {
                 ingredientes
                 {p.valoracion !== null && ` · ★ ${formatearNumero(p.valoracion)}`}
               </p>
+              {p.porRevisar && (
+                <p className="etiqueta bg-suave-2 text-tinta mt-1">
+                  Por revisar: ingredientes y tiempo estimados
+                </p>
+              )}
               {p.noProponer && (
                 <p className="etiqueta bg-aviso-fondo text-aviso-texto mt-1">No se propone</p>
               )}
