@@ -9,7 +9,7 @@ Trabajo Fin de Máster · Máster de Desarrollo con IA (The Big School).
 ## Stack
 
 Next.js 16 (App Router) · React 19 · TypeScript estricto · Tailwind CSS 4 · Supabase (Postgres 17,
-Auth, RLS, Realtime) · zod · Vitest · Vercel · PWA mobile-first.
+Auth, RLS, Realtime) · zod · Vitest · Playwright · Docker en Railway · PWA mobile-first.
 
 ## Puesta en marcha
 
@@ -50,6 +50,7 @@ supabase/            Configuración, migraciones y tests SQL
 ## Documentación
 
 - [Arquitectura](docs/arquitectura.md)
+- [Seguridad desde el diseño](docs/seguridad.md)
 - [Decisiones técnicas](docs/decisiones.md)
 - [Infraestructura](docs/infraestructura.md)
 - [Uso de IA en el desarrollo](docs/uso-de-ia.md)

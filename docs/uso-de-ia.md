@@ -48,3 +48,23 @@ Registro de prompts que funcionaron o fallaron, con lo aprendido. Material para 
 ### ✅ Documentación local para agentes (`AGENTS.md` de Next 16)
 
 - Next 16 genera un `AGENTS.md` que avisa a los agentes de que sus conocimientos pueden estar desfasados y les remite a `node_modules/next/dist/docs`. Seguirlo evitó dos errores: la configuración de Vitest y el tipo global `LayoutProps`, que requiere `next typegen` antes de `tsc`.
+
+## 2026-11-01 · Seguridad desde el diseño
+
+### ⚠️ Un test de seguridad mal planteado da una falsa alarma (o una falsa tranquilidad)
+
+- **Qué pasó:** la primera prueba de XSS del agente inyectaba un `<script>` con `page.evaluate` y **se ejecutaba**. En lugar de darlo por bueno o por malo, el agente lo analizó: `page.evaluate` ejecuta código por el protocolo de depuración (fuera de la CSP) y `'strict-dynamic'` confía por diseño en los scripts que crea código de confianza. La prueba simulaba a un atacante que ya ejecuta código.
+- **Corrección:** se rehízo con vectores realistas (HTML del servidor con `<script>` sin nonce y manejadores `onerror` inyectados), que quedaron bloqueados. El límite real de `'strict-dynamic'` quedó documentado.
+- **Aprendizaje:** un resultado de seguridad, positivo o negativo, hay que entenderlo antes de aceptarlo.
+
+### ✅ La documentación local de Next 16 evitó un error de diseño
+
+- La plantilla traía `cacheComponents` activado. La guía de CSP incluida en `node_modules/next/dist/docs` advierte que es incompatible con nonces. Sin leerla, el agente habría añadido una CSP que rompía la app o una con `'unsafe-inline'`, que no protege.
+
+### ✅ El control de cadena de suministro funcionó el mismo día
+
+- Tras añadir `minimumReleaseAge: 1440`, pnpm bloqueó una dependencia transitiva publicada hace 18 h. Se resolvió fijando la versión madura anterior, no desactivando la regla.
+
+### ℹ️ Límites del entorno del agente
+
+- El entorno denegó descargar y ejecutar un binario externo (gitleaks) en local. El agente no buscó un rodeo: movió el escaneo a la CI, donde el binario se verifica por checksum.

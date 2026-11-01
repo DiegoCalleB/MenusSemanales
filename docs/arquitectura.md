@@ -24,7 +24,10 @@ flowchart LR
 
 - El **dominio** concentra el valor del producto (equilibrio nutricional, opciones, compra). Al ser puro y determinista (recibe `hoy` y la semilla como parámetros) se prueba sin red ni base de datos, y los tests son rápidos y fiables.
 - Los **puertos** permiten probar los casos de uso con repositorios en memoria y cambiar Supabase sin tocar la lógica.
-- Las **Server Actions** son finas: validan la entrada con zod, llaman a un caso de uso y devuelven el resultado.
+- Las **Server Actions** son finas: validan la entrada con zod, **comprueban la sesión y la autorización**, llaman a un caso de uso y devuelven un DTO mínimo. La autorización nunca depende solo del proxy (recomendación de Next 16).
+- La infraestructura actúa como **capa de acceso a datos** (_Data Access Layer_): solo se ejecuta en el servidor (`server-only`) y devuelve objetos de dominio, no filas crudas.
+
+La seguridad de cada capa está descrita en [seguridad.md](seguridad.md).
 
 ## Validación y seguridad en profundidad
 
