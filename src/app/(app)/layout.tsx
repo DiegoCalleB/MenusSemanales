@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { BannerPrueba } from "@/componentes/banner-prueba";
 import { AvisoGlobal } from "@/componentes/aviso";
 import { NavegacionInferior, NavegacionLateral } from "@/componentes/navegacion";
 import { ProveedorHogar } from "@/componentes/proveedor-hogar";
@@ -21,10 +22,10 @@ export default function LayoutApp({ children }: { children: ReactNode }) {
       <div className="min-h-dvh md:flex">
         <NavegacionLateral />
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="border-borde bg-superficie/95 sticky top-0 z-20 flex items-center justify-between gap-3 border-b px-4 py-3 backdrop-blur md:hidden">
+          <header className="border-borde bg-superficie/95 sticky top-0 z-20 flex items-center gap-3 border-b px-4 py-3 backdrop-blur md:hidden">
             <span className="text-marca text-lg font-semibold tracking-tight">Menús Semanales</span>
-            <span className="etiqueta bg-aviso-fondo text-aviso-texto">Demo</span>
           </header>
+          <BannerPrueba />
           <main
             id="contenido"
             className="mx-auto w-full max-w-5xl flex-1 px-4 pt-5 pb-32 md:px-8 md:pt-8 md:pb-12"

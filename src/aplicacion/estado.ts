@@ -107,6 +107,7 @@ export type Accion =
   | { tipo: "menu/elegir"; fecha: FechaIso; platoId: string }
   | { tipo: "menu/quitar"; fecha: FechaIso }
   | { tipo: "menu/llegoTarde"; fecha: FechaIso }
+  | { tipo: "hogar/sustituir"; estado: EstadoHogar }
   | { tipo: "cerrarAviso" }
   | { tipo: "reparto/asignarResponsable"; cargaId: string; personaId: string | null }
   | { tipo: "reparto/proponerRotacion" }
@@ -421,6 +422,9 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
           ? e.llegoTarde.filter((f) => f !== accion.fecha)
           : [...e.llegoTarde, accion.fecha],
       };
+
+    case "hogar/sustituir":
+      return accion.estado;
 
     case "cerrarAviso":
       return e.aviso === null ? e : { ...e, aviso: null };

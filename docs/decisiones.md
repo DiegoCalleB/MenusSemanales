@@ -338,3 +338,10 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **Decisión:** sustituye a la regla simple «no repetir grupo». `recomendadosParaCenar` (en `src/dominio/menu.ts`) convierte primero y segundo del cole en los grupos permitidos para la cena; un plato vale si lo recomienda alguno de los dos. Sin datos del cole no se restringe. La tabla está en código tal cual el documento, para revisarla fácilmente.
 - **Datos:** el menú de noviembre del cole se carga como datos de demostración (estructura primero/segundo por día). Leerlo automáticamente desde el PDF o la foto es el primer uso de IA previsto (D-041), con revisión humana antes de guardar. El documento mezcla un menú por centro, así que encaja con el centro compartido: lo introduce un curador y lo ven todas las familias del cole.
 - **Pendiente:** el postre recomendado (fruta o lácteo) aún no se muestra.
+
+## D-043 · Modo prueba sin cuenta, con el puerto de persistencia preparado para cuentas
+
+- **Estado:** aceptada (2026-11-01)
+- **Decisión:** de momento no hay login. La app arranca en **modo prueba**: datos de ejemplo guardados solo en el dispositivo (`localStorage`, con versión y validación de forma, sin lanzar nunca errores), un banner visible y un botón «Restablecer ejemplo». Así la familia puede probar de verdad (los cambios sobreviven a recargar) sin exponer nada en el servidor.
+- **Preparado para cuentas:** la interfaz depende del puerto `AlmacenHogar` (`src/aplicacion/almacen.ts`: cargar, guardar, borrar). Hoy lo cumple `crearAlmacenLocal`; el acceso por cuenta añadirá un adaptador de Supabase (login por código de email, crear/unirse a un hogar, RLS ya lista) que se inyecta en `ProveedorHogar` sin tocar vistas ni reductor. El esquema de base de datos y las políticas de seguridad ya existen y están probadas.
+- **Seguridad:** en modo prueba no se envía ni se guarda ningún dato en el servidor. No debe usarse con datos reales sensibles; el banner lo deja claro. El almacén descarta lo guardado con otra versión o con forma incorrecta en lugar de confiar en ello.

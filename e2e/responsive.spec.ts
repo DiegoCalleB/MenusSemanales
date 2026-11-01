@@ -199,6 +199,25 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 
+  test("modo prueba: lo hecho sobrevive a recargar y «Restablecer ejemplo» lo borra", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/compra");
+    await pagina.getByLabel("Añadir algo a la lista").fill("Velas");
+    await pagina.getByRole("button", { name: "Añadir" }).click();
+    await expect(pagina.getByRole("checkbox", { name: /Velas/ })).toBeVisible();
+
+    await pagina.reload({ waitUntil: "networkidle" });
+    await expect(pagina.getByRole("checkbox", { name: /Velas/ })).toBeVisible();
+
+    await pagina.getByRole("button", { name: "Restablecer ejemplo" }).click();
+    await expect(pagina.getByRole("checkbox", { name: /Velas/ })).toHaveCount(0);
+    await pagina.reload({ waitUntil: "networkidle" });
+    await expect(pagina.getByRole("checkbox", { name: /Velas/ })).toHaveCount(0);
+    await contexto.close();
+  });
+
   test("añadir un artículo a mano y marcarlo", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/compra");
