@@ -1,50 +1,42 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { diasDelMenu, menuDeLaSemana, nombreDia } from "@/aplicacion/estado";
-import type { Motivo, Opcion } from "@/dominio/menu";
+import type { Opcion } from "@/dominio/menu";
+import { TarjetaCole } from "../cole";
 import { EMOJI_GRUPO, formatearNumero } from "../formato";
-import { IconoReloj } from "../iconos";
-import { ColeVsCena, TarjetaCole } from "../cole";
-import { Razones } from "../razones";
 import { useHogar } from "../proveedor-hogar";
+import { Razones } from "../razones";
 
-const TEXTO_MOTIVO: Record<Motivo, string> = {
-  usa_caducidad: "Gasta lo que caduca",
-  usa_despensa: "Ya tenéis ingredientes",
-  bien_valorado: "Os gusta",
-  hace_tiempo: "Hace tiempo que no lo coméis",
-  novedad: "Nuevo para vosotros",
-  falta_en_semana: "Os falta esta semana",
-  rapido: "Rápido",
-};
-
-const NOMBRE_GRUPO: Record<string, string> = {
-  carne: "carne",
-  pescado: "pescado",
-  legumbre: "legumbres",
-  huevo: "huevos",
-  pasta: "pasta",
-  arroz: "arroz",
-  verdura: "verdura",
-  otro: "otro",
-};
-
-const formatoFecha = new Intl.DateTimeFormat("es-ES", {
-  day: "numeric",
-  month: "long",
-  timeZone: "UTC",
-});
 const mayuscula = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+const largo = (f: string) => {
+  const meses = [
+    "enero",
+    "febrero",
+    "marzo",
+    "abril",
+    "mayo",
+    "junio",
+    "julio",
+    "agosto",
+    "septiembre",
+    "octubre",
+    "noviembre",
+    "diciembre",
+  ];
+  return `${mayuscula(nombreDia(f))} ${Number(f.slice(8))} de ${meses[Number(f.slice(5, 7)) - 1]}`;
+};
 
 function Valoracion({ platoId, nombre }: { platoId: string; nombre: string }) {
   const { estado, despachar } = useHogar();
   const notas = estado.valoraciones[platoId] ?? {};
   return (
-    <fieldset className="border-borde rounded-2xl border p-3">
-      <legend className="px-1 text-sm font-bold">¿Qué tal estuvo? {nombre}</legend>
-      <ul className="flex flex-col gap-2">
+    <details className="border-borde rounded-2xl border px-3">
+      <summary className="flex min-h-11 cursor-pointer items-center text-base font-bold">
+        ¿Qué tal estuvo? {nombre}
+      </summary>
+      <ul className="flex flex-col gap-2 pb-2">
         {estado.personas
           .filter((p) => p.activa)
           .map((persona) => (
@@ -72,7 +64,7 @@ function Valoracion({ platoId, nombre }: { platoId: string; nombre: string }) {
             </li>
           ))}
       </ul>
-    </fieldset>
+    </details>
   );
 }
 
@@ -81,32 +73,32 @@ export function MenuVista() {
   const dias = useMemo(() => diasDelMenu(estado), [estado]);
   const propuesta = useMemo(() => menuDeLaSemana(estado), [estado]);
   const eleccion = (fecha: string) => estado.comidas.find((c) => c.fecha === fecha);
+  // Solo un día abierto a la vez: por defecto, el primero que aún no tiene cena.
+  const primeraSinCena = dias.find(
+    (d) => !estado.saltados.includes(d.fecha) && !eleccion(d.fecha),
+  )?.fecha;
+  const [abierto, setAbierto] = useState<string | null | undefined>(undefined);
+  const abiertoAhora = abierto === undefined ? (primeraSinCena ?? null) : abierto;
 
   return (
-    <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-2">
-        <h1 className="text-3xl font-extrabold tracking-tight">
-          Menú de la semana <span aria-hidden="true">🍽️</span>
-        </h1>
-        <p className="text-tinta-suave max-w-prose text-base">
-          Para cada cena, unas pocas opciones que encajan con el tiempo de ese día y con el menú del
-          cole. Elegid la que más os cuadre y la lista de la compra se actualiza sola.
-        </p>
-      </header>
-
-      <div className="flex flex-wrap items-center gap-3">
+    <div className="flex flex-col gap-4">
+      <header className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-2xl font-extrabold tracking-tight">Menú</h1>
         <button
           type="button"
           className="boton"
           onClick={() => despachar({ tipo: "menu/autocompletar" })}
         >
-          ✨ Proponer los días sin cena
+          ✨ Proponer días sin cena
         </button>
+      </header>
+
+      <div className="flex flex-wrap items-center gap-2">
         <div role="group" aria-label="Cuánto planificar" className="flex gap-2">
           {(
             [
-              ["semana", "Esta semana"],
-              ["quincena", "Próximos 15 días"],
+              ["semana", "Semana"],
+              ["quincena", "15 días"],
             ] as const
           ).map(([valor, texto]) => (
             <button
@@ -121,185 +113,196 @@ export function MenuVista() {
           ))}
         </div>
         <Link href="/menu/platos" className="boton-suave">
-          Mis platos
+          Platos
         </Link>
         <Link href="/menu/emergencia" className="boton-suave">
-          Cena de emergencia
+          Emergencia
         </Link>
         <Link href="/menu/cole" className="boton-suave">
-          Menú del cole
+          Cole
         </Link>
       </div>
-      {estado.horizonte === "quincena" && (
-        <p className="text-tinta-suave max-w-prose text-base">
-          Eligiendo varias cenas puedes adelantar la compra de 15 días: la lista suma lo de todas.
-        </p>
-      )}
 
-      <ColeVsCena />
-
-      <ul className="grid gap-4 lg:grid-cols-2">
+      <ul className="flex flex-col gap-2">
         {dias.map((dia) => {
           const elegida = eleccion(dia.fecha);
           const opciones: Opcion[] = elegida
-            ? (menuDeLaSemana(estado, dia.fecha)
-                .dias.find((d) => d.fecha === dia.fecha)
-                ?.opciones.filter((o) => o.plato.id !== elegida.plato.id) ?? [])
+            ? []
             : (propuesta.dias.find((d) => d.fecha === dia.fecha)?.opciones ?? []);
+          const opcionElegida = propuesta.dias.find((d) => d.fecha === dia.fecha)?.opciones[0];
           const tarde = estado.llegoTarde.includes(dia.fecha);
-          const titulo = `${mayuscula(nombreDia(dia.fecha))} ${formatoFecha.format(new Date(`${dia.fecha}T00:00:00Z`))}`;
           const evento = estado.eventos[dia.fecha];
           const saltado = estado.saltados.includes(dia.fecha);
+          const abiertoDia = abiertoAhora === dia.fecha && !saltado;
+          const emojisCole = [dia.cole?.primero, dia.cole?.segundo]
+            .filter((g): g is NonNullable<typeof g> => !!g)
+            .map((g) => EMOJI_GRUPO[g])
+            .join(" ");
+          const grupoElegida = (elegida?.plato as { grupo?: string } | undefined)?.grupo ?? "otro";
+
           if (saltado) {
             return (
               <li
                 key={dia.fecha}
-                className="tarjeta flex flex-wrap items-center justify-between gap-3 opacity-80"
+                className="tarjeta flex items-center justify-between gap-3 py-2 opacity-80"
               >
-                <div>
-                  <h2 className="text-xl font-extrabold">{titulo}</h2>
-                  <p className="text-tinta-suave text-base">Sin cena en casa este día.</p>
-                </div>
+                <h2 className="text-base font-bold">
+                  {largo(dia.fecha)}{" "}
+                  <span className="text-tinta-suave font-normal">· sin cena en casa</span>
+                </h2>
                 <button
                   type="button"
-                  className="boton-suave"
+                  className="boton-suave shrink-0 whitespace-nowrap"
                   onClick={() => despachar({ tipo: "menu/saltar", fecha: dia.fecha })}
                 >
-                  Planificar este día
+                  Planificar
                 </button>
               </li>
             );
           }
+
           return (
-            <li key={dia.fecha} className="tarjeta flex flex-col gap-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h2 className="text-xl font-extrabold">{titulo}</h2>
-                  {evento && (
-                    <p className="bg-suave-1 mt-1 w-fit rounded-full px-3 py-1 text-base font-bold">
-                      <span aria-hidden="true">{evento.emoji} </span>
-                      {evento.titulo}
-                    </p>
-                  )}
-                  <p className="text-tinta-suave flex items-center gap-1.5 text-base">
-                    <IconoReloj width={18} height={18} />
-                    Hasta {dia.minutosMax} min
-                  </p>
-                </div>
+            <li key={dia.fecha} className="tarjeta p-0">
+              <h2>
                 <button
                   type="button"
-                  aria-pressed={tarde}
-                  onClick={() => despachar({ tipo: "menu/llegoTarde", fecha: dia.fecha })}
-                  className={tarde ? "boton" : "boton-suave"}
+                  aria-expanded={abiertoDia}
+                  onClick={() => setAbierto(abiertoDia ? null : dia.fecha)}
+                  className="flex min-h-16 w-full items-center gap-3 px-4 py-2 text-left"
                 >
-                  Hoy llego tarde
+                  <span className="w-14 shrink-0 leading-tight">
+                    <span className="sr-only">{largo(dia.fecha)}</span>
+                    <span aria-hidden="true" className="block text-sm font-semibold uppercase">
+                      {nombreDia(dia.fecha).slice(0, 3)}
+                    </span>
+                    <span aria-hidden="true" className="block text-2xl font-extrabold">
+                      {Number(dia.fecha.slice(8))}
+                    </span>
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-base font-bold">
+                      {elegida ? (
+                        <>
+                          <span aria-hidden="true">{EMOJI_GRUPO[grupoElegida]} </span>
+                          {elegida.plato.nombre}
+                        </>
+                      ) : (
+                        <span className="text-marca-fuerte">Elegir cena</span>
+                      )}
+                    </span>
+                    <span className="text-tinta-suave block truncate text-sm">
+                      {evento && <span aria-hidden="true">{evento.emoji} </span>}
+                      {evento ? `${evento.titulo} · ` : ""}
+                      {emojisCole ? (
+                        <>
+                          <span aria-hidden="true">🎒 {emojisCole}</span>
+                          <span className="sr-only"> cole: {emojisCole}</span>
+                        </>
+                      ) : (
+                        "sin cole"
+                      )}
+                    </span>
+                  </span>
+                  <span aria-hidden="true" className="text-xl">
+                    {abiertoDia ? "▴" : "▾"}
+                  </span>
                 </button>
-              </div>
-              <button
-                type="button"
-                className="text-tinta-suave min-h-11 w-fit text-base font-semibold underline"
-                onClick={() => despachar({ tipo: "menu/saltar", fecha: dia.fecha })}
-              >
-                No cenamos en casa este día
-              </button>
+              </h2>
 
-              <TarjetaCole cole={dia.cole} fecha={dia.fecha} />
+              {abiertoDia && (
+                <div className="flex flex-col gap-3 px-4 pb-4">
+                  <TarjetaCole cole={dia.cole} fecha={dia.fecha} />
 
-              {elegida && (
-                <div className="bg-ok-fondo text-ok-texto flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4">
-                  <div>
-                    <p className="text-sm font-bold">✓ Elegido</p>
-                    <p className="text-lg font-bold">
-                      <span aria-hidden="true">
-                        {EMOJI_GRUPO[(elegida.plato as { grupo?: string }).grupo ?? "otro"]}{" "}
-                      </span>
-                      {elegida.plato.nombre}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    className="boton-suave"
-                    onClick={() => despachar({ tipo: "menu/quitar", fecha: dia.fecha })}
-                  >
-                    Quitar
-                  </button>
-                </div>
-              )}
-
-              {elegida && propuesta.dias.find((d) => d.fecha === dia.fecha)?.opciones[0] && (
-                <Razones
-                  fecha={dia.fecha}
-                  opcion={propuesta.dias.find((d) => d.fecha === dia.fecha)!.opciones[0]!}
-                />
-              )}
-
-              {elegida && dia.fecha <= estado.hoy && (
-                <Valoracion platoId={elegida.plato.id} nombre={elegida.plato.nombre} />
-              )}
-
-              {opciones.length === 0 && !elegida && (
-                <p className="text-tinta-suave text-base">
-                  Ningún plato cumple las reglas de este día (tiempo, cole o ingredientes). Prueba a
-                  quitar «Hoy llego tarde» o a añadir platos al catálogo.
-                </p>
-              )}
-
-              {opciones.length > 0 && (
-                <section aria-label={`Opciones para el ${nombreDia(dia.fecha)}`}>
-                  <h3 className="text-tinta-suave mb-2 text-sm font-semibold">
-                    {elegida ? "Otras opciones" : "Opciones"}
-                  </h3>
-                  <ul className="flex flex-col gap-2">
-                    {opciones.map((o) => (
-                      <li
-                        key={o.plato.id}
-                        className="border-borde bg-fondo flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-3"
+                  {elegida && (
+                    <div className="bg-ok-fondo text-ok-texto flex flex-wrap items-center justify-between gap-3 rounded-2xl p-3">
+                      <p className="text-base font-bold">
+                        <span aria-hidden="true">✓ </span>
+                        {elegida.plato.nombre}
+                      </p>
+                      <button
+                        type="button"
+                        className="boton-suave"
+                        aria-label={`Cancelar elección de ${elegida.plato.nombre}`}
+                        onClick={() => despachar({ tipo: "menu/quitar", fecha: dia.fecha })}
                       >
-                        <div className="min-w-0 flex-1">
-                          <p className="text-base font-bold">
-                            <span aria-hidden="true">{EMOJI_GRUPO[o.plato.grupo]} </span>
-                            {o.plato.nombre}
-                          </p>
-                          <p className="text-tinta-suave text-sm">
-                            {o.plato.minutosActivos} min · {NOMBRE_GRUPO[o.plato.grupo]}
-                            {o.plato.valoracion !== null && (
-                              <span
-                                aria-label={`valoración media ${formatearNumero(o.plato.valoracion)} de 5`}
-                              >
-                                {" "}
-                                · ★ {formatearNumero(o.plato.valoracion)}
-                              </span>
-                            )}
-                          </p>
-                          <Razones fecha={dia.fecha} opcion={o} />
-                          {o.motivos.length > 0 && (
-                            <ul className="mt-1 flex flex-wrap gap-1.5">
-                              {o.motivos.map((m) => (
-                                <li key={m} className="etiqueta bg-suave-1 text-tinta">
-                                  {TEXTO_MOTIVO[m]}
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                        </div>
-                        <button
-                          type="button"
-                          className="boton"
-                          aria-label={`${elegida ? "Cambiar por" : "Elegir"} ${o.plato.nombre}`}
-                          onClick={() =>
-                            despachar({
-                              tipo: "menu/elegir",
-                              fecha: dia.fecha,
-                              platoId: o.plato.id,
-                            })
-                          }
+                        Cancelar elección
+                      </button>
+                    </div>
+                  )}
+                  {elegida && opcionElegida && <Razones fecha={dia.fecha} opcion={opcionElegida} />}
+                  {elegida && dia.fecha <= estado.hoy && (
+                    <Valoracion platoId={elegida.plato.id} nombre={elegida.plato.nombre} />
+                  )}
+
+                  {!elegida && opciones.length === 0 && (
+                    <p className="text-tinta-suave text-base">
+                      Ningún plato cumple las reglas de este día (tiempo, cole o ingredientes).
+                    </p>
+                  )}
+
+                  {!elegida && opciones.length > 0 && (
+                    <ul
+                      aria-label={`Opciones para el ${nombreDia(dia.fecha)}`}
+                      className="flex flex-col gap-2"
+                    >
+                      {opciones.map((o) => (
+                        <li
+                          key={o.plato.id}
+                          className="border-borde bg-fondo flex flex-col gap-1 rounded-2xl border p-3"
                         >
-                          {elegida ? "Cambiar" : "Elegir"}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-base font-bold">
+                                <span aria-hidden="true">{EMOJI_GRUPO[o.plato.grupo]} </span>
+                                {o.plato.nombre}
+                              </p>
+                              <p className="text-tinta-suave text-sm">
+                                {o.plato.minutosActivos} min
+                                {o.plato.valoracion !== null &&
+                                  ` · ★ ${formatearNumero(o.plato.valoracion)}`}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              className="boton"
+                              aria-label={`Elegir ${o.plato.nombre}`}
+                              onClick={() => {
+                                despachar({
+                                  tipo: "menu/elegir",
+                                  fecha: dia.fecha,
+                                  platoId: o.plato.id,
+                                });
+                                // El día elegido se queda abierto: se ve la elección y se puede cancelar.
+                                setAbierto(dia.fecha);
+                              }}
+                            >
+                              Elegir
+                            </button>
+                          </div>
+                          <Razones fecha={dia.fecha} opcion={o} />
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      aria-pressed={tarde}
+                      onClick={() => despachar({ tipo: "menu/llegoTarde", fecha: dia.fecha })}
+                      className={tarde ? "boton" : "boton-suave"}
+                    >
+                      Llego tarde (15 min)
+                    </button>
+                    <button
+                      type="button"
+                      className="boton-suave"
+                      onClick={() => despachar({ tipo: "menu/saltar", fecha: dia.fecha })}
+                    >
+                      No cenamos en casa
+                    </button>
+                  </div>
+                </div>
               )}
             </li>
           );

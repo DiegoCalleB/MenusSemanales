@@ -52,12 +52,9 @@ export function DespensaVista() {
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-2">
-        <h1 className="text-3xl font-extrabold tracking-tight">
+        <h1 className="text-2xl font-extrabold tracking-tight">
           Despensa y nevera <span aria-hidden="true">🧊</span>
         </h1>
-        <p className="text-tinta-suave max-w-prose text-base">
-          Lo que hay en casa. Al cocinar se descuenta solo, y cualquier cambio se puede deshacer.
-        </p>
       </header>
 
       {(caducados.length > 0 || urgentes.length > 0) && (

@@ -236,10 +236,10 @@ test.describe("flujos en móvil", () => {
   test("menú: 15 días y menú del cole leído desde texto", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/menu");
-    await pagina.getByRole("button", { name: "Próximos 15 días" }).click();
+    await pagina.getByRole("button", { name: "15 días" }).click();
     await expect(pagina.getByRole("heading", { level: 2, name: /18 de noviembre/i })).toBeVisible();
 
-    await pagina.getByRole("link", { name: "Menú del cole" }).click();
+    await pagina.getByRole("link", { name: "Cole", exact: true }).click();
     await expect(pagina.getByRole("heading", { level: 1, name: "Menú del cole" })).toBeVisible();
     await pagina.getByRole("button", { name: "Usar el ejemplo de noviembre" }).click();
     await pagina.getByRole("button", { name: "Leer menú" }).click();
@@ -254,13 +254,16 @@ test.describe("flujos en móvil", () => {
   test("menú: valorar la cena de hoy por persona", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/menu");
-    await expect(pagina.getByText(/¿Qué tal estuvo\?/)).toBeVisible();
+    await pagina.getByRole("button", { name: /Miércoles 4 de noviembre/ }).click();
+    await pagina.getByText(/¿Qué tal estuvo\?/).click();
     await pagina.getByRole("button", { name: "Ana: 5 estrellas" }).click();
     await expect(pagina.getByRole("button", { name: "Ana: 5 estrellas" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
     await pagina.reload({ waitUntil: "networkidle" });
+    await pagina.getByRole("button", { name: /Miércoles 4 de noviembre/ }).click();
+    await pagina.getByText(/¿Qué tal estuvo\?/).click();
     await expect(pagina.getByRole("button", { name: "Ana: 5 estrellas" })).toHaveAttribute(
       "aria-pressed",
       "true",
@@ -330,10 +333,11 @@ test.describe("flujos en móvil", () => {
   }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/menu");
+    await pagina.getByRole("button", { name: /Miércoles 4 de noviembre/ }).click();
+    await pagina.getByText("Por qué").first().click();
     await expect(
       pagina.getByText(/han comido verdura y carne en el cole; para compensar/).first(),
     ).toBeVisible();
-    await pagina.getByText("Ver por qué").first().click();
     await expect(pagina.getByText(/de trabajo, dentro de los 30 min/).first()).toBeVisible();
     await contexto.close();
   });
@@ -347,11 +351,43 @@ test.describe("flujos en móvil", () => {
     await expect(pagina.getByRole("heading", { level: 2, name: "Hoy en el cole" })).toBeVisible();
     await expect(pagina.getByText("Crema suave de calabacín, zanahoria y calabaza")).toBeVisible();
     await expect(pagina.getByText("Para cenar conviene:").first()).toBeVisible();
-    // El menú junta cole y cena de cada día.
+    // En el menú, cada día enseña su cena y, al abrirlo, lo que comieron en el cole.
     await pagina.goto("/menu", { waitUntil: "networkidle" });
-    const resumen = pagina.getByRole("region", { name: "Cole y cena, de un vistazo" });
-    await expect(resumen).toContainText("Cinta de lomo a la plancha");
-    await expect(resumen).toContainText("Arroz con pollo al curry");
+    await pagina.getByRole("button", { name: /Miércoles 4 de noviembre/ }).click();
+    await expect(pagina.getByText("Cinta de lomo a la plancha")).toBeVisible();
+    await expect(pagina.getByRole("button", { name: /Miércoles 4 de noviembre/ })).toContainText(
+      "Arroz con pollo al curry",
+    );
+    await contexto.close();
+  });
+
+  test("menú: al elegir se ocultan las otras opciones y al cancelar vuelven", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/menu");
+    const elegir = pagina.getByRole("button", { name: /^Elegir / });
+    await expect(elegir).toHaveCount(3); // solo se ve el día abierto: tres opciones
+    await elegir.first().click();
+    await expect(elegir).toHaveCount(0); // al elegir, las otras opciones desaparecen
+    await pagina
+      .getByRole("button", { name: /^Cancelar elección de / })
+      .last()
+      .click();
+    await expect(elegir).toHaveCount(3); // al cancelar, vuelven
+    await contexto.close();
+  });
+
+  test("calendario: lo mismo al elegir y cancelar", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/calendario");
+    await pagina.getByRole("button", { name: /^Sábado 7 de noviembre/ }).click();
+    const elegir = pagina.getByRole("button", { name: /^Elegir / });
+    await expect(elegir).toHaveCount(3);
+    await elegir.first().click();
+    await expect(elegir).toHaveCount(0);
+    await pagina.getByRole("button", { name: /^Cancelar elección de / }).click();
+    await expect(elegir).toHaveCount(3);
     await contexto.close();
   });
 

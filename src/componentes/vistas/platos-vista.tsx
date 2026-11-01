@@ -143,13 +143,9 @@ export function PlatosVista() {
         <Link href="/menu" className="boton-suave w-fit">
           ← Volver al menú
         </Link>
-        <h1 className="text-3xl font-extrabold tracking-tight">
+        <h1 className="text-2xl font-extrabold tracking-tight">
           Mis platos <span aria-hidden="true">📖</span>
         </h1>
-        <p className="text-tinta-suave max-w-prose text-base">
-          Los platos que cocináis en casa. El planificador propone entre ellos, así que cuantos más
-          añadáis (rápidos y que os gusten), mejores serán las propuestas.
-        </p>
       </header>
 
       {borrador === null ? (

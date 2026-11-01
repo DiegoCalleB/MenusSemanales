@@ -445,3 +445,11 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **Petición de Diego:** ver rápidamente, cada día, lo que han comido en el cole para contrastarlo con la cena.
 - **Decisión:** una pieza común (`src/componentes/cole.tsx`) con dos vistas: **«En el cole»** (primero y segundo con su emoji de grupo, guarnición, postre, kilocalorías y «Para cenar conviene: …») y **«Cole y cena, de un vistazo»** (cada día con el cole y la cena elegida, uno debajo de otro). Aparecen en la **portada** («Hoy en el cole», o el próximo día con menú si hoy no hay), en el **menú** (resumen de la semana arriba y la tarjeta en cada día) y en el **detalle del calendario**.
 - **Datos:** la guarnición se guarda ahora también con el menú del cole (antes solo se usaba al revisar).
+
+## D-058 · Simplificar: menos pantalla, menos scroll
+
+- **Estado:** aceptada (2026-11-01)
+- **Petición de Diego:** simplificar mucho y no tener que hacer tanto scroll.
+- **Decisión:** (1) **Portada de una sola pantalla**: saludo, cena de hoy, menú del cole de hoy y dos botones; se quitan las tarjetas de módulos (la barra de navegación ya lleva a cada sección). (2) **Menú en acordeón**: cada día es una fila de una línea (día, cena elegida o «Elegir cena», emojis del cole) y solo se abre un día a la vez, por defecto el primero sin cena; dentro, el cole, las opciones (una línea cada una) y los botones. Al elegir se ocultan las demás opciones y al cancelar vuelven. Se elimina el resumen largo «Cole y cena» (cada fila ya lo muestra). (3) **«Por qué» y «¿Qué tal estuvo?» plegados** hasta que se piden. (4) **Cabeceras sin párrafos explicativos**, títulos más pequeños, banner de modo de una sola línea y botones del menú más cortos.
+- **Medida:** la portada cabe sin desplazarse en un móvil de 390 × 844; las filas de día abiertas siguen siendo la parte larga, a propósito, porque ahí se decide.
+- **Pendiente:** aplicar el mismo criterio a la despensa, la compra y el reparto (son largas por naturaleza: listas) con secciones plegables y buscador.

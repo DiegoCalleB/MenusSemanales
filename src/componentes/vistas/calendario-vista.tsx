@@ -73,13 +73,9 @@ export function CalendarioVista() {
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-2">
-        <h1 className="text-3xl font-extrabold tracking-tight">
+        <h1 className="text-2xl font-extrabold tracking-tight">
           Calendario <span aria-hidden="true">📅</span>
         </h1>
-        <p className="text-tinta-suave max-w-prose text-base">
-          Todo el mes de un vistazo: la cena de cada día, lo que comen las niñas en el cole (🎒) y
-          quién cocina. Toca un día para ver su detalle o elegir la cena.
-        </p>
       </header>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
@@ -227,9 +223,10 @@ export function CalendarioVista() {
                 <button
                   type="button"
                   className="boton-suave"
+                  aria-label={`Cancelar elección de ${elegida.plato.nombre}`}
                   onClick={() => despachar({ tipo: "menu/quitar", fecha: sel })}
                 >
-                  Quitar
+                  Cancelar elección
                 </button>
               )}
             </div>
@@ -250,11 +247,9 @@ export function CalendarioVista() {
             </button>
           )}
 
-          {planificable && opciones.length > 0 && (
+          {planificable && !elegida && opciones.length > 0 && (
             <div>
-              <h3 className="text-tinta-suave mb-2 text-sm font-bold">
-                {elegida ? "Otras opciones" : "Opciones"}
-              </h3>
+              <h3 className="text-tinta-suave mb-2 text-sm font-bold">Opciones</h3>
               <ul className="flex flex-col gap-2">
                 {opciones.map((o) => (
                   <li
@@ -272,12 +267,12 @@ export function CalendarioVista() {
                     <button
                       type="button"
                       className="boton"
-                      aria-label={`${elegida ? "Cambiar por" : "Elegir"} ${o.plato.nombre} para el ${largo(sel)}`}
+                      aria-label={`Elegir ${o.plato.nombre} para el ${largo(sel)}`}
                       onClick={() =>
                         despachar({ tipo: "menu/elegir", fecha: sel, platoId: o.plato.id })
                       }
                     >
-                      {elegida ? "Cambiar" : "Elegir"}
+                      Elegir
                     </button>
                   </li>
                 ))}

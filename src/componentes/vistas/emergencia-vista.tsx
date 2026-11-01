@@ -22,13 +22,9 @@ export function EmergenciaVista() {
         <Link href="/menu" className="boton-suave w-fit">
           ← Volver al menú
         </Link>
-        <h1 className="text-3xl font-extrabold tracking-tight">
+        <h1 className="text-2xl font-extrabold tracking-tight">
           Cena de emergencia <span aria-hidden="true">⏱️</span>
         </h1>
-        <p className="text-tinta-suave max-w-prose text-base">
-          Hoy no hay tiempo: platos de 15 minutos o menos con lo que ya tenéis en casa, o a los que
-          les falta muy poco. Cocinar descuenta de la despensa y se puede deshacer.
-        </p>
       </header>
 
       {opciones.length === 0 ? (
