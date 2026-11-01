@@ -26,21 +26,21 @@ Staging/previews: Supabase Branching cuando el proyecto pase a plan Pro.
 
 ## Supabase: configuración objetivo
 
-| Área           | Configuración                                                                 | Fase |
-| -------------- | ----------------------------------------------------------------------------- | ---- |
-| Región         | eu-west-1 (Irlanda)                                                           | 1    |
-| Esquema        | Solo vía migraciones del repo (`supabase/migrations`)                         | 1    |
-| RLS            | Activada y forzada en todas las tablas; políticas por pertenencia a hogar     | 1    |
-| Advisors       | Seguridad + rendimiento tras cada migración, sin avisos abiertos              | 1    |
-| Tipos          | `supabase gen types typescript` → `src/lib/supabase/database.types.ts`        | 1    |
-| Claves         | Publishable en cliente; secret solo en servidor/CI/scripts                    | 1    |
-| Auth           | Magic link + Google; redirecciones localhost y Vercel; alta por invitación    | 3    |
-| Email          | SMTP propio con Resend (el integrado tiene límites de prueba)                 | 3    |
-| Realtime       | Solo tablas de colaboración (comidas, compra, despensa, tareas)               | 3    |
-| Storage        | Bucket privado por hogar para menús del cole (foto/PDF)                       | 4    |
-| Edge Functions | Extracción con IA; clave de API como secreto                                  | 4    |
-| pg_cron        | Recordatorios de tareas de casa                                               | 3    |
-| Copias         | Activas desde el primer día (el panel muestra copias de seguridad realizadas) | —    |
+| Área           | Configuración                                                                      | Fase |
+| -------------- | ---------------------------------------------------------------------------------- | ---- |
+| Región         | eu-west-1 (Irlanda)                                                                | 1    |
+| Esquema        | Solo vía migraciones del repo (`supabase/migrations`)                              | 1    |
+| RLS            | Activada y forzada en todas las tablas; políticas por pertenencia a hogar          | 1    |
+| Advisors       | Seguridad + rendimiento tras cada migración, sin avisos abiertos                   | 1    |
+| Tipos          | `supabase gen types typescript` → `src/infraestructura/supabase/database.types.ts` | 1    |
+| Claves         | Publishable en cliente; secret solo en servidor/CI/scripts                         | 1    |
+| Auth           | Magic link + Google; redirecciones localhost y Vercel; alta por invitación         | 3    |
+| Email          | SMTP propio con Resend (el integrado tiene límites de prueba)                      | 3    |
+| Realtime       | Solo tablas de colaboración (comidas, compra, despensa, tareas)                    | 3    |
+| Storage        | Bucket privado por hogar para menús del cole (foto/PDF)                            | 4    |
+| Edge Functions | Extracción con IA; clave de API como secreto                                       | 4    |
+| pg_cron        | Recordatorios de tareas de casa                                                    | 3    |
+| Copias         | Activas desde el primer día (el panel muestra copias de seguridad realizadas)      | —    |
 
 ## Secretos
 

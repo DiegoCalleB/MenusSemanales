@@ -1,5 +1,5 @@
 import { createBrowserClient } from "@supabase/ssr";
-import { envPublico } from "@/lib/env";
+import { envPublico } from "@/infraestructura/env";
 import type { Database } from "./database.types";
 
 /** Cliente de Supabase para componentes de cliente. Usa solo la clave publishable. */
