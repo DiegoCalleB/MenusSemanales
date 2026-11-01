@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { diaSemanaIso, enRango, semanaDe, sumarDias } from "./fechas";
+import { diaSemanaIso, diasEntre, enRango, semanaDe, sumarDias } from "./fechas";
 
 describe("fechas", () => {
   it("suma días cruzando mes y año", () => {
@@ -24,6 +24,13 @@ describe("fechas", () => {
     expect(enRango("2026-11-02", "2026-11-02", "2026-11-08")).toBe(true);
     expect(enRango("2026-11-08", "2026-11-02", "2026-11-08")).toBe(true);
     expect(enRango("2026-11-09", "2026-11-02", "2026-11-08")).toBe(false);
+  });
+
+  it("cuenta los días entre dos fechas, con signo", () => {
+    expect(diasEntre("2026-11-04", "2026-11-04")).toBe(0);
+    expect(diasEntre("2026-11-04", "2026-11-06")).toBe(2);
+    expect(diasEntre("2026-11-04", "2026-11-01")).toBe(-3);
+    expect(diasEntre("2026-12-30", "2027-01-02")).toBe(3);
   });
 
   it("rechaza fechas mal formadas o inexistentes", () => {

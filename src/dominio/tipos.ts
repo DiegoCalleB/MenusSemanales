@@ -2,6 +2,15 @@ import { z } from "zod";
 import type { FechaIso } from "./fechas";
 
 /**
+ * zod 4 comprueba al arrancar si el navegador permite `eval` (para generar validadores más rápidos).
+ * Con nuestra CSP estricta (sin `unsafe-eval`, ver D-025) esa comprobación se registra como una
+ * violación aunque zod la capture. `jitless` evita la comprobación: los datos de esta app son
+ * pequeños y la velocidad no se resiente, y así la CSP no necesita ninguna excepción.
+ * Debe ejecutarse antes de crear ningún esquema.
+ */
+z.config({ jitless: true });
+
+/**
  * Tipos y esquemas del dominio. Reflejan las reglas de la base de datos (ver las migraciones) para
  * que un dato válido aquí también lo sea allí. Se validan con zod en los bordes de la aplicación.
  */

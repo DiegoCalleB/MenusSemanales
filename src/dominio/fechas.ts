@@ -34,3 +34,8 @@ export function semanaDe(iso: FechaIso): { desde: FechaIso; hasta: FechaIso } {
 export function enRango(iso: FechaIso, desde: FechaIso, hasta: FechaIso): boolean {
   return iso >= desde && iso <= hasta; // el formato ISO se ordena como texto
 }
+
+/** Días de `desde` a `hasta` (negativo si `hasta` es anterior). */
+export function diasEntre(desde: FechaIso, hasta: FechaIso): number {
+  return Math.round((aFecha(hasta).getTime() - aFecha(desde).getTime()) / MS_DIA);
+}
