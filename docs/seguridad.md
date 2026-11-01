@@ -80,11 +80,24 @@ La seguridad no se añade al final: cada decisión de arquitectura parte de la p
 - Ningún secreto en el repositorio: `.env*` ignorado salvo la plantilla.
 - Revisión por PR con la definición de hecho (incluye "sin secretos en el diff").
 
+## Centro compartido: la excepción al aislamiento
+
+Es la única tabla compartida entre hogares, por eso concentra los controles más estrictos (D-034):
+
+| Riesgo                                        | Control                                                              | Verificación                                   |
+| --------------------------------------------- | -------------------------------------------------------------------- | ---------------------------------------------- |
+| Saber qué familias usan el colegio            | Cada hogar solo ve su propio vínculo                                 | Test + mutación                                |
+| Acceso a datos privados por compartir colegio | Ninguna política de datos privados considera el centro               | Test: B no ve hogar, personas ni miembros de A |
+| Código adivinado o reutilizado sin control    | 48 bits, hash, caducidad, límite de usos, revocación, error uniforme | Tests + mutación                               |
+| Vandalismo del menú                           | Historial inmutable con autor, visible solo para curadores           | Tests + mutación                               |
+| Spam de centros                               | Máximo 3 por usuario; solo administradores                           | Test                                           |
+| Mover datos a un centro ajeno                 | `WITH CHECK`                                                         | Test                                           |
+
 ## Privacidad (RGPD)
 
 - Datos alojados en la UE (Supabase eu-west-1, Railway EU West).
 - Minimización: de las personas sin cuenta (las niñas) solo se guarda un alias, el tipo (adulto/niño) y el factor de ración.
-- Derecho de supresión: borrar el hogar elimina en cascada todos sus datos.
+- Derecho de supresión: borrar el hogar elimina en cascada todos sus datos, y borrar la cuenta de quien lo creó no lo impide (D-035).
 - Fase 4 (IA): las fotos del menú del cole no contienen datos personales; aun así se procesarán solo con consentimiento y sin conservarse más de lo necesario.
 
 ## Verificación automática

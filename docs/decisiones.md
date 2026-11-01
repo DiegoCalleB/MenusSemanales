@@ -235,3 +235,47 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 
 - **Estado:** propuesta
 - **Decisión:** MVP = menú con opciones + compra + despensa + menú del cole compartido. Después tareas del hogar, calendario escolar y recordatorios; luego IA para leer el menú desde foto y módulos menores. Regla: no se añade un módulo hasta que el anterior se usa de verdad en casa.
+
+## D-031 · Catálogo comunitario de platos rápidos y sencillos
+
+- **Estado:** requisito aceptado (el autor lo pide); diseño propuesto
+- **Contexto:** se quiere un catálogo que las familias enriquezcan entre todas con sus recetas. Prioridad: rápido y sencillo, aunque puede haber de todo.
+- **Decisión de diseño:** biblioteca **global** (`plato_compartido`, con sus ingredientes) separada del catálogo **privado** de cada hogar. Publicar crea un borrador que se revisa antes de ser visible; adoptar copia el plato al hogar. Valoración agregada y anónima; reportes; versiones inmutables una vez publicadas. Ingredientes normalizados y comunes, para poder sumar la compra de platos de familias distintas.
+- **Riesgos:** (1) moderación, que al principio recae en el autor; (2) derechos de autor, de ahí "solo recetas propias, sin copiar ni fotos"; (3) duplicados de ingredientes ("tomate"/"tomates"), que se atajan con normalización y sugerencias; (4) contenido inapropiado, con reportes y revisión previa a publicar.
+- **Dependencia:** el modelo de ingredientes y cantidades debe casar con `seed-platos.json`, que aún no está en el repositorio. Los 58 platos de la familia serán la semilla de la biblioteca.
+
+## D-032 · Reparto de la carga mental como objetivo de producto
+
+- **Estado:** requisito aceptado; diseño propuesto
+- **Contexto:** en muchas familias la carga mental (acordarse, planificar, organizar) recae en una sola persona, con frecuencia la madre. La app debe facilitar un reparto equitativo y visible.
+- **Decisión de diseño:** cada carga (cena, compra, tarea, gestión del cole) tiene responsable, y concebir, planificar y ejecutar se reparten como una unidad (inspirado en Fair Play). Los avisos van al responsable. Panel de reparto semanal que cuenta también planificar y comprar. Rotación con ponderación del esfuerzo. Lenguaje neutral y sin suponer la composición del hogar.
+- **Salvaguardas de tono:** el panel es informativo y compartido, activado por acuerdo; nunca puntúa ni reprocha.
+- **Alternativa descartada:** una lista de tareas con "completada" por persona (mide quién ejecuta, no quién carga con acordarse).
+
+## D-033 · El tiempo, restricción de primer orden del generador
+
+- **Estado:** aceptada (2026-11-01)
+- **Contexto:** el problema central de la familia es la falta de tiempo para cocinar y para planificar.
+- **Decisión:** `tiempo_activo_min` y `tiempo_total_min` en cada plato; tiempo disponible por día (por defecto entre semana ≤ 30 min activos; "hoy llego tarde" ≤ 15 min); botón de "cena de emergencia" con lo que hay en la despensa. Objetivo medible: planificar la semana en menos de 2 minutos.
+- **Consecuencia:** el generador trata el tiempo como restricción dura por día, antes que el resto de preferencias blandas.
+
+## D-034 · Centro compartido: diseño implementado y riesgos aceptados
+
+- **Estado:** aceptada (2026-11-01) — aplicada en producción (migración `20261101135511`)
+- **Implementado:** `centro`, `centro_hogar`, `centro_codigo`, `menu_cole_dia` e `menu_cole_dia_historial`, más tres funciones (`crear_centro`, `crear_codigo_centro`, `unirse_a_centro`). 93 comprobaciones de RLS en total.
+- **Privacidad:** el vínculo es del hogar. **Un hogar solo ve su propio vínculo**: no puede saber qué otras familias usan el centro. Compartir centro no da acceso a ningún dato privado (probado). El historial, que contiene el autor de cada cambio, solo lo ven los curadores y no se puede modificar.
+- **Códigos:** 12 caracteres hexadecimales aleatorios (48 bits), solo se guarda el hash, caducan (1-90 días), límite de usos (1-500), revocables; el error es el mismo para código inexistente, caducado, revocado o agotado. Unirse es idempotente.
+- **Anti-abuso:** máximo 3 centros creados por usuario; solo el administrador del hogar vincula el hogar.
+- **Verificación:** mutaciones que rompen la seguridad (menú legible por cualquiera, vínculos visibles, borrado abierto, código agotado válido, alta por no administrador, historial editable): los 6 se detectan.
+- **Riesgos aceptados (a revisar antes del piloto):**
+  1. _Fuerza bruta de códigos:_ 48 bits y límites de Supabase lo hacen inviable, pero no hay limitación propia de intentos por usuario.
+  2. _Centro sin curador:_ si el único curador sale, nadie puede crear códigos. Falta la promoción de curadores.
+  3. _Centros duplicados:_ dos familias pueden crear el mismo colegio por separado; no hay búsqueda ni fusión todavía.
+  4. _Edición abierta:_ cualquier hogar vinculado edita el menú; se mitiga con el historial inmutable, pero falta la interfaz de revertir.
+
+## D-035 · Derecho de supresión de datos
+
+- **Estado:** aceptada (2026-11-01)
+- **Problema detectado:** `hogar.creado_por` tenía `ON DELETE RESTRICT`, lo que impedía borrar la cuenta de quien creó un hogar, incompatible con el derecho de supresión del RGPD. Detectado al diseñar el producto para otras familias.
+- **Corrección:** `ON DELETE SET NULL`; el hogar permanece, sin autoría, y se elimina la pertenencia de la persona. Probado.
+- **Pendiente:** limpieza periódica de hogares sin miembros (`pg_cron`) y exportación de datos desde la app.

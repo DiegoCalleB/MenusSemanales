@@ -53,6 +53,14 @@ Nunca en git. Plantilla en `.env.example`.
 | `SUPABASE_SECRET_KEY`                                                   | Solo donde se use (script de importación), nunca en el navegador |
 | `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `SUPABASE_PROJECT_REF` | Secretos de GitHub (despliegue de migraciones)                   |
 
+## Migraciones aplicadas
+
+| Versión          | Nombre                    | Contenido                                                                         |
+| ---------------- | ------------------------- | --------------------------------------------------------------------------------- |
+| `20261101131702` | `fundacion_hogares`       | Hogares, miembros, invitaciones, personas y asistencia, con RLS                   |
+| `20261101131747` | `indices_claves_foraneas` | Índices de claves foráneas                                                        |
+| `20261101135511` | `centro_compartido`       | Centro, códigos, menú del cole con historial; corrección del derecho de supresión |
+
 ## Flujo de migraciones
 
 1. Crear migración en local (`supabase migration new <nombre>`).
