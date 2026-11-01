@@ -11,7 +11,7 @@ import { type ItemDespensa, fechaIsoSchema, platoSchema } from "./tipos";
  * puede probar con propiedades y explicar cada opción.
  *
  * Reglas duras (nunca se rompen): ingredientes excluidos (alergias, sabores raros), tiempo máximo
- * del día, no coincidir con el grupo del menú del cole, no repetir un plato ya elegido en la semana
+ * del día, complementar el menú del cole según su recomendador de cenas (ver `recomendadosParaCenar`), no repetir un plato ya elegido en la semana
  * y no repetir grupo con el día anterior o el siguiente ya elegidos.
  * Reglas blandas (puntúan): valoración, tiempo desde la última vez, aprovechar caducidades y lo que
  * ya hay en casa, rapidez y variedad entre las opciones.
@@ -40,12 +40,49 @@ export const platoMenuSchema = platoSchema.extend({
 });
 export type PlatoMenu = z.infer<typeof platoMenuSchema>;
 
+/** Qué han comido las niñas en el cole ese día (primer y segundo plato), si se conoce. */
+export interface MenuCole {
+  primero: GrupoPlato | null;
+  segundo: GrupoPlato | null;
+}
+
+/**
+ * Recomendador de cenas del cole (documento «Recomendador de cenas»): qué conviene cenar según lo
+ * que se comió. Se guarda como tabla para que sea fácil de revisar frente al documento original.
+ */
+const RECOMENDADO_TRAS_PRIMERO: Partial<Record<GrupoPlato, readonly GrupoPlato[]>> = {
+  verdura: ["pasta", "arroz"],
+  pasta: ["verdura"],
+  arroz: ["verdura"],
+  legumbre: ["verdura", "pasta", "arroz"],
+};
+const RECOMENDADO_TRAS_SEGUNDO: Partial<Record<GrupoPlato, readonly GrupoPlato[]>> = {
+  huevo: ["carne", "pescado"],
+  pescado: ["huevo", "carne"],
+  legumbre: ["verdura", "huevo"],
+  carne: ["huevo", "pescado"],
+};
+
+/**
+ * Grupos que complementan lo que se comió en el cole, o `null` si no se sabe (no hay restricción).
+ * Un plato vale si lo recomienda el primero o el segundo del cole; así no se repite la verdura o la
+ * carne del mediodía por la noche.
+ */
+export function recomendadosParaCenar(cole: MenuCole | null): ReadonlySet<GrupoPlato> | null {
+  if (!cole) return null;
+  const reglas = [
+    cole.primero ? RECOMENDADO_TRAS_PRIMERO[cole.primero] : undefined,
+    cole.segundo ? RECOMENDADO_TRAS_SEGUNDO[cole.segundo] : undefined,
+  ].filter((r): r is readonly GrupoPlato[] => r !== undefined);
+  return reglas.length === 0 ? null : new Set(reglas.flat());
+}
+
 export interface DiaMenu {
   fecha: FechaIso;
   /** Tiempo activo máximo de ese día (30 entre semana, 15 si «hoy llego tarde»). */
   minutosMax: number;
-  /** Grupo del plato que las niñas comen en el cole ese día, si se conoce. */
-  grupoCole: GrupoPlato | null;
+  /** Menú del cole de ese día (las niñas comen allí de lunes a viernes). */
+  cole: MenuCole | null;
 }
 
 export type Motivo =
@@ -85,7 +122,8 @@ export function cumpleReglasDuras(
   gruposVecinos: ReadonlySet<GrupoPlato>,
 ): boolean {
   if (plato.minutosActivos > dia.minutosMax) return false;
-  if (dia.grupoCole === plato.grupo) return false;
+  const recomendados = recomendadosParaCenar(dia.cole);
+  if (recomendados && !recomendados.has(plato.grupo)) return false;
   if (gruposVecinos.has(plato.grupo)) return false;
   return !plato.ingredientes.some((i) => !i.opcional && excluidos.has(i.ingredienteId));
 }

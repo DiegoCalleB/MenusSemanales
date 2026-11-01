@@ -7,7 +7,14 @@ import {
   invertirMovimientos,
   planificarCocinado,
 } from "@/dominio/despensa";
-import { type FechaIso, semanaDe } from "@/dominio/fechas";
+import { type FechaIso, semanaDe, sumarDias, diaSemanaIso } from "@/dominio/fechas";
+import {
+  proponerMenu,
+  type DiaMenu,
+  type MenuCole,
+  type MenuPropuesto,
+  type PlatoMenu,
+} from "@/dominio/menu";
 import {
   calcularReparto,
   proponerRotacion,
@@ -22,7 +29,6 @@ import type {
   Movimiento,
   MovimientoAplicado,
   Persona,
-  Plato,
   Turno,
   Ubicacion,
 } from "@/dominio/tipos";
@@ -69,7 +75,13 @@ export interface Aviso {
 export interface EstadoHogar {
   hoy: FechaIso;
   ingredientes: Ingrediente[];
-  platos: Plato[];
+  platos: PlatoMenu[];
+  /** Ingredientes que la familia no quiere ver en el menú (alergias, sabores que no gustan). */
+  excluirIngredientes: string[];
+  /** Menú del cole de cada día (primer y segundo plato). */
+  colegio: Record<FechaIso, MenuCole>;
+  /** Días en que se llega tarde: el tiempo máximo baja a 15 minutos. */
+  llegoTarde: FechaIso[];
   personas: Persona[];
   despensa: ItemDespensa[];
   comidas: ComidaPlanificada[];
@@ -92,6 +104,9 @@ export type Accion =
   | { tipo: "ajustar"; ingredienteId: string; ubicacion: Ubicacion; delta: number }
   | { tipo: "tirarCaducado"; ingredienteId: string; ubicacion: Ubicacion }
   | { tipo: "deshacer"; operacionId: string }
+  | { tipo: "menu/elegir"; fecha: FechaIso; platoId: string }
+  | { tipo: "menu/quitar"; fecha: FechaIso }
+  | { tipo: "menu/llegoTarde"; fecha: FechaIso }
   | { tipo: "cerrarAviso" }
   | { tipo: "reparto/asignarResponsable"; cargaId: string; personaId: string | null }
   | { tipo: "reparto/proponerRotacion" }
@@ -129,6 +144,42 @@ export function repartoDeLaSemana(e: EstadoHogar): Reparto {
     semana: semanaDe(e.hoy),
   });
 }
+
+/** Cenas que se planifican: desde hoy hasta el domingo. Entre semana, 30 min; el fin de semana, 60. */
+export function diasDelMenu(e: EstadoHogar): DiaMenu[] {
+  const { hasta } = semanaDe(e.hoy);
+  const dias: DiaMenu[] = [];
+  for (let f = e.hoy; f <= hasta; f = sumarDias(f, 1)) {
+    const laborable = diaSemanaIso(f) <= 5;
+    dias.push({
+      fecha: f,
+      minutosMax: e.llegoTarde.includes(f) ? 15 : laborable ? 30 : 60,
+      cole: e.colegio[f] ?? null,
+    });
+  }
+  return dias;
+}
+
+/** Opciones de cada día. Las cenas ya elegidas se respetan; para ver alternativas de un día elegido, pásalo en `liberar`. */
+export function menuDeLaSemana(e: EstadoHogar, liberar?: FechaIso): MenuPropuesto {
+  const dias = diasDelMenu(e);
+  const fechas = new Set(dias.map((d) => d.fecha));
+  const elegidos: Record<FechaIso, string> = {};
+  for (const c of e.comidas) {
+    if (fechas.has(c.fecha) && c.fecha !== liberar) elegidos[c.fecha] = c.plato.id;
+  }
+  return proponerMenu({
+    hoy: e.hoy,
+    dias,
+    catalogo: e.platos,
+    despensa: e.despensa,
+    excluirIngredientes: e.excluirIngredientes,
+    elegidos,
+  });
+}
+
+const NOMBRE_DIA = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"];
+export const nombreDia = (fecha: FechaIso): string => NOMBRE_DIA[diaSemanaIso(fecha) - 1] ?? "";
 
 // --------------------------------------------------------------------------------------------
 // Reductor
@@ -326,6 +377,50 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
         };
       }
     }
+
+    case "menu/elegir": {
+      const plato = e.platos.find((p) => p.id === accion.platoId);
+      if (!plato || !diasDelMenu(e).some((d) => d.fecha === accion.fecha)) return e;
+      const raciones = e.personas
+        .filter((p) => p.activa)
+        .reduce((suma, p) => suma + p.factorRacion, 0);
+      const comida: ComidaPlanificada = {
+        etiqueta: `Cena del ${nombreDia(accion.fecha)}`,
+        fecha: accion.fecha,
+        plato,
+        raciones,
+      };
+      return {
+        ...e,
+        comidas: [...e.comidas.filter((c) => c.fecha !== accion.fecha), comida].sort((a, b) =>
+          a.fecha.localeCompare(b.fecha),
+        ),
+        siguienteId: e.siguienteId + 1,
+        aviso: ok(
+          e,
+          `Elegido para el ${nombreDia(accion.fecha)}: ${plato.nombre}. La compra se ha actualizado.`,
+        ),
+      };
+    }
+
+    case "menu/quitar":
+      return {
+        ...e,
+        comidas: e.comidas.filter((c) => c.fecha !== accion.fecha),
+        siguienteId: e.siguienteId + 1,
+        aviso: ok(
+          e,
+          `Cena del ${nombreDia(accion.fecha)} sin decidir. La compra se ha actualizado.`,
+        ),
+      };
+
+    case "menu/llegoTarde":
+      return {
+        ...e,
+        llegoTarde: e.llegoTarde.includes(accion.fecha)
+          ? e.llegoTarde.filter((f) => f !== accion.fecha)
+          : [...e.llegoTarde, accion.fecha],
+      };
 
     case "cerrarAviso":
       return e.aviso === null ? e : { ...e, aviso: null };

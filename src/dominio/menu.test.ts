@@ -1,6 +1,12 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { GRUPOS_PLATO, type DiaMenu, type PlatoMenu, proponerMenu } from "./menu";
+import {
+  GRUPOS_PLATO,
+  type DiaMenu,
+  type PlatoMenu,
+  proponerMenu,
+  recomendadosParaCenar,
+} from "./menu";
 
 const HOY = "2026-11-02";
 
@@ -19,7 +25,7 @@ function plato(id: string, extra: Partial<PlatoMenu> = {}): PlatoMenu {
 const dia = (fecha: string, extra: Partial<DiaMenu> = {}): DiaMenu => ({
   fecha,
   minutosMax: 30,
-  grupoCole: null,
+  cole: null,
   ...extra,
 });
 const base = { hoy: HOY, despensa: [], excluirIngredientes: [] };
@@ -50,13 +56,37 @@ describe("proponerMenu · reglas duras", () => {
     expect(m.dias[0]?.opciones.map((o) => o.plato.id)).toEqual(["rapido"]);
   });
 
-  it("no ofrece el grupo que las niñas comen en el cole", () => {
+  it("sigue el recomendador de cenas del cole (verdura + carne en el cole → pasta/arroz, huevo o pescado)", () => {
     const m = proponerMenu({
       ...base,
-      dias: [dia(HOY, { grupoCole: "pasta" })],
-      catalogo: [plato("espaguetis", { grupo: "pasta" }), plato("pollo")],
+      dias: [dia(HOY, { cole: { primero: "verdura", segundo: "carne" } })],
+      opcionesPorDia: 10,
+      catalogo: [
+        plato("espaguetis", { grupo: "pasta" }),
+        plato("arroz", { grupo: "arroz" }),
+        plato("pollo", { grupo: "carne" }),
+        plato("crema", { grupo: "verdura" }),
+        plato("merluza", { grupo: "pescado" }),
+        plato("tortilla", { grupo: "huevo" }),
+        plato("lentejas", { grupo: "legumbre" }),
+      ],
     });
-    expect(m.dias[0]?.opciones.map((o) => o.plato.id)).toEqual(["pollo"]);
+    expect(m.dias[0]?.opciones.map((o) => o.plato.grupo).sort()).toEqual([
+      "arroz",
+      "huevo",
+      "pasta",
+      "pescado",
+    ]);
+  });
+
+  it("si el cole solo tiene un plato conocido, aplica solo esa regla; sin datos no restringe", () => {
+    expect(recomendadosParaCenar(null)).toBeNull();
+    expect(recomendadosParaCenar({ primero: null, segundo: null })).toBeNull();
+    expect(
+      [...(recomendadosParaCenar({ primero: "legumbre", segundo: null }) ?? [])].sort(),
+    ).toEqual(["arroz", "pasta", "verdura"]);
+    // Un primero sin regla (p. ej. «otro») tampoco restringe.
+    expect(recomendadosParaCenar({ primero: "otro", segundo: null })).toBeNull();
   });
 
   it("un plato elegido no se repite y condiciona el grupo de los días vecinos", () => {
@@ -190,9 +220,9 @@ describe("proponerMenu · propiedades", () => {
         fc.subarray(["x", "y", "z"]),
         fc.constantFrom(15, 30),
         fc.option(fc.constantFrom(...GRUPOS_PLATO), { nil: null }),
-        (catalogo, excluidos, minutosMax, grupoCole) => {
+        (catalogo, excluidos, minutosMax, primeroCole) => {
           const dias = [
-            dia("2026-11-02", { minutosMax, grupoCole }),
+            dia("2026-11-02", { minutosMax, cole: { primero: primeroCole, segundo: null } }),
             dia("2026-11-03", { minutosMax }),
           ];
           const ctx = { ...base, dias, catalogo, excluirIngredientes: excluidos };
@@ -204,7 +234,9 @@ describe("proponerMenu · propiedades", () => {
             expect(ids.length).toBeLessThanOrEqual(3);
             for (const o of d.opciones) {
               expect(o.plato.minutosActivos).toBeLessThanOrEqual(minutosMax);
-              if (i === 0 && grupoCole) expect(o.plato.grupo).not.toBe(grupoCole);
+              const rec =
+                i === 0 ? recomendadosParaCenar({ primero: primeroCole, segundo: null }) : null;
+              if (rec) expect(rec.has(o.plato.grupo)).toBe(true);
               for (const ing of o.plato.ingredientes) {
                 if (!ing.opcional) expect(excluidos).not.toContain(ing.ingredienteId);
               }

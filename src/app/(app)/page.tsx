@@ -1,7 +1,14 @@
 import Link from "next/link";
-import { IconoCompra, IconoDespensa, IconoReparto } from "@/componentes/iconos";
+import { IconoCompra, IconoDespensa, IconoMenu, IconoReparto } from "@/componentes/iconos";
 
 const MODULOS = [
+  {
+    href: "/menu",
+    titulo: "Menú de la semana",
+    texto:
+      "Varias opciones para cada cena, adaptadas al tiempo que tenéis y al menú del cole. Elegid la que os cuadre.",
+    Icono: IconoMenu,
+  },
   {
     href: "/compra",
     titulo: "Lista de la compra",

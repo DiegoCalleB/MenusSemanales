@@ -4,6 +4,8 @@ import {
   type Accion,
   type EstadoHogar,
   articulosPendientes,
+  diasDelMenu,
+  menuDeLaSemana,
   reducir,
   repartoDeLaSemana,
   ubicacionDeCompra,
@@ -294,6 +296,66 @@ describe("reparto de la carga", () => {
   });
 });
 
+describe("menú semanal", () => {
+  it("planifica desde hoy hasta el domingo: 30 min entre semana, 60 el fin de semana", () => {
+    const dias = diasDelMenu(estadoInicialDemo());
+    expect(dias.map((d) => d.fecha)).toEqual([
+      "2026-11-04",
+      "2026-11-05",
+      "2026-11-06",
+      "2026-11-07",
+      "2026-11-08",
+    ]);
+    expect(dias.map((d) => d.minutosMax)).toEqual([30, 30, 30, 60, 60]);
+  });
+
+  it("respeta las cenas ya elegidas y no ofrece su grupo a los días vecinos", () => {
+    const m = menuDeLaSemana(estadoInicialDemo());
+    expect(m.dias.find((d) => d.fecha === "2026-11-06")?.opciones.map((o) => o.plato.id)).toEqual([
+      "tortilla",
+    ]);
+    const sabado = m.dias.find((d) => d.fecha === "2026-11-07")?.opciones ?? [];
+    expect(sabado.length).toBeGreaterThan(0);
+    expect(sabado.every((o) => o.plato.grupo !== "huevo")).toBe(true);
+  });
+
+  it("elegir una cena la guarda y cambia la lista de la compra", () => {
+    const e0 = estadoInicialDemo();
+    const e1 = aplicar(e0, { tipo: "menu/elegir", fecha: "2026-11-07", platoId: "salmon-plancha" });
+    expect(e1.comidas.find((c) => c.fecha === "2026-11-07")?.plato.id).toBe("salmon-plancha");
+    expect(pendientes(e1).salmon).toBe(400); // 120 g × 3 raciones = 360 g, redondeado a pasos de 50 g
+    expect(pendientes(e0).salmon).toBeUndefined();
+    // Cambiarla sustituye la anterior (una cena por día).
+    const e2 = aplicar(e1, { tipo: "menu/elegir", fecha: "2026-11-07", platoId: "hamburguesas" });
+    expect(e2.comidas.filter((c) => c.fecha === "2026-11-07")).toHaveLength(1);
+    expect(pendientes(e2).salmon).toBeUndefined();
+  });
+
+  it("quitar una cena la deja sin decidir", () => {
+    const e = aplicar(estadoInicialDemo(), { tipo: "menu/quitar", fecha: "2026-11-06" });
+    expect(e.comidas.some((c) => c.fecha === "2026-11-06")).toBe(false);
+    expect(menuDeLaSemana(e).dias.find((d) => d.fecha === "2026-11-06")?.opciones.length).toBe(3);
+  });
+
+  it("«hoy llego tarde» deja solo platos de 15 minutos o menos, y se puede revertir", () => {
+    const e = aplicar(
+      estadoInicialDemo(),
+      { tipo: "menu/quitar", fecha: "2026-11-06" },
+      { tipo: "menu/llegoTarde", fecha: "2026-11-06" },
+    );
+    const opciones = menuDeLaSemana(e).dias.find((d) => d.fecha === "2026-11-06")?.opciones ?? [];
+    expect(opciones.length).toBeGreaterThan(0);
+    expect(opciones.every((o) => o.plato.minutosActivos <= 15)).toBe(true);
+    expect(aplicar(e, { tipo: "menu/llegoTarde", fecha: "2026-11-06" }).llegoTarde).toEqual([]);
+  });
+
+  it("ignora platos o días que no existen", () => {
+    const e = estadoInicialDemo();
+    expect(reducir(e, { tipo: "menu/elegir", fecha: "2026-11-07", platoId: "nada" })).toBe(e);
+    expect(reducir(e, { tipo: "menu/elegir", fecha: "2026-12-25", platoId: "tortilla" })).toBe(e);
+  });
+});
+
 describe("pureza", () => {
   it("el reductor nunca modifica el estado anterior", () => {
     const inicial = estadoInicialDemo();
@@ -305,6 +367,9 @@ describe("pureza", () => {
       { tipo: "tirarCaducado", ingredienteId: "yogur", ubicacion: "nevera" },
       { tipo: "manual/anadir", nombre: "x" },
       { tipo: "reparto/proponerRotacion" },
+      { tipo: "menu/elegir", fecha: "2026-11-07", platoId: "salmon-plancha" },
+      { tipo: "menu/quitar", fecha: "2026-11-06" },
+      { tipo: "menu/llegoTarde", fecha: "2026-11-05" },
     ];
     acciones.reduce(reducir, inicial);
     expect(JSON.stringify(inicial)).toBe(foto);

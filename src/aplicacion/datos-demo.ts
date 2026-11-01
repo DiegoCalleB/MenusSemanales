@@ -4,10 +4,10 @@ import type {
   Ingrediente,
   ItemDespensa,
   Persona,
-  Plato,
   Turno,
 } from "@/dominio/tipos";
 import { racionesDe } from "@/dominio/tipos";
+import type { PlatoMenu } from "@/dominio/menu";
 import type { Ocurrencia } from "@/dominio/reparto";
 import type { EstadoHogar } from "./estado";
 
@@ -32,11 +32,23 @@ const ingredientes: Ingrediente[] = [
   { id: "pollo", nombre: "Pechuga de pollo", unidad: "g", seccion: "carne" },
   { id: "merluza", nombre: "Merluza", unidad: "g", seccion: "congelados" },
   { id: "pan", nombre: "Pan", unidad: "ud", seccion: "panaderia" },
+  { id: "lentejas", nombre: "Lentejas", unidad: "g", seccion: "despensa" },
+  { id: "garbanzos", nombre: "Garbanzos cocidos", unidad: "g", seccion: "conservas" },
+  { id: "zanahoria", nombre: "Zanahoria", unidad: "g", seccion: "fruta_verdura" },
+  { id: "cebolla", nombre: "Cebolla", unidad: "g", seccion: "fruta_verdura" },
+  { id: "espinacas", nombre: "Espinacas", unidad: "g", seccion: "fruta_verdura" },
+  { id: "atun", nombre: "Atún en lata", unidad: "ud", seccion: "conservas" },
+  { id: "salmon", nombre: "Salmón", unidad: "g", seccion: "pescado" },
+  { id: "ternera", nombre: "Ternera picada", unidad: "g", seccion: "carne" },
 ];
 
-const platos: Plato[] = [
+const platos: PlatoMenu[] = [
   {
     id: "pasta-tomate",
+    grupo: "pasta",
+    minutosActivos: 20,
+    ultimaVez: "2026-10-26",
+    valoracion: 4,
     nombre: "Pasta con tomate",
     ingredientes: [
       { ingredienteId: "pasta", cantidadPorRacion: 80, opcional: false },
@@ -46,6 +58,10 @@ const platos: Plato[] = [
   },
   {
     id: "arroz-pollo",
+    grupo: "arroz",
+    minutosActivos: 25,
+    ultimaVez: "2026-10-14",
+    valoracion: 5,
     nombre: "Arroz con pollo al curry",
     ingredientes: [
       { ingredienteId: "arroz", cantidadPorRacion: 70, opcional: false },
@@ -54,6 +70,10 @@ const platos: Plato[] = [
   },
   {
     id: "crema-calabacin",
+    grupo: "verdura",
+    minutosActivos: 25,
+    ultimaVez: "2026-10-05",
+    valoracion: 3,
     nombre: "Crema de calabacín",
     ingredientes: [
       { ingredienteId: "calabacin", cantidadPorRacion: 200, opcional: false },
@@ -63,15 +83,123 @@ const platos: Plato[] = [
   },
   {
     id: "tortilla",
+    grupo: "huevo",
+    minutosActivos: 10,
+    ultimaVez: "2026-10-30",
+    valoracion: 4,
     nombre: "Tortilla francesa",
     ingredientes: [{ ingredienteId: "huevo", cantidadPorRacion: 2, opcional: false }],
   },
   {
     id: "merluza-patata",
+    grupo: "pescado",
+    minutosActivos: 15,
+    ultimaVez: "2026-10-18",
+    valoracion: 4,
     nombre: "Merluza al horno con patata",
     ingredientes: [
       { ingredienteId: "merluza", cantidadPorRacion: 150, opcional: false },
       { ingredienteId: "patata", cantidadPorRacion: 150, opcional: false },
+    ],
+  },
+  {
+    id: "lentejas-verduras",
+    nombre: "Lentejas con verduras",
+    grupo: "legumbre",
+    minutosActivos: 25,
+    ultimaVez: "2026-10-12",
+    valoracion: 4,
+    ingredientes: [
+      { ingredienteId: "lentejas", cantidadPorRacion: 70, opcional: false },
+      { ingredienteId: "zanahoria", cantidadPorRacion: 50, opcional: false },
+      { ingredienteId: "cebolla", cantidadPorRacion: 30, opcional: false },
+    ],
+  },
+  {
+    id: "garbanzos-espinacas",
+    nombre: "Garbanzos con espinacas",
+    grupo: "legumbre",
+    minutosActivos: 20,
+    ultimaVez: null,
+    valoracion: null,
+    ingredientes: [
+      { ingredienteId: "garbanzos", cantidadPorRacion: 100, opcional: false },
+      { ingredienteId: "espinacas", cantidadPorRacion: 80, opcional: false },
+    ],
+  },
+  {
+    id: "macarrones-atun",
+    nombre: "Macarrones con atún y tomate",
+    grupo: "pasta",
+    minutosActivos: 20,
+    ultimaVez: "2026-10-21",
+    valoracion: 4,
+    ingredientes: [
+      { ingredienteId: "pasta", cantidadPorRacion: 80, opcional: false },
+      { ingredienteId: "atun", cantidadPorRacion: 0.5, opcional: false },
+      { ingredienteId: "tomate", cantidadPorRacion: 80, opcional: false },
+    ],
+  },
+  {
+    id: "salmon-plancha",
+    nombre: "Salmón a la plancha con patata",
+    grupo: "pescado",
+    minutosActivos: 15,
+    ultimaVez: "2026-10-20",
+    valoracion: 5,
+    ingredientes: [
+      { ingredienteId: "salmon", cantidadPorRacion: 120, opcional: false },
+      { ingredienteId: "patata", cantidadPorRacion: 100, opcional: false },
+    ],
+  },
+  {
+    id: "hamburguesas",
+    nombre: "Hamburguesas de ternera",
+    grupo: "carne",
+    minutosActivos: 20,
+    ultimaVez: "2026-10-28",
+    valoracion: 4,
+    ingredientes: [
+      { ingredienteId: "ternera", cantidadPorRacion: 100, opcional: false },
+      { ingredienteId: "pan", cantidadPorRacion: 0.5, opcional: false },
+      { ingredienteId: "tomate", cantidadPorRacion: 50, opcional: false },
+    ],
+  },
+  {
+    id: "pollo-ensalada",
+    nombre: "Pollo a la plancha con ensalada",
+    grupo: "carne",
+    minutosActivos: 15,
+    ultimaVez: "2026-10-24",
+    valoracion: 3,
+    ingredientes: [
+      { ingredienteId: "pollo", cantidadPorRacion: 120, opcional: false },
+      { ingredienteId: "tomate", cantidadPorRacion: 100, opcional: false },
+    ],
+  },
+  {
+    id: "huevos-patatas",
+    nombre: "Huevos con patatas",
+    grupo: "huevo",
+    minutosActivos: 15,
+    ultimaVez: "2026-10-09",
+    valoracion: 5,
+    ingredientes: [
+      { ingredienteId: "huevo", cantidadPorRacion: 2, opcional: false },
+      { ingredienteId: "patata", cantidadPorRacion: 150, opcional: false },
+    ],
+  },
+  {
+    id: "arroz-tres-delicias",
+    nombre: "Arroz tres delicias",
+    grupo: "arroz",
+    minutosActivos: 20,
+    ultimaVez: null,
+    valoracion: null,
+    ingredientes: [
+      { ingredienteId: "arroz", cantidadPorRacion: 70, opcional: false },
+      { ingredienteId: "huevo", cantidadPorRacion: 1, opcional: false },
+      { ingredienteId: "zanahoria", cantidadPorRacion: 40, opcional: false },
     ],
   },
 ];
@@ -207,6 +335,14 @@ export function estadoInicialDemo(): EstadoHogar {
     hoy: HOY,
     ingredientes,
     platos,
+    excluirIngredientes: [],
+    // Menú real del cole (Basal, noviembre 2026), docs/contexto/menu-cole-noviembre-2026.pdf
+    colegio: {
+      "2026-11-04": { primero: "verdura", segundo: "carne" }, // crema de calabacín + lomo
+      "2026-11-05": { primero: "pasta", segundo: "legumbre" }, // sopa de cocido + cocido
+      "2026-11-06": { primero: "arroz", segundo: "pescado" }, // arroz caldoso + dorado
+    },
+    llegoTarde: [],
     personas,
     despensa,
     comidas,

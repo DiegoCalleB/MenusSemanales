@@ -20,7 +20,7 @@ const PANTALLAS = [
   { nombre: "pantalla ancha (1920)", ancho: 1920, alto: 1080 },
 ] as const;
 
-const RUTAS = ["/", "/compra", "/despensa", "/reparto"] as const;
+const RUTAS = ["/", "/menu", "/compra", "/despensa", "/reparto"] as const;
 const PUNTO_DE_CORTE = 768; // md de Tailwind
 
 async function abrir(
@@ -183,6 +183,19 @@ test.describe("flujos en móvil", () => {
     await pagina.getByRole("checkbox", { name: /Calabacín/ }).uncheck();
     await expect(pagina.getByRole("status")).toContainText("Deshecho");
     await expect(pagina.getByRole("checkbox", { name: /Calabacín/ })).not.toBeChecked();
+    await contexto.close();
+  });
+
+  test("menú: elegir una cena actualiza la lista de la compra", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/menu");
+    await pagina
+      .getByRole("button", { name: /^Elegir / })
+      .first()
+      .click();
+    await expect(pagina.getByRole("status")).toContainText("La compra se ha actualizado");
+    await pagina.getByRole("link", { name: "Compra" }).click();
+    await expect(pagina.getByRole("heading", { level: 1, name: /compra/i })).toBeVisible();
     await contexto.close();
   });
 
