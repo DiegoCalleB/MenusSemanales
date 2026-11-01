@@ -1,0 +1,16 @@
+# Nunca enviar secretos ni artefactos locales al contexto de build.
+.env
+.env.*
+!.env.example
+.git
+.github
+node_modules
+.next
+coverage
+docs
+supabase
+scripts
+*.md
+!README.md
+Dockerfile
+.dockerignore
