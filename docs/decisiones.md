@@ -297,3 +297,28 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **Bug del entorno de pruebas detectado:** la normalización de tildes fallaba en local porque el Postgres de pruebas no era UTF-8 (producción y CI sí). El script fija ahora `UTF8`, de modo que local y CI coinciden.
 - **Aviso resuelto:** `administrador_plataforma` tenía RLS sin políticas (aviso INFO). Se añadió una política explícita que deniega todo.
 - **Pendiente:** valoraciones agregadas, reportes y notificación al autor; importación del seed (necesita ver su formato).
+
+## D-037 · Caducidad exacta en las operaciones de despensa
+
+- **Estado:** aceptada (2026-11-01) — aplicada en producción (migración `20261101150059`)
+- **Defecto encontrado por una prueba de propiedades:** una fila de despensa vacía conservaba su caducidad antigua, así que al comprar de nuevo el stock recién comprado heredaba una fecha vencida y figuraba como caducado (la app habría seguido pidiéndolo sin parar). Borrar la fecha sin más habría permitido que «deshacer» resucitara comida caducada como si fuera fresca.
+- **Reglas:** (1) una fila que llega a 0 pierde su caducidad; (2) cada movimiento guarda la caducidad que tenía la fila antes y deshacer la restaura, de modo que **deshacer es exacto también en las fechas**; (3) no se mezcla stock nuevo con stock caducado: añadir a una fila con stock caducado se rechaza y hay que tirarlo antes (excepto al deshacer). El dominio y la base de datos aplican las mismas reglas.
+- **Verificación:** propiedades del dominio (miles de despensas generadas), 8 comprobaciones SQL, 4 mutaciones detectadas y prueba de humo en producción.
+
+## D-038 · Capa de aplicación: estado del hogar como reductor puro
+
+- **Estado:** aceptada (2026-11-01)
+- **Decisión:** `src/aplicacion/estado.ts` es un reductor puro (acción → estado nuevo) que usa las funciones del dominio. La interfaz lo consume con `useReducer`; un adaptador de Supabase persistirá las mismas operaciones cuando haya acceso con cuenta, sin tocar las vistas. Hasta entonces la interfaz funciona con **datos de demostración** (una familia de cuatro), que no se guardan.
+- **Por qué:** permite construir y probar toda la interfaz (y su responsive) antes de tener login, y mantiene la lógica de negocio fuera de los componentes.
+- **Límite honesto:** las pantallas **no están conectadas a la base de datos todavía**; la base de datos, el dominio y la interfaz están probados por separado y falta el adaptador que los une (fase 3, con el acceso por cuenta).
+
+## D-039 · Responsive verificado, no supuesto
+
+- **Estado:** aceptada (2026-11-01)
+- **Decisión:** diseño mobile-first con un único punto de corte (768 px) y reglas medibles (sin desbordamiento, objetivos táctiles ≥ 44 px, texto ≥ 16 px, zonas seguras, reflujo a 320 px). Se verifican con 102 pruebas E2E en Chromium sobre 10 tamaños de pantalla (320 a 1920 px, vertical y horizontal), con tema claro y oscuro y revisión de accesibilidad con axe (WCAG 2.2 AA). Detalle en [diseno.md](diseno.md).
+
+## D-040 · zod en modo `jitless` por la CSP estricta
+
+- **Estado:** aceptada (2026-11-01)
+- **Contexto:** al llevar el dominio al navegador, el test de seguridad de la CSP falló: zod 4 comprueba al arrancar si se permite `eval`, y con nuestra CSP (sin `unsafe-eval`, D-025) esa comprobación se registra como violación aunque zod la capture.
+- **Decisión:** `z.config({ jitless: true })` al inicio del dominio. Los datos son pequeños y no hay pérdida apreciable de velocidad. **No se relaja la CSP.**

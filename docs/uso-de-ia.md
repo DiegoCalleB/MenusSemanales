@@ -74,3 +74,25 @@ Registro de prompts que funcionaron o fallaron, con lo aprendido. Material para 
 - **Qué pasó:** gitleaks falló con "leaks found: 1" sin decir dónde. El agente **sospechó** de un falso positivo en el archivo de tipos generado (`foreignKeyName: "..._fkey"`), lo dijo como sospecha y activó el modo detallado en lugar de ignorarlo. El hallazgo real era otro: un valor de prueba del propio agente (`sb_publishable_abc123`) en un test.
 - **Aprendizaje:** una sospecha razonable no es un diagnóstico. Acertar de casualidad habría llevado a silenciar la regla equivocada. Se resolvió con una excepción por huella exacta y cambiando el valor de prueba por uno obviamente falso.
 - **Corolario:** los valores de prueba con forma de secreto (`sb_publishable_abc123`) generan ruido y entrenan a ignorar alertas; usar valores claramente falsos.
+
+## 2026-11-01 · Despensa, compra, reparto e interfaz responsive
+
+### ✅ Las pruebas de propiedades encontraron dos defectos de diseño que los ejemplos no veían
+
+- **Defecto 1 (en la base de datos):** al comprar de nuevo, una fila vacía heredaba una caducidad vencida. Lo destapó la propiedad «tras comprar lo que pide la lista, ya no falta nada» con un contraejemplo mínimo: una fila con 0 unidades y una fecha pasada.
+- **Defecto 2 (en la base de datos):** al deshacer la compra de algo que la lista ya había vuelto a pedir, la restricción de unicidad fallaba. Lo destapó un test SQL de escenario.
+- **Aprendizaje:** pedir a la IA tests de **propiedades** (invariantes con datos generados) y de **mutaciones** (romper el código a propósito) encuentra fallos de diseño que los casos de ejemplo no. En ambos casos el arreglo exigió pensar en el comportamiento deseado (¿qué debe pasar con una caducidad al deshacer?), no solo parchear.
+
+### ❌ Tiempo perdido por un proceso zombi (error del agente)
+
+- **Qué pasó:** el agente depuró varios pasos dos «anomalías» (una violación de CSP intermitente y un `h1` de 24 px) que no existían: un servidor de una compilación antigua seguía vivo en el puerto de pruebas, porque Next renombra su proceso hijo a `next-server` y el `pkill -f "node server.js"` ni lo encontraba ni, peor, coincidía con su propio comando y mataba la consola (código de salida 144).
+- **Cómo se descubrió:** el HTML servido referenciaba un fragmento de JavaScript que no existía en disco, algo imposible en una compilación coherente. Eso apuntó a «el servidor que contesta no es el que creo». Se buscó el proceso por puerto y se mató por PID.
+- **Aprendizaje:** cuando los datos son incoherentes, **verificar primero qué estás probando** antes de buscar el fallo en el código; y lanzar los servidores de prueba desde el propio script, cerrándolos por grupo de procesos.
+
+### ✅ Tests de seguridad que protegen a los de funcionalidad
+
+- Al llevar el dominio al navegador, el test E2E de la CSP falló por la comprobación de `eval` de zod. Sin ese test, habría quedado como una violación silenciosa en la consola.
+
+### ✅ Revisar capturas de pantalla, no solo ejecutar tests
+
+- Las 102 pruebas pasaban, pero al mirar las capturas el agente vio algo que ningún test mide: en tarjetas estrechas el texto «50 g cada vez» se partía en tres líneas. Los tests comprueban reglas; los ojos comprueban si se ve bien.

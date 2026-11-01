@@ -62,6 +62,8 @@ Nunca en git. Plantilla en `.env.example`.
 | `20261101135511` | `centro_compartido`                | Centro, códigos, menú del cole con historial; corrección del derecho de supresión |
 | `20261101143913` | `catalogo_platos`                  | Ingredientes, platos del hogar, biblioteca comunitaria y moderación               |
 | `20261101143940` | `administrador_politica_explicita` | Política que deniega todo acceso a la lista de administradores                    |
+| `20261101145322` | `despensa_compra_cargas`           | Despensa con movimientos, lista de la compra y reparto de cargas                  |
+| `20261101150059` | `despensa_caducidad`               | Caducidad exacta al deshacer (D-037)                                              |
 
 ## Flujo de migraciones
 
