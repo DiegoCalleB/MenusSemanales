@@ -4,6 +4,7 @@ import {
   type Accion,
   type EstadoHogar,
   articulosPendientes,
+  cenaDeEmergenciaHoy,
   diasDelMenu,
   menuDeLaSemana,
   reducir,
@@ -405,6 +406,35 @@ describe("menú semanal", () => {
     const e = estadoInicialDemo();
     expect(reducir(e, { tipo: "menu/elegir", fecha: "2026-11-07", platoId: "nada" })).toBe(e);
     expect(reducir(e, { tipo: "menu/elegir", fecha: "2026-12-25", platoId: "tortilla" })).toBe(e);
+  });
+});
+
+describe("cena de emergencia", () => {
+  it("propone platos de 15 minutos o menos y pone primero los que se pueden hacer ya", () => {
+    const r = cenaDeEmergenciaHoy(estadoInicialDemo());
+    expect(r.length).toBeGreaterThan(0);
+    expect(r.every((o) => o.plato.minutosActivos <= 15)).toBe(true);
+    const primeraIncompleta = r.findIndex((o) => !o.completa);
+    expect(
+      r.slice(primeraIncompleta === -1 ? r.length : primeraIncompleta).every((o) => !o.completa),
+    ).toBe(true);
+  });
+
+  it("cocinar la emergencia elige la cena de hoy, descuenta la despensa y se puede deshacer", () => {
+    const e0 = estadoInicialDemo();
+    const completa = cenaDeEmergenciaHoy(e0).find((o) => o.completa);
+    expect(completa).toBeDefined();
+    const e1 = aplicar(e0, { tipo: "emergencia/cocinar", platoId: completa?.plato.id ?? "" });
+    expect(e1.comidas.find((c) => c.fecha === e1.hoy)?.plato.id).toBe(completa?.plato.id);
+    expect(e1.operaciones.at(-1)?.tipo).toBe("cocinar");
+    expect(e1.despensa).not.toEqual(e0.despensa);
+    const e2 = aplicar(e1, { tipo: "deshacer", operacionId: e1.operaciones.at(-1)?.id ?? "" });
+    expect(conStock(e2)).toEqual(conStock(e0));
+  });
+
+  it("un plato desconocido no hace nada", () => {
+    const e = estadoInicialDemo();
+    expect(reducir(e, { tipo: "emergencia/cocinar", platoId: "nada" })).toBe(e);
   });
 });
 

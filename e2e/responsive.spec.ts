@@ -20,7 +20,15 @@ const PANTALLAS = [
   { nombre: "pantalla ancha (1920)", ancho: 1920, alto: 1080 },
 ] as const;
 
-const RUTAS = ["/", "/menu", "/menu/cole", "/compra", "/despensa", "/reparto"] as const;
+const RUTAS = [
+  "/",
+  "/menu",
+  "/menu/cole",
+  "/menu/emergencia",
+  "/compra",
+  "/despensa",
+  "/reparto",
+] as const;
 const PUNTO_DE_CORTE = 768; // md de Tailwind
 
 async function abrir(
@@ -250,6 +258,17 @@ test.describe("flujos en móvil", () => {
       "aria-pressed",
       "true",
     );
+    await contexto.close();
+  });
+
+  test("cena de emergencia: cocinar ahora descuenta y se puede deshacer", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/menu/emergencia");
+    await expect(pagina.getByText("✓ Tenéis todo").first()).toBeVisible();
+    await pagina.getByRole("button", { name: "Cocinar ahora" }).first().click();
+    await expect(pagina.getByRole("status")).toContainText("Cocinado");
+    await pagina.getByRole("button", { name: /Deshacer/ }).click();
+    await expect(pagina.getByRole("status")).toContainText("Deshecho");
     await contexto.close();
   });
 

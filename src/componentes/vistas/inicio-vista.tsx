@@ -67,6 +67,9 @@ export function InicioVista() {
           <Link href="/menu" className="boton">
             {cena ? "Ver el menú" : "Elegir la cena"}
           </Link>
+          <Link href="/menu/emergencia" className="boton-suave">
+            Hoy llego tarde
+          </Link>
           <Link href="/compra" className="boton-suave">
             Lista de la compra
           </Link>

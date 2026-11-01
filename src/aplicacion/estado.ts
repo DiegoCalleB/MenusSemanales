@@ -7,6 +7,7 @@ import {
   invertirMovimientos,
   planificarCocinado,
 } from "@/dominio/despensa";
+import { cenaDeEmergencia, type OpcionEmergencia } from "@/dominio/emergencia";
 import { redondear } from "@/dominio/numeros";
 import { type FechaIso, semanaDe, sumarDias, diaSemanaIso } from "@/dominio/fechas";
 import {
@@ -112,6 +113,7 @@ export type Accion =
   | { tipo: "menu/elegir"; fecha: FechaIso; platoId: string }
   | { tipo: "menu/quitar"; fecha: FechaIso }
   | { tipo: "menu/llegoTarde"; fecha: FechaIso }
+  | { tipo: "emergencia/cocinar"; platoId: string }
   | { tipo: "valorar"; platoId: string; personaId: string; puntos: number }
   | { tipo: "menu/horizonte"; horizonte: EstadoHogar["horizonte"] }
   | { tipo: "cole/importar"; dias: Record<FechaIso, MenuCole> }
@@ -184,6 +186,22 @@ export function menuDeLaSemana(e: EstadoHogar, liberar?: FechaIso): MenuPropuest
     despensa: e.despensa,
     excluirIngredientes: e.excluirIngredientes,
     elegidos,
+  });
+}
+
+/** Raciones de adulto equivalentes de quienes cenan en casa. */
+export const racionesDelHogar = (e: EstadoHogar): number =>
+  e.personas.filter((p) => p.activa).reduce((suma, p) => suma + p.factorRacion, 0);
+
+/** Qué cenar hoy con lo que hay en casa, rápido (D-033). */
+export function cenaDeEmergenciaHoy(e: EstadoHogar): OpcionEmergencia[] {
+  return cenaDeEmergencia({
+    catalogo: e.platos,
+    despensa: e.despensa,
+    hoy: e.hoy,
+    raciones: racionesDelHogar(e),
+    excluirIngredientes: e.excluirIngredientes,
+    cole: e.colegio[e.hoy] ?? null,
   });
 }
 
@@ -430,6 +448,17 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
           ? e.llegoTarde.filter((f) => f !== accion.fecha)
           : [...e.llegoTarde, accion.fecha],
       };
+
+    case "emergencia/cocinar": {
+      // Elige el plato para hoy y lo cocina: se descuenta de la despensa y se puede deshacer.
+      const elegido = reducir(e, { tipo: "menu/elegir", fecha: e.hoy, platoId: accion.platoId });
+      if (elegido === e) return e;
+      return reducir(elegido, {
+        tipo: "cocinar",
+        platoId: accion.platoId,
+        raciones: racionesDelHogar(e),
+      });
+    }
 
     case "valorar": {
       const plato = e.platos.find((p) => p.id === accion.platoId);

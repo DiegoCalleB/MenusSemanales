@@ -368,3 +368,11 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **Decisión:** cada persona del hogar valora de 1 a 5 las cenas ya hechas (pulsar de nuevo la misma nota la quita). La **media** se guarda en el plato y es la que usa el motor (`valoracion` en `src/dominio/menu.ts`: sube lo bien valorado y baja lo mal valorado). Las opciones muestran la media con una estrella; los botones son de 44 px y funcionan con teclado y lector de pantalla.
 - **Por qué por persona:** las niñas y los adultos no comen igual de a gusto lo mismo; así se ve quién no ha puesto nota y se puede ponderar por persona en el futuro (perfil de gusto, D-041).
 - **Base de datos:** la tabla `valoracion_plato` (en la migración `menu_planificado`) ya guarda una nota por persona y plato, con aislamiento entre hogares.
+
+## D-047 · Cena de emergencia
+
+- **Estado:** aceptada (2026-11-01)
+- **Decisión:** `cenaDeEmergencia` (`src/dominio/emergencia.ts`) propone platos de ≤ 15 minutos que se pueden cocinar **ya** con la despensa (cantidades por las raciones reales, sin contar lo caducado) o a los que falten como mucho 2 ingredientes. Orden: completos primero, menos faltantes, encaja con el recomendador del cole, gasta lo que caduca, mejor valorados, más rápidos. Es determinista y no usa IA (D-041).
+- **Flujo:** «Cocinar ahora» elige la cena de hoy y descuenta la despensa en una operación que se puede deshacer; si falta algo, «Elegir para hoy y apuntar lo que falta» la elige y la compra automática añade lo que falte. Accesos desde la portada («Hoy llego tarde») y desde el menú.
+- **Por qué:** ataca el problema central (falta de tiempo) en el momento crítico: evitar comer «rápido y mal de lo que hay en la nevera».
+- **Límite:** el catálogo de demostración es pequeño; con el catálogo comunitario de platos rápidos (D-016, moderación) habrá muchas más opciones.
