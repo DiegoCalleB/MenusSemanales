@@ -10,9 +10,13 @@ export default defineConfig({
     include: ["src/**/*.test.ts"],
     coverage: {
       provider: "v8",
-      include: ["src/lib/**/*.ts"],
-      exclude: ["src/lib/**/*.test.ts", "src/lib/supabase/database.types.ts"],
+      include: ["src/dominio/**/*.ts", "src/aplicacion/**/*.ts", "src/infraestructura/env.ts"],
+      exclude: ["**/*.test.ts"],
       reporter: ["text", "html"],
+      // El dominio es el corazón del producto: se exige cobertura alta y se comprueba en CI.
+      thresholds: {
+        "src/dominio/**/*.ts": { lines: 90, functions: 90, branches: 85, statements: 90 },
+      },
     },
   },
 });
