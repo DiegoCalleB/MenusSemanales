@@ -1,4 +1,4 @@
-import { type Accion, type EstadoHogar, reducir } from "./estado";
+import { type Accion, type EstadoHogar, normalizar, reducir } from "./estado";
 
 /**
  * Sincronización del hogar entre dispositivos (D-063). El plan de la familia es un documento con
@@ -44,11 +44,8 @@ export const esAccionSincronizable = (a: Accion): boolean =>
 export const paraNube = (e: EstadoHogar): EstadoHogar => ({ ...e, aviso: null });
 
 /** Estado de la nube para este dispositivo: conserva su propio «hoy». */
-export const desdeNube = (remoto: EstadoHogar, local: EstadoHogar): EstadoHogar => ({
-  ...remoto,
-  hoy: local.hoy,
-  aviso: null,
-});
+export const desdeNube = (remoto: EstadoHogar, local: EstadoHogar): EstadoHogar =>
+  normalizar({ ...remoto, hoy: local.hoy, aviso: null });
 
 /** Reaplica cambios propios sobre el estado de la nube. */
 export function rebasar(

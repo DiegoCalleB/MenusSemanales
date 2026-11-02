@@ -452,6 +452,35 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 
+  test("si lo guardado en el móvil está roto, la app lo cuenta y deja borrarlo", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/fechas");
+    await pagina.getByLabel(/Escribe como en una nota/).fill("5 Noviembre Prueba");
+    await pagina.getByRole("button", { name: "Apuntar", exact: true }).click();
+    await expect(pagina.getByRole("list", { name: "Apuntes" })).toBeVisible();
+    // Un estado con la forma justa para pasar la comprobación pero que rompe al dibujar.
+    await pagina.evaluate(() => {
+      const k = "menus-semanales:prueba";
+      const g = JSON.parse(window.localStorage.getItem(k) ?? "{}");
+      g.estado.personas = [null];
+      window.localStorage.setItem(k, JSON.stringify(g));
+    });
+    await pagina.goto("/fechas", { waitUntil: "networkidle" });
+    await expect(pagina.getByRole("heading", { level: 1, name: /Algo ha fallado/ })).toBeVisible();
+    await expect(pagina.getByRole("button", { name: "Volver a intentarlo" })).toBeVisible();
+    const axe = await new AxeBuilder({ page: pagina })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+      .analyze();
+    expect(axe.violations).toEqual([]);
+    await pagina.getByRole("button", { name: "Borrar lo guardado en este móvil" }).click();
+    await pagina.getByRole("button", { name: "Sí, borrar y recargar" }).click();
+    await expect(pagina.getByRole("heading", { level: 1, name: /Próximas fechas/ })).toBeVisible();
+    await expect(pagina.getByRole("list", { name: "Apuntes" })).toHaveCount(0);
+    await contexto.close();
+  });
+
   test("enviar: WhatsApp, copiar y archivo de calendario", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/compartir");

@@ -184,3 +184,19 @@ describe("sincronización entre dispositivos", () => {
     expect(a.d.s.hayPendientes).toBe(false);
   });
 });
+
+describe("estado de la nube guardado antes de existir la agenda", () => {
+  it("se completa y las acciones de agenda no fallan al rebasar", async () => {
+    const { rebasar, desdeNube } = await import("./sincronizacion");
+    const viejo: Partial<EstadoHogar> = { ...estadoInicialDemo() };
+    delete viejo.agenda;
+    const remoto = viejo as EstadoHogar;
+    expect(desdeNube(remoto, estadoInicialDemo()).agenda).toEqual([]);
+    const e = rebasar(
+      remoto,
+      [{ tipo: "agenda/anadir", texto: "5 Noviembre Prueba", personaId: null }],
+      estadoInicialDemo(),
+    );
+    expect(e.agenda).toHaveLength(1);
+  });
+});

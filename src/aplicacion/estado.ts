@@ -436,6 +436,10 @@ export const nombreDia = (fecha: FechaIso): string => NOMBRE_DIA[diaSemanaIso(fe
 // Reductor
 // --------------------------------------------------------------------------------------------
 
+/** Completa lo que un estado guardado por una versión anterior no trae (la agenda, D-075). */
+export const normalizar = (e: EstadoHogar): EstadoHogar =>
+  Array.isArray(e.agenda) ? e : { ...e, agenda: [] };
+
 const ok = (e: EstadoHogar, texto: string, operacionId?: string): Aviso => ({
   id: e.siguienteId,
   tipo: "ok",
@@ -1142,7 +1146,7 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
 
     case "hogar/sustituir":
       // Lo guardado antes de existir la agenda no la trae: se parte de una lista vacía.
-      return { ...accion.estado, agenda: accion.estado.agenda ?? [] };
+      return normalizar(accion.estado);
 
     case "cerrarAviso":
       return e.aviso === null ? e : { ...e, aviso: null };
