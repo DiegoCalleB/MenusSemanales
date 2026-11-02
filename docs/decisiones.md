@@ -573,3 +573,11 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **Fuente:** los cumpleaños y las fechas señaladas de la app (`eventos`). El propio día del cumple no sale: lo cubre la tarjeta de felicitación (D-070).
 - **Cómo:** `cuentaAtras` es una función pura del dominio, con tests.
 - **Pendiente (decisión de Diego):** sincronizar con el Google Calendar «Familia». Ver el mensaje de la sesión: opciones de solo lectura por enlace secreto iCal frente a OAuth completo.
+
+## D-074 — Google Calendar «Familia» por enlace secreto (solo lectura)
+
+- **Estado:** aceptada (2026-11-02); sin probar contra un calendario real de Google.
+- **Qué:** la app lee el calendario de Google «Familia» con su «Dirección secreta en formato iCal» y enseña esos eventos en la **cuenta atrás** de la portada (📅) y en el **calendario**. Los cumpleaños de Google que ya tenemos en la app no se repiten.
+- **Cómo:** la ruta `/api/calendario-familia` (servidor) descarga el `.ics` con la variable `GOOGLE_CALENDAR_ICAL_URL`, lo guarda 15 minutos en memoria y devuelve solo los próximos 60 días (título, día y hora). El lector (`dominio/ics.ts`) entiende eventos de día completo y con hora (pasados a hora de Madrid), repeticiones diaria/semanal/mensual/anual con `INTERVAL`, `UNTIL`, `COUNT`, excepciones, cambios de un día y cancelados.
+- **Seguridad:** el enlace da acceso a **todo** el calendario, por eso (1) vive solo como variable en Railway, nunca en el repo ni en el navegador; (2) la ruta solo responde si el navegador manda su sesión y **Supabase confirma que es miembro de un hogar** (se consulta `miembro` con su propio token, así decide la RLS); (3) solo se aceptan URLs `https://calendar.google.com` (no hay petición a sitios arbitrarios); (4) los errores no cuentan detalles; (5) `Cache-Control: no-store`.
+- **Límites:** solo lectura: lo que se escribe en la app no va a Google (para eso sigue el `.ics` de exportar). Requiere haber **entrado con la cuenta** (modo con nube); en modo prueba local no hay calendario de Google. Hasta 15 minutos de retraso. Si se pulsa «Restablecer enlace» en Google, el enlace viejo deja de valer. Repeticiones raras (`BYSETPOS`, «último viernes del mes»…) no se interpretan; tampoco zonas horarias que no sean UTC o la hora local indicada.

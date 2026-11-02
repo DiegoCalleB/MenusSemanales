@@ -11,6 +11,7 @@ import { enlaceWhatsApp } from "@/dominio/compartir";
 import { useHogar } from "../proveedor-hogar";
 import { AyudaInstalarIos } from "../instalar-ios";
 import { useYo } from "../yo";
+import { useCalendarioFamilia } from "../usar-calendario-familia";
 import { resumenDeTareas } from "@/dominio/tareas";
 
 /** Portada: una sola pantalla, sin desplazarse: la cena de hoy, el cole de hoy y los accesos. */
@@ -21,7 +22,8 @@ export function InicioVista() {
   const misTareas = yo ? resumenDeTareas(estado.tareas, yo.id, estado.hoy) : null;
   const cenas = comidasDe(estado, estado.hoy);
   const cena = cenas[0];
-  const proximos = cuentaAtras(estado.cumples, estado.eventos, estado.hoy);
+  const deGoogle = useCalendarioFamilia(estado.hoy);
+  const proximos = cuentaAtras(estado.cumples, estado.eventos, estado.hoy, { externos: deGoogle });
   const diaCole = proximoDiaConCole(estado, estado.hoy);
   // A quien cumple no se le enseñan los avisos de su propio regalo.
   const avisosCumples = cumplesProximos(estado).filter((a) => !yo || a.cumple.personaId !== yo.id);

@@ -1,5 +1,6 @@
 import { type Cumple, diasHasta, edadQueCumple } from "./cumples";
 import { type FechaIso, diasEntre } from "./fechas";
+import type { EventoExterno } from "./ics";
 
 export interface CuentaAtras {
   clave: string;
@@ -13,6 +14,12 @@ export interface CuentaAtras {
 export const textoDias = (dias: number): string =>
   dias === 0 ? "¡hoy!" : dias === 1 ? "mañana" : `${dias} días`;
 
+/** ¿Es el cumpleaños de alguien que ya tenemos? Google suele traer los mismos y no deben salir dos veces. */
+export function esCumpleRepetido(titulo: string, cumples: readonly Cumple[]): boolean {
+  const t = titulo.toLowerCase();
+  return t.includes("cumple") && cumples.some((c) => t.includes(c.nombre.toLowerCase()));
+}
+
 /**
  * Cuenta atrás de lo próximo: cumpleaños y fechas señaladas del calendario, de lo más cercano a lo
  * más lejano. Es corta a propósito (D-073): solo lo que cae en las próximas semanas y unos pocos.
@@ -22,7 +29,11 @@ export function cuentaAtras(
   cumples: readonly Cumple[],
   eventos: Record<FechaIso, { titulo: string; emoji: string }>,
   hoy: FechaIso,
-  { maxDias = 30, max = 3 }: { maxDias?: number; max?: number } = {},
+  {
+    maxDias = 30,
+    max = 3,
+    externos = [],
+  }: { maxDias?: number; max?: number; externos?: readonly EventoExterno[] } = {},
 ): CuentaAtras[] {
   const lista: CuentaAtras[] = [];
   for (const c of cumples) {
@@ -44,6 +55,19 @@ export function cuentaAtras(
       clave: `evento-${fecha}`,
       emoji: ev.emoji,
       titulo: ev.titulo,
+      dias,
+      texto: textoDias(dias),
+    });
+  }
+  // Los de Google Calendar. Un cumpleaños que ya tenemos nosotros no se repite.
+  for (const ev of externos) {
+    const dias = diasEntre(hoy, ev.fecha);
+    if (dias < 0 || dias > maxDias) continue;
+    if (esCumpleRepetido(ev.titulo, cumples)) continue;
+    lista.push({
+      clave: `google-${ev.fecha}-${ev.titulo}`,
+      emoji: "📅",
+      titulo: ev.hora ? `${ev.titulo} (${ev.hora})` : ev.titulo,
       dias,
       texto: textoDias(dias),
     });

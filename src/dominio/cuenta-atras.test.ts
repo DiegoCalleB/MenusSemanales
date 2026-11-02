@@ -41,4 +41,19 @@ describe("cuentaAtras", () => {
       cuentaAtras([], { "2026-11-03": { titulo: "Mañana", emoji: "x" } }, "2026-11-02")[0]?.texto,
     ).toBe("mañana");
   });
+
+  it("suma los eventos de Google, sin repetir los cumpleaños que ya tenemos", () => {
+    const r = cuentaAtras([c({})], {}, "2026-11-02", {
+      externos: [
+        { fecha: "2026-11-04", titulo: "Reunión del cole", hora: "17:00" },
+        { fecha: "2026-11-07", titulo: "Cumpleaños de Ana", hora: null },
+        { fecha: "2026-11-03", titulo: "Pasado de rango", hora: null },
+      ],
+    });
+    expect(r.map((x) => [x.emoji, x.titulo, x.dias])).toEqual([
+      ["📅", "Pasado de rango", 1],
+      ["📅", "Reunión del cole (17:00)", 2],
+      ["🎂", "Ana (41)", 5],
+    ]);
+  });
 });

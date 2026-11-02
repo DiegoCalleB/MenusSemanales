@@ -1,5 +1,7 @@
 "use client";
 
+import { esCumpleRepetido } from "@/dominio/cuenta-atras";
+import { useCalendarioFamilia } from "../usar-calendario-familia";
 import { useMemo, useState } from "react";
 import {
   MAX_PLATOS_POR_CENA,
@@ -51,6 +53,7 @@ function mesSiguiente(primero: FechaIso, delta: number): FechaIso {
  */
 export function CalendarioVista() {
   const { estado, despachar } = useHogar();
+  const deGoogle = useCalendarioFamilia(estado.hoy);
   const [mes, setMes] = useState<FechaIso>(`${estado.hoy.slice(0, 7)}-01`);
   const [sel, setSel] = useState<FechaIso>(estado.hoy);
 
@@ -61,6 +64,15 @@ export function CalendarioVista() {
     for (const a of [(anio ?? 2026) - 1, anio ?? 2026, (anio ?? 2026) + 1]) {
       eventos[fechaEnAnio(a, c.mes, c.dia)] ??= { titulo: `Cumple de ${c.nombre}`, emoji: "🎂" };
     }
+  }
+  // Lo del Google Calendar «Familia», si está conectado (D-074).
+  for (const ev of deGoogle) {
+    if (esCumpleRepetido(ev.titulo, estado.cumples)) continue;
+    const texto = ev.hora ? `${ev.titulo} (${ev.hora})` : ev.titulo;
+    const ya = eventos[ev.fecha];
+    eventos[ev.fecha] = ya
+      ? { ...ya, titulo: `${ya.titulo} · ${texto}` }
+      : { emoji: "📅", titulo: texto };
   }
   const diasEnMes = new Date(Date.UTC(anio ?? 2026, nMes ?? 1, 0)).getUTCDate();
   const huecos = diaSemanaIso(mes) - 1;
