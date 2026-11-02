@@ -1,7 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { diaMenuDe, fechaPlanificable, nombreDia, opcionesParaFecha } from "@/aplicacion/estado";
+import {
+  MAX_PLATOS_POR_CENA,
+  comidasDe,
+  diaMenuDe,
+  fechaPlanificable,
+  nombreDia,
+  opcionesParaFecha,
+} from "@/aplicacion/estado";
 import { diaSemanaIso, sumarDias, type FechaIso } from "@/dominio/fechas";
 import { EMOJI_GRUPO } from "../formato";
 import { TarjetaCole } from "../cole";
@@ -53,19 +60,26 @@ export function CalendarioVista() {
     ...Array.from({ length: diasEnMes }, (_, i) => sumarDias(mes, i)),
   ];
 
-  const cenaDe = (f: FechaIso) => estado.comidas.find((c) => c.fecha === f);
+  const cenaDe = (f: FechaIso) => comidasDe(estado, f)[0];
+  const nombresDe = (f: FechaIso) =>
+    comidasDe(estado, f)
+      .map((c) => c.plato.nombre)
+      .join(" + ");
+  const [anadiendoA, setAnadiendoA] = useState<FechaIso | null>(null);
   const cocinaDe = (f: FechaIso) => {
     const turno = estado.turnos.find((t) => t.cargaId === "cenas" && t.fecha === f);
     return turno ? estado.personas.find((p) => p.id === turno.personaId)?.nombre : undefined;
   };
 
   const elegida = cenaDe(sel);
+  const elegidas = comidasDe(estado, sel);
+  const anadiendo = anadiendoA === sel;
   const cole = estado.colegio[sel] ?? null;
   const dia = diaMenuDe(estado, sel);
   const planificable = fechaPlanificable(estado, sel);
   const opciones = useMemo(
-    () => opcionesParaFecha(estado, sel).filter((o) => o.plato.id !== elegida?.plato.id),
-    [estado, sel, elegida],
+    () => (elegida && !anadiendo ? [] : opcionesParaFecha(estado, sel, anadiendo)),
+    [estado, sel, elegida, anadiendo],
   );
   const tarde = estado.llegoTarde.includes(sel);
   const cocina = cocinaDe(sel);
@@ -131,7 +145,7 @@ export function CalendarioVista() {
                     </span>
                     <span className="truncate text-sm font-normal">
                       {cena
-                        ? `${EMOJI_GRUPO[(cena.plato as { grupo?: string }).grupo ?? "otro"] ?? "🍽️"} ${cena.plato.nombre}`
+                        ? `${EMOJI_GRUPO[(cena.plato as { grupo?: string }).grupo ?? "otro"] ?? "🍽️"} ${nombresDe(f)}`
                         : "Sin cena elegida"}
                     </span>
                   </button>
@@ -154,7 +168,7 @@ export function CalendarioVista() {
               const esHoy = f === estado.hoy;
               const esSel = f === sel;
               const pasado = f < estado.hoy;
-              const etiqueta = `${largo(f)}${cena ? `: cena ${cena.plato.nombre}` : ": sin cena elegida"}${hayCole ? ", hay menú del cole" : ""}${evento ? `, ${evento.titulo}` : ""}${esHoy ? ", hoy" : ""}`;
+              const etiqueta = `${largo(f)}${cena ? `: cena ${nombresDe(f)}` : ": sin cena elegida"}${hayCole ? ", hay menú del cole" : ""}${evento ? `, ${evento.titulo}` : ""}${esHoy ? ", hoy" : ""}`;
               return (
                 <div key={f}>
                   <button
@@ -214,19 +228,37 @@ export function CalendarioVista() {
           <TarjetaCole cole={cole} fecha={sel} />
 
           {elegida ? (
-            <div className="bg-ok-fondo text-ok-texto flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4">
-              <div>
-                <p className="text-sm font-bold">✓ Cena elegida</p>
-                <p className="text-lg font-bold">{elegida.plato.nombre}</p>
-              </div>
-              {planificable && (
+            <div className="flex flex-col gap-2">
+              {elegidas.map((c) => (
+                <div
+                  key={c.plato.id}
+                  className="bg-ok-fondo text-ok-texto flex flex-wrap items-center justify-between gap-3 rounded-2xl p-3"
+                >
+                  <p className="text-base font-bold">
+                    <span aria-hidden="true">✓ </span>
+                    {c.plato.nombre}
+                  </p>
+                  {planificable && (
+                    <button
+                      type="button"
+                      className="boton-suave"
+                      aria-label={`Quitar ${c.plato.nombre}`}
+                      onClick={() =>
+                        despachar({ tipo: "menu/quitar", fecha: sel, platoId: c.plato.id })
+                      }
+                    >
+                      Quitar
+                    </button>
+                  )}
+                </div>
+              ))}
+              {planificable && elegidas.length < MAX_PLATOS_POR_CENA && !anadiendo && (
                 <button
                   type="button"
-                  className="boton-suave"
-                  aria-label={`Cancelar elección de ${elegida.plato.nombre}`}
-                  onClick={() => despachar({ tipo: "menu/quitar", fecha: sel })}
+                  className="boton-suave w-fit"
+                  onClick={() => setAnadiendoA(sel)}
                 >
-                  Cancelar elección
+                  ＋ Añadir otro plato
                 </button>
               )}
             </div>
@@ -247,9 +279,11 @@ export function CalendarioVista() {
             </button>
           )}
 
-          {planificable && !elegida && opciones.length > 0 && (
+          {planificable && opciones.length > 0 && (
             <div>
-              <h3 className="text-tinta-suave mb-2 text-sm font-bold">Opciones</h3>
+              <h3 className="text-tinta-suave mb-2 text-sm font-bold">
+                {anadiendo ? "Añadir a la cena (platos pequeños primero)" : "Opciones"}
+              </h3>
               <ul className="flex flex-col gap-2">
                 {opciones.map((o) => (
                   <li
@@ -267,12 +301,17 @@ export function CalendarioVista() {
                     <button
                       type="button"
                       className="boton"
-                      aria-label={`Elegir ${o.plato.nombre} para el ${largo(sel)}`}
-                      onClick={() =>
-                        despachar({ tipo: "menu/elegir", fecha: sel, platoId: o.plato.id })
-                      }
+                      aria-label={`${anadiendo ? "Añadir" : "Elegir"} ${o.plato.nombre} para el ${largo(sel)}`}
+                      onClick={() => {
+                        despachar({
+                          tipo: anadiendo ? "menu/anadir" : "menu/elegir",
+                          fecha: sel,
+                          platoId: o.plato.id,
+                        });
+                        setAnadiendoA(null);
+                      }}
                     >
-                      Elegir
+                      {anadiendo ? "Añadir" : "Elegir"}
                     </button>
                   </li>
                 ))}

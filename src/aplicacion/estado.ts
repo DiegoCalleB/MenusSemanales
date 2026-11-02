@@ -128,7 +128,8 @@ export type Accion =
   | { tipo: "tirarCaducado"; ingredienteId: string; ubicacion: Ubicacion }
   | { tipo: "deshacer"; operacionId: string }
   | { tipo: "menu/elegir"; fecha: FechaIso; platoId: string }
-  | { tipo: "menu/quitar"; fecha: FechaIso }
+  | { tipo: "menu/anadir"; fecha: FechaIso; platoId: string }
+  | { tipo: "menu/quitar"; fecha: FechaIso; platoId?: string }
   | { tipo: "menu/llegoTarde"; fecha: FechaIso }
   | { tipo: "plato/guardar"; id?: string; plato: PlatoEditable }
   | { tipo: "plato/proponer"; id: string; proponer: boolean }
@@ -195,15 +196,47 @@ export function diaMenuDe(e: EstadoHogar, fecha: FechaIso): DiaMenu {
 export const fechaPlanificable = (e: EstadoHogar, fecha: FechaIso): boolean =>
   fecha >= e.hoy && fecha <= sumarDias(e.hoy, 60);
 
-/** Opciones para una fecha cualquiera (la elegida no cuenta: así se ven alternativas). */
-export function opcionesParaFecha(e: EstadoHogar, fecha: FechaIso) {
+/** Platos elegidos para una cena (puede haber varios si son pequeños). */
+export const comidasDe = (e: EstadoHogar, fecha: FechaIso): ComidaPlanificada[] =>
+  e.comidas.filter((c) => c.fecha === fecha);
+
+/** Máximo de platos en una misma cena. */
+export const MAX_PLATOS_POR_CENA = 3;
+
+/** El plato que manda en la cena (el primero que no es pequeño): el motor se fija en él. */
+const principal = (cs: readonly ComidaPlanificada[]): ComidaPlanificada | undefined =>
+  cs.find((c) => !(c.plato as { ligero?: boolean }).ligero) ?? cs[0];
+
+/** Fecha → plato principal de esa cena, sin contar `excepto`. */
+function elegidosPrincipales(e: EstadoHogar, excepto?: FechaIso): Record<FechaIso, string> {
+  const salida: Record<FechaIso, string> = {};
+  for (const f of new Set(e.comidas.map((c) => c.fecha))) {
+    if (f === excepto) continue;
+    const p = principal(comidasDe(e, f));
+    if (p) salida[f] = p.plato.id;
+  }
+  return salida;
+}
+
+/**
+ * Opciones para una fecha cualquiera. Por defecto la elegida no cuenta (se ven alternativas); con
+ * `anadir` se buscan complementos para lo ya elegido: platos pequeños que caben en el tiempo que
+ * queda y que no se repiten.
+ */
+export function opcionesParaFecha(e: EstadoHogar, fecha: FechaIso, anadir = false) {
   if (!fechaPlanificable(e, fecha)) return [];
-  const elegidos: Record<FechaIso, string> = {};
-  for (const c of e.comidas) if (c.fecha !== fecha) elegidos[c.fecha] = c.plato.id;
+  const elegidos = elegidosPrincipales(e, fecha);
+  const ya = comidasDe(e, fecha);
+  const dia = diaMenuDe(e, fecha);
+  if (anadir) {
+    const usados = ya.reduce((suma, c) => suma + ((c.plato as PlatoMenu).minutosActivos ?? 0), 0);
+    dia.minutosMax = Math.max(5, dia.minutosMax - usados);
+  }
   return (
     proponerMenu({
       hoy: e.hoy,
-      dias: [diaMenuDe(e, fecha)],
+      dias: [dia],
+      ...(anadir ? { complemento: true, excluirPlatos: ya.map((c) => c.plato.id) } : {}),
       catalogo: e.platos.filter((p) => !p.noProponer),
       despensa: e.despensa,
       excluirIngredientes: e.excluirIngredientes,
@@ -230,8 +263,8 @@ export function menuDeLaSemana(e: EstadoHogar, liberar?: FechaIso): MenuPropuest
   const dias = diasDelMenu(e);
   const fechas = new Set(dias.map((d) => d.fecha));
   const elegidos: Record<FechaIso, string> = {};
-  for (const c of e.comidas) {
-    if (fechas.has(c.fecha) && c.fecha !== liberar) elegidos[c.fecha] = c.plato.id;
+  for (const [f, id] of Object.entries(elegidosPrincipales(e, liberar))) {
+    if (fechas.has(f)) elegidos[f] = id;
   }
   return proponerMenu({
     hoy: e.hoy,
@@ -246,10 +279,10 @@ export function menuDeLaSemana(e: EstadoHogar, liberar?: FechaIso): MenuPropuest
 
 /** Por qué se recomienda esa opción para ese día: cole, equilibrio de la semana, tiempo, caducidad, gusto. */
 export function explicacionDe(e: EstadoHogar, fecha: FechaIso, opcion: Opcion): ExplicacionOpcion {
-  const cenas: Record<FechaIso, GrupoPlato> = {};
+  const cenas: Record<FechaIso, GrupoPlato[]> = {};
   for (const c of e.comidas) {
     const grupo = e.platos.find((p) => p.id === c.plato.id)?.grupo;
-    if (c.fecha !== fecha && grupo) cenas[c.fecha] = grupo;
+    if (c.fecha !== fecha && grupo) (cenas[c.fecha] ??= []).push(grupo);
   }
   const nombres = new Map(e.ingredientes.map((i) => [i.id, i.nombre]));
   const usa = new Set(
@@ -546,10 +579,37 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
       };
     }
 
+    case "menu/anadir": {
+      const plato = e.platos.find((p) => p.id === accion.platoId);
+      const ya = comidasDe(e, accion.fecha);
+      if (!plato || !fechaPlanificable(e, accion.fecha) || e.saltados.includes(accion.fecha))
+        return e;
+      if (ya.length >= MAX_PLATOS_POR_CENA || ya.some((c) => c.plato.id === plato.id)) return e;
+      const comida: ComidaPlanificada = {
+        etiqueta: `Cena del ${nombreDia(accion.fecha)}`,
+        fecha: accion.fecha,
+        plato,
+        raciones: racionesDelHogar(e),
+      };
+      return {
+        ...e,
+        comidas: [...e.comidas, comida].sort((a, b) => a.fecha.localeCompare(b.fecha)),
+        siguienteId: e.siguienteId + 1,
+        aviso: ok(
+          e,
+          `Añadido al ${nombreDia(accion.fecha)}: ${plato.nombre}. La compra se ha actualizado.`,
+        ),
+      };
+    }
+
     case "menu/quitar":
       return {
         ...e,
-        comidas: e.comidas.filter((c) => c.fecha !== accion.fecha),
+        comidas: e.comidas.filter(
+          (c) =>
+            c.fecha !== accion.fecha ||
+            (accion.platoId !== undefined && c.plato.id !== accion.platoId),
+        ),
         siguienteId: e.siguienteId + 1,
         aviso: ok(
           e,
@@ -590,6 +650,7 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
         ultimaVez: existente?.ultimaVez ?? null,
         valoracion: existente?.valoracion ?? null,
         ...(existente?.noProponer ? { noProponer: true } : {}),
+        ...(r.valor.ligero ? { ligero: true } : {}),
       };
       const platos = existente
         ? e.platos.map((p) => (p.id === existente.id ? guardado : p))

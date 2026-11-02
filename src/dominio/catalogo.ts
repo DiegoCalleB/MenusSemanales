@@ -26,6 +26,8 @@ export const platoEditableSchema = z.object({
     .min(1, "Mínimo 1 minuto")
     .max(240, "Máximo 240 minutos"),
   pasos: z.string().max(4000, "Los pasos son demasiado largos").nullable(),
+  /** Plato pequeño que se combina con otros en una misma cena. */
+  ligero: z.boolean().optional(),
   ingredientes: z
     .array(ingredienteDePlatoSchema)
     .min(1, "Añade al menos un ingrediente")

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { proximoDiaConCole } from "@/aplicacion/estado";
+import { comidasDe, proximoDiaConCole } from "@/aplicacion/estado";
 import { diasEntre } from "@/dominio/fechas";
 import { TarjetaCole, fechaCorta } from "../cole";
 import { EMOJI_GRUPO } from "../formato";
@@ -10,7 +10,8 @@ import { MODO_DATOS, useHogar } from "../proveedor-hogar";
 /** Portada: una sola pantalla, sin desplazarse: la cena de hoy, el cole de hoy y los accesos. */
 export function InicioVista() {
   const { estado } = useHogar();
-  const cena = estado.comidas.find((c) => c.fecha === estado.hoy);
+  const cenas = comidasDe(estado, estado.hoy);
+  const cena = cenas[0];
   const proximo = Object.entries(estado.eventos)
     .filter(([f]) => f >= estado.hoy && diasEntre(estado.hoy, f) <= 14)
     .sort(([a], [b]) => a.localeCompare(b))[0];
@@ -41,7 +42,7 @@ export function InicioVista() {
             <span aria-hidden="true" className="text-3xl">
               {EMOJI_GRUPO[(cena.plato as { grupo?: string }).grupo ?? "otro"] ?? "🍽️"}
             </span>
-            {cena.plato.nombre}
+            {cenas.map((c) => c.plato.nombre).join(" + ")}
           </p>
         )}
         <div className="flex flex-wrap gap-2">

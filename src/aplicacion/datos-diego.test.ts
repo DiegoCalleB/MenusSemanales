@@ -113,6 +113,18 @@ describe("modo Diego: datos reales de la familia", () => {
     expect(ex.lineas.some((l) => l.includes("Esta semana llevan"))).toBe(true);
   });
 
+  it("la propuesta usa platos principales y los pequeños se ofrecen como complemento", () => {
+    const p = aplicar(e, { tipo: "menu/autocompletar" });
+    for (const c of p.comidas) expect((c.plato as { ligero?: boolean }).ligero).toBeFalsy();
+    const martes = "2026-11-03";
+    const ops = opcionesParaFecha(p, martes, true);
+    expect(ops.length).toBeGreaterThan(0);
+    expect(ops.some((o) => o.plato.ligero)).toBe(true);
+    expect(ops[0]?.plato.ligero).toBe(true);
+    const con = aplicar(p, { tipo: "menu/anadir", fecha: martes, platoId: ops[0]?.plato.id ?? "" });
+    expect(con.comidas.filter((c) => c.fecha === martes)).toHaveLength(2);
+  });
+
   it("«hoy» se puede actualizar a la fecha real", () => {
     expect(reducir(e, { tipo: "hogar/hoy", fecha: "2026-11-02" }).hoy).toBe("2026-11-02");
     expect(reducir(e, { tipo: "hogar/hoy", fecha: DOMINGO })).toBe(e);

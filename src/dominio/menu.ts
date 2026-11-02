@@ -45,6 +45,8 @@ export const platoMenuSchema = platoSchema.extend({
   noProponer: z.boolean().optional(),
   /** Ingredientes y tiempos estimados al importarlo: la familia debe revisarlos. */
   porRevisar: z.boolean().optional(),
+  /** Plato pequeño (sopa, ensalada, guarnición…): se combina con otros en una misma cena. */
+  ligero: z.boolean().optional(),
 });
 export type PlatoMenu = z.infer<typeof platoMenuSchema>;
 
@@ -137,6 +139,10 @@ export interface ContextoMenu {
   colegio?: Readonly<Record<FechaIso, MenuCole>>;
   /** Fecha → plato ya elegido (se respeta y condiciona a los días vecinos). */
   elegidos?: Readonly<Record<FechaIso, string>>;
+  /** Platos que no se pueden ofrecer (p. ej. los ya elegidos ese día). */
+  excluirPlatos?: readonly string[];
+  /** Se busca un complemento para una cena ya elegida: los platos pequeños suben, los grandes bajan. */
+  complemento?: boolean;
   /** Opciones por día (por defecto 3). */
   opcionesPorDia?: number;
 }
@@ -219,6 +225,10 @@ function puntuar(
   p += holgura;
   if (plato.minutosActivos <= 15) motivos.push("rapido");
 
+  // Un plato pequeño no es una cena por sí solo, pero es un buen complemento de otra.
+  if (plato.ligero) p += ctx.complemento ? 2.5 : -2.5;
+  else if (ctx.complemento) p -= 1;
+
   // Equilibrio de la semana (cole + cenas): sube lo que falta, baja lo que ya se ha pasado.
   const eq = estadoDelGrupo(plato.grupo, semana);
   if (eq?.estado === "falta") {
@@ -297,10 +307,12 @@ export function proponerMenu(ctx: ContextoMenu): MenuPropuesto {
     const candidatas = ctx.catalogo
       .filter(
         (p) =>
+          !(ctx.excluirPlatos ?? []).includes(p.id) &&
           !elegidosLista.some(
             ([f, id]) =>
               id === p.id && Math.abs(diasEntre(f, dia.fecha)) < DISTANCIA_MINIMA_REPETIR,
-          ) && cumpleReglasDuras(p, dia, excluidos, vecinos),
+          ) &&
+          cumpleReglasDuras(p, dia, excluidos, vecinos),
       )
       .map((p) => puntuar(p, dia, ctx, stock, caducan, ofrecidos, semana));
     const opciones = elegirVariadas(candidatas, n);

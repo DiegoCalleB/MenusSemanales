@@ -533,6 +533,24 @@ const PLATOS: readonly P[] = [
   ],
 ];
 
+/** Platos pequeños (sopa, ensalada, guarnición…): se pueden combinar varios en una misma cena. */
+const LIGEROS = new Set([
+  "champinones",
+  "gulas",
+  "judias-verdes",
+  "guisantes-jamon",
+  "pure",
+  "tosta",
+  "salmorejo",
+  "sopa",
+  "ensalada-aguacate-mozzarella",
+  "ensaladilla-rusa",
+  "croquetas",
+  "empanadillas",
+  "onion-baji",
+  "patatas-ana",
+]);
+
 export const PERSONAS_DIEGO: Persona[] = [
   { id: "diego", nombre: "Diego", tipo: "adulto", activa: true, factorRacion: 1 },
   { id: "ana", nombre: "Ana", tipo: "adulto", activa: true, factorRacion: 1 },
@@ -615,6 +633,7 @@ export function estadoModoDiego(hoy: string): EstadoHogar {
     ultimaVez: null,
     valoracion: null,
     porRevisar: true,
+    ...(LIGEROS.has(id) ? { ligero: true } : {}),
     ingredientes: ings.map(([ingredienteId, cantidadPorRacion]) => ({
       ingredienteId,
       cantidadPorRacion,

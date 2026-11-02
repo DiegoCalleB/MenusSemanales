@@ -31,6 +31,7 @@ interface Borrador {
   grupo: GrupoPlato;
   minutos: string;
   pasos: string;
+  ligero: boolean;
   filas: FilaIngrediente[];
 }
 
@@ -39,6 +40,7 @@ const vacio = (): Borrador => ({
   grupo: "otro",
   minutos: "20",
   pasos: "",
+  ligero: false,
   filas: [{ clave: 0, ingredienteId: "", cantidad: "", opcional: false }],
 });
 
@@ -49,6 +51,7 @@ function desdePlato(p: PlatoMenu): Borrador {
     grupo: p.grupo,
     minutos: String(p.minutosActivos),
     pasos: p.pasos ?? "",
+    ligero: !!p.ligero,
     filas: p.ingredientes.map((i, n) => ({
       clave: n,
       ingredienteId: i.ingredienteId,
@@ -102,6 +105,7 @@ export function PlatosVista() {
         grupo: borrador.grupo,
         minutosActivos: Number(borrador.minutos),
         pasos: borrador.pasos.trim() === "" ? null : borrador.pasos,
+        ligero: borrador.ligero,
         ingredientes: borrador.filas
           .filter((f) => f.ingredienteId !== "" || f.cantidad !== "")
           .map((f) => ({
@@ -177,6 +181,15 @@ export function PlatosVista() {
               maxLength={120}
               onChange={(e) => setBorrador({ ...borrador, nombre: e.target.value })}
             />
+          </label>
+          <label className="flex min-h-11 items-center gap-3 text-base font-semibold">
+            <input
+              type="checkbox"
+              className="size-6"
+              checked={borrador.ligero}
+              onChange={(e) => setBorrador({ ...borrador, ligero: e.target.checked })}
+            />
+            Es un plato pequeño (se combina con otros en una cena)
           </label>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="flex flex-col gap-1 text-base font-semibold">

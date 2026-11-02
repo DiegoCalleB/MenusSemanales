@@ -8,6 +8,7 @@ import {
   diasDelMenu,
   menuDeLaSemana,
   opcionesParaFecha,
+  comidasDe,
   reducir,
   repartoDeLaSemana,
   ubicacionDeCompra,
@@ -574,6 +575,90 @@ describe("calendario", () => {
     const grupos = opcionesParaFecha(e, "2026-11-12").map((o) => o.plato.grupo);
     expect(grupos.length).toBeGreaterThan(0);
     for (const g of grupos) expect(["verdura", "pasta", "arroz", "carne", "pescado"]).toContain(g);
+  });
+});
+
+describe("varios platos en una cena", () => {
+  const base = () =>
+    aplicar(estadoInicialDemo(), {
+      tipo: "menu/elegir",
+      fecha: "2026-11-07",
+      platoId: "salmon-plancha",
+    });
+
+  it("se puede añadir un segundo plato y la compra suma los dos", () => {
+    const e0 = base();
+    const e1 = aplicar(e0, { tipo: "menu/anadir", fecha: "2026-11-07", platoId: "huevos-patatas" });
+    expect(comidasDe(e1, "2026-11-07").map((c) => c.plato.id)).toEqual([
+      "salmon-plancha",
+      "huevos-patatas",
+    ]);
+    expect(e1.aviso?.texto).toContain("Añadido al sábado");
+    expect(pendientes(e1).huevo).toBeGreaterThan(pendientes(e0).huevo ?? 0);
+  });
+
+  it("no repite plato, no pasa de 3 y no añade en días saltados o fuera de plazo", () => {
+    let e = base();
+    e = aplicar(e, { tipo: "menu/anadir", fecha: "2026-11-07", platoId: "huevos-patatas" });
+    expect(
+      reducir(e, { tipo: "menu/anadir", fecha: "2026-11-07", platoId: "huevos-patatas" }),
+    ).toBe(e);
+    e = aplicar(e, { tipo: "menu/anadir", fecha: "2026-11-07", platoId: "pisto-huevo" });
+    expect(comidasDe(e, "2026-11-07")).toHaveLength(3);
+    expect(
+      reducir(e, { tipo: "menu/anadir", fecha: "2026-11-07", platoId: "crema-zanahoria" }),
+    ).toBe(e);
+    const b = base();
+    expect(reducir(b, { tipo: "menu/anadir", fecha: "2027-06-01", platoId: "tortilla" })).toBe(b);
+    expect(reducir(b, { tipo: "menu/anadir", fecha: "2026-11-07", platoId: "nada" })).toBe(b);
+    const saltado = aplicar(estadoInicialDemo(), { tipo: "menu/saltar", fecha: "2026-11-07" });
+    expect(
+      reducir(saltado, { tipo: "menu/anadir", fecha: "2026-11-07", platoId: "tortilla" }),
+    ).toBe(saltado);
+  });
+
+  it("quitar con plato quita solo ese; sin plato quita todo el día", () => {
+    const e = aplicar(base(), {
+      tipo: "menu/anadir",
+      fecha: "2026-11-07",
+      platoId: "huevos-patatas",
+    });
+    const uno = aplicar(e, { tipo: "menu/quitar", fecha: "2026-11-07", platoId: "salmon-plancha" });
+    expect(comidasDe(uno, "2026-11-07").map((c) => c.plato.id)).toEqual(["huevos-patatas"]);
+    expect(
+      comidasDe(aplicar(e, { tipo: "menu/quitar", fecha: "2026-11-07" }), "2026-11-07"),
+    ).toEqual([]);
+  });
+
+  it("las opciones para añadir no incluyen lo ya elegido y prefieren lo pequeño", () => {
+    let e = estadoInicialDemo();
+    e = {
+      ...e,
+      platos: e.platos.map((p) => (p.id === "pisto-huevo" ? { ...p, ligero: true } : p)),
+    };
+    e = aplicar(e, { tipo: "menu/elegir", fecha: "2026-11-07", platoId: "salmon-plancha" });
+    const ops = opcionesParaFecha(e, "2026-11-07", true);
+    expect(ops.length).toBeGreaterThan(0);
+    expect(ops.map((o) => o.plato.id)).not.toContain("salmon-plancha");
+    expect(ops[0]?.plato.id).toBe("pisto-huevo");
+  });
+
+  it("solo se ofrece lo que cabe en el tiempo que queda (un día de prisas con un plato de 10 min)", () => {
+    const e = aplicar(
+      estadoInicialDemo(),
+      { tipo: "menu/llegoTarde", fecha: "2026-11-07" },
+      { tipo: "menu/elegir", fecha: "2026-11-07", platoId: "tortilla" }, // 10 de 15 min
+    );
+    expect(opcionesParaFecha(e, "2026-11-07", true)).toEqual([]);
+  });
+
+  it("cambiar de plato (elegir) sustituye todo el día", () => {
+    const e = aplicar(
+      base(),
+      { tipo: "menu/anadir", fecha: "2026-11-07", platoId: "huevos-patatas" },
+      { tipo: "menu/elegir", fecha: "2026-11-07", platoId: "hamburguesas" },
+    );
+    expect(comidasDe(e, "2026-11-07").map((c) => c.plato.id)).toEqual(["hamburguesas"]);
   });
 });
 

@@ -371,10 +371,31 @@ test.describe("flujos en móvil", () => {
     await elegir.first().click();
     await expect(elegir).toHaveCount(0); // al elegir, las otras opciones desaparecen
     await pagina
-      .getByRole("button", { name: /^Cancelar elección de / })
+      .getByRole("button", { name: /^Quitar / })
       .last()
       .click();
     await expect(elegir).toHaveCount(3); // al cancelar, vuelven
+    await contexto.close();
+  });
+
+  test("menú: una cena con varios platos pequeños", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/menu");
+    await pagina
+      .getByRole("button", { name: /^Elegir / })
+      .first()
+      .click();
+    await pagina.getByRole("button", { name: "＋ Añadir otro plato" }).click();
+    await pagina
+      .getByRole("button", { name: /^Añadir / })
+      .first()
+      .click();
+    await expect(pagina.getByRole("button", { name: /^Quitar / })).toHaveCount(2);
+    await pagina
+      .getByRole("button", { name: /^Quitar / })
+      .first()
+      .click();
+    await expect(pagina.getByRole("button", { name: /^Quitar / })).toHaveCount(1);
     await contexto.close();
   });
 
@@ -386,7 +407,7 @@ test.describe("flujos en móvil", () => {
     await expect(elegir).toHaveCount(3);
     await elegir.first().click();
     await expect(elegir).toHaveCount(0);
-    await pagina.getByRole("button", { name: /^Cancelar elección de / }).click();
+    await pagina.getByRole("button", { name: /^Quitar / }).click();
     await expect(elegir).toHaveCount(3);
     await contexto.close();
   });

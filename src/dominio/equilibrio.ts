@@ -49,7 +49,7 @@ export function estadoDelGrupo(
 export function contarSemana(
   fecha: FechaIso,
   colegio: Readonly<Record<FechaIso, MenuCole>>,
-  cenas: Readonly<Record<FechaIso, GrupoPlato>>,
+  cenas: Readonly<Record<FechaIso, GrupoPlato | readonly GrupoPlato[]>>,
 ): Partial<Record<GrupoPlato, number>> {
   const { desde } = semanaDe(fecha);
   const conteo: Partial<Record<GrupoPlato, number>> = {};
@@ -63,7 +63,11 @@ export function contarSemana(
       sumar(cole.primero);
       sumar(cole.segundo);
     }
-    if (f !== fecha) sumar(cenas[f]);
+    if (f !== fecha) {
+      const c = cenas[f];
+      if (Array.isArray(c)) for (const g of c) sumar(g);
+      else sumar(c as GrupoPlato | undefined);
+    }
   }
   return conteo;
 }

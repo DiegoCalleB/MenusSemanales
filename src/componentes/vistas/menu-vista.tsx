@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { diasDelMenu, menuDeLaSemana, nombreDia } from "@/aplicacion/estado";
+import {
+  MAX_PLATOS_POR_CENA,
+  comidasDe,
+  diasDelMenu,
+  menuDeLaSemana,
+  nombreDia,
+  opcionesParaFecha,
+} from "@/aplicacion/estado";
 import type { Opcion } from "@/dominio/menu";
 import { TarjetaCole } from "../cole";
 import { EMOJI_GRUPO, formatearNumero } from "../formato";
@@ -72,7 +79,8 @@ export function MenuVista() {
   const { estado, despachar } = useHogar();
   const dias = useMemo(() => diasDelMenu(estado), [estado]);
   const propuesta = useMemo(() => menuDeLaSemana(estado), [estado]);
-  const eleccion = (fecha: string) => estado.comidas.find((c) => c.fecha === fecha);
+  const eleccion = (fecha: string) => comidasDe(estado, fecha)[0];
+  const [anadiendo, setAnadiendo] = useState<string | null>(null);
   // Solo un día abierto a la vez: por defecto, el primero que aún no tiene cena.
   const primeraSinCena = dias.find(
     (d) => !estado.saltados.includes(d.fecha) && !eleccion(d.fecha),
@@ -126,6 +134,7 @@ export function MenuVista() {
       <ul className="flex flex-col gap-2">
         {dias.map((dia) => {
           const elegida = eleccion(dia.fecha);
+          const elegidas = comidasDe(estado, dia.fecha);
           const opciones: Opcion[] = elegida
             ? []
             : (propuesta.dias.find((d) => d.fecha === dia.fecha)?.opciones ?? []);
@@ -184,7 +193,9 @@ export function MenuVista() {
                       {elegida ? (
                         <>
                           <span aria-hidden="true">{EMOJI_GRUPO[grupoElegida]} </span>
-                          {elegida.plato.nombre}
+                          {comidasDe(estado, dia.fecha)
+                            .map((c) => c.plato.nombre)
+                            .join(" + ")}
                         </>
                       ) : (
                         <span className="text-marca-fuerte">Elegir cena</span>
@@ -213,25 +224,88 @@ export function MenuVista() {
                 <div className="flex flex-col gap-3 px-4 pb-4">
                   <TarjetaCole cole={dia.cole} fecha={dia.fecha} />
 
-                  {elegida && (
-                    <div className="bg-ok-fondo text-ok-texto flex flex-wrap items-center justify-between gap-3 rounded-2xl p-3">
+                  {elegidas.map((c) => (
+                    <div
+                      key={c.plato.id}
+                      className="bg-ok-fondo text-ok-texto flex flex-wrap items-center justify-between gap-3 rounded-2xl p-3"
+                    >
                       <p className="text-base font-bold">
                         <span aria-hidden="true">✓ </span>
-                        {elegida.plato.nombre}
+                        {c.plato.nombre}
                       </p>
                       <button
                         type="button"
                         className="boton-suave"
-                        aria-label={`Cancelar elección de ${elegida.plato.nombre}`}
-                        onClick={() => despachar({ tipo: "menu/quitar", fecha: dia.fecha })}
+                        aria-label={`Quitar ${c.plato.nombre}`}
+                        onClick={() =>
+                          despachar({ tipo: "menu/quitar", fecha: dia.fecha, platoId: c.plato.id })
+                        }
                       >
-                        Cancelar elección
+                        Quitar
                       </button>
                     </div>
+                  ))}
+                  {elegida && elegidas.length < MAX_PLATOS_POR_CENA && anadiendo !== dia.fecha && (
+                    <button
+                      type="button"
+                      className="boton-suave w-fit"
+                      onClick={() => setAnadiendo(dia.fecha)}
+                    >
+                      ＋ Añadir otro plato
+                    </button>
                   )}
                   {elegida && opcionElegida && <Razones fecha={dia.fecha} opcion={opcionElegida} />}
-                  {elegida && dia.fecha <= estado.hoy && (
-                    <Valoracion platoId={elegida.plato.id} nombre={elegida.plato.nombre} />
+                  {dia.fecha <= estado.hoy &&
+                    elegidas.map((c) => (
+                      <Valoracion key={c.plato.id} platoId={c.plato.id} nombre={c.plato.nombre} />
+                    ))}
+
+                  {anadiendo === dia.fecha && (
+                    <div className="flex flex-col gap-2">
+                      <p className="text-base font-bold">
+                        Añadir a la cena (platos pequeños primero)
+                      </p>
+                      <ul aria-label="Platos para añadir" className="flex flex-col gap-2">
+                        {opcionesParaFecha(estado, dia.fecha, true).map((o) => (
+                          <li
+                            key={o.plato.id}
+                            className="border-borde bg-fondo flex items-center justify-between gap-3 rounded-2xl border p-3"
+                          >
+                            <div className="min-w-0">
+                              <p className="text-base font-bold">
+                                <span aria-hidden="true">{EMOJI_GRUPO[o.plato.grupo]} </span>
+                                {o.plato.nombre}
+                              </p>
+                              <p className="text-tinta-suave text-sm">
+                                {o.plato.minutosActivos} min
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              className="boton"
+                              aria-label={`Añadir ${o.plato.nombre}`}
+                              onClick={() => {
+                                despachar({
+                                  tipo: "menu/anadir",
+                                  fecha: dia.fecha,
+                                  platoId: o.plato.id,
+                                });
+                                setAnadiendo(null);
+                              }}
+                            >
+                              Añadir
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                      <button
+                        type="button"
+                        className="boton-suave w-fit"
+                        onClick={() => setAnadiendo(null)}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
                   )}
 
                   {!elegida && opciones.length === 0 && (
