@@ -25,3 +25,11 @@ $$;
 grant execute on function auth.uid() to anon, authenticated, service_role;
 
 grant usage on schema public to anon, authenticated, service_role;
+
+-- Supabase concede POR DEFECTO todos los privilegios a anon, authenticated y service_role sobre
+-- cualquier tabla, secuencia o función que se cree en public. Las pruebas deben partir de lo mismo:
+-- sin esto, una migración que solo revoca a anon y a public parece segura en local y no lo es en
+-- producción (hallazgo D-064).
+alter default privileges in schema public grant all on tables    to anon, authenticated, service_role;
+alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
+alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
