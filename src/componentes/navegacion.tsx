@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import type { ComponentType, SVGProps } from "react";
 import { articulosPendientes } from "@/aplicacion/estado";
 import { useHogar } from "./proveedor-hogar";
+import { BotonPerfil } from "./perfiles";
 import { BotonTema } from "./tema";
 import { IconoAgenda, IconoCompra, IconoDespensa, IconoMenu, IconoReparto } from "./iconos";
 
@@ -122,7 +123,8 @@ export function NavegacionLateral() {
           })}
         </ul>
       </nav>
-      <div className="mt-auto px-2">
+      <div className="mt-auto flex flex-col items-start gap-2 px-2">
+        <BotonPerfil />
         <BotonTema />
       </div>
       <p className="text-tinta-suave px-2 text-sm">

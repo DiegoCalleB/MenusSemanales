@@ -4,6 +4,7 @@ import { AnadirRapido } from "@/componentes/anadir-rapido";
 import { AvisoGlobal } from "@/componentes/aviso";
 import { NavegacionInferior, NavegacionLateral } from "@/componentes/navegacion";
 import { BotonTema, ProveedorTema } from "@/componentes/tema";
+import { BotonPerfil, PuertaDePerfil } from "@/componentes/perfiles";
 import { ProveedorHogar } from "@/componentes/proveedor-hogar";
 
 /**
@@ -22,33 +23,36 @@ export default function LayoutApp({ children }: { children: ReactNode }) {
         >
           Saltar al contenido
         </a>
-        <div className="min-h-dvh md:flex">
-          <NavegacionLateral />
-          <div className="flex min-w-0 flex-1 flex-col">
-            <header className="border-borde bg-superficie/95 sticky top-0 z-20 flex items-center gap-3 border-b px-4 py-3 backdrop-blur md:hidden">
-              <span
-                aria-hidden="true"
-                className="bg-suave-1 flex size-9 items-center justify-center rounded-xl text-xl"
+        <PuertaDePerfil>
+          <div className="min-h-dvh md:flex">
+            <NavegacionLateral />
+            <div className="flex min-w-0 flex-1 flex-col">
+              <header className="border-borde bg-superficie/95 sticky top-0 z-20 flex items-center gap-3 border-b px-4 py-3 backdrop-blur md:hidden">
+                <span
+                  aria-hidden="true"
+                  className="bg-suave-1 flex size-9 items-center justify-center rounded-xl text-xl"
+                >
+                  🍽️
+                </span>
+                <span className="text-marca flex-1 text-lg font-extrabold tracking-tight">
+                  Menús Semanales
+                </span>
+                <BotonPerfil />
+                <BotonTema />
+              </header>
+              <BannerPrueba />
+              <main
+                id="contenido"
+                className="mx-auto w-full max-w-5xl flex-1 px-4 pt-5 pb-32 md:px-8 md:pt-8 md:pb-12"
               >
-                🍽️
-              </span>
-              <span className="text-marca flex-1 text-lg font-extrabold tracking-tight">
-                Menús Semanales
-              </span>
-              <BotonTema />
-            </header>
-            <BannerPrueba />
-            <main
-              id="contenido"
-              className="mx-auto w-full max-w-5xl flex-1 px-4 pt-5 pb-32 md:px-8 md:pt-8 md:pb-12"
-            >
-              {children}
-            </main>
+                {children}
+              </main>
+            </div>
           </div>
-        </div>
-        <NavegacionInferior />
-        <AnadirRapido />
-        <AvisoGlobal />
+          <NavegacionInferior />
+          <AnadirRapido />
+          <AvisoGlobal />
+        </PuertaDePerfil>
       </ProveedorHogar>
     </ProveedorTema>
   );

@@ -8,6 +8,7 @@ import {
   useMemo,
   useReducer,
   useRef,
+  useState,
   type Dispatch,
   type ReactNode,
 } from "react";
@@ -34,6 +35,8 @@ const estadoInicial = () =>
 
 interface ContextoHogar {
   estado: EstadoHogar;
+  /** Ya se ha leído lo guardado en este dispositivo (antes, el estado es el de ejemplo). */
+  cargado: boolean;
   despachar: Dispatch<Accion>;
   /** Modo prueba: vuelve a los datos de ejemplo y olvida lo guardado. */
   restablecer: () => void;
@@ -72,6 +75,7 @@ export function ProveedorHogar({
     [registrar],
   );
   const primera = useRef(true);
+  const [cargado, fijarCargado] = useState(false);
   const almacenActual = useRef<AlmacenHogar | null>(null);
 
   useEffect(() => {
@@ -80,6 +84,9 @@ export function ProveedorHogar({
     const guardado = a.cargar();
     if (guardado) despacharLocal({ tipo: "hogar/sustituir", estado: guardado });
     if (MODO_DATOS === "diego") despacharLocal({ tipo: "hogar/hoy", fecha: hoyLocal() });
+    // Se marca una sola vez, al terminar de leer lo guardado.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fijarCargado(true);
   }, [almacen]);
 
   useEffect(() => {
@@ -94,6 +101,7 @@ export function ProveedorHogar({
   const valor = useMemo<ContextoHogar>(
     () => ({
       estado,
+      cargado,
       despachar,
       restablecer: () => {
         almacenActual.current?.borrar();
@@ -101,7 +109,7 @@ export function ProveedorHogar({
         if (MODO_DATOS === "diego") despacharLocal({ tipo: "hogar/hoy", fecha: hoyLocal() });
       },
     }),
-    [estado, despachar],
+    [estado, cargado, despachar],
   );
 
   return (

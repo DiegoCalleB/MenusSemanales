@@ -16,9 +16,8 @@ import { resumenDeTareas } from "@/dominio/tareas";
 /** Portada: una sola pantalla, sin desplazarse: la cena de hoy, el cole de hoy y los accesos. */
 export function InicioVista() {
   const { estado } = useHogar();
-  const [yoId, fijarYo] = useYo();
+  const [yoId] = useYo();
   const yo = estado.personas.find((p) => p.id === yoId && p.activa);
-  const adultos = estado.personas.filter((p) => p.tipo === "adulto" && p.activa);
   const misTareas = yo ? resumenDeTareas(estado.tareas, yo.id, estado.hoy) : null;
   const cenas = comidasDe(estado, estado.hoy);
   const cena = cenas[0];
@@ -123,24 +122,6 @@ export function InicioVista() {
           <Link href="/cumples" className="boton-suave w-fit">
             Pensar los regalos
           </Link>
-        </section>
-      )}
-
-      {!yo && adultos.length > 0 && (
-        <section aria-labelledby="quien" className="tarjeta flex flex-col gap-2">
-          <h2 id="quien" className="text-lg font-extrabold">
-            ¿Quién eres?
-          </h2>
-          <p className="text-tinta-suave text-base">
-            Así te saludo y te enseño tus tareas. Solo se guarda en este móvil.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {adultos.map((p) => (
-              <button key={p.id} type="button" className="boton" onClick={() => fijarYo(p.id)}>
-                Soy {p.nombre}
-              </button>
-            ))}
-          </div>
         </section>
       )}
 

@@ -42,6 +42,7 @@ async function abrir(
   ancho: number,
   alto: number,
   tema: "light" | "dark" = "light",
+  perfil: string | null = "diego",
 ) {
   const tactil = ancho < PUNTO_DE_CORTE;
   const contexto = await browser.newContext({
@@ -51,6 +52,15 @@ async function abrir(
     colorScheme: tema,
   });
   const pagina = await contexto.newPage();
+  // Salvo que la prueba quiera ver la pantalla de perfiles, se entra ya con un perfil elegido.
+  if (perfil) {
+    await pagina.addInitScript((id) => {
+      // Solo la primera vez: así un cambio de perfil durante la prueba se mantiene al recargar.
+      if (!window.localStorage.getItem("menus-semanales:yo")) {
+        window.localStorage.setItem("menus-semanales:yo", id);
+      }
+    }, perfil);
+  }
   // El tema es claro siempre; el oscuro solo si la persona lo elige (se guarda en el dispositivo).
   if (tema === "dark") {
     await pagina.addInitScript(() => window.localStorage.setItem("menus-semanales:tema", "oscuro"));
@@ -365,20 +375,23 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 
-  test("menú: al elegir se ocultan las otras opciones y al cancelar vuelven", async ({
+  test("menú: al elegir las demás opciones siguen a la vista para marcar varios platos", async ({
     browser,
   }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/menu");
-    const elegir = pagina.getByRole("button", { name: /^Elegir / });
-    await expect(elegir).toHaveCount(3); // solo se ve el día abierto: tres opciones
-    await elegir.first().click();
-    await expect(elegir).toHaveCount(0); // al elegir, las otras opciones desaparecen
+    await expect(pagina.getByRole("button", { name: /^Elegir / })).toHaveCount(3);
     await pagina
-      .getByRole("button", { name: /^Quitar / })
-      .last()
+      .getByRole("button", { name: /^Elegir / })
+      .first()
       .click();
-    await expect(elegir).toHaveCount(3); // al cancelar, vuelven
+    const anadir = pagina.getByRole("button", { name: /^Añadir / });
+    await expect(pagina.getByRole("button", { name: /^Quitar / })).toHaveCount(1);
+    await anadir.first().click(); // sin volver a abrir nada: la lista sigue ahí
+    await expect(pagina.getByRole("button", { name: /^Quitar / })).toHaveCount(2);
+    await expect(anadir.first()).toBeVisible();
+    await pagina.getByRole("button", { name: "Listo" }).click();
+    await expect(anadir).toHaveCount(0);
     await contexto.close();
   });
 
@@ -389,7 +402,6 @@ test.describe("flujos en móvil", () => {
       .getByRole("button", { name: /^Elegir / })
       .first()
       .click();
-    await pagina.getByRole("button", { name: "＋ Añadir otro plato" }).click();
     await pagina
       .getByRole("button", { name: /^Añadir / })
       .first()
@@ -527,19 +539,33 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 
-  test("quién eres: saluda por el nombre y no enseña el regalo a quien no es Diego", async ({
+  test("perfiles: se elige quién eres, se saluda por el nombre y se puede cambiar", async ({
     browser,
   }) => {
-    const { contexto, pagina } = await abrir(browser, 390, 844);
+    const { contexto, pagina } = await abrir(browser, 390, 844, "light", null);
     await cargar(pagina, "/");
-    await expect(pagina.getByRole("heading", { level: 2, name: "¿Quién eres?" })).toBeVisible();
-    await expect(pagina.getByRole("link", { name: /Preparar un regalo/ })).toHaveCount(0);
-    await pagina.getByRole("button", { name: "Soy Ana" }).click();
+    await expect(pagina.getByRole("heading", { level: 1, name: "¿Quién eres?" })).toBeVisible();
+    for (const nombre of ["Diego", "Ana"]) {
+      await expect(pagina.getByRole("button", { name: nombre, exact: true })).toBeVisible();
+    }
+    // Sin perfil no se enseña nada más (ni navegación).
+    await expect(pagina.getByRole("navigation")).toHaveCount(0);
+    const axe = await new AxeBuilder({ page: pagina })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+      .analyze();
+    expect(axe.violations).toEqual([]);
+
+    await pagina.getByRole("button", { name: "Ana", exact: true }).click();
     await expect(pagina.getByText("¡Hola, Ana! 👋")).toBeVisible();
     await expect(pagina.getByRole("link", { name: /Preparar un regalo/ })).toHaveCount(0);
     await pagina.reload({ waitUntil: "networkidle" });
     await expect(pagina.getByText("¡Hola, Ana! 👋")).toBeVisible();
-    await expect(pagina.getByRole("heading", { level: 2, name: "¿Quién eres?" })).toHaveCount(0);
+
+    await pagina.getByRole("button", { name: /Cambiar de perfil/ }).click();
+    await expect(pagina.getByRole("heading", { level: 1, name: "¿Quién eres?" })).toBeVisible();
+    await pagina.getByRole("button", { name: "Diego", exact: true }).click();
+    await expect(pagina.getByText("¡Hola, Diego! 👋")).toBeVisible();
+    await expect(pagina.getByRole("link", { name: /Preparar un regalo/ })).toBeVisible();
     await contexto.close();
   });
 
@@ -602,12 +628,14 @@ test.describe("flujos en móvil", () => {
     await expect(pagina.getByText(/Ana.* en 6 días/)).toBeVisible();
 
     // Ana no ve las ideas de su propio cumple ni su aviso de regalo.
-    await pagina.getByRole("button", { name: "Soy Ana" }).click();
+    await pagina.getByRole("button", { name: /Cambiar de perfil/ }).click();
+    await pagina.getByRole("button", { name: "Ana", exact: true }).click();
     await expect(pagina.getByRole("heading", { level: 2, name: /Próximos cumples/ })).toHaveCount(
       0,
     );
     await pagina.goto("/cumples", { waitUntil: "networkidle" });
     await pagina
+      .getByRole("main")
       .getByRole("button", { name: /^10 NOV|Ana/ })
       .first()
       .click();

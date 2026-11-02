@@ -553,3 +553,16 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **Por qué:** quitar otra cosa que recordar (carga mental). Los avisos de regalo ya existían; faltaba el momento de felicitar.
 - **Cómo:** `felicitacionesDeHoy` es una función pura del dominio, con tests. La animación (CSS) se detiene con `prefers-reduced-motion`.
 - **Límites:** la felicitación solo se ve si alguien abre la app ese día; no hay notificación push (en iPhone solo funciona con la app instalada). El aviso sin abrir la app sigue siendo el evento anual del calendario. No hay prueba E2E del día exacto porque los datos de ejemplo no tienen cumpleaños en su «hoy».
+
+## D-071 — Perfiles al estilo Netflix
+
+- **Qué:** al abrir la app en un móvil sin perfil elegido sale «¿Quién eres?» con una ficha grande por persona (adultos y niñas). Al elegir, se entra en ese perfil. Un botón con la inicial (cabecera en móvil, barra lateral en escritorio) permite **cambiar de perfil**. Sustituye al aviso suelto «¿Quién eres?» de la portada.
+- **Por qué:** es lo que ya hacía `useYo` (saludar, enseñar tus tareas, esconder sorpresas), pero ahora es lo primero que se ve y es más fácil para quien comparte un móvil o tablet con las niñas.
+- **Cómo:** `PuertaDePerfil` envuelve la app y no enseña nada más hasta elegir; espera a haber leído lo guardado para no ofrecer personas de ejemplo ni parpadear. El perfil se guarda **solo en ese dispositivo** (no se sincroniza).
+- **Límites:** **no es seguridad**: no hay PIN, así que cualquiera con el móvil desbloqueado puede entrar en el perfil de otro y ver, por ejemplo, el regalo. Un PIN por perfil o un perfil infantil con menos pantallas quedan pendientes y dependen de lo que decida Diego. Si el hogar sincronizado trae personas con otros identificadores, volverá a pedir perfil.
+
+## D-072 — Al elegir un plato, las demás opciones siguen a la vista
+
+- **Qué:** tras elegir un plato, la lista para añadir más se queda abierta (platos pequeños primero) y se va marcando uno tras otro hasta llenar la cena (3 platos) o pulsar «Listo». Antes, al elegir se ocultaba el resto.
+- **Por qué:** Diego pidió poder seleccionar varios platos más rápido, sin volver a abrir la lista cada vez. Sustituye al «ocultar tras elegir» anterior, que dejaba la pantalla limpia pero obligaba a más toques.
+- **Límite:** la lista tras el primer plato ofrece complementos, no otra vez los principales.

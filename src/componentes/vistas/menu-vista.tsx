@@ -295,7 +295,8 @@ export function MenuVista() {
                                   fecha: dia.fecha,
                                   platoId: o.plato.id,
                                 });
-                                setAnadiendo(null);
+                                // Sigue la lista abierta hasta llenar la cena o pulsar «Listo».
+                                if (elegidas.length + 1 >= MAX_PLATOS_POR_CENA) setAnadiendo(null);
                               }}
                             >
                               Añadir
@@ -308,7 +309,7 @@ export function MenuVista() {
                         className="boton-suave w-fit"
                         onClick={() => setAnadiendo(null)}
                       >
-                        Cancelar
+                        Listo
                       </button>
                     </div>
                   )}
@@ -351,8 +352,10 @@ export function MenuVista() {
                                   fecha: dia.fecha,
                                   platoId: o.plato.id,
                                 });
-                                // El día elegido se queda abierto: se ve la elección y se puede cancelar.
+                                // El día elegido se queda abierto y las demás opciones siguen a la vista,
+                                // para marcar varios platos seguidos sin volver a buscarlos.
                                 setAbierto(dia.fecha);
+                                setAnadiendo(dia.fecha);
                               }}
                             >
                               Elegir
@@ -384,8 +387,14 @@ export function MenuVista() {
                               fecha: dia.fecha,
                               platoId,
                             });
-                            setAnadiendo(null);
-                            setVerTodos(null);
+                            // Mientras quepan más platos, la lista sigue abierta.
+                            if (
+                              !(anadiendo === dia.fecha || elegida) ||
+                              elegidas.length + 1 >= MAX_PLATOS_POR_CENA
+                            ) {
+                              setAnadiendo(null);
+                              setVerTodos(null);
+                            }
                             setAbierto(dia.fecha);
                           }}
                         />
