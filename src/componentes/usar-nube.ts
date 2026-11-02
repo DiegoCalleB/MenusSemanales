@@ -143,7 +143,16 @@ export function useNube(
 
   useEffect(() => {
     if (!NUBE_DISPONIBLE) return;
-    const c = crearClienteNavegador();
+    let c: SupabaseClient<Database>;
+    try {
+      c = crearClienteNavegador();
+    } catch (e) {
+      // Variables de Supabase mal puestas (clave o URL con otra forma): la app sigue en modo local
+      // en vez de caerse entera, y el motivo queda en la consola.
+      console.error(e);
+      void Promise.resolve().then(() => setFase("sin-configurar"));
+      return;
+    }
     cliente.current = c;
     // Tras el primer pintado: lee la sesión del navegador sin tocar el estado dentro del efecto.
     void Promise.resolve().then(() => resolverSesion(c));

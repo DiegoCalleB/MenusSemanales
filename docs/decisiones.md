@@ -600,3 +600,10 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **Calendario:** «📅 Todo al calendario (.ics)» descarga lo próximo, y el `.ics` general de «Enviar» incluye ahora los apuntes (con hora de 1 hora, varios días y aviso).
 - **Dónde se guarda:** la página dice si lo apuntado está **solo en este móvil** o **en la nube**. Con la cuenta conectada, la agenda va en el estado del hogar que se guarda en Supabase (`hogar_estado`, con RLS y versión), igual que cumples, tareas y menú. **No hay tablas propias por tipo de dato** (una `agenda`, una `cumples`…): es un documento por hogar (D-063). Pasarlo a tablas relacionales sigue pendiente; hasta entonces no se pueden hacer consultas SQL por fecha.
 - **Límites:** «＋ Google» abre la web/app de Google Calendar del dispositivo, donde hay que estar con la cuenta correcta; el `.ics` de un evento suelto depende de que el navegador deje abrirlo (en iPhone, Safari). Los avisos salen del calendario del móvil, no de la app.
+
+## D-077 — Una configuración de la nube mala no tumba la app
+
+- **Qué pasó:** en Railway la app mostró «This page couldn't load» en todos los navegadores. Reproducido en local: si `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` no empieza por `sb_publishable_` (p. ej. la clave antigua `eyJ…`) o la URL no es válida, `crearClienteNavegador()` lanzaba una excepción al arrancar y se caía **toda** la app, incluso sus partes que no usan la nube.
+- **Arreglo:** esa creación va en `try/catch`: ante una configuración inválida, la app sigue en **modo local** y deja el motivo en la consola. Además hay pantallas de error propias (`error.tsx`, `global-error.tsx`) que enseñan el mensaje en vez del aviso genérico, y un estado de la nube antiguo (sin agenda) se completa antes de usarlo (`normalizar`).
+- **Pendiente de confirmar:** que esta fuera la causa del fallo real de Railway; no se han visto los registros del despliegue.
+- **Límite:** en modo local no hay sincronización ni Google Calendar hasta corregir las variables.
