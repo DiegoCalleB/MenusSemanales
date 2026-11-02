@@ -31,6 +31,13 @@ import {
 } from "@/dominio/cumples";
 import { type FrecuenciaTarea, type Tarea, alternarTarea } from "@/dominio/tareas";
 import { type Apunte, parsearAgenda } from "@/dominio/agenda";
+import {
+  PLANTILLA_CASA,
+  type TareaCasa,
+  aplazarUnDia,
+  marcarHecha,
+  repartirEntre,
+} from "@/dominio/casa";
 import { contarSemana } from "@/dominio/equilibrio";
 import { faltanComponentes } from "@/dominio/componentes";
 import { explicarOpcion, type ExplicacionOpcion } from "@/dominio/explicacion";
@@ -127,6 +134,8 @@ export interface EstadoHogar {
   cumples: Cumple[];
   /** Apuntes con fecha escritos a mano, como en una nota (D-075). */
   agenda: Apunte[];
+  /** Lo recurrente de la casa: sábanas, toallas, filtros… (D-078). */
+  casa: TareaCasa[];
   /** Tareas de cada persona (rutinas diarias y cosas puntuales). */
   tareas: Tarea[];
   /** Días en que no se planifica cena en casa (salir, comer fuera, no hace falta). */
@@ -167,6 +176,13 @@ export type Accion =
   | { tipo: "cumple/importar"; texto: string; relacion: Relacion }
   | { tipo: "agenda/anadir"; texto: string; personaId: string | null }
   | { tipo: "agenda/borrar"; id: string }
+  | { tipo: "casa/anadir"; titulo: string; cadaDias: number; responsableId: string | null }
+  | { tipo: "casa/plantilla" }
+  | { tipo: "casa/hecha"; id: string }
+  | { tipo: "casa/aplazar"; id: string }
+  | { tipo: "casa/asignar"; id: string; responsableId: string | null }
+  | { tipo: "casa/repartir" }
+  | { tipo: "casa/borrar"; id: string }
   | { tipo: "cumple/borrar"; id: string }
   | { tipo: "cumple/idea"; id: string; texto: string }
   | { tipo: "cumple/quitarIdea"; id: string; texto: string }
@@ -436,9 +452,15 @@ export const nombreDia = (fecha: FechaIso): string => NOMBRE_DIA[diaSemanaIso(fe
 // Reductor
 // --------------------------------------------------------------------------------------------
 
-/** Completa lo que un estado guardado por una versión anterior no trae (la agenda, D-075). */
+/** Completa lo que un estado guardado por una versión anterior no trae (agenda y casa, D-075 y D-078). */
 export const normalizar = (e: EstadoHogar): EstadoHogar =>
-  Array.isArray(e.agenda) ? e : { ...e, agenda: [] };
+  Array.isArray(e.agenda) && Array.isArray(e.casa)
+    ? e
+    : {
+        ...e,
+        agenda: Array.isArray(e.agenda) ? e.agenda : [],
+        casa: Array.isArray(e.casa) ? e.casa : [],
+      };
 
 const ok = (e: EstadoHogar, texto: string, operacionId?: string): Aviso => ({
   id: e.siguienteId,
@@ -804,6 +826,101 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
         aviso: partes.length === 0 && noEntendido.length > 0 ? error(e, texto) : ok(e, texto),
       };
     }
+
+    case "casa/anadir": {
+      const titulo = accion.titulo.replace(/\s+/g, " ").trim();
+      if (titulo === "" || titulo.length > MAX_LARGO_ARTICULO || !(accion.cadaDias >= 1)) {
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: error(e, `Escribe qué hay que hacer (hasta ${MAX_LARGO_ARTICULO} caracteres).`),
+        };
+      }
+      if (e.casa.some((t) => claveArticulo(t.titulo) === claveArticulo(titulo))) {
+        return { ...e, siguienteId: e.siguienteId + 1, aviso: ok(e, "Ya estaba en la lista.") };
+      }
+      const responsable = e.personas.some((p) => p.id === accion.responsableId && p.activa)
+        ? accion.responsableId
+        : null;
+      return {
+        ...e,
+        casa: [
+          ...e.casa,
+          {
+            id: `c-${e.siguienteId}`,
+            titulo,
+            emoji: "🏠",
+            cadaDias: Math.round(accion.cadaDias),
+            responsableId: responsable,
+            ultimaVez: null,
+            desde: e.hoy,
+          },
+        ],
+        siguienteId: e.siguienteId + 1,
+        aviso: ok(e, `Apuntado: ${titulo}.`),
+      };
+    }
+
+    case "casa/plantilla": {
+      const ya = new Set(e.casa.map((t) => claveArticulo(t.titulo)));
+      const nuevas = PLANTILLA_CASA.filter((p) => !ya.has(claveArticulo(p.titulo)));
+      return {
+        ...e,
+        casa: [
+          ...e.casa,
+          ...nuevas.map((p, i) => ({
+            id: `c-${e.siguienteId}-${i}`,
+            titulo: p.titulo,
+            emoji: p.emoji,
+            cadaDias: p.cadaDias,
+            responsableId: null,
+            ultimaVez: null,
+            desde: sumarDias(e.hoy, p.empiezaEn),
+          })),
+        ],
+        siguienteId: e.siguienteId + 1,
+        aviso: ok(
+          e,
+          nuevas.length > 0
+            ? `Añadidas ${nuevas.length} tareas de la casa. Cámbialas o quita las que no os valgan.`
+            : "Ya estaba toda la plantilla.",
+        ),
+      };
+    }
+
+    case "casa/hecha":
+      return { ...e, casa: e.casa.map((t) => (t.id === accion.id ? marcarHecha(t, e.hoy) : t)) };
+
+    case "casa/aplazar":
+      return { ...e, casa: e.casa.map((t) => (t.id === accion.id ? aplazarUnDia(t, e.hoy) : t)) };
+
+    case "casa/asignar": {
+      const valido = e.personas.some((p) => p.id === accion.responsableId && p.activa);
+      return {
+        ...e,
+        casa: e.casa.map((t) =>
+          t.id === accion.id ? { ...t, responsableId: valido ? accion.responsableId : null } : t,
+        ),
+      };
+    }
+
+    case "casa/repartir": {
+      const adultos = e.personas.filter((p) => p.tipo === "adulto" && p.activa).map((p) => p.id);
+      const repartidas = repartirEntre(e.casa, adultos);
+      const cambiadas = repartidas.filter((t, i) => t.responsableId !== e.casa[i]?.responsableId);
+      return {
+        ...e,
+        casa: repartidas,
+        siguienteId: e.siguienteId + 1,
+        aviso:
+          cambiadas.length > 0
+            ? ok(e, `Repartidas ${cambiadas.length} entre los dos. Cambia las que no os cuadren.`)
+            : ok(e, "No había nada sin responsable que repartir."),
+      };
+    }
+
+    case "casa/borrar":
+      return { ...e, casa: e.casa.filter((t) => t.id !== accion.id) };
 
     case "agenda/borrar":
       return { ...e, agenda: e.agenda.filter((a) => a.id !== accion.id) };

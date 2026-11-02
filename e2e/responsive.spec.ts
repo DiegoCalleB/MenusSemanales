@@ -32,6 +32,7 @@ const RUTAS = [
   "/cuenta",
   "/cumples",
   "/fechas",
+  "/casa",
   "/compra",
   "/despensa",
   "/reparto",
@@ -478,6 +479,47 @@ test.describe("flujos en móvil", () => {
     await pagina.getByRole("button", { name: "Sí, borrar y recargar" }).click();
     await expect(pagina.getByRole("heading", { level: 1, name: /Próximas fechas/ })).toBeVisible();
     await expect(pagina.getByRole("list", { name: "Apuntes" })).toHaveCount(0);
+    await contexto.close();
+  });
+
+  test("casa: plantilla, hoy toca, hecha se reprograma, reparto y aviso en la portada", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/casa");
+    await pagina.getByRole("button", { name: "Añadir la plantilla de la casa" }).click();
+    const hoy = pagina.getByRole("list", { name: "Hoy toca" });
+    await expect(
+      hoy.getByRole("listitem").filter({ hasText: /Cambiar las sábanas de mamá y papá/ }),
+    ).toHaveCount(1);
+    const axe = await new AxeBuilder({ page: pagina })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+      .analyze();
+    expect(axe.violations).toEqual([]);
+
+    // Reparto entre los dos: todas con responsable y «Tuya» en las de Diego.
+    await pagina.getByRole("button", { name: /Repartir las \d+ sin responsable/ }).click();
+    await expect(pagina.getByRole("button", { name: /Repartir las/ })).toHaveCount(0);
+    await expect(pagina.getByText("Tuya").first()).toBeVisible();
+
+    // En la portada aparece lo que le toca hoy (a quien tiene la tarea o a los dos).
+    await pagina.goto("/", { waitUntil: "networkidle" });
+    await pagina
+      .getByRole("button", { name: /Marcar hecha: Cambiar las sábanas de mamá y papá/ })
+      .click();
+    await pagina.goto("/casa", { waitUntil: "networkidle" });
+    await expect(
+      pagina.getByRole("list", { name: "Hoy toca" }).getByText(/sábanas de mamá y papá/),
+    ).toHaveCount(0);
+    await expect(pagina.getByText(/sábanas de mamá y papá/).first()).toBeVisible(); // ahora en «Más adelante»
+    await expect(pagina.getByText(/última vez/).first()).toBeVisible();
+
+    // Una propia.
+    await pagina.getByLabel("Qué hay que hacer").fill("Regar las plantas");
+    await pagina.getByRole("button", { name: "Añadir", exact: true }).click();
+    await expect(pagina.getByRole("listitem").filter({ hasText: "Regar las plantas" })).toHaveCount(
+      1,
+    );
     await contexto.close();
   });
 

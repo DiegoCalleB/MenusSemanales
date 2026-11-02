@@ -12,11 +12,12 @@ import { useHogar } from "../proveedor-hogar";
 import { AyudaInstalarIos } from "../instalar-ios";
 import { useYo } from "../yo";
 import { useCalendarioFamilia } from "../usar-calendario-familia";
+import { quePideHoy } from "@/dominio/casa";
 import { resumenDeTareas } from "@/dominio/tareas";
 
 /** Portada: una sola pantalla, sin desplazarse: la cena de hoy, el cole de hoy y los accesos. */
 export function InicioVista() {
-  const { estado } = useHogar();
+  const { estado, despachar } = useHogar();
   const [yoId] = useYo();
   const yo = estado.personas.find((p) => p.id === yoId && p.activa);
   const misTareas = yo ? resumenDeTareas(estado.tareas, yo.id, estado.hoy) : null;
@@ -37,6 +38,11 @@ export function InicioVista() {
   const diaCole = proximoDiaConCole(estado, estado.hoy);
   // A quien cumple no se le enseñan los avisos de su propio regalo.
   const avisosCumples = cumplesProximos(estado).filter((a) => !yo || a.cumple.personaId !== yo.id);
+
+  // Lo recurrente de la casa que toca ya: lo mío y lo de los dos (lo de otro no se enseña aquí).
+  const casaHoy = quePideHoy(estado.casa, estado.hoy).filter(
+    (t) => t.responsableId === null || t.responsableId === yo?.id,
+  );
 
   const felicitaciones = felicitacionesDeHoy(estado.cumples, estado.hoy);
 
@@ -112,6 +118,9 @@ export function InicioVista() {
           <Link href="/tareas" className="boton-suave">
             🧹 Zafarrancho
           </Link>
+          <Link href="/casa" className="boton-suave">
+            🏠 Casa
+          </Link>
           <Link href="/fechas" className="boton-suave">
             📌 Fechas
           </Link>
@@ -122,6 +131,35 @@ export function InicioVista() {
       </section>
 
       <AyudaInstalarIos />
+
+      {casaHoy.length > 0 && (
+        <section aria-labelledby="casa-hoy" className="tarjeta flex flex-col gap-2">
+          <h2 id="casa-hoy" className="text-lg font-extrabold">
+            🏠 Hoy toca en casa
+          </h2>
+          <ul className="flex flex-col gap-2">
+            {casaHoy.slice(0, 3).map((t) => (
+              <li key={t.id} className="flex items-center justify-between gap-3">
+                <span className="min-w-0 text-base font-semibold">
+                  <span aria-hidden="true">{t.emoji} </span>
+                  {t.titulo}
+                </span>
+                <button
+                  type="button"
+                  className="boton"
+                  aria-label={`Marcar hecha: ${t.titulo}`}
+                  onClick={() => despachar({ tipo: "casa/hecha", id: t.id })}
+                >
+                  ✓ Hecha
+                </button>
+              </li>
+            ))}
+          </ul>
+          <Link href="/casa" className="boton-suave w-fit">
+            {casaHoy.length > 3 ? `Ver las ${casaHoy.length}` : "Ver la casa"}
+          </Link>
+        </section>
+      )}
 
       {avisosCumples.length > 0 && (
         <section aria-labelledby="cumples" className="tarjeta flex flex-col gap-2">

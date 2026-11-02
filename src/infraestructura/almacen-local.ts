@@ -1,5 +1,5 @@
 import type { AlmacenHogar } from "@/aplicacion/almacen";
-import type { EstadoHogar } from "@/aplicacion/estado";
+import { type EstadoHogar, normalizar } from "@/aplicacion/estado";
 
 /** Súbela cuando cambie la forma del estado: lo guardado con otra versión se descarta. */
 export const VERSION_ALMACEN = 7;
@@ -53,8 +53,8 @@ export function crearAlmacenLocal(
         if (!texto) return null;
         const guardado = JSON.parse(texto) as { version?: unknown; estado?: unknown };
         if (guardado.version !== VERSION_ALMACEN || !esEstadoValido(guardado.estado)) return null;
-        // `agenda` se añadió después: lo guardado antes no la trae.
-        return { ...guardado.estado, agenda: guardado.estado.agenda ?? [], aviso: null };
+        // `agenda` y `casa` se añadieron después: lo guardado antes no las trae.
+        return normalizar({ ...guardado.estado, aviso: null });
       } catch {
         return null;
       }

@@ -607,3 +607,15 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **Arreglo:** esa creación va en `try/catch`: ante una configuración inválida, la app sigue en **modo local** y deja el motivo en la consola. Además hay pantallas de error propias (`error.tsx`, `global-error.tsx`) que enseñan el mensaje en vez del aviso genérico, y un estado de la nube antiguo (sin agenda) se completa antes de usarlo (`normalizar`).
 - **Pendiente de confirmar:** que esta fuera la causa del fallo real de Railway; no se han visto los registros del despliegue.
 - **Límite:** en modo local no hay sincronización ni Google Calendar hasta corregir las variables.
+
+## D-078 — Casa: lo recurrente (sábanas, toallas y compañía)
+
+- **Estado:** aceptada (2026-11-02). Primer módulo del plan de carga mental (`docs/plan-carga-mental.md`, sección B).
+- **Problema:** «Diego nunca se acuerda» de cambiar sábanas y toallas, así que Ana acaba concibiendo y recordando todo. La tarea no es difícil; lo difícil es acordarse.
+- **Qué:** página `/casa` y tarjeta «🏠 Hoy toca en casa» en la portada. Cada tarea tiene **frecuencia** (cada 3 días, semana, 2 semanas, mes, 3 meses, 6 meses, año), **responsable** (una persona o «los dos») y **última vez hecha**. La app calcula cuándo toca; al pulsar **«✓ Hecha»** se reprograma sola contando desde ese día; **«Mañana»** la aparta un día; «Ya la hice» la marca hecha antes de que toque. Se agrupan en «Hoy toca», «Esta semana» y «Más adelante».
+- **Plantilla:** un botón añade 12 tareas orientativas (sábanas de mamá y papá cada 14 días, de las niñas cada 7, toallas, toallas de manos y trapos cada 3, nevera, filtros de campana y aspirador, cepillos de dientes, botiquín, caldera, coche, dentista), **escalonadas** para que no caigan todas el mismo día. Nada se añade solo: lo pulsa quien quiera.
+- **Reparto:** «Repartir entre los dos» asigna las que no tienen responsable **alternando entre los adultos**, empezando por quien menos lleva. Es una propuesta sencilla que se corrige a mano; **no** es el motor de reparto completo (`proponerRotacion`) ni cuenta la carga mental. **Quién lleva qué se decide entre Diego y Ana**: la app no asigna nada sin que se pulse.
+- **Sin señalar:** en la portada solo salen las tareas del perfil abierto y las de «los dos»; las de otra persona no se enseñan ahí. Atrasada se dice «toca desde hace 3 días», sin tono de reproche.
+- **Datos:** nueva lista `casa` en el estado (se sincroniza con el resto). No se sube la versión del almacén: `normalizar` completa `agenda` y `casa` en lo guardado antes, en lo recibido de la nube y al rebasar.
+- **Límites:** **no hay aviso fuera de la app** (ni notificación ni evento en el calendario): se ve al abrirla. Las recurrencias no entran en el `.ics` porque «cada N días desde la última vez» se reprograma al hacerla y una repetición fija del calendario se descuadraría. No hay recurrencias por fecha del calendario («abril y octubre» para el cambio de ropa) ni por temporada. No se avisa a otro cuando la tarea se hace.
+- **Siguiente:** avisos fuera de la app (calendario suscrito o notificaciones), recurrencias por fecha, y usar el motor de reparto real.

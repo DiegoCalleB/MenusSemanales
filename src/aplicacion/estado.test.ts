@@ -1006,3 +1006,90 @@ describe("el archivo de calendario incluye los apuntes", () => {
     ]);
   });
 });
+
+describe("casa: lo recurrente", () => {
+  const con = (...a: Accion[]) => aplicar(estadoInicialDemo(), ...a);
+  const hoy = estadoInicialDemo().hoy;
+
+  it("la plantilla añade sábanas y toallas escalonadas, sin repetir al pulsar otra vez", () => {
+    const e = con({ tipo: "casa/plantilla" });
+    expect(e.casa.length).toBeGreaterThanOrEqual(10);
+    expect(e.casa.some((t) => /sábanas/i.test(t.titulo))).toBe(true);
+    expect(e.casa.every((t) => t.responsableId === null && t.ultimaVez === null)).toBe(true);
+    expect(new Set(e.casa.map((t) => t.desde)).size).toBeGreaterThan(3);
+    const otra = aplicar(e, { tipo: "casa/plantilla" });
+    expect(otra.casa).toHaveLength(e.casa.length);
+    expect(otra.aviso?.texto).toBe("Ya estaba toda la plantilla.");
+  });
+
+  it("añade una propia, no la repite y rechaza lo vacío o sin frecuencia", () => {
+    const e = con({
+      tipo: "casa/anadir",
+      titulo: "  Regar   las plantas ",
+      cadaDias: 3,
+      responsableId: "ana",
+    });
+    expect(e.casa).toMatchObject([
+      {
+        titulo: "Regar las plantas",
+        cadaDias: 3,
+        responsableId: "ana",
+        ultimaVez: null,
+        desde: hoy,
+      },
+    ]);
+    expect(
+      aplicar(e, {
+        tipo: "casa/anadir",
+        titulo: "regar las PLANTAS",
+        cadaDias: 7,
+        responsableId: null,
+      }).casa,
+    ).toHaveLength(1);
+    expect(
+      con({ tipo: "casa/anadir", titulo: "", cadaDias: 3, responsableId: null }).aviso,
+    ).toMatchObject({ tipo: "error" });
+    expect(
+      con({ tipo: "casa/anadir", titulo: "Algo", cadaDias: 0, responsableId: null }).casa,
+    ).toEqual([]);
+    // Un responsable que no existe se queda sin responsable.
+    expect(
+      con({ tipo: "casa/anadir", titulo: "Algo", cadaDias: 3, responsableId: "nadie" }).casa[0]
+        ?.responsableId,
+    ).toBeNull();
+  });
+
+  it("hecha se reprograma, «mañana» la aparta, se asigna, se reparte y se borra", () => {
+    let e = con({ tipo: "casa/anadir", titulo: "Sábanas", cadaDias: 14, responsableId: null });
+    const id = e.casa[0]?.id ?? "";
+    e = aplicar(e, { tipo: "casa/aplazar", id });
+    expect(e.casa[0]?.aplazadaHasta).not.toBeNull();
+    e = aplicar(e, { tipo: "casa/hecha", id });
+    expect(e.casa[0]).toMatchObject({ ultimaVez: hoy, aplazadaHasta: null });
+    e = aplicar(e, { tipo: "casa/asignar", id, responsableId: "ana" });
+    expect(e.casa[0]?.responsableId).toBe("ana");
+    e = aplicar(e, { tipo: "casa/asignar", id, responsableId: "alguien-que-no-existe" });
+    expect(e.casa[0]?.responsableId).toBeNull();
+    const repartido = aplicar(con({ tipo: "casa/plantilla" }), { tipo: "casa/repartir" });
+    const adultos = repartido.personas.filter((p) => p.tipo === "adulto").map((p) => p.id);
+    expect(
+      repartido.casa.every((t) => t.responsableId !== null && adultos.includes(t.responsableId)),
+    ).toBe(true);
+    const cuenta = adultos.map((a) => repartido.casa.filter((t) => t.responsableId === a).length);
+    expect(Math.max(...cuenta) - Math.min(...cuenta)).toBeLessThanOrEqual(1);
+    expect(aplicar(repartido, { tipo: "casa/repartir" }).aviso?.texto).toContain(
+      "nada sin responsable",
+    );
+    expect(aplicar(e, { tipo: "casa/borrar", id }).casa).toEqual([]);
+  });
+
+  it("un estado antiguo sin casa se completa", () => {
+    const viejo: Partial<EstadoHogar> = { ...estadoInicialDemo() };
+    delete viejo.casa;
+    const e = reducir(estadoInicialDemo(), {
+      tipo: "hogar/sustituir",
+      estado: viejo as EstadoHogar,
+    });
+    expect(e.casa).toEqual([]);
+  });
+});
