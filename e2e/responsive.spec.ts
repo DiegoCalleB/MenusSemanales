@@ -515,6 +515,34 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 
+  test("cena: nota del día y plato nuevo escribiendo el nombre, sin abrir listas", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/calendario");
+    // Plato nuevo directamente en el campo siempre visible.
+    // Un día sin cena elegida: el campo para poner un plato está a la vista desde el principio.
+    await pagina.getByRole("button", { name: /^Lunes 9 de noviembre/ }).click();
+    const campo = pagina.getByRole("textbox", { name: /¿Otro plato\?|Añadir un plato/ });
+    await campo.fill("Lomo con pimientos");
+    await pagina.getByRole("button", { name: /Crear «Lomo con pimientos» y elegirlo/ }).click();
+    await expect(pagina.getByText("Lomo con pimientos").first()).toBeVisible();
+    // Nota de la cena: se guarda al salir del campo y queda al recargar.
+    const nota = pagina.getByRole("textbox", { name: "Nota de la cena" });
+    await nota.fill("o igual pollo, depende");
+    await nota.blur();
+    await pagina.reload({ waitUntil: "networkidle" });
+    await pagina.getByRole("button", { name: /^Lunes 9 de noviembre/ }).click();
+    await expect(pagina.getByRole("textbox", { name: "Nota de la cena" })).toHaveValue(
+      "o igual pollo, depende",
+    );
+    const axe = await new AxeBuilder({ page: pagina })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+      .analyze();
+    expect(axe.violations).toEqual([]);
+    await contexto.close();
+  });
+
   test("familia: añadir a alguien, cambiar su ración y dejar de contarlo", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/personas");

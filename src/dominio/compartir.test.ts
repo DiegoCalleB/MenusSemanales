@@ -27,6 +27,14 @@ const dias = [
   },
 ];
 
+describe("nota de la cena en el mensaje", () => {
+  it("sale justo debajo de la cena, y solo si existe", () => {
+    const t = textoMenu("Menú", [{ ...dias[0]!, nota: "o igual lomo, depende" }, { ...dias[1]! }]);
+    expect(t).toContain("🍴 Filetes de ternera\n📝 o igual lomo, depende");
+    expect(t.match(/📝/g)).toHaveLength(1);
+  });
+});
+
 describe("texto del menú para WhatsApp", () => {
   const t = textoMenu("Menú del 3 al 7 de noviembre", dias);
   it("lleva título en negrita, días, cole, platos juntos y sin decidir", () => {

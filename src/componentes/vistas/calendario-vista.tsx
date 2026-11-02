@@ -18,6 +18,8 @@ import { diaSemanaIso, sumarDias, type FechaIso } from "@/dominio/fechas";
 import { EMOJI_GRUPO } from "../formato";
 import { TarjetaCole } from "../cole";
 import { Razones } from "../razones";
+import { NotaDelDia } from "../nota-del-dia";
+import { PlatoRapido } from "../plato-rapido";
 import { TodosLosPlatos } from "../todos-los-platos";
 import { useHogar } from "../proveedor-hogar";
 
@@ -303,6 +305,18 @@ export function CalendarioVista() {
 
           {planificable && (!elegida || anadiendo) && (
             <>
+              <PlatoRapido
+                anadir={anadiendo}
+                alElegir={(platoId) => {
+                  despachar({
+                    tipo: anadiendo ? "menu/anadir" : "menu/elegir",
+                    fecha: sel,
+                    platoId,
+                  });
+                  setAnadiendoA(null);
+                  setVerTodosEn(null);
+                }}
+              />
               <button
                 type="button"
                 className="boton-suave w-fit"
@@ -328,6 +342,8 @@ export function CalendarioVista() {
               )}
             </>
           )}
+
+          <NotaDelDia fecha={sel} />
 
           {planificable && (
             <button

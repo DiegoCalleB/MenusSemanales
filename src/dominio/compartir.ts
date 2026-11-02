@@ -18,6 +18,8 @@ export interface DiaParaCompartir {
   /** Lo apuntado para la comida del mediodía (vacío si no se piensa ese día). */
   comida?: readonly string[];
   evento: { emoji: string; titulo: string } | null;
+  /** Nota de la cena: «o igual lomo, depende». */
+  nota?: string;
 }
 
 const MAX_WHATSAPP = 3800; // WhatsApp admite más, pero los enlaces largos fallan en algunos móviles
@@ -35,6 +37,7 @@ export function textoMenu(titulo: string, dias: readonly DiaParaCompartir[]): st
         ? `🍴 ${hayComida ? "Cena: " : ""}${d.platos.join(" + ")}`
         : `🍴 _${hayComida ? "cena " : ""}sin decidir_`,
     );
+    if (d.nota) lineas.push(`📝 ${d.nota}`);
     lineas.push("");
   }
   lineas.push("_Hecho con Menús Semanales_");

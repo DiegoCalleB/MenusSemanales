@@ -17,6 +17,8 @@ import { TarjetaCole } from "../cole";
 import { EMOJI_GRUPO, formatearNumero } from "../formato";
 import { useHogar } from "../proveedor-hogar";
 import { Razones } from "../razones";
+import { NotaDelDia } from "../nota-del-dia";
+import { PlatoRapido } from "../plato-rapido";
 import { TodosLosPlatos } from "../todos-los-platos";
 
 const mayuscula = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
@@ -362,6 +364,24 @@ export function MenuVista() {
 
                   {(!elegida || anadiendo === dia.fecha) && (
                     <>
+                      <PlatoRapido
+                        anadir={anadiendo === dia.fecha}
+                        alElegir={(platoId) => {
+                          despachar({
+                            tipo: anadiendo === dia.fecha ? "menu/anadir" : "menu/elegir",
+                            fecha: dia.fecha,
+                            platoId,
+                          });
+                          if (
+                            !(anadiendo === dia.fecha || elegida) ||
+                            elegidas.length + 1 >= MAX_PLATOS_POR_CENA
+                          ) {
+                            setAnadiendo(null);
+                            setVerTodos(null);
+                          }
+                          setAbierto(dia.fecha);
+                        }}
+                      />
                       <button
                         type="button"
                         className="boton-suave w-fit"
@@ -394,6 +414,8 @@ export function MenuVista() {
                       )}
                     </>
                   )}
+
+                  <NotaDelDia fecha={dia.fecha} />
 
                   <div className="flex flex-wrap items-center gap-2">
                     <button

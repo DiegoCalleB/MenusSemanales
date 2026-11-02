@@ -84,6 +84,7 @@ import type {
  */
 
 export const MAX_LARGO_NOMBRE_PERSONA = 60;
+export const MAX_LARGO_NOTA_MENU = 140;
 
 export interface ArticuloManual {
   id: string;
@@ -143,6 +144,8 @@ export interface EstadoHogar {
   casa: TareaCasa[];
   /** La comida del mediodía de los días en que hay que pensarla (D-079). */
   almuerzos: Almuerzo[];
+  /** Nota corta de la cena de un día: «o igual lomo, depende» (D-096). */
+  notasMenu: Record<FechaIso, string>;
   /** Tareas de cada persona (rutinas diarias y cosas puntuales). */
   tareas: Tarea[];
   /** Días en que no se planifica cena en casa (salir, comer fuera, no hace falta). */
@@ -226,6 +229,7 @@ export type Accion =
   | { tipo: "menu/anadir"; fecha: FechaIso; platoId: string }
   | { tipo: "menu/quitar"; fecha: FechaIso; platoId?: string }
   | { tipo: "menu/llegoTarde"; fecha: FechaIso }
+  | { tipo: "menu/nota"; fecha: FechaIso; texto: string }
   | { tipo: "plato/guardar"; id?: string; plato: PlatoEditable }
   | { tipo: "plato/rapido"; nombre: string; grupo: GrupoPlato; idBase?: string }
   | { tipo: "plato/proponer"; id: string; proponer: boolean }
@@ -536,10 +540,15 @@ export const nombreDia = (fecha: FechaIso): string => NOMBRE_DIA[diaSemanaIso(fe
 
 /** Completa lo que un estado guardado por una versión anterior no trae (agenda, casa y almuerzos, D-075, D-078 y D-079). */
 export const normalizar = (e: EstadoHogar): EstadoHogar =>
-  Array.isArray(e.agenda) && Array.isArray(e.casa) && Array.isArray(e.almuerzos)
+  Array.isArray(e.agenda) &&
+  Array.isArray(e.casa) &&
+  Array.isArray(e.almuerzos) &&
+  typeof e.notasMenu === "object" &&
+  e.notasMenu !== null
     ? e
     : {
         ...e,
+        notasMenu: typeof e.notasMenu === "object" && e.notasMenu !== null ? e.notasMenu : {},
         agenda: Array.isArray(e.agenda) ? e.agenda : [],
         casa: Array.isArray(e.casa) ? e.casa : [],
         almuerzos: Array.isArray(e.almuerzos) ? e.almuerzos : [],
@@ -1277,6 +1286,13 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
           ? e.llegoTarde.filter((f) => f !== accion.fecha)
           : [...e.llegoTarde, accion.fecha],
       };
+
+    case "menu/nota": {
+      const texto = accion.texto.replace(/\s+/g, " ").trim().slice(0, MAX_LARGO_NOTA_MENU);
+      const { [accion.fecha]: _antes, ...resto } = e.notasMenu;
+      void _antes;
+      return { ...e, notasMenu: texto === "" ? resto : { ...resto, [accion.fecha]: texto } };
+    }
 
     case "plato/rapido": {
       const nombre = accion.nombre.replace(/\s+/g, " ").trim();

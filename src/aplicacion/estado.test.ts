@@ -10,6 +10,7 @@ import {
   cenaDeEmergenciaHoy,
   diasDelMenu,
   menuDeLaSemana,
+  normalizar,
   opcionesParaFecha,
   comidasDe,
   conIdBase,
@@ -1449,5 +1450,25 @@ describe("plato nuevo al vuelo (plato/rapido)", () => {
       },
     });
     expect(b.platos.find((p) => p.id === id)?.noProponer).toBeUndefined();
+  });
+});
+
+describe("nota de la cena (D-096)", () => {
+  it("guarda, cambia y quita la nota de un día, recortada y sin espacios de más", () => {
+    const e = estadoInicialDemo();
+    const f = e.hoy;
+    const a = reducir(e, { tipo: "menu/nota", fecha: f, texto: "  o igual   lomo, depende " });
+    expect(a.notasMenu[f]).toBe("o igual lomo, depende");
+    const b = reducir(a, { tipo: "menu/nota", fecha: f, texto: "mejor pollo" });
+    expect(b.notasMenu[f]).toBe("mejor pollo");
+    const c = reducir(b, { tipo: "menu/nota", fecha: f, texto: "   " });
+    expect(c.notasMenu).not.toHaveProperty(f);
+    const larga = reducir(e, { tipo: "menu/nota", fecha: f, texto: "x".repeat(500) });
+    expect(larga.notasMenu[f]).toHaveLength(140);
+  });
+
+  it("lo guardado antes de que existieran las notas se completa al normalizar", () => {
+    const viejo = { ...estadoInicialDemo(), notasMenu: undefined } as unknown as EstadoHogar;
+    expect(normalizar(viejo).notasMenu).toEqual({});
   });
 });

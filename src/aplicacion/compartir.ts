@@ -60,6 +60,7 @@ export function planParaCompartir(e: EstadoHogar): { titulo: string; dias: DiaPa
         platos: comidasDe(e, d.fecha).map((c) => c.plato.nombre),
         comida: e.almuerzos.filter((a) => a.fecha === d.fecha).map((a) => a.texto),
         evento: e.eventos[d.fecha] ?? null,
+        ...(e.notasMenu[d.fecha] ? { nota: e.notasMenu[d.fecha] } : {}),
       };
     });
   const primero = dias[0]?.fecha;

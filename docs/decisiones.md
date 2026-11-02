@@ -777,3 +777,10 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **Al adoptar las tablas** se guarda una copia automática en el móvil si los datos difieren.
 - **Migración Realtime** (`20261102190000`): añade las 11 tablas a la publicación y `replica identity full` para que lleguen también los borrados.
 - **Límites:** (1) sin la migración de Realtime no hay avisos en directo; sí se actualiza al volver a la app y en cada cambio propio. (2) Si dos móviles editan **la misma fila** a la vez, gana el último en enviar (por fila, no por campo). (3) El indicador de estado de la cuenta sigue siendo el del documento; los fallos del motor por tablas hoy no se enseñan en pantalla. (4) Faltan por migrar platos, ingredientes, despensa, compra, comidas, reparto, cole, valoraciones y comidas del mediodía.
+
+## D-096 — Nota en cada cena y alta rápida de platos
+
+- **Estado:** hecho (2026-11-02).
+- **Nota de la cena** (petición de Diego: «pollo a la plancha… o igual lomo, depende»): un campo en cada día del menú y del calendario; se guarda al salir del campo o con Intro (máximo 140 letras) y sale en el mensaje del menú que se comparte (`📝 …`). Estado nuevo `notasMenu` (fecha → texto), completado al cargar datos antiguos.
+- **Alta rápida:** campo siempre a la vista bajo cada día sin cena (y al «Añadir otro plato»): al escribir salen los platos del hogar que coinciden para elegir con un toque; si no existe, aparece «Crear «X» y elegirlo» con su tipo de plato. Sin abrir «Ver todos» ni pulsar buscar (que sigue disponible). El plato se crea como en D-093 (sin ingredientes, se completan en «Platos»).
+- **Límite:** las notas viven por ahora en el documento (`hogar_estado`), no en una tabla propia; irán a tabla con el resto de la planificación de comidas.
