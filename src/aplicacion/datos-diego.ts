@@ -686,6 +686,7 @@ export function estadoModoDiego(hoy: string): EstadoHogar {
     // El lunes 2 no hay menú del cole y la planificación de ahora es de martes a viernes.
     saltados: ["2026-11-02"],
     // Solo se conoce el cumpleaños de Ana; el resto de fechas las añade la familia en «Cumples».
+    agenda: [],
     cumples: [
       {
         id: "c-ana",

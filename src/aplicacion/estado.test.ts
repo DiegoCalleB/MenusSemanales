@@ -936,3 +936,56 @@ describe("pureza", () => {
     expect(JSON.stringify(inicial)).toBe(foto);
   });
 });
+
+describe("agenda: apuntes escritos como en una nota", () => {
+  const con = (...a: Accion[]) => aplicar(estadoInicialDemo(), ...a);
+  const hoy = estadoInicialDemo().hoy;
+  const anio = Number(hoy.slice(0, 4)) + 1;
+
+  it("apunta lo que tiene fecha, pasa lo demás a tareas de la persona y avisa de lo que no entiende", () => {
+    const e = con({
+      tipo: "agenda/anadir",
+      texto: `[X] 17 Marzo ${anio} Excursión Alba\n[ ] Veterinario Punky\n31 Abril Mal`,
+      personaId: "alba",
+    });
+    expect(e.agenda.map((a) => [a.fecha, a.titulo])).toEqual([[`${anio}-03-17`, "Excursión Alba"]]);
+    expect(e.tareas.filter((t) => t.texto === "Veterinario Punky")).toMatchObject([
+      { personaId: "alba", frecuencia: "puntual" },
+    ]);
+    expect(e.aviso).toMatchObject({ tipo: "ok" });
+    expect(e.aviso?.texto).toContain("1 apunte y 1 tarea");
+    expect(e.aviso?.texto).toContain("No he entendido: 31 Abril Mal");
+  });
+
+  it("no repite lo ya apuntado, no inventa dueño para las tareas y se puede quitar", () => {
+    const a = con({
+      tipo: "agenda/anadir",
+      texto: `3 mayo ${anio} Cole\nLlamar Rosana`,
+      personaId: null,
+    });
+    expect(a.agenda).toHaveLength(1);
+    expect(a.tareas.some((t) => t.texto === "Llamar Rosana")).toBe(false);
+    expect(a.aviso?.texto).toContain("No he entendido: Llamar Rosana");
+    const dos = aplicar(a, {
+      tipo: "agenda/anadir",
+      texto: `3 mayo ${anio} cole`,
+      personaId: null,
+    });
+    expect(dos.agenda).toHaveLength(1);
+    expect(dos.aviso?.texto).toContain("nada nuevo");
+    const sin = aplicar(dos, { tipo: "agenda/borrar", id: dos.agenda[0]?.id ?? "" });
+    expect(sin.agenda).toEqual([]);
+    const error = con({ tipo: "agenda/anadir", texto: "31 Abril Mal", personaId: "alba" });
+    expect(error.aviso).toMatchObject({ tipo: "error" });
+  });
+
+  it("al recibir un estado de antes de la agenda, parte de una lista vacía", () => {
+    const viejo: Partial<EstadoHogar> = { ...estadoInicialDemo() };
+    delete viejo.agenda;
+    const e = reducir(estadoInicialDemo(), {
+      tipo: "hogar/sustituir",
+      estado: viejo as unknown as EstadoHogar,
+    });
+    expect(e.agenda).toEqual([]);
+  });
+});

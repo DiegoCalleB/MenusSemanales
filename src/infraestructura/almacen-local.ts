@@ -53,7 +53,8 @@ export function crearAlmacenLocal(
         if (!texto) return null;
         const guardado = JSON.parse(texto) as { version?: unknown; estado?: unknown };
         if (guardado.version !== VERSION_ALMACEN || !esEstadoValido(guardado.estado)) return null;
-        return { ...guardado.estado, aviso: null };
+        // `agenda` se añadió después: lo guardado antes no la trae.
+        return { ...guardado.estado, agenda: guardado.estado.agenda ?? [], aviso: null };
       } catch {
         return null;
       }

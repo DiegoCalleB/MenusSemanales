@@ -1,6 +1,7 @@
 "use client";
 
 import { esCumpleRepetido } from "@/dominio/cuenta-atras";
+import { Apuntar } from "../apuntar";
 import { useCalendarioFamilia } from "../usar-calendario-familia";
 import { useMemo, useState } from "react";
 import {
@@ -65,8 +66,9 @@ export function CalendarioVista() {
       eventos[fechaEnAnio(a, c.mes, c.dia)] ??= { titulo: `Cumple de ${c.nombre}`, emoji: "🎂" };
     }
   }
-  // Lo del Google Calendar «Familia», si está conectado (D-074).
-  for (const ev of deGoogle) {
+  // Lo apuntado a mano (D-075) y lo del Google Calendar «Familia», si está conectado (D-074).
+  const apuntes = estado.agenda.map((a) => ({ fecha: a.fecha, titulo: a.titulo, hora: a.hora }));
+  for (const ev of [...apuntes, ...deGoogle]) {
     if (esCumpleRepetido(ev.titulo, estado.cumples)) continue;
     const texto = ev.hora ? `${ev.titulo} (${ev.hora})` : ev.titulo;
     const ya = eventos[ev.fecha];
@@ -113,6 +115,8 @@ export function CalendarioVista() {
           Calendario <span aria-hidden="true">📅</span>
         </h1>
       </header>
+
+      <Apuntar />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
         <section className="tarjeta flex flex-col gap-3" aria-labelledby="mes">

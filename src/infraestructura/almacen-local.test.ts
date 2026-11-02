@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { EstadoHogar } from "@/aplicacion/estado";
 import { estadoInicialDemo } from "@/aplicacion/datos-demo";
 import { VERSION_ALMACEN, crearAlmacenLocal, esEstadoValido } from "./almacen-local";
 
@@ -29,6 +30,15 @@ describe("almacén local del modo prueba", () => {
     expect(crearAlmacenLocal(falsoStorage({ [clave]: vieja })).cargar()).toBeNull();
     const rota = JSON.stringify({ version: VERSION_ALMACEN, estado: { hoy: "2026-11-04" } });
     expect(crearAlmacenLocal(falsoStorage({ [clave]: rota })).cargar()).toBeNull();
+  });
+
+  it("lo guardado antes de existir la agenda se carga con la agenda vacía", () => {
+    const viejo: Partial<EstadoHogar> = { ...estadoInicialDemo() };
+    delete viejo.agenda;
+    const s = falsoStorage({
+      "menus-semanales:prueba": JSON.stringify({ version: VERSION_ALMACEN, estado: viejo }),
+    });
+    expect(crearAlmacenLocal(s).cargar()?.agenda).toEqual([]);
   });
 
   it("borrar elimina lo guardado", () => {

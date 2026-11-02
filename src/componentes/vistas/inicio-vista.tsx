@@ -23,7 +23,12 @@ export function InicioVista() {
   const cenas = comidasDe(estado, estado.hoy);
   const cena = cenas[0];
   const deGoogle = useCalendarioFamilia(estado.hoy);
-  const proximos = cuentaAtras(estado.cumples, estado.eventos, estado.hoy, { externos: deGoogle });
+  const proximos = cuentaAtras(estado.cumples, estado.eventos, estado.hoy, {
+    externos: [
+      ...estado.agenda.map((a) => ({ fecha: a.fecha, titulo: a.titulo, hora: a.hora })),
+      ...deGoogle,
+    ],
+  });
   const diaCole = proximoDiaConCole(estado, estado.hoy);
   // A quien cumple no se le enseñan los avisos de su propio regalo.
   const avisosCumples = cumplesProximos(estado).filter((a) => !yo || a.cumple.personaId !== yo.id);

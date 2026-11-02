@@ -415,6 +415,36 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 
+  test("agenda: se apunta como en una nota, sale en la cuenta atrás y se puede quitar", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/calendario");
+    await pagina.getByLabel(/Escribe como en una nota/).fill("5 Noviembre 18:15 Psicotécnico");
+    await pagina.getByRole("button", { name: "Apuntar", exact: true }).click();
+    const apuntes = pagina.getByRole("list", { name: "Apuntes" });
+    await expect(apuntes.getByText(/Psicotécnico · 18:15/)).toBeVisible();
+    // Varias líneas pegadas: antes de guardar pide confirmar.
+    await pagina
+      .getByLabel(/Escribe como en una nota/)
+      .fill("6 Noviembre Uno\n7 Noviembre Dos\n8 Noviembre Tres\nRecoger paquete");
+    await pagina.getByRole("button", { name: "Apuntar", exact: true }).click();
+    await expect(pagina.getByText(/Vas a apuntar 3 con fecha y 1 sin fecha/)).toBeVisible();
+    await pagina.getByRole("button", { name: "Revisar" }).click();
+    await pagina.getByLabel(/Escribe como en una nota/).fill("");
+    await pagina.goto("/", { waitUntil: "networkidle" });
+    await expect(
+      pagina
+        .getByRole("list", { name: "Cuenta atrás" })
+        .getByRole("listitem")
+        .filter({ hasText: /Psicotécnico \(18:15\)/ }),
+    ).toHaveCount(1);
+    await pagina.goto("/calendario", { waitUntil: "networkidle" });
+    await pagina.getByRole("button", { name: "Quitar Psicotécnico" }).click();
+    await expect(apuntes).toHaveCount(0);
+    await contexto.close();
+  });
+
   test("enviar: WhatsApp, copiar y archivo de calendario", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/compartir");

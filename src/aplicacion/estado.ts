@@ -30,6 +30,7 @@ import {
   proximaFecha,
 } from "@/dominio/cumples";
 import { type FrecuenciaTarea, type Tarea, alternarTarea } from "@/dominio/tareas";
+import { type Apunte, parsearAgenda } from "@/dominio/agenda";
 import { contarSemana } from "@/dominio/equilibrio";
 import { faltanComponentes } from "@/dominio/componentes";
 import { explicarOpcion, type ExplicacionOpcion } from "@/dominio/explicacion";
@@ -124,6 +125,8 @@ export interface EstadoHogar {
   eventos: Record<FechaIso, { titulo: string; emoji: string }>;
   /** Cumpleaños (familia, amigos, cole) con las ideas y el estado del regalo. */
   cumples: Cumple[];
+  /** Apuntes con fecha escritos a mano, como en una nota (D-075). */
+  agenda: Apunte[];
   /** Tareas de cada persona (rutinas diarias y cosas puntuales). */
   tareas: Tarea[];
   /** Días en que no se planifica cena en casa (salir, comer fuera, no hace falta). */
@@ -162,6 +165,8 @@ export type Accion =
       personaId?: string | null;
     }
   | { tipo: "cumple/importar"; texto: string; relacion: Relacion }
+  | { tipo: "agenda/anadir"; texto: string; personaId: string | null }
+  | { tipo: "agenda/borrar"; id: string }
   | { tipo: "cumple/borrar"; id: string }
   | { tipo: "cumple/idea"; id: string; texto: string }
   | { tipo: "cumple/quitarIdea"; id: string; texto: string }
@@ -750,6 +755,55 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
       };
     }
 
+    case "agenda/anadir": {
+      const { conFecha, sinFecha, erroneos } = parsearAgenda(accion.texto, e.hoy);
+      const clave = (f: string, t: string) => `${f}|${claveArticulo(t)}`;
+      const ya = new Set(e.agenda.map((a) => clave(a.fecha, a.titulo)));
+      const nuevos = conFecha.filter((a) => {
+        const k = clave(a.fecha, a.titulo);
+        if (ya.has(k)) return false;
+        ya.add(k);
+        return true;
+      });
+      const persona = e.personas.find((p) => p.id === accion.personaId && p.activa);
+      const yaTarea = new Set(
+        e.tareas.filter((t) => t.personaId === persona?.id).map((t) => claveArticulo(t.texto)),
+      );
+      const tareasNuevas = persona ? sinFecha.filter((t) => !yaTarea.has(claveArticulo(t))) : [];
+      const sinDueno = persona ? [] : sinFecha;
+      const partes = [
+        nuevos.length > 0 ? `${nuevos.length} ${nuevos.length === 1 ? "apunte" : "apuntes"}` : "",
+        tareasNuevas.length > 0
+          ? `${tareasNuevas.length} ${tareasNuevas.length === 1 ? "tarea" : "tareas"}`
+          : "",
+      ].filter(Boolean);
+      const noEntendido = [...erroneos, ...sinDueno];
+      const texto =
+        (partes.length > 0
+          ? `Apuntado: ${partes.join(" y ")}.`
+          : "No había nada nuevo que apuntar.") +
+        (noEntendido.length > 0 ? ` No he entendido: ${noEntendido.join("; ")}.` : "");
+      return {
+        ...e,
+        agenda: [...e.agenda, ...nuevos.map((a, i) => ({ id: `a-${e.siguienteId}-${i}`, ...a }))],
+        tareas: [
+          ...e.tareas,
+          ...tareasNuevas.map((t, i) => ({
+            id: `t-${e.siguienteId}-a${i}`,
+            personaId: persona?.id ?? "",
+            texto: t,
+            frecuencia: "puntual" as const,
+            hechas: [],
+          })),
+        ],
+        siguienteId: e.siguienteId + 1,
+        aviso: partes.length === 0 && noEntendido.length > 0 ? error(e, texto) : ok(e, texto),
+      };
+    }
+
+    case "agenda/borrar":
+      return { ...e, agenda: e.agenda.filter((a) => a.id !== accion.id) };
+
     case "cumple/borrar":
       return { ...e, cumples: e.cumples.filter((c) => c.id !== accion.id) };
 
@@ -1087,7 +1141,8 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
       };
 
     case "hogar/sustituir":
-      return accion.estado;
+      // Lo guardado antes de existir la agenda no la trae: se parte de una lista vacía.
+      return { ...accion.estado, agenda: accion.estado.agenda ?? [] };
 
     case "cerrarAviso":
       return e.aviso === null ? e : { ...e, aviso: null };
