@@ -676,6 +676,11 @@ test.describe("flujos en móvil", () => {
     await cargar(pagina, "/compartir");
     const whatsapp = pagina.getByRole("link", { name: "Enviar por WhatsApp" });
     await expect(whatsapp).toHaveCount(4); // menú, compra, fechas y casa
+    // Los avisos en el calendario del móvil piden primero la cuenta (aquí no hay nube).
+    const avisos = pagina.getByRole("region", { name: "Avisos en el calendario del móvil" });
+    await expect(avisos.getByText(/con la app cerrada/)).toBeVisible();
+    await expect(avisos.getByText(/Primero entra con tu cuenta/)).toBeVisible();
+    await expect(avisos.getByRole("button", { name: /Activar los avisos/ })).toHaveCount(0);
     expect(await whatsapp.first().getAttribute("href")).toMatch(/^https:\/\/wa\.me\/\?text=/);
     await pagina.getByText("Ver mensaje").first().click();
     await expect(pagina.locator("pre").first()).toContainText("Hecho con Menús Semanales");

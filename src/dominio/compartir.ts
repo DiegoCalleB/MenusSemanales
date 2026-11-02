@@ -141,6 +141,8 @@ export interface EventoCalendario {
   hora?: string | null;
   /** Último día, si dura varios (se cuenta completo). */
   hasta?: FechaIso | null;
+  /** Identificador estable: así el calendario actualiza el evento en vez de duplicarlo. */
+  uid?: string;
 }
 
 const sinDosPuntos = (h: string) => `${h.replace(":", "")}00`;
@@ -180,6 +182,8 @@ export function generarIcs(
   nombre: string,
   eventos: readonly EventoCalendario[],
   ahora: Date,
+  /** Para calendarios suscritos: cada cuántas horas conviene que el móvil vuelva a pedirlo. */
+  refrescoHoras?: number,
 ): string {
   const sello = ahora
     .toISOString()
@@ -192,11 +196,17 @@ export function generarIcs(
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     `X-WR-CALNAME:${escaparIcs(nombre)}`,
+    ...(refrescoHoras
+      ? [
+          `REFRESH-INTERVAL;VALUE=DURATION:PT${refrescoHoras}H`,
+          `X-PUBLISHED-TTL:PT${refrescoHoras}H`,
+        ]
+      : []),
   ];
   eventos.forEach((e, i) => {
     lineas.push(
       "BEGIN:VEVENT",
-      `UID:${sinGuiones(e.fecha)}-${i}@menus-semanales`,
+      `UID:${e.uid ? escaparIcs(e.uid) : `${sinGuiones(e.fecha)}-${i}`}@menus-semanales`,
       `DTSTAMP:${sello}`,
       ...(e.hora
         ? [

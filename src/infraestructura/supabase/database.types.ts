@@ -17,6 +17,35 @@ export type Database = {
   }
   public: {
     Tables: {
+      hogar_calendario: {
+        Row: {
+          creado_en: string
+          creado_por: string | null
+          hogar_id: string
+          token: string
+        }
+        Insert: {
+          creado_en?: string
+          creado_por?: string | null
+          hogar_id: string
+          token: string
+        }
+        Update: {
+          creado_en?: string
+          creado_por?: string | null
+          hogar_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hogar_calendario_hogar_id_fkey"
+            columns: ["hogar_id"]
+            isOneToOne: true
+            referencedRelation: "hogar"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hogar_estado: {
         Row: {
           actualizado_en: string
@@ -1061,6 +1090,7 @@ export type Database = {
         Returns: string
       }
       crear_hogar: { Args: { p_nombre: string }; Returns: string }
+      estado_para_calendario: { Args: { p_token: string }; Returns: Json }
       guardar_estado_hogar: {
         Args: { p_hogar_id: string; p_version_esperada: number; p_estado: Json }
         Returns: number
@@ -1071,6 +1101,10 @@ export type Database = {
       }
       crear_invitacion: {
         Args: { p_hogar_id: string; p_rol?: string }
+        Returns: string
+      }
+      enlace_calendario: {
+        Args: { p_hogar_id: string; p_renovar?: boolean }
         Returns: string
       }
       enviar_plato_a_catalogo: {

@@ -10,8 +10,10 @@ import {
   seccionesDeCompra,
 } from "@/aplicacion/compartir";
 import { generarIcs, textoCasa, textoCompra, textoFechas, textoMenu } from "@/dominio/compartir";
+import { AvisosCalendario } from "../avisos-calendario";
 import { BotonesCompartir } from "../compartir-botones";
 import { useHogar } from "../proveedor-hogar";
+import { useYo } from "../yo";
 
 function Tarjeta({
   titulo,
@@ -48,6 +50,7 @@ function Tarjeta({
 /** Sacar el plan de la app: mensaje de WhatsApp, lista para Keep y archivo de calendario. */
 export function CompartirVista() {
   const { estado } = useHogar();
+  const [yo] = useYo();
   const [aviso, setAviso] = useState("");
   const plan = useMemo(() => planParaCompartir(estado), [estado]);
   const compra = useMemo(() => seccionesDeCompra(estado), [estado]);
@@ -58,7 +61,7 @@ export function CompartirVista() {
   const hayEventos = estado.comidas.length > 0 || Object.keys(estado.eventos).length > 0;
 
   function descargarIcs() {
-    const ics = generarIcs("Menús Semanales", eventosDeCalendario(estado), new Date());
+    const ics = generarIcs("Menús Semanales", eventosDeCalendario(estado, yo), new Date());
     const url = URL.createObjectURL(new Blob([ics], { type: "text/calendar;charset=utf-8" }));
     const a = document.createElement("a");
     a.href = url;
@@ -90,6 +93,8 @@ export function CompartirVista() {
       <Tarjeta titulo="Lista de la compra" emoji="🛒" texto={textoDeCompra} />
       <Tarjeta titulo="Próximas fechas" emoji="📌" texto={textoDeFechas} />
       <Tarjeta titulo="Lo que toca en casa" emoji="🏠" texto={textoDeCasa} />
+
+      <AvisosCalendario />
 
       <p className="text-tinta-suave text-base">
         En Google Keep: «Compartir…» → Keep, o «Copiar» y pegar en una nota. En Google Calendar:

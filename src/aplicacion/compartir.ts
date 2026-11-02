@@ -105,7 +105,13 @@ export function seccionesDeCompra(e: EstadoHogar): {
 }
 
 /** Eventos de calendario: una cena por día y las fechas señaladas (cumpleaños…). */
-export function eventosDeCalendario(e: EstadoHogar): EventoCalendario[] {
+export function eventosDeCalendario(
+  e: EstadoHogar,
+  yoId: string | null = null,
+): EventoCalendario[] {
+  // Los avisos del regalo solo van a un adulto que no cumple: a quien cumple no se le avisa de su
+  // regalo, y si no se sabe quién baja el archivo, no se incluyen (D-083).
+  const yo = e.personas.find((p) => p.id === yoId && p.activa && p.tipo === "adulto");
   const eventos: EventoCalendario[] = [];
   const fechas = new Set<FechaIso>([...e.comidas.map((c) => c.fecha), ...Object.keys(e.eventos)]);
   for (const fecha of [...fechas].sort()) {
@@ -132,29 +138,31 @@ export function eventosDeCalendario(e: EstadoHogar): EventoCalendario[] {
   // Se repiten cada año, así el móvil avisa solo sin tener que abrir la app.
   for (const c of e.cumples) {
     const dia = proximaFecha(c, e.hoy);
-    eventos.push(
-      {
-        fecha: dia,
-        titulo: `🎂 Cumple de ${c.nombre}`,
-        descripcion: `Cumpleaños de ${c.nombre}`,
-        anual: true,
-        aviso: true,
-      },
-      {
-        fecha: sumarDias(dia, -30),
-        titulo: `🎁 Pensar el regalo de ${c.nombre}`,
-        descripcion: `Faltan 30 días para el cumple de ${c.nombre}: ¡a pensar ideas!`,
-        anual: true,
-        aviso: true,
-      },
-      {
-        fecha: sumarDias(dia, -14),
-        titulo: `🎁 Comprar el regalo de ${c.nombre}`,
-        descripcion: `Faltan 14 días para el cumple de ${c.nombre}: hay que comprar el regalo.`,
-        anual: true,
-        aviso: true,
-      },
-    );
+    eventos.push({
+      fecha: dia,
+      titulo: `🎂 Cumple de ${c.nombre}`,
+      descripcion: `Cumpleaños de ${c.nombre}`,
+      anual: true,
+      aviso: true,
+    });
+    if (yo && c.personaId !== yo.id) {
+      eventos.push(
+        {
+          fecha: sumarDias(dia, -30),
+          titulo: `🎁 Pensar el regalo de ${c.nombre}`,
+          descripcion: `Faltan 30 días para el cumple de ${c.nombre}: ¡a pensar ideas!`,
+          anual: true,
+          aviso: true,
+        },
+        {
+          fecha: sumarDias(dia, -14),
+          titulo: `🎁 Comprar el regalo de ${c.nombre}`,
+          descripcion: `Faltan 14 días para el cumple de ${c.nombre}: hay que comprar el regalo.`,
+          anual: true,
+          aviso: true,
+        },
+      );
+    }
   }
   // La comida del mediodía de los días en que se piensa (D-079).
   for (const a of e.almuerzos) {

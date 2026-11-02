@@ -57,3 +57,7 @@ export const crearInvitacion = (cliente: Cliente, hogarId: string) =>
   cliente.rpc("crear_invitacion", { p_hogar_id: hogarId, p_rol: "miembro" });
 export const unirseConCodigo = (cliente: Cliente, codigo: string) =>
   cliente.rpc("unirse_a_hogar", { p_codigo: codigo });
+
+/** Enlace secreto del calendario del hogar (D-083). Con `renovar`, el anterior deja de valer. */
+export const enlaceDelCalendario = (cliente: Cliente, hogarId: string, renovar = false) =>
+  cliente.rpc("enlace_calendario", { p_hogar_id: hogarId, p_renovar: renovar });
