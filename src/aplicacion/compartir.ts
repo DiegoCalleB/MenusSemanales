@@ -146,5 +146,16 @@ export function eventosDeCalendario(e: EstadoHogar): EventoCalendario[] {
       },
     );
   }
+  // Lo apuntado a mano (D-075): con aviso, para que el móvil lo recuerde sin abrir la app.
+  for (const a of e.agenda) {
+    eventos.push({
+      fecha: a.fecha,
+      titulo: `📌 ${a.titulo}`,
+      descripcion: a.titulo,
+      hora: a.hora,
+      hasta: a.hasta,
+      aviso: true,
+    });
+  }
   return eventos;
 }

@@ -123,3 +123,24 @@ describe("archivo de calendario", () => {
     expect(desplegado).toContain("🍽️".repeat(60));
   });
 });
+
+describe("generarIcs: apuntes con hora y de varios días", () => {
+  const ahora = new Date("2026-11-02T10:00:00Z");
+  it("con hora dura una hora y avisa una hora antes; de varios días cuenta el último completo", () => {
+    const ics = generarIcs(
+      "x",
+      [
+        { fecha: "2026-11-05", titulo: "Psico", descripcion: "Psico", hora: "18:15", aviso: true },
+        { fecha: "2026-11-17", titulo: "Puente", descripcion: "Puente", hasta: "2026-11-19" },
+        { fecha: "2026-11-06", titulo: "Tarde", descripcion: "Tarde", hora: "23:30" },
+      ],
+      ahora,
+    );
+    expect(ics).toContain("DTSTART:20261105T181500");
+    expect(ics).toContain("DTEND:20261105T191500");
+    expect(ics).toContain("TRIGGER:-PT1H");
+    expect(ics).toContain("DTSTART;VALUE=DATE:20261117");
+    expect(ics).toContain("DTEND;VALUE=DATE:20261120");
+    expect(ics).toContain("DTEND:20261106T235900");
+  });
+});

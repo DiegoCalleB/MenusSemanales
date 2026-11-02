@@ -81,6 +81,18 @@ export interface EventoCalendario {
   anual?: boolean;
   /** Con aviso en el móvil a las 9:00 del propio día (el calendario lo muestra como notificación). */
   aviso?: boolean;
+  /** «18:15»: dura una hora desde entonces. Sin hora, es de todo el día. */
+  hora?: string | null;
+  /** Último día, si dura varios (se cuenta completo). */
+  hasta?: FechaIso | null;
+}
+
+const sinDosPuntos = (h: string) => `${h.replace(":", "")}00`;
+
+/** Una hora más tarde, sin pasar de las 23:59 del mismo día. */
+function unaHoraMas(h: string): string {
+  const [hh = 0, mm = 0] = h.split(":").map(Number);
+  return hh >= 23 ? "23:59" : `${String(hh + 1).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
 }
 
 const escaparIcs = (t: string) =>
@@ -130,8 +142,15 @@ export function generarIcs(
       "BEGIN:VEVENT",
       `UID:${sinGuiones(e.fecha)}-${i}@menus-semanales`,
       `DTSTAMP:${sello}`,
-      `DTSTART;VALUE=DATE:${sinGuiones(e.fecha)}`,
-      `DTEND;VALUE=DATE:${sinGuiones(sumarDias(e.fecha, 1))}`,
+      ...(e.hora
+        ? [
+            `DTSTART:${sinGuiones(e.fecha)}T${sinDosPuntos(e.hora)}`,
+            `DTEND:${sinGuiones(e.fecha)}T${sinDosPuntos(unaHoraMas(e.hora))}`,
+          ]
+        : [
+            `DTSTART;VALUE=DATE:${sinGuiones(e.fecha)}`,
+            `DTEND;VALUE=DATE:${sinGuiones(sumarDias(e.hasta ?? e.fecha, 1))}`,
+          ]),
       ...(e.anual ? ["RRULE:FREQ=YEARLY"] : []),
       `SUMMARY:${escaparIcs(e.titulo)}`,
       `DESCRIPTION:${escaparIcs(e.descripcion)}`,
@@ -140,8 +159,8 @@ export function generarIcs(
             "BEGIN:VALARM",
             "ACTION:DISPLAY",
             `DESCRIPTION:${escaparIcs(e.titulo)}`,
-            // En eventos de todo el día, el aviso se cuenta desde las 00:00: +9 horas = 9:00.
-            "TRIGGER:PT9H",
+            // De todo el día, el aviso se cuenta desde las 00:00: +9 horas = 9:00. Con hora, una antes.
+            e.hora ? "TRIGGER:-PT1H" : "TRIGGER:PT9H",
             "END:VALARM",
           ]
         : []),

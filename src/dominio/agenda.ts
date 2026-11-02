@@ -143,3 +143,47 @@ export function resumenApunte(a: Pick<Apunte, "hasta" | "hora" | "titulo" | "fec
   const hasta = a.hasta ? ` (hasta el ${Number(a.hasta.slice(8))})` : "";
   return `${a.titulo}${a.hora ? ` · ${a.hora}` : ""}${hasta}`;
 }
+
+const NOMBRE_MES = (m: number) => MESES_LARGOS[m - 1] ?? "";
+const mayus = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+
+/**
+ * Los apuntes como una nota de Keep, uno por línea y con la misma forma que se escribe («17 Marzo
+ * 8:00 Midas»), de modo que lo copiado se puede volver a pegar en la app. Solo lleva el año cuando
+ * la fecha no es la próxima vez que cae ese día.
+ */
+export function textoParaKeep(apuntes: readonly ApunteLeido[], hoy: FechaIso): string {
+  return [...apuntes]
+    .sort((a, b) => a.fecha.localeCompare(b.fecha) || (a.hora ?? "").localeCompare(b.hora ?? ""))
+    .map((a) => {
+      const [, m, d] = a.fecha.split("-").map(Number) as [number, number, number];
+      const dias = a.hasta ? `${d}-${Number(a.hasta.slice(8))}` : String(d);
+      const anio = proxima(d, m, hoy) === a.fecha ? "" : ` ${a.fecha.slice(0, 4)}`;
+      return `${dias} ${mayus(NOMBRE_MES(m))}${anio}${a.hora ? ` ${a.hora}` : ""} ${a.titulo}`;
+    })
+    .join("\n");
+}
+
+const compacta = (f: FechaIso) => f.replace(/-/g, "");
+
+/** Enlace que abre Google Calendar con el evento ya rellenado (solo falta pulsar «Guardar»). */
+export function enlaceGoogleCalendar(e: {
+  fecha: FechaIso;
+  hasta?: FechaIso | null;
+  hora?: string | null;
+  titulo: string;
+  anual?: boolean;
+}): string {
+  let fechas: string;
+  if (e.hora) {
+    const [h = 0, m = 0] = e.hora.split(":").map(Number);
+    const fin = h >= 23 ? "2359" : `${String(h + 1).padStart(2, "0")}${String(m).padStart(2, "0")}`;
+    fechas = `${compacta(e.fecha)}T${e.hora.replace(":", "")}00/${compacta(e.fecha)}T${fin}00`;
+  } else {
+    fechas = `${compacta(e.fecha)}/${compacta(sumarDias(e.hasta ?? e.fecha, 1))}`;
+  }
+  const q = new URLSearchParams({ action: "TEMPLATE", text: e.titulo, dates: fechas });
+  if (e.hora) q.set("ctz", "Europe/Madrid");
+  if (e.anual) q.set("recur", "RRULE:FREQ=YEARLY");
+  return `https://calendar.google.com/calendar/render?${q.toString()}`;
+}

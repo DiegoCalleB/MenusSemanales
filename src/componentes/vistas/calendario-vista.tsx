@@ -1,7 +1,7 @@
 "use client";
 
+import Link from "next/link";
 import { esCumpleRepetido } from "@/dominio/cuenta-atras";
-import { Apuntar } from "../apuntar";
 import { useCalendarioFamilia } from "../usar-calendario-familia";
 import { useMemo, useState } from "react";
 import {
@@ -116,7 +116,9 @@ export function CalendarioVista() {
         </h1>
       </header>
 
-      <Apuntar />
+      <Link href="/fechas" className="boton-suave w-fit">
+        📌 Próximas fechas y apuntar
+      </Link>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
         <section className="tarjeta flex flex-col gap-3" aria-labelledby="mes">

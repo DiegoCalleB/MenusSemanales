@@ -11,6 +11,8 @@ export interface EventoExterno {
   titulo: string;
   /** «18:30» en hora de Madrid, o null si dura todo el día. */
   hora: string | null;
+  /** Último día, si dura varios. */
+  hasta?: FechaIso | null;
 }
 
 interface Crudo {

@@ -1,9 +1,14 @@
-import { type Cumple, diasHasta, edadQueCumple } from "./cumples";
+import { type Cumple, diasHasta, edadQueCumple, proximaFecha } from "./cumples";
 import { type FechaIso, diasEntre } from "./fechas";
 import type { EventoExterno } from "./ics";
 
 export interface CuentaAtras {
   clave: string;
+  fecha: FechaIso;
+  hasta: FechaIso | null;
+  hora: string | null;
+  /** Se repite cada año (cumpleaños). */
+  anual: boolean;
   emoji: string;
   titulo: string;
   dias: number;
@@ -42,6 +47,10 @@ export function cuentaAtras(
     const edad = edadQueCumple(c, hoy);
     lista.push({
       clave: `cumple-${c.id}`,
+      fecha: proximaFecha(c, hoy),
+      hasta: null,
+      hora: null,
+      anual: true,
       emoji: "🎂",
       titulo: `${c.nombre}${edad !== null ? ` (${edad})` : ""}`,
       dias,
@@ -53,6 +62,10 @@ export function cuentaAtras(
     if (dias < 0 || dias > maxDias) continue;
     lista.push({
       clave: `evento-${fecha}`,
+      fecha,
+      hasta: null,
+      hora: null,
+      anual: false,
       emoji: ev.emoji,
       titulo: ev.titulo,
       dias,
@@ -66,8 +79,12 @@ export function cuentaAtras(
     if (esCumpleRepetido(ev.titulo, cumples)) continue;
     lista.push({
       clave: `google-${ev.fecha}-${ev.titulo}`,
+      fecha: ev.fecha,
+      hasta: ev.hasta ?? null,
+      hora: ev.hora,
+      anual: false,
       emoji: "📅",
-      titulo: ev.hora ? `${ev.titulo} (${ev.hora})` : ev.titulo,
+      titulo: ev.titulo,
       dias,
       texto: textoDias(dias),
     });

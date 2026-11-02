@@ -31,6 +31,7 @@ const RUTAS = [
   "/tareas",
   "/cuenta",
   "/cumples",
+  "/fechas",
   "/compra",
   "/despensa",
   "/reparto",
@@ -419,7 +420,7 @@ test.describe("flujos en móvil", () => {
     browser,
   }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
-    await cargar(pagina, "/calendario");
+    await cargar(pagina, "/fechas");
     await pagina.getByLabel(/Escribe como en una nota/).fill("5 Noviembre 18:15 Psicotécnico");
     await pagina.getByRole("button", { name: "Apuntar", exact: true }).click();
     const apuntes = pagina.getByRole("list", { name: "Apuntes" });
@@ -439,8 +440,14 @@ test.describe("flujos en móvil", () => {
         .getByRole("listitem")
         .filter({ hasText: /Psicotécnico \(18:15\)/ }),
     ).toHaveCount(1);
-    await pagina.goto("/calendario", { waitUntil: "networkidle" });
-    await pagina.getByRole("button", { name: "Quitar Psicotécnico" }).click();
+    await pagina.goto("/fechas", { waitUntil: "networkidle" });
+    // Para llevarlo al calendario y a Keep.
+    const enlace = pagina.getByRole("link", { name: /Añadir Psicotécnico a Google Calendar/ });
+    const href = (await enlace.getAttribute("href")) ?? "";
+    expect(href).toMatch(/^https:\/\/calendar\.google\.com\/calendar\/render\?action=TEMPLATE/);
+    expect(href).toContain("text=Psicot%C3%A9cnico");
+    expect(href).toMatch(/dates=2026\d{4}T181500%2F|dates=2026\d{4}T181500\//);
+    await pagina.getByRole("button", { name: "Quitar Psicotécnico" }).first().click();
     await expect(apuntes).toHaveCount(0);
     await contexto.close();
   });

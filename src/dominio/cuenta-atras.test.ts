@@ -52,7 +52,7 @@ describe("cuentaAtras", () => {
     });
     expect(r.map((x) => [x.emoji, x.titulo, x.dias])).toEqual([
       ["📅", "Pasado de rango", 1],
-      ["📅", "Reunión del cole (17:00)", 2],
+      ["📅", "Reunión del cole", 2],
       ["🎂", "Ana (41)", 5],
     ]);
   });

@@ -989,3 +989,20 @@ describe("agenda: apuntes escritos como en una nota", () => {
     expect(e.agenda).toEqual([]);
   });
 });
+
+describe("el archivo de calendario incluye los apuntes", () => {
+  it("cada apunte sale con su hora, sus días y aviso", async () => {
+    const { eventosDeCalendario } = await import("./compartir");
+    const base = estadoInicialDemo();
+    const e = aplicar(base, {
+      tipo: "agenda/anadir",
+      texto: "5 Noviembre 18:15 Psicotécnico\n17-19 Noviembre Puente",
+      personaId: null,
+    });
+    const eventos = eventosDeCalendario(e).filter((x) => x.titulo.startsWith("📌"));
+    expect(eventos.map((x) => [x.titulo, x.hora, x.hasta, x.aviso])).toEqual([
+      ["📌 Psicotécnico", "18:15", null, true],
+      ["📌 Puente", null, "2026-11-19", true],
+    ]);
+  });
+});

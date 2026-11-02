@@ -25,7 +25,12 @@ export function InicioVista() {
   const deGoogle = useCalendarioFamilia(estado.hoy);
   const proximos = cuentaAtras(estado.cumples, estado.eventos, estado.hoy, {
     externos: [
-      ...estado.agenda.map((a) => ({ fecha: a.fecha, titulo: a.titulo, hora: a.hora })),
+      ...estado.agenda.map((a) => ({
+        fecha: a.fecha,
+        titulo: a.titulo,
+        hora: a.hora,
+        hasta: a.hasta,
+      })),
       ...deGoogle,
     ],
   });
@@ -73,7 +78,8 @@ export function InicioVista() {
               className="bg-suave-1 border-borde rounded-full border px-3 py-1 text-sm font-bold"
             >
               <span aria-hidden="true">{p.emoji} </span>
-              {p.titulo} · {p.dias <= 1 ? p.texto : `en ${p.texto}`}
+              {p.titulo}
+              {p.hora && ` (${p.hora})`} · {p.dias <= 1 ? p.texto : `en ${p.texto}`}
             </li>
           ))}
         </ul>
@@ -105,6 +111,9 @@ export function InicioVista() {
           </Link>
           <Link href="/tareas" className="boton-suave">
             🧹 Zafarrancho
+          </Link>
+          <Link href="/fechas" className="boton-suave">
+            📌 Fechas
           </Link>
           <Link href="/cumples" className="boton-suave">
             🎂 Cumples
