@@ -7,6 +7,7 @@ import {
   type Accion,
   type EstadoHogar,
   articulosPendientes,
+  articulosQuitados,
   cenaDeEmergenciaHoy,
   diasDelMenu,
   menuDeLaSemana,
@@ -1470,5 +1471,86 @@ describe("nota de la cena (D-096)", () => {
   it("lo guardado antes de que existieran las notas se completa al normalizar", () => {
     const viejo = { ...estadoInicialDemo(), notasMenu: undefined } as unknown as EstadoHogar;
     expect(normalizar(viejo).notasMenu).toEqual({});
+  });
+});
+
+describe("lista de la compra editable (D-097)", () => {
+  it("al apuntar se separa la cantidad y se puede editar nombre y cantidad", () => {
+    const e = reducir(estadoInicialDemo(), {
+      tipo: "manual/anadir",
+      nombre: "huevos 12, 2 yogures",
+    });
+    const huevos = e.manuales.find((m) => m.nombre === "Huevos")!;
+    expect(huevos.cantidad).toBe("12");
+    expect(e.manuales.find((m) => m.nombre === "Yogures")?.cantidad).toBe("2");
+    const a = reducir(e, {
+      tipo: "manual/editar",
+      id: huevos.id,
+      nombre: "Huevos camperos",
+      cantidad: "6",
+    });
+    expect(a.manuales.find((m) => m.id === huevos.id)).toMatchObject({
+      nombre: "Huevos camperos",
+      cantidad: "6",
+    });
+    const b = reducir(a, { tipo: "manual/editar", id: huevos.id, cantidad: "" });
+    expect(b.manuales.find((m) => m.id === huevos.id)).not.toHaveProperty("cantidad");
+    const c = reducir(b, { tipo: "manual/editar", id: huevos.id, nombre: "  " });
+    expect(c.manuales.find((m) => m.id === huevos.id)?.nombre).toBe("Huevos camperos");
+    expect(c.aviso?.tipo).toBe("error");
+  });
+
+  it("la cantidad de un artículo calculado se cambia, se quita y se restablece", () => {
+    const e = estadoInicialDemo();
+    const art = articulosPendientes(e)[0]!;
+    const a = reducir(e, {
+      tipo: "compra/cantidad",
+      ingredienteId: art.ingredienteId,
+      cantidad: art.cantidad + 100,
+    });
+    const editado = articulosPendientes(a).find((x) => x.ingredienteId === art.ingredienteId)!;
+    expect(editado.cantidad).toBe(art.cantidad + 100);
+    expect(editado.calculada).toBe(art.cantidad);
+    // Poner la cantidad calculada borra el ajuste.
+    const igual = reducir(a, {
+      tipo: "compra/cantidad",
+      ingredienteId: art.ingredienteId,
+      cantidad: art.cantidad,
+    });
+    expect(igual.ajustesCompra).toEqual({});
+    // 0 = no hace falta: desaparece de pendientes y aparece en quitados.
+    const q = reducir(e, {
+      tipo: "compra/cantidad",
+      ingredienteId: art.ingredienteId,
+      cantidad: 0,
+    });
+    expect(articulosPendientes(q).some((x) => x.ingredienteId === art.ingredienteId)).toBe(false);
+    expect(articulosQuitados(q).some((x) => x.ingredienteId === art.ingredienteId)).toBe(true);
+    const r = reducir(q, { tipo: "compra/restablecer", ingredienteId: art.ingredienteId });
+    expect(articulosPendientes(r).some((x) => x.ingredienteId === art.ingredienteId)).toBe(true);
+  });
+
+  it("al comprar con cantidad editada se compra esa cantidad y se limpia el ajuste", () => {
+    const e = estadoInicialDemo();
+    const art = articulosPendientes(e)[0]!;
+    const a = reducir(e, {
+      tipo: "compra/cantidad",
+      ingredienteId: art.ingredienteId,
+      cantidad: art.cantidad + 250,
+    });
+    const b = reducir(a, { tipo: "comprar", ingredienteId: art.ingredienteId });
+    expect(b.compras.at(-1)?.cantidad).toBe(art.cantidad + 250);
+    expect(b.ajustesCompra).toEqual({});
+  });
+
+  it("rechaza cantidades negativas o de artículos que no están en la lista", () => {
+    const e = estadoInicialDemo();
+    const art = articulosPendientes(e)[0]!;
+    expect(
+      reducir(e, { tipo: "compra/cantidad", ingredienteId: art.ingredienteId, cantidad: -3 }),
+    ).toBe(e);
+    expect(reducir(e, { tipo: "compra/cantidad", ingredienteId: "no-existe", cantidad: 3 })).toBe(
+      e,
+    );
   });
 });

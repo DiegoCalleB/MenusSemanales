@@ -1,171 +1,222 @@
 "use client";
 
-import { useState } from "react";
+import { type FormEvent, useEffect, useId, useState } from "react";
 import { seccionesDeCompra } from "@/aplicacion/compartir";
-import { articulosPendientes } from "@/aplicacion/estado";
+import { articulosPendientes, articulosQuitados, MAX_LARGO_CANTIDAD } from "@/aplicacion/estado";
 import { textoCompra } from "@/dominio/compartir";
-import { BotonesCompartir } from "../compartir-botones";
-import type { ArticuloCompra } from "@/dominio/compra";
-import { formatearCantidad, NOMBRE_SECCION } from "../formato";
-import { EntradaCompra } from "../entrada-compra";
+import { PASO_POR_UNIDAD } from "@/dominio/compra";
 import {
   CATEGORIAS,
+  type Categoria,
   NOMBRE_CATEGORIA,
   claveArticulo,
   clasificarArticulo,
 } from "@/dominio/habituales";
+import type { Unidad } from "@/dominio/tipos";
+import { BotonesCompartir } from "../compartir-botones";
+import { EntradaCompra } from "../entrada-compra";
+import { formatearCantidad } from "../formato";
 import { useHogar } from "../proveedor-hogar";
 
-function agruparPorSeccion(articulos: readonly ArticuloCompra[]) {
-  const grupos: Array<{ seccion: string; articulos: ArticuloCompra[] }> = [];
-  for (const a of articulos) {
-    const ultimo = grupos[grupos.length - 1];
-    if (ultimo && ultimo.seccion === a.seccion) ultimo.articulos.push(a);
-    else grupos.push({ seccion: a.seccion, articulos: [a] });
-  }
-  return grupos;
-}
+type Vista = "secciones" | "lista" | "comida" | "tienda";
+const VISTAS: ReadonlyArray<{ id: Vista; texto: string }> = [
+  { id: "secciones", texto: "Secciones" },
+  { id: "lista", texto: "Lista" },
+  { id: "comida", texto: "Por comida" },
+  { id: "tienda", texto: "Tienda" },
+];
+const CLAVE_VISTA = "menus-semanales:vista-compra";
 
-interface FilaProps {
+/** Un artículo de la lista, venga de donde venga (calculado por el menú o apuntado a mano). */
+interface Item {
+  clave: string;
+  /** Qué tipo de fila es: define qué pasa al marcarla y qué se puede editar. */
+  tipo: "auto" | "manual" | "auto-hecho" | "manual-hecho";
+  id: string;
   nombre: string;
+  cantidad: string;
   detalle?: string;
-  cantidad?: string;
-  marcado: boolean;
-  alCambiar: () => void;
-  etiquetaAccion?: string;
+  categoria: Categoria;
+  /** Solo para los calculados: lo que hace falta y cómo se mide. */
+  numero?: number;
+  unidad?: Unidad;
+  calculada?: number;
+  /** Solo para los hechos: la operación que se deshace al desmarcar. */
+  operacionId?: string;
+  /** Primer motivo, para la vista «Por comida». */
+  grupo: string;
 }
 
-/** Toda la fila es la casilla: se puede tocar en cualquier punto (mínimo 56 px de alto). */
-function Fila({ nombre, detalle, cantidad, marcado, alCambiar }: FilaProps) {
-  return (
-    <li>
-      <label className="hover:bg-fondo flex min-h-14 cursor-pointer items-center gap-3 rounded-xl px-2 py-2">
-        <input
-          type="checkbox"
-          checked={marcado}
-          onChange={alCambiar}
-          className="size-6 shrink-0 accent-[var(--marca)]"
-        />
-        <span className="min-w-0 flex-1">
-          <span className={`block text-base ${marcado ? "text-tinta-suave line-through" : ""}`}>
-            {nombre}
-          </span>
-          {detalle && <span className="text-tinta-suave block text-sm">{detalle}</span>}
-        </span>
-        {cantidad && (
-          <span className="shrink-0 text-base font-medium tabular-nums">{cantidad}</span>
-        )}
-      </label>
-    </li>
-  );
-}
+const textoCantidad = (n: number, u: Unidad) => formatearCantidad(n, u);
 
 export function CompraVista() {
   const { estado, despachar } = useHogar();
+  const [vista, setVista] = useState<Vista>("secciones");
+  const [editando, setEditando] = useState<string | null>(null);
   const [ocultarComprado, setOcultarComprado] = useState(false);
 
-  const pendientes = articulosPendientes(estado);
+  useEffect(() => {
+    try {
+      const guardada = window.localStorage.getItem(CLAVE_VISTA);
+      if (VISTAS.some((v) => v.id === guardada)) {
+        // Se lee una sola vez, ya en el navegador, para que el servidor y el cliente pinten lo mismo.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setVista(guardada as Vista);
+      }
+    } catch {
+      /* sin almacenamiento: se queda la vista por defecto */
+    }
+  }, []);
+  function elegirVista(v: Vista) {
+    setVista(v);
+    setEditando(null);
+    try {
+      window.localStorage.setItem(CLAVE_VISTA, v);
+    } catch {
+      /* no pasa nada */
+    }
+  }
+
+  const calculados = articulosPendientes(estado);
+  const quitados = articulosQuitados(estado);
+  const pendientes: Item[] = [
+    ...estado.manuales
+      .filter((m) => !m.comprado)
+      .map<Item>((m) => ({
+        clave: `m-${m.id}`,
+        tipo: "manual",
+        id: m.id,
+        nombre: m.nombre,
+        cantidad: m.cantidad ?? "",
+        categoria: m.categoria ?? clasificarArticulo(m.nombre),
+        grupo: "Apuntado a mano",
+      })),
+    ...calculados.map<Item>((a) => ({
+      clave: `a-${a.ingredienteId}`,
+      tipo: "auto",
+      id: a.ingredienteId,
+      nombre: a.nombre,
+      cantidad: textoCantidad(a.cantidad, a.unidad),
+      detalle: a.motivos.join(" · "),
+      categoria: a.seccion as Categoria,
+      numero: a.cantidad,
+      unidad: a.unidad,
+      ...(a.calculada !== undefined ? { calculada: a.calculada } : {}),
+      grupo: a.motivos[0] ?? "Otros",
+    })),
+  ];
+  const hechos: Item[] = [
+    ...estado.compras.map<Item>((c) => ({
+      clave: `c-${c.id}`,
+      tipo: "auto-hecho",
+      id: c.id,
+      nombre: c.nombre,
+      cantidad: textoCantidad(c.cantidad, c.unidad),
+      categoria: "otros",
+      operacionId: c.operacionId,
+      grupo: "Comprado",
+    })),
+    ...estado.manuales
+      .filter((m) => m.comprado)
+      .map<Item>((m) => ({
+        clave: `m-${m.id}`,
+        tipo: "manual-hecho",
+        id: m.id,
+        nombre: m.nombre,
+        cantidad: m.cantidad ?? "",
+        categoria: "otros",
+        grupo: "Comprado",
+      })),
+  ];
+
   const compra = seccionesDeCompra(estado);
   const textoDeCompra = textoCompra(compra.secciones, compra.manuales);
-  const grupos = agruparPorSeccion(pendientes);
-  const manualesPendientes = estado.manuales.filter((m) => !m.comprado);
-  const manualesComprados = estado.manuales.filter((m) => m.comprado);
+  const total = pendientes.length + hechos.length;
+  const modoTienda = vista === "tienda";
 
-  const total = pendientes.length + estado.compras.length + estado.manuales.length;
-  const hechos = estado.compras.length + manualesComprados.length;
-  const hayComprado = hechos > 0;
+  function alternar(i: Item) {
+    if (i.tipo === "auto") despachar({ tipo: "comprar", ingredienteId: i.id });
+    else if (i.tipo === "auto-hecho" && i.operacionId)
+      despachar({ tipo: "deshacer", operacionId: i.operacionId });
+    else despachar({ tipo: "manual/alternar", id: i.id });
+  }
+
+  const fila = (i: Item) => (
+    <FilaCompra
+      key={i.clave}
+      item={i}
+      grande={modoTienda}
+      editando={editando === i.clave}
+      alAbrir={() => setEditando(editando === i.clave ? null : i.clave)}
+      alMarcar={() => alternar(i)}
+    />
+  );
+
+  const grupos = agrupar(pendientes, vista);
 
   return (
-    <div className="flex flex-col gap-4">
-      <header className="flex flex-col gap-3">
-        <h1 className="text-2xl font-extrabold tracking-tight">
-          Lista de la compra <span aria-hidden="true">🛒</span>
-        </h1>
-        <BotonesCompartir titulo="Lista de la compra" texto={textoDeCompra} />
-        <div className="flex items-center gap-3">
-          <progress
-            max={Math.max(total, 1)}
-            value={hechos}
-            aria-label="Progreso de la compra"
-            className="h-3 w-full max-w-xs flex-1 overflow-hidden rounded-full accent-[var(--marca)]"
-          />
+    <div className="flex flex-col gap-3">
+      <header className="flex flex-col gap-2">
+        <div className="flex items-baseline justify-between gap-3">
+          <h1 className="text-2xl font-extrabold tracking-tight">
+            Lista de la compra <span aria-hidden="true">🛒</span>
+          </h1>
           <span className="shrink-0 text-base font-medium tabular-nums">
-            {hechos} de {total}
+            {hechos.length} de {total}
           </span>
+        </div>
+        <progress
+          max={Math.max(total, 1)}
+          value={hechos.length}
+          aria-label="Progreso de la compra"
+          className="h-1.5 w-full overflow-hidden rounded-full accent-[var(--marca)]"
+        />
+        <div role="group" aria-label="Vista de la lista" className="grid grid-cols-4 gap-1">
+          {VISTAS.map((v) => (
+            <button
+              key={v.id}
+              type="button"
+              aria-pressed={vista === v.id}
+              className={`min-h-11 rounded-xl px-1 text-sm font-semibold ${
+                vista === v.id ? "boton" : "boton-suave"
+              }`}
+              onClick={() => elegirVista(v.id)}
+            >
+              {v.texto}
+            </button>
+          ))}
         </div>
       </header>
 
-      <EntradaCompra
-        yaEnLista={
-          new Set([
-            ...pendientes.map((a) => claveArticulo(a.nombre)),
-            ...manualesPendientes.map((m) => claveArticulo(m.nombre)),
-          ])
-        }
-      />
+      {!modoTienda && (
+        <EntradaCompra yaEnLista={new Set(pendientes.map((i) => claveArticulo(i.nombre)))} />
+      )}
 
-      <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
-        {grupos.length === 0 && manualesPendientes.length === 0 ? (
-          <p className="tarjeta text-tinta-suave text-base lg:col-span-2">
-            No falta nada por comprar. Cuando elijáis la próxima cena, lo que haga falta aparecerá
-            aquí.
-          </p>
-        ) : (
-          <>
-            {grupos.map(({ seccion, articulos }) => (
-              <section key={seccion} aria-labelledby={`s-${seccion}`} className="tarjeta">
-                <h2 id={`s-${seccion}`} className="mb-1 text-lg font-semibold">
-                  {NOMBRE_SECCION[seccion] ?? seccion}
+      {pendientes.length === 0 ? (
+        <p className="tarjeta text-tinta-suave text-base">
+          No falta nada por comprar. Cuando elijáis la próxima cena, lo que haga falta aparecerá
+          aquí.
+        </p>
+      ) : (
+        <div className="tarjeta flex flex-col gap-1 p-2 sm:p-3">
+          {grupos.map(({ clave, titulo, items }) => (
+            <section key={clave} aria-label={titulo || "Lista"}>
+              {titulo && (
+                <h2 className="text-tinta-suave px-2 pt-2 text-sm font-bold tracking-wide">
+                  {titulo} <span className="font-medium">· {items.length}</span>
                 </h2>
-                <ul>
-                  {articulos.map((a) => (
-                    <Fila
-                      key={a.ingredienteId}
-                      nombre={a.nombre}
-                      detalle={a.motivos.join(" · ")}
-                      cantidad={formatearCantidad(a.cantidad, a.unidad)}
-                      marcado={false}
-                      alCambiar={() =>
-                        despachar({ tipo: "comprar", ingredienteId: a.ingredienteId })
-                      }
-                    />
-                  ))}
-                </ul>
-              </section>
-            ))}
-            {CATEGORIAS.map((c) => {
-              const items = manualesPendientes.filter(
-                (m) => (m.categoria ?? clasificarArticulo(m.nombre)) === c,
-              );
-              if (items.length === 0) return null;
-              return (
-                <section key={`m-${c}`} aria-labelledby={`m-${c}`} className="tarjeta">
-                  <h2 id={`m-${c}`} className="mb-1 text-lg font-semibold">
-                    <span aria-hidden="true">{NOMBRE_CATEGORIA[c].emoji} </span>
-                    {NOMBRE_CATEGORIA[c].nombre}
-                  </h2>
-                  <ul>
-                    {items.map((m) => (
-                      <Fila
-                        key={m.id}
-                        nombre={m.nombre}
-                        marcado={false}
-                        alCambiar={() => despachar({ tipo: "manual/alternar", id: m.id })}
-                      />
-                    ))}
-                  </ul>
-                </section>
-              );
-            })}
-          </>
-        )}
-      </div>
+              )}
+              <ul className="divide-borde divide-y">{items.map(fila)}</ul>
+            </section>
+          ))}
+        </div>
+      )}
 
-      {hayComprado && (
-        <section aria-labelledby="s-comprado" className="tarjeta">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 id="s-comprado" className="text-lg font-semibold">
-              Comprado ({hechos})
+      {hechos.length > 0 && (
+        <section aria-labelledby="s-comprado" className="tarjeta p-2 sm:p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 px-2">
+            <h2 id="s-comprado" className="text-base font-bold">
+              Comprado ({hechos.length})
             </h2>
             <label className="flex min-h-11 cursor-pointer items-center gap-2 text-base">
               <input
@@ -177,30 +228,258 @@ export function CompraVista() {
               Ocultar
             </label>
           </div>
-          {!ocultarComprado && (
-            <ul>
-              {estado.compras.map((c) => (
-                <Fila
-                  key={c.id}
-                  nombre={c.nombre}
-                  detalle="Ya está en la despensa. Desmarca para deshacer."
-                  cantidad={formatearCantidad(c.cantidad, c.unidad)}
-                  marcado
-                  alCambiar={() => despachar({ tipo: "deshacer", operacionId: c.operacionId })}
-                />
-              ))}
-              {manualesComprados.map((m) => (
-                <Fila
-                  key={m.id}
-                  nombre={m.nombre}
-                  marcado
-                  alCambiar={() => despachar({ tipo: "manual/alternar", id: m.id })}
-                />
-              ))}
-            </ul>
-          )}
+          {!ocultarComprado && <ul className="divide-borde divide-y">{hechos.map(fila)}</ul>}
         </section>
       )}
+
+      {!modoTienda && <BotonesCompartir titulo="Lista de la compra" texto={textoDeCompra} />}
+
+      {!modoTienda && quitados.length > 0 && (
+        <details className="tarjeta p-2 sm:p-3">
+          <summary className="min-h-11 cursor-pointer px-2 py-2 text-base font-bold">
+            No hace falta ({quitados.length})
+          </summary>
+          <ul className="divide-borde divide-y">
+            {quitados.map((q) => (
+              <li
+                key={q.ingredienteId}
+                className="flex min-h-11 items-center justify-between gap-2 px-2"
+              >
+                <span className="text-tinta-suave min-w-0 text-base line-through">{q.nombre}</span>
+                <button
+                  type="button"
+                  className="boton-suave"
+                  onClick={() =>
+                    despachar({ tipo: "compra/restablecer", ingredienteId: q.ingredienteId })
+                  }
+                >
+                  Volver a poner {q.nombre}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </div>
+  );
+}
+
+function agrupar(items: readonly Item[], vista: Vista) {
+  if (vista === "lista") return [{ clave: "todo", titulo: "", items: [...items] }];
+  if (vista === "comida") {
+    const mapa = new Map<string, Item[]>();
+    for (const i of items) mapa.set(i.grupo, [...(mapa.get(i.grupo) ?? []), i]);
+    return [...mapa.entries()].map(([titulo, its]) => ({ clave: titulo, titulo, items: its }));
+  }
+  // Secciones (y modo tienda): en el orden del recorrido del súper.
+  return CATEGORIAS.flatMap((c) => {
+    const its = items.filter((i) => i.categoria === c);
+    return its.length === 0
+      ? []
+      : [
+          {
+            clave: c,
+            titulo: `${NOMBRE_CATEGORIA[c].emoji} ${NOMBRE_CATEGORIA[c].nombre}`,
+            items: its,
+          },
+        ];
+  });
+}
+
+/**
+ * Una fila de una línea, como en Keep: casilla, nombre y cantidad. Tocar el nombre abre la edición
+ * en el sitio; tocar la casilla marca. En «Tienda» la fila es más grande y no se edita.
+ */
+function FilaCompra({
+  item,
+  grande,
+  editando,
+  alAbrir,
+  alMarcar,
+}: {
+  item: Item;
+  grande: boolean;
+  editando: boolean;
+  alAbrir: () => void;
+  alMarcar: () => void;
+}) {
+  const hecho = item.tipo === "auto-hecho" || item.tipo === "manual-hecho";
+  const editable = !hecho && !grande;
+  return (
+    <li className="py-0.5">
+      <div className={`flex items-center gap-1 ${grande ? "min-h-16" : "min-h-11"}`}>
+        <label className="flex size-11 shrink-0 cursor-pointer items-center justify-center">
+          <input
+            type="checkbox"
+            checked={hecho}
+            onChange={alMarcar}
+            aria-label={item.nombre}
+            className="size-6 accent-[var(--marca)]"
+          />
+        </label>
+        {editable ? (
+          <button
+            type="button"
+            aria-expanded={editando}
+            onClick={alAbrir}
+            className="min-h-11 min-w-0 flex-1 rounded-lg px-1 text-left"
+          >
+            <span className="block truncate text-base">{item.nombre}</span>
+            {item.detalle && (
+              <span className="text-tinta-suave block truncate text-xs">{item.detalle}</span>
+            )}
+          </button>
+        ) : (
+          <span className="min-w-0 flex-1 px-1">
+            <span
+              className={`block truncate ${grande ? "text-xl" : "text-base"} ${
+                hecho ? "text-tinta-suave line-through" : ""
+              }`}
+            >
+              {item.nombre}
+            </span>
+            {item.detalle && !grande && (
+              <span className="text-tinta-suave block truncate text-xs">{item.detalle}</span>
+            )}
+          </span>
+        )}
+        {item.cantidad && (
+          <span
+            className={`shrink-0 px-1 font-medium tabular-nums ${grande ? "text-lg" : "text-sm"} ${
+              item.calculada !== undefined ? "text-marca-fuerte" : "text-tinta-suave"
+            }`}
+          >
+            {item.cantidad}
+          </span>
+        )}
+      </div>
+      {editando && editable && <Edicion item={item} alCerrar={alAbrir} />}
+    </li>
+  );
+}
+
+function Edicion({ item, alCerrar }: { item: Item; alCerrar: () => void }) {
+  return item.tipo === "manual" ? (
+    <EdicionManual item={item} alCerrar={alCerrar} />
+  ) : (
+    <EdicionCalculada item={item} alCerrar={alCerrar} />
+  );
+}
+
+function EdicionManual({ item, alCerrar }: { item: Item; alCerrar: () => void }) {
+  const { despachar } = useHogar();
+  const id = useId();
+  const [nombre, setNombre] = useState(item.nombre);
+  const [cantidad, setCantidad] = useState(item.cantidad);
+
+  function guardar(e: FormEvent) {
+    e.preventDefault();
+    despachar({ tipo: "manual/editar", id: item.id, nombre, cantidad });
+    alCerrar();
+  }
+
+  return (
+    <form onSubmit={guardar} className="bg-fondo mb-1 flex flex-col gap-2 rounded-xl p-2">
+      <div className="flex gap-2">
+        <label htmlFor={`${id}-n`} className="sr-only">
+          Nombre de {item.nombre}
+        </label>
+        <input
+          id={`${id}-n`}
+          className="campo min-w-0 flex-1"
+          value={nombre}
+          maxLength={80}
+          autoFocus
+          onChange={(e) => setNombre(e.target.value)}
+        />
+        <label htmlFor={`${id}-c`} className="sr-only">
+          Cantidad de {item.nombre}
+        </label>
+        <input
+          id={`${id}-c`}
+          className="campo w-24"
+          value={cantidad}
+          maxLength={MAX_LARGO_CANTIDAD}
+          placeholder="Cuánto"
+          inputMode="text"
+          onChange={(e) => setCantidad(e.target.value)}
+        />
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <button type="submit" className="boton">
+          Guardar
+        </button>
+        <button
+          type="button"
+          className="boton-suave"
+          onClick={() => despachar({ tipo: "manual/borrar", id: item.id })}
+        >
+          Borrar {item.nombre}
+        </button>
+        <button type="button" className="boton-suave" onClick={alCerrar}>
+          Cerrar
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function EdicionCalculada({ item, alCerrar }: { item: Item; alCerrar: () => void }) {
+  const { despachar } = useHogar();
+  const unidad = item.unidad ?? "ud";
+  const paso = PASO_POR_UNIDAD[unidad];
+  const actual = item.numero ?? 0;
+  const poner = (n: number) =>
+    despachar({ tipo: "compra/cantidad", ingredienteId: item.id, cantidad: Math.max(0, n) });
+
+  return (
+    <div className="bg-fondo mb-1 flex flex-col gap-2 rounded-xl p-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          className="boton-suave"
+          aria-label={`Menos ${item.nombre}`}
+          onClick={() => poner(actual - paso)}
+        >
+          −
+        </button>
+        <span className="min-w-20 text-center text-base font-bold tabular-nums">
+          {item.cantidad}
+        </span>
+        <button
+          type="button"
+          className="boton-suave"
+          aria-label={`Más ${item.nombre}`}
+          onClick={() => poner(actual + paso)}
+        >
+          +
+        </button>
+        {item.calculada !== undefined && (
+          <span className="text-tinta-suave text-sm">
+            La app calculó {textoCantidad(item.calculada, unidad)}
+          </span>
+        )}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {item.calculada !== undefined && (
+          <button
+            type="button"
+            className="boton-suave"
+            onClick={() => despachar({ tipo: "compra/restablecer", ingredienteId: item.id })}
+          >
+            Restablecer {item.nombre}
+          </button>
+        )}
+        <button type="button" className="boton-suave" onClick={() => poner(0)}>
+          No hace falta {item.nombre}
+        </button>
+        <button type="button" className="boton-suave" onClick={alCerrar}>
+          Cerrar
+        </button>
+      </div>
+      <p className="text-tinta-suave text-xs">
+        El nombre viene del plato; aquí solo se cambia cuánto comprar.
+      </p>
     </div>
   );
 }

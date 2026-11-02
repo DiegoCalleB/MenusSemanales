@@ -543,6 +543,69 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 
+  test("compra: filas compactas, cantidad y nombre editables, vistas y «no hace falta»", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/compra");
+    // Compacta como Keep: caben muchas filas en una pantalla de móvil.
+    const filas = pagina.getByRole("listitem").filter({ has: pagina.getByRole("checkbox") });
+    const visibles = await filas.evaluateAll(
+      (els) => els.filter((e) => e.getBoundingClientRect().bottom < window.innerHeight).length,
+    );
+    expect(visibles).toBeGreaterThanOrEqual(5);
+
+    // Apuntar con cantidad, y editar nombre y cantidad en el sitio.
+    await pagina.getByLabel("Añadir algo a la lista").fill("huevos 12");
+    await pagina.getByRole("button", { name: "Añadir", exact: true }).click();
+    const fila = pagina
+      .getByRole("listitem")
+      .filter({ hasText: "Huevos" })
+      .filter({ hasText: "12" });
+    await expect(fila.first()).toBeVisible();
+    await fila
+      .first()
+      .getByRole("button", { name: /Huevos/ })
+      .click();
+    await pagina.getByLabel("Cantidad de Huevos").fill("6");
+    await pagina.getByLabel("Nombre de Huevos").fill("Huevos camperos");
+    await pagina.getByRole("button", { name: "Guardar", exact: true }).click();
+    await expect(
+      pagina.getByRole("listitem").filter({ hasText: "Huevos camperos" }).filter({ hasText: "6" }),
+    ).toBeVisible();
+
+    // Cantidad de un artículo calculado por el menú: + sube, restablecer vuelve.
+    const calculada = pagina.getByRole("button", { name: /^Calabacín/ }).first();
+    await calculada.click();
+    await pagina.getByRole("button", { name: "Más Calabacín" }).click();
+    await expect(pagina.getByText(/La app calculó/)).toBeVisible();
+    await pagina.getByRole("button", { name: "Restablecer Calabacín" }).click();
+    await expect(pagina.getByText(/La app calculó/)).toHaveCount(0);
+
+    // «No hace falta» lo manda abajo y se puede volver a poner.
+    await pagina.getByRole("button", { name: "No hace falta Calabacín" }).click();
+    await expect(pagina.getByRole("button", { name: /^Calabacín/ })).toHaveCount(0);
+    await pagina.getByText(/No hace falta \(1\)/).click();
+    await pagina.getByRole("button", { name: "Volver a poner Calabacín" }).click();
+    await expect(pagina.getByRole("button", { name: /^Calabacín/ }).first()).toBeVisible();
+
+    // Vistas: la elegida se recuerda; «Tienda» no se edita; «Por comida» agrupa por motivo.
+    await pagina.getByRole("button", { name: "Por comida", exact: true }).click();
+    await expect(pagina.getByRole("heading", { name: /Cena del/ }).first()).toBeVisible();
+    await pagina.getByRole("button", { name: "Tienda", exact: true }).click();
+    await expect(pagina.getByLabel("Añadir algo a la lista")).toHaveCount(0);
+    await pagina.reload({ waitUntil: "networkidle" });
+    await expect(pagina.getByRole("button", { name: "Tienda", exact: true })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    const axe = await new AxeBuilder({ page: pagina })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+      .analyze();
+    expect(axe.violations).toEqual([]);
+    await contexto.close();
+  });
+
   test("familia: añadir a alguien, cambiar su ración y dejar de contarlo", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/personas");

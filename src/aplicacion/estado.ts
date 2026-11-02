@@ -20,6 +20,7 @@ import {
   claveArticulo,
   clasificarArticulo,
   partirDictado,
+  separarCantidad,
 } from "@/dominio/habituales";
 import {
   type Cumple,
@@ -84,6 +85,13 @@ import type {
  */
 
 export const MAX_LARGO_NOMBRE_PERSONA = 60;
+export const MAX_LARGO_CANTIDAD = 20;
+
+const sinClave = <T>(o: Record<string, T>, clave: string): Record<string, T> => {
+  const { [clave]: _quitada, ...resto } = o;
+  void _quitada;
+  return resto;
+};
 export const MAX_LARGO_NOTA_MENU = 140;
 
 export interface ArticuloManual {
@@ -92,6 +100,8 @@ export interface ArticuloManual {
   comprado: boolean;
   /** Sección del súper deducida del nombre (leche → lácteos, pañales → higiene…). */
   categoria?: Categoria;
+  /** Cuánto: «2», «12», «1 kg». Texto libre y corto. */
+  cantidad?: string;
 }
 
 export interface CompraRealizada {
@@ -144,6 +154,8 @@ export interface EstadoHogar {
   casa: TareaCasa[];
   /** La comida del mediodía de los días en que hay que pensarla (D-079). */
   almuerzos: Almuerzo[];
+  /** Cantidades de la compra cambiadas a mano (ingrediente → cantidad; 0 = no hace falta). */
+  ajustesCompra: Record<string, number>;
   /** Nota corta de la cena de un día: «o igual lomo, depende» (D-096). */
   notasMenu: Record<FechaIso, string>;
   /** Tareas de cada persona (rutinas diarias y cosas puntuales). */
@@ -167,6 +179,9 @@ export type Accion =
   | { tipo: "comprar"; ingredienteId: string }
   | { tipo: "manual/anadir"; nombre: string }
   | { tipo: "manual/alternar"; id: string }
+  | { tipo: "manual/editar"; id: string; nombre?: string; cantidad?: string }
+  | { tipo: "compra/cantidad"; ingredienteId: string; cantidad: number }
+  | { tipo: "compra/restablecer"; ingredienteId: string }
   | { tipo: "manual/borrar"; id: string }
   | { tipo: "cocinar"; platoId: string; raciones: number }
   | { tipo: "ajustar"; ingredienteId: string; ubicacion: Ubicacion; delta: number }
@@ -300,13 +315,28 @@ export function ubicacionDeCompra(ingrediente: Ingrediente): Ubicacion {
 }
 
 /** Lo que falta por comprar según el menú y los mínimos (ya descontado lo que hay y lo comprado). */
-export function articulosPendientes(e: EstadoHogar): ArticuloCompra[] {
+function pendientesCalculados(e: EstadoHogar): ArticuloCompra[] {
   return calcularCompra({
     comidas: [...e.comidas, ...almuerzosComoComidas(e)],
     despensa: e.despensa,
     ingredientes: catalogo(e),
     hoy: e.hoy,
   });
+}
+
+/** Lo que falta por comprar, con las cantidades que se hayan cambiado a mano. */
+export function articulosPendientes(e: EstadoHogar): ArticuloCompra[] {
+  return pendientesCalculados(e).flatMap((a) => {
+    const ajuste = e.ajustesCompra[a.ingredienteId];
+    if (ajuste === undefined) return [a];
+    if (ajuste <= 0) return [];
+    return [{ ...a, cantidad: ajuste, calculada: a.cantidad }];
+  });
+}
+
+/** Lo que se ha quitado de la lista a mano («no hace falta»), por si se quiere volver a poner. */
+export function articulosQuitados(e: EstadoHogar): ArticuloCompra[] {
+  return pendientesCalculados(e).filter((a) => e.ajustesCompra[a.ingredienteId] === 0);
 }
 
 /** Las comidas del mediodía con plato del catálogo, para que sus ingredientes entren en la compra. */
@@ -544,10 +574,14 @@ export const normalizar = (e: EstadoHogar): EstadoHogar =>
   Array.isArray(e.casa) &&
   Array.isArray(e.almuerzos) &&
   typeof e.notasMenu === "object" &&
-  e.notasMenu !== null
+  e.notasMenu !== null &&
+  typeof e.ajustesCompra === "object" &&
+  e.ajustesCompra !== null
     ? e
     : {
         ...e,
+        ajustesCompra:
+          typeof e.ajustesCompra === "object" && e.ajustesCompra !== null ? e.ajustesCompra : {},
         notasMenu: typeof e.notasMenu === "object" && e.notasMenu !== null ? e.notasMenu : {},
         agenda: Array.isArray(e.agenda) ? e.agenda : [],
         casa: Array.isArray(e.casa) ? e.casa : [],
@@ -633,8 +667,58 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
               operacionId,
             },
           ],
+          ajustesCompra: sinClave(e.ajustesCompra, ingrediente.id),
         }),
       );
+    }
+
+    case "compra/cantidad": {
+      const bruto = pendientesCalculados(e).find((a) => a.ingredienteId === accion.ingredienteId);
+      if (!bruto || !Number.isFinite(accion.cantidad) || accion.cantidad < 0) return e;
+      const cantidad = Math.min(redondear(accion.cantidad, 2), 100000);
+      return {
+        ...e,
+        ajustesCompra:
+          cantidad === bruto.cantidad
+            ? sinClave(e.ajustesCompra, accion.ingredienteId)
+            : { ...e.ajustesCompra, [accion.ingredienteId]: cantidad },
+      };
+    }
+
+    case "compra/restablecer":
+      return { ...e, ajustesCompra: sinClave(e.ajustesCompra, accion.ingredienteId) };
+
+    case "manual/editar": {
+      const actual = e.manuales.find((m) => m.id === accion.id);
+      if (!actual) return e;
+      const nombre =
+        accion.nombre === undefined ? actual.nombre : accion.nombre.replace(/\s+/g, " ").trim();
+      if (nombre === "" || nombre.length > MAX_LARGO_ARTICULO) {
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: error(e, `Escribe un nombre (hasta ${MAX_LARGO_ARTICULO} caracteres).`),
+        };
+      }
+      const cantidad =
+        accion.cantidad === undefined
+          ? actual.cantidad
+          : accion.cantidad.replace(/\s+/g, " ").trim().slice(0, MAX_LARGO_CANTIDAD);
+      const { cantidad: _c, ...sinCantidad } = actual;
+      void _c;
+      return {
+        ...e,
+        manuales: e.manuales.map((m) =>
+          m.id === actual.id
+            ? {
+                ...sinCantidad,
+                nombre,
+                categoria: nombre === actual.nombre ? actual.categoria : clasificarArticulo(nombre),
+                ...(cantidad ? { cantidad } : {}),
+              }
+            : m,
+        ),
+      };
     }
 
     case "manual/anadir": {
@@ -650,7 +734,8 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
       const yaEstan = new Set(
         e.manuales.filter((m) => !m.comprado).map((m) => claveArticulo(m.nombre)),
       );
-      const nuevos = nombres.filter((n) => !yaEstan.has(claveArticulo(n)));
+      const separados = nombres.map(separarCantidad);
+      const nuevos = separados.filter((n) => !yaEstan.has(claveArticulo(n.nombre)));
       if (nuevos.length === 0) {
         return {
           ...e,
@@ -667,15 +752,16 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
         ...e,
         manuales: [
           ...e.manuales,
-          ...nuevos.map((nombre, i) => ({
+          ...nuevos.map(({ nombre, cantidad }, i) => ({
             id: `m-${e.siguienteId}-${i}`,
             nombre,
             comprado: false,
             categoria: clasificarArticulo(nombre),
+            ...(cantidad ? { cantidad } : {}),
           })),
         ],
         siguienteId: e.siguienteId + 1,
-        aviso: ok(e, `Añadido: ${nuevos.join(", ")}.`),
+        aviso: ok(e, `Añadido: ${nuevos.map((n) => n.nombre).join(", ")}.`),
       };
     }
     case "manual/alternar":

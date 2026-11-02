@@ -7,6 +7,7 @@ import {
   clasificarArticulo,
   habitualesPorCategoria,
   partirDictado,
+  separarCantidad,
   sugerencias,
 } from "./habituales";
 
@@ -102,5 +103,23 @@ describe("habitualesPorCategoria", () => {
     expect(grupos.find((g) => g.categoria === "lacteos")?.articulos).toContain("Kéfir");
     expect(grupos.find((g) => g.categoria === "higiene")?.articulos).toContain("Pañales");
     expect(grupos.every((g) => g.articulos.length > 0)).toBe(true);
+  });
+});
+
+describe("separarCantidad", () => {
+  it("saca la cantidad del principio o del final, con o sin unidad", () => {
+    expect(separarCantidad("2 yogures")).toEqual({ nombre: "Yogures", cantidad: "2" });
+    expect(separarCantidad("huevos 12")).toEqual({ nombre: "Huevos", cantidad: "12" });
+    expect(separarCantidad("huevos x12")).toEqual({ nombre: "Huevos", cantidad: "12" });
+    expect(separarCantidad("arroz 1 kg")).toEqual({ nombre: "Arroz", cantidad: "1 kg" });
+    expect(separarCantidad("500 g de pasta")).toEqual({ nombre: "Pasta", cantidad: "500 g" });
+    expect(separarCantidad("1,5 l leche")).toEqual({ nombre: "Leche", cantidad: "1,5 l" });
+  });
+
+  it("deja tal cual lo que no tiene cantidad o no se entiende", () => {
+    expect(separarCantidad("leche")).toEqual({ nombre: "leche", cantidad: null });
+    expect(separarCantidad("Kéfir 0%")).toEqual({ nombre: "Kéfir 0%", cantidad: null });
+    expect(separarCantidad("12")).toEqual({ nombre: "12", cantidad: null });
+    expect(separarCantidad("3 x")).toEqual({ nombre: "3 x", cantidad: null });
   });
 });

@@ -93,7 +93,10 @@ export function seccionesDeCompra(e: EstadoHogar): {
   const manuales = new Map<string, string[]>();
   for (const m of e.manuales.filter((x) => !x.comprado)) {
     const c = m.categoria ?? clasificarArticulo(m.nombre);
-    manuales.set(c, [...(manuales.get(c) ?? []), m.nombre]);
+    manuales.set(c, [
+      ...(manuales.get(c) ?? []),
+      m.cantidad ? `${m.nombre} · ${m.cantidad}` : m.nombre,
+    ]);
   }
   for (const c of CATEGORIAS) {
     const lineas = manuales.get(c);

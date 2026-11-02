@@ -448,6 +448,7 @@ export function estadoInicialDemo(): EstadoHogar {
     tareas: [],
     agenda: [],
     notasMenu: {},
+    ajustesCompra: {},
     casa: [],
     almuerzos: [],
     cumples: [],

@@ -27,6 +27,8 @@ export interface ArticuloCompra {
   cantidad: number;
   /** Por qué está en la lista: «Cena del martes», «Stock mínimo». */
   motivos: string[];
+  /** Si se ha cambiado la cantidad a mano, la que calculó la app. */
+  calculada?: number;
 }
 
 /** Paso de compra por unidad: los gramos y mililitros se redondean a 50; las unidades, a 1. */

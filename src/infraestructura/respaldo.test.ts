@@ -85,16 +85,16 @@ describe("copia automática antes de que la nube sustituya lo del móvil", () =>
   it("guarda lo del móvil si es distinto, no repite la misma y conserva las 3 últimas", () => {
     const m = memoria();
     const nube = con("De la familia");
-    expect(guardarRespaldoAntesDeLaNube(m, con("Mía 1"), nube, AHORA)).toBe("guardada");
-    expect(guardarRespaldoAntesDeLaNube(m, con("Mía 1"), nube, AHORA)).toBe("sin-cambios");
-    for (const n of ["Mía 2", "Mía 3", "Mía 4"])
+    expect(guardarRespaldoAntesDeLaNube(m, con("Mía uno"), nube, AHORA)).toBe("guardada");
+    expect(guardarRespaldoAntesDeLaNube(m, con("Mía uno"), nube, AHORA)).toBe("sin-cambios");
+    for (const n of ["Mía dos", "Mía tres", "Mía cuatro"])
       guardarRespaldoAntesDeLaNube(m, con(n), nube, AHORA);
     const guardadas = leerRespaldosAutomaticos(m);
     expect(guardadas).toHaveLength(3);
     expect(guardadas.map((r) => r.estado.manuales.at(-1)?.nombre)).toEqual([
-      "Mía 4",
-      "Mía 3",
-      "Mía 2",
+      "Mía cuatro",
+      "Mía tres",
+      "Mía dos",
     ]);
     expect(guardadas.every((r) => r.motivo === "antes-de-la-nube")).toBe(true);
   });

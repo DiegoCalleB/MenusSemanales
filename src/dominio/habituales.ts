@@ -126,6 +126,36 @@ export function partirDictado(texto: string): string[] {
   return salida;
 }
 
+const UNIDADES_COMPRA =
+  "kg|kilos?|g|gr|gramos|l|litros?|ml|cl|ud|uds|unidades|paquetes?|botellas?|latas?|bolsas?|cajas?|docenas?|packs?";
+
+/**
+ * Separa la cantidad del nombre al apuntar: «2 yogures» → Yogures · 2; «huevos 12» → Huevos · 12;
+ * «arroz 1 kg» → Arroz · 1 kg; «500 g de pasta» → Pasta · 500 g. Sin cantidad, la devuelve nula.
+ */
+export function separarCantidad(texto: string): { nombre: string; cantidad: string | null } {
+  const t = texto.replace(/\s+/g, " ").trim();
+  const inicio = new RegExp(
+    `^(\\d+(?:[.,]\\d+)?)\\s*(${UNIDADES_COMPRA})?\\s+(?:de\\s+)?(\\p{L}.*)$`,
+    "iu",
+  ).exec(t);
+  const fin = new RegExp(
+    `^(\\p{L}.*?)\\s+x?(\\d+(?:[.,]\\d+)?)\\s*(${UNIDADES_COMPRA})?$`,
+    "iu",
+  ).exec(t);
+  const m = inicio
+    ? { nombre: inicio[3] ?? "", n: inicio[1] ?? "", u: inicio[2] }
+    : fin
+      ? { nombre: fin[1] ?? "", n: fin[2] ?? "", u: fin[3] }
+      : null;
+  if (!m || m.nombre.trim().length < 2) return { nombre: t, cantidad: null };
+  const nombre = m.nombre.trim();
+  return {
+    nombre: nombre.charAt(0).toUpperCase() + nombre.slice(1),
+    cantidad: `${m.n}${m.u ? ` ${m.u.toLowerCase()}` : ""}`,
+  };
+}
+
 /** «Lo de siempre»: los artículos que más se repetían en la lista de la compra histórica. */
 export const HABITUALES: readonly string[] = [
   "Leche",
