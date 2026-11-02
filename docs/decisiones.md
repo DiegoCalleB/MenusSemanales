@@ -734,7 +734,7 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 
 ## D-091 — Vincular cada persona con su cuenta mediante código de invitación
 
-- **Estado:** migración `20261102180000_vincular_personas.sql` escrita y probada en local (`vincular_personas.test.sql`, con mutación comprobada). **Pendiente de aplicar en Supabase** (el servidor pidió confirmación y no llegó respuesta a tiempo).
+- **Estado:** migración `20261102180000_vincular_personas.sql` escrita y probada en local (`vincular_personas.test.sql`, con mutación comprobada). **Aplicada y comprobada en Supabase** (2026-11-02, a mano desde el editor SQL: las 3 funciones, la columna, privilegios solo para `authenticated`, `mi_persona` con `SECURITY INVOKER`, registrada en el historial). Avisos de seguridad: 2 nuevos de la misma clase aceptada (`SECURITY DEFINER` para usuarios con sesión; ahora 20), nada más.
 - **Decisión de Diego:** código de invitación para cada persona.
 - **Cómo:** `crear_invitacion_persona(hogar, persona)` (solo administrador; un código vivo por persona; un solo uso; caduca a los 7 días); `unirse_a_hogar` vincula la cuenta a esa persona si el código era para una; `vincular_persona_propia` para que el administrador elija quién es él; `mi_persona(hogar)` dice cuál es la mía. Una cuenta, una persona por hogar.
 - **Límite:** quien tenga el código (o un administrador) podría vincularse a otra persona antes que ella: es confianza dentro del hogar.
