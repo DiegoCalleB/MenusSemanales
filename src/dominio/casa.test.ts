@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  PLANTILLAS,
   PLANTILLA_CASA,
+  PLANTILLA_GATOS,
   type TareaCasa,
   aplazarUnDia,
   diasParaCasa,
@@ -120,5 +122,20 @@ describe("repartir entre los adultos", () => {
       null,
       null,
     ]);
+  });
+});
+
+describe("plantilla de los gatos", () => {
+  it("limpia los areneros cada día, compra arena y comida, y no se mezcla con la de la casa", () => {
+    const porTitulo = (t: string) => PLANTILLA_GATOS.find((p) => p.titulo === t);
+    expect(porTitulo("Limpiar los areneros")).toMatchObject({ cadaDias: 1, empiezaEn: 0 });
+    expect(PLANTILLA_GATOS.filter((p) => p.compra).map((p) => p.compra)).toEqual([
+      "Arena para gatos",
+      "Comida de los gatos",
+    ]);
+    const todos = [...PLANTILLA_CASA, ...PLANTILLA_GATOS].map((p) => p.titulo);
+    expect(new Set(todos).size).toBe(todos.length);
+    expect(PLANTILLAS.gatos).toBe(PLANTILLA_GATOS);
+    expect(PLANTILLAS.casa).toBe(PLANTILLA_CASA);
   });
 });

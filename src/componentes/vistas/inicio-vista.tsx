@@ -12,6 +12,7 @@ import { useHogar } from "../proveedor-hogar";
 import { AyudaInstalarIos } from "../instalar-ios";
 import { useYo } from "../yo";
 import { useCalendarioFamilia } from "../usar-calendario-familia";
+import { almuerzosDe } from "@/dominio/almuerzos";
 import { quePideHoy } from "@/dominio/casa";
 import { resumenDeTareas } from "@/dominio/tareas";
 
@@ -44,6 +45,7 @@ export function InicioVista() {
     (t) => t.responsableId === null || t.responsableId === yo?.id,
   );
 
+  const comidaHoy = almuerzosDe(estado.almuerzos, estado.hoy);
   const felicitaciones = felicitacionesDeHoy(estado.cumples, estado.hoy);
 
   return (
@@ -100,6 +102,11 @@ export function InicioVista() {
         <h1 id="hoy" className="text-2xl font-extrabold tracking-tight">
           {cena ? "Hoy cenáis…" : "¿Qué cenamos hoy?"}
         </h1>
+        {comidaHoy.length > 0 && (
+          <p className="text-base font-semibold">
+            <span aria-hidden="true">☀️ </span>Comida: {comidaHoy.map((a) => a.texto).join(" + ")}
+          </p>
+        )}
         {cena && (
           <p className="flex items-center gap-2 text-xl font-bold">
             <span aria-hidden="true" className="text-3xl">

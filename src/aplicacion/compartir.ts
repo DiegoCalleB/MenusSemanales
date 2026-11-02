@@ -146,6 +146,14 @@ export function eventosDeCalendario(e: EstadoHogar): EventoCalendario[] {
       },
     );
   }
+  // La comida del mediodía de los días en que se piensa (D-079).
+  for (const a of e.almuerzos) {
+    eventos.push({
+      fecha: a.fecha,
+      titulo: `☀️ Comida: ${a.texto}`,
+      descripcion: `Comida: ${a.texto}`,
+    });
+  }
   // Lo apuntado a mano (D-075): con aviso, para que el móvil lo recuerde sin abrir la app.
   for (const a of e.agenda) {
     eventos.push({

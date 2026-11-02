@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { sumarDias } from "@/dominio/fechas";
 import { type Cumple, estadoVigente } from "@/dominio/cumples";
 import { estadoInicialDemo } from "./datos-demo";
 import {
@@ -1083,6 +1084,24 @@ describe("casa: lo recurrente", () => {
     expect(aplicar(e, { tipo: "casa/borrar", id }).casa).toEqual([]);
   });
 
+  it("la plantilla de los gatos va aparte y «comprar arena» manda la arena a la lista de la compra", () => {
+    const e = con({ tipo: "casa/plantilla", conjunto: "gatos" });
+    expect(e.casa.some((t) => /areneros/i.test(t.titulo))).toBe(true);
+    expect(e.casa.some((t) => /sábanas/i.test(t.titulo))).toBe(false);
+    const arena = e.casa.find((t) => t.compra === "Arena para gatos");
+    expect(arena).toBeDefined();
+    const conLista = aplicar(e, { tipo: "casa/aListaCompra", id: arena?.id ?? "" });
+    expect(conLista.manuales.map((m) => m.nombre)).toContain("Arena para gatos");
+    // Una tarea sin nada que comprar no hace nada.
+    const sinCompra = e.casa.find((t) => !t.compra);
+    expect(aplicar(e, { tipo: "casa/aListaCompra", id: sinCompra?.id ?? "" })).toBe(e);
+    // La de la casa se puede añadir después sin duplicar los gatos.
+    expect(aplicar(e, { tipo: "casa/plantilla" }).casa.length).toBeGreaterThan(e.casa.length);
+    expect(aplicar(e, { tipo: "casa/plantilla", conjunto: "gatos" }).casa).toHaveLength(
+      e.casa.length,
+    );
+  });
+
   it("un estado antiguo sin casa se completa", () => {
     const viejo: Partial<EstadoHogar> = { ...estadoInicialDemo() };
     delete viejo.casa;
@@ -1091,5 +1110,74 @@ describe("casa: lo recurrente", () => {
       estado: viejo as EstadoHogar,
     });
     expect(e.casa).toEqual([]);
+  });
+});
+
+describe("comida del mediodía (D-079)", () => {
+  const base = estadoInicialDemo();
+  const con = (...a: Accion[]) => aplicar(base, ...a);
+  const hoy = base.hoy;
+  const plato = base.platos.find((p) => !p.noProponer)!;
+
+  it("apunta un texto libre o un plato del catálogo, sin repetir, y se quita", () => {
+    let e = con({
+      tipo: "almuerzo/anadir",
+      fecha: hoy,
+      texto: "  Comemos en casa   de los abuelos ",
+    });
+    expect(e.almuerzos).toMatchObject([
+      { fecha: hoy, texto: "Comemos en casa de los abuelos", platoId: null },
+    ]);
+    e = aplicar(e, {
+      tipo: "almuerzo/anadir",
+      fecha: hoy,
+      texto: "comemos en casa de los ABUELOS",
+    });
+    expect(e.almuerzos).toHaveLength(1);
+    expect(e.aviso?.texto).toBe("Ya estaba apuntado.");
+    e = aplicar(e, { tipo: "almuerzo/anadir", fecha: hoy, platoId: plato.id });
+    expect(e.almuerzos[1]).toMatchObject({ texto: plato.nombre, platoId: plato.id });
+    expect(e.almuerzos).toHaveLength(2);
+    expect(
+      aplicar(e, { tipo: "almuerzo/borrar", id: e.almuerzos[0]?.id ?? "" }).almuerzos,
+    ).toHaveLength(1);
+  });
+
+  it("rechaza lo vacío, un plato que no existe y los días fuera de plazo", () => {
+    for (const a of [
+      { tipo: "almuerzo/anadir", fecha: hoy, texto: "  " },
+      { tipo: "almuerzo/anadir", fecha: hoy, platoId: "no-existe" },
+      { tipo: "almuerzo/anadir", fecha: "2020-01-01", texto: "Ayer" },
+      { tipo: "almuerzo/anadir", fecha: sumarDias(hoy, 61), texto: "Lejos" },
+      { tipo: "almuerzo/anadir", fecha: hoy, texto: "x".repeat(81) },
+    ] as Accion[]) {
+      const e = con(a);
+      expect(e.almuerzos).toEqual([]);
+      expect(e.aviso).toMatchObject({ tipo: "error" });
+    }
+  });
+
+  it("los ingredientes de un plato de la comida entran en la lista de la compra", () => {
+    const antes = articulosPendientes(con());
+    const despues = articulosPendientes(
+      con({ tipo: "almuerzo/anadir", fecha: hoy, platoId: plato.id }),
+    );
+    const suma = (l: typeof antes) => l.reduce((x, a) => x + a.cantidad, 0);
+    expect(despues.length + suma(despues)).toBeGreaterThan(antes.length + suma(antes));
+    // Un texto libre no cambia la compra, y un día ya pasado tampoco.
+    expect(
+      articulosPendientes(con({ tipo: "almuerzo/anadir", fecha: hoy, texto: "Restaurante" })),
+    ).toEqual(antes);
+  });
+
+  it("sale en el archivo de calendario y un estado antiguo se completa", async () => {
+    const { eventosDeCalendario } = await import("./compartir");
+    const e = con({ tipo: "almuerzo/anadir", fecha: hoy, texto: "Paella" });
+    expect(eventosDeCalendario(e).map((x) => x.titulo)).toContain("☀️ Comida: Paella");
+    const viejo: Partial<EstadoHogar> = { ...base };
+    delete viejo.almuerzos;
+    expect(
+      reducir(base, { tipo: "hogar/sustituir", estado: viejo as EstadoHogar }).almuerzos,
+    ).toEqual([]);
   });
 });

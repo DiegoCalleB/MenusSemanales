@@ -20,6 +20,8 @@ export interface TareaCasa {
   desde: FechaIso;
   /** «Mañana»: no se enseña como pendiente hasta ese día. */
   aplazadaHasta?: FechaIso | null;
+  /** Si hay que comprar algo para hacerla («Arena para gatos»): se puede mandar a la lista. */
+  compra?: string | null;
 }
 
 export type EstadoCasa = "atrasada" | "hoy" | "pronto" | "lejos";
@@ -96,12 +98,15 @@ export const FRECUENCIAS_CASA: ReadonlyArray<{ dias: number; texto: string }> = 
  * Plantilla inicial (frecuencias orientativas, editables). Cada una empieza dentro de unos días
  * (`empiezaEn`) para que no caiga todo el mismo día.
  */
-export const PLANTILLA_CASA: ReadonlyArray<{
+export interface PlantillaCasa {
   titulo: string;
   emoji: string;
   cadaDias: number;
   empiezaEn: number;
-}> = [
+  compra?: string;
+}
+
+export const PLANTILLA_CASA: ReadonlyArray<PlantillaCasa> = [
   { titulo: "Cambiar las sábanas de mamá y papá", emoji: "🛏️", cadaDias: 14, empiezaEn: 0 },
   { titulo: "Cambiar las sábanas de las niñas", emoji: "🧸", cadaDias: 7, empiezaEn: 1 },
   { titulo: "Cambiar las toallas del baño", emoji: "🛁", cadaDias: 7, empiezaEn: 2 },
@@ -115,6 +120,41 @@ export const PLANTILLA_CASA: ReadonlyArray<{
   { titulo: "Revisión del coche", emoji: "🚗", cadaDias: 365, empiezaEn: 45 },
   { titulo: "Cita del dentista de la familia", emoji: "🦷", cadaDias: 180, empiezaEn: 30 },
 ];
+
+/** Lo que lleva tener dos gatos (D-079). Aparte de la casa: solo se añade si se pide. */
+export const PLANTILLA_GATOS: ReadonlyArray<PlantillaCasa> = [
+  { titulo: "Limpiar los areneros", emoji: "🐱", cadaDias: 1, empiezaEn: 0 },
+  { titulo: "Lavar comederos y bebederos de los gatos", emoji: "🥣", cadaDias: 3, empiezaEn: 1 },
+  { titulo: "Cambiar toda la arena de los areneros", emoji: "🧼", cadaDias: 14, empiezaEn: 3 },
+  { titulo: "Cepillar a los gatos", emoji: "🪮", cadaDias: 7, empiezaEn: 2 },
+  {
+    titulo: "Comprar arena para los gatos",
+    emoji: "🛒",
+    cadaDias: 30,
+    empiezaEn: 7,
+    compra: "Arena para gatos",
+  },
+  {
+    titulo: "Comprar comida de los gatos",
+    emoji: "🥫",
+    cadaDias: 14,
+    empiezaEn: 5,
+    compra: "Comida de los gatos",
+  },
+  { titulo: "Desparasitar a los gatos", emoji: "💊", cadaDias: 90, empiezaEn: 20 },
+  {
+    titulo: "Revisión y vacunas de los gatos (veterinario)",
+    emoji: "🩺",
+    cadaDias: 365,
+    empiezaEn: 45,
+  },
+];
+
+export type ConjuntoCasa = "casa" | "gatos";
+export const PLANTILLAS: Record<ConjuntoCasa, ReadonlyArray<PlantillaCasa>> = {
+  casa: PLANTILLA_CASA,
+  gatos: PLANTILLA_GATOS,
+};
 
 /**
  * Reparto sencillo de las que no tienen responsable: alternando entre los adultos, para que

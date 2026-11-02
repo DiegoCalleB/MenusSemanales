@@ -3,6 +3,7 @@
 import { type FormEvent, useState } from "react";
 import {
   FRECUENCIAS_CASA,
+  PLANTILLA_GATOS,
   type TareaCasa,
   diasParaCasa,
   estadoDeCasa,
@@ -55,6 +56,8 @@ export function CasaVista() {
       lista: ordenadas.filter((t) => estadoDeCasa(t, estado.hoy) === "lejos"),
     },
   ];
+  const titulos = new Set(estado.casa.map((t) => t.titulo.toLowerCase()));
+  const faltanGatos = PLANTILLA_GATOS.some((p) => !titulos.has(p.titulo.toLowerCase()));
   const sinResponsable = estado.casa.filter((t) => t.responsableId === null).length;
 
   function anadir(e: FormEvent) {
@@ -84,13 +87,22 @@ export function CasaVista() {
             Sábanas, toallas, nevera, filtros, cepillos, botiquín, caldera, coche, dentista… Son 12
             tareas con una frecuencia orientativa. Luego cambiáis las que no os valgan.
           </p>
-          <button
-            type="button"
-            className="boton w-fit"
-            onClick={() => despachar({ tipo: "casa/plantilla" })}
-          >
-            Añadir la plantilla de la casa
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="boton"
+              onClick={() => despachar({ tipo: "casa/plantilla" })}
+            >
+              Añadir la plantilla de la casa
+            </button>
+            <button
+              type="button"
+              className="boton-suave"
+              onClick={() => despachar({ tipo: "casa/plantilla", conjunto: "gatos" })}
+            >
+              🐱 Añadir lo de los gatos
+            </button>
+          </div>
         </section>
       )}
 
@@ -187,6 +199,16 @@ export function CasaVista() {
                           ))}
                         </select>
                       </label>
+                      {t.compra && (
+                        <button
+                          type="button"
+                          className="boton-suave"
+                          aria-label={`A la lista de la compra: ${t.compra}`}
+                          onClick={() => despachar({ tipo: "casa/aListaCompra", id: t.id })}
+                        >
+                          🛒 A la lista
+                        </button>
+                      )}
                       <button
                         type="button"
                         className="boton-suave"
@@ -250,13 +272,24 @@ export function CasaVista() {
           </button>
         </form>
         {estado.casa.length > 0 && (
-          <button
-            type="button"
-            className="boton-suave w-fit"
-            onClick={() => despachar({ tipo: "casa/plantilla" })}
-          >
-            Añadir lo que falte de la plantilla
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="boton-suave"
+              onClick={() => despachar({ tipo: "casa/plantilla" })}
+            >
+              Añadir lo que falte de la plantilla
+            </button>
+            {faltanGatos && (
+              <button
+                type="button"
+                className="boton-suave"
+                onClick={() => despachar({ tipo: "casa/plantilla", conjunto: "gatos" })}
+              >
+                🐱 Añadir lo de los gatos
+              </button>
+            )}
+          </div>
         )}
       </section>
     </div>

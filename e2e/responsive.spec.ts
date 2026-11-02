@@ -523,6 +523,57 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 
+  test("gatos: areneros cada día y arena y comida a la lista de la compra", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/casa");
+    await pagina.getByRole("button", { name: "🐱 Añadir lo de los gatos" }).click();
+    const hoy = pagina.getByRole("list", { name: "Hoy toca" });
+    await expect(hoy.getByRole("listitem").filter({ hasText: /Limpiar los areneros/ })).toHaveCount(
+      1,
+    );
+    await pagina.getByRole("button", { name: "A la lista de la compra: Arena para gatos" }).click();
+    await pagina.goto("/compra", { waitUntil: "networkidle" });
+    await expect(pagina.getByText("Arena para gatos").first()).toBeVisible();
+    await pagina.goto("/casa", { waitUntil: "networkidle" });
+    await pagina.getByRole("button", { name: "Marcar hecha: Limpiar los areneros" }).click();
+    await expect(
+      pagina
+        .getByRole("list", { name: "Hoy toca" })
+        .getByRole("listitem")
+        .filter({ hasText: /Limpiar los areneros/ }),
+    ).toHaveCount(0);
+    await contexto.close();
+  });
+
+  test("comidas: se piensan en el calendario (texto, «por decidir» o plato) y salen en la portada", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/calendario");
+    const comida = pagina.getByRole("region", { name: "Comida del mediodía" });
+    await expect(comida.getByText("Sin comida pensada.")).toBeVisible();
+    await comida.getByLabel("Qué se come").fill("Paella en casa de los abuelos");
+    await comida.getByRole("button", { name: "Apuntar", exact: true }).click();
+    await expect(comida.getByText("Paella en casa de los abuelos")).toBeVisible();
+    await comida.getByRole("button", { name: /Por decidir/ }).click();
+    await expect(comida.getByRole("button", { name: "Quitar comida: Por decidir" })).toBeVisible();
+    await comida.getByRole("button", { name: /Elegir un plato/ }).click();
+    await comida
+      .getByRole("button", { name: /^Comer / })
+      .first()
+      .click();
+    await expect(comida.getByRole("button", { name: /^Quitar comida/ })).toHaveCount(3);
+    // La portada la enseña y el día lleva ☀️ en el calendario.
+    await expect(pagina.getByText("☀️ hay comida apuntada", { exact: false })).toBeVisible();
+    const axe = await new AxeBuilder({ page: pagina })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+      .analyze();
+    expect(axe.violations).toEqual([]);
+    await pagina.goto("/", { waitUntil: "networkidle" });
+    await expect(pagina.getByText(/Comida: Paella en casa de los abuelos/)).toBeVisible();
+    await contexto.close();
+  });
+
   test("enviar: WhatsApp, copiar y archivo de calendario", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/compartir");

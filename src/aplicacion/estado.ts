@@ -30,9 +30,11 @@ import {
   proximaFecha,
 } from "@/dominio/cumples";
 import { type FrecuenciaTarea, type Tarea, alternarTarea } from "@/dominio/tareas";
+import { type Almuerzo, MAX_LARGO_ALMUERZO } from "@/dominio/almuerzos";
 import { type Apunte, parsearAgenda } from "@/dominio/agenda";
 import {
-  PLANTILLA_CASA,
+  type ConjuntoCasa,
+  PLANTILLAS,
   type TareaCasa,
   aplazarUnDia,
   marcarHecha,
@@ -136,6 +138,8 @@ export interface EstadoHogar {
   agenda: Apunte[];
   /** Lo recurrente de la casa: sábanas, toallas, filtros… (D-078). */
   casa: TareaCasa[];
+  /** La comida del mediodía de los días en que hay que pensarla (D-079). */
+  almuerzos: Almuerzo[];
   /** Tareas de cada persona (rutinas diarias y cosas puntuales). */
   tareas: Tarea[];
   /** Días en que no se planifica cena en casa (salir, comer fuera, no hace falta). */
@@ -176,8 +180,11 @@ export type Accion =
   | { tipo: "cumple/importar"; texto: string; relacion: Relacion }
   | { tipo: "agenda/anadir"; texto: string; personaId: string | null }
   | { tipo: "agenda/borrar"; id: string }
+  | { tipo: "almuerzo/anadir"; fecha: FechaIso; texto?: string; platoId?: string }
+  | { tipo: "almuerzo/borrar"; id: string }
   | { tipo: "casa/anadir"; titulo: string; cadaDias: number; responsableId: string | null }
-  | { tipo: "casa/plantilla" }
+  | { tipo: "casa/plantilla"; conjunto?: ConjuntoCasa }
+  | { tipo: "casa/aListaCompra"; id: string }
   | { tipo: "casa/hecha"; id: string }
   | { tipo: "casa/aplazar"; id: string }
   | { tipo: "casa/asignar"; id: string; responsableId: string | null }
@@ -227,10 +234,21 @@ export function ubicacionDeCompra(ingrediente: Ingrediente): Ubicacion {
 /** Lo que falta por comprar según el menú y los mínimos (ya descontado lo que hay y lo comprado). */
 export function articulosPendientes(e: EstadoHogar): ArticuloCompra[] {
   return calcularCompra({
-    comidas: e.comidas,
+    comidas: [...e.comidas, ...almuerzosComoComidas(e)],
     despensa: e.despensa,
     ingredientes: catalogo(e),
     hoy: e.hoy,
+  });
+}
+
+/** Las comidas del mediodía con plato del catálogo, para que sus ingredientes entren en la compra. */
+function almuerzosComoComidas(e: EstadoHogar): ComidaPlanificada[] {
+  const raciones = e.personas.filter((p) => p.activa).reduce((x, p) => x + p.factorRacion, 0);
+  return e.almuerzos.flatMap((a) => {
+    const plato = a.platoId ? e.platos.find((p) => p.id === a.platoId) : undefined;
+    return plato && a.fecha >= e.hoy
+      ? [{ etiqueta: `Comida del ${nombreDia(a.fecha)}`, fecha: a.fecha, plato, raciones }]
+      : [];
   });
 }
 
@@ -452,14 +470,15 @@ export const nombreDia = (fecha: FechaIso): string => NOMBRE_DIA[diaSemanaIso(fe
 // Reductor
 // --------------------------------------------------------------------------------------------
 
-/** Completa lo que un estado guardado por una versión anterior no trae (agenda y casa, D-075 y D-078). */
+/** Completa lo que un estado guardado por una versión anterior no trae (agenda, casa y almuerzos, D-075, D-078 y D-079). */
 export const normalizar = (e: EstadoHogar): EstadoHogar =>
-  Array.isArray(e.agenda) && Array.isArray(e.casa)
+  Array.isArray(e.agenda) && Array.isArray(e.casa) && Array.isArray(e.almuerzos)
     ? e
     : {
         ...e,
         agenda: Array.isArray(e.agenda) ? e.agenda : [],
         casa: Array.isArray(e.casa) ? e.casa : [],
+        almuerzos: Array.isArray(e.almuerzos) ? e.almuerzos : [],
       };
 
 const ok = (e: EstadoHogar, texto: string, operacionId?: string): Aviso => ({
@@ -827,6 +846,45 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
       };
     }
 
+    case "almuerzo/anadir": {
+      const plato = accion.platoId ? e.platos.find((p) => p.id === accion.platoId) : undefined;
+      const texto = (plato?.nombre ?? accion.texto ?? "").replace(/\s+/g, " ").trim();
+      if (
+        texto === "" ||
+        texto.length > MAX_LARGO_ALMUERZO ||
+        (accion.platoId && !plato) ||
+        !fechaPlanificable(e, accion.fecha)
+      ) {
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: error(
+            e,
+            `Escribe qué se come (hasta ${MAX_LARGO_ALMUERZO} caracteres), en un día desde hoy y hasta dentro de 60 días.`,
+          ),
+        };
+      }
+      const k = claveArticulo(texto);
+      if (e.almuerzos.some((a) => a.fecha === accion.fecha && claveArticulo(a.texto) === k)) {
+        return { ...e, siguienteId: e.siguienteId + 1, aviso: ok(e, "Ya estaba apuntado.") };
+      }
+      return {
+        ...e,
+        almuerzos: [
+          ...e.almuerzos,
+          { id: `m-${e.siguienteId}`, fecha: accion.fecha, texto, platoId: plato?.id ?? null },
+        ],
+        siguienteId: e.siguienteId + 1,
+        aviso: ok(
+          e,
+          `Comida del ${nombreDia(accion.fecha)}: ${texto}.${plato ? " La compra se ha actualizado." : ""}`,
+        ),
+      };
+    }
+
+    case "almuerzo/borrar":
+      return { ...e, almuerzos: e.almuerzos.filter((a) => a.id !== accion.id) };
+
     case "casa/anadir": {
       const titulo = accion.titulo.replace(/\s+/g, " ").trim();
       if (titulo === "" || titulo.length > MAX_LARGO_ARTICULO || !(accion.cadaDias >= 1)) {
@@ -863,7 +921,8 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
 
     case "casa/plantilla": {
       const ya = new Set(e.casa.map((t) => claveArticulo(t.titulo)));
-      const nuevas = PLANTILLA_CASA.filter((p) => !ya.has(claveArticulo(p.titulo)));
+      const conjunto = accion.conjunto ?? "casa";
+      const nuevas = PLANTILLAS[conjunto].filter((p) => !ya.has(claveArticulo(p.titulo)));
       return {
         ...e,
         casa: [
@@ -876,16 +935,23 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
             responsableId: null,
             ultimaVez: null,
             desde: sumarDias(e.hoy, p.empiezaEn),
+            compra: p.compra ?? null,
           })),
         ],
         siguienteId: e.siguienteId + 1,
         aviso: ok(
           e,
           nuevas.length > 0
-            ? `Añadidas ${nuevas.length} tareas de la casa. Cámbialas o quita las que no os valgan.`
+            ? `Añadidas ${nuevas.length} tareas${conjunto === "gatos" ? " de los gatos" : " de la casa"}. Cámbialas o quita las que no os valgan.`
             : "Ya estaba toda la plantilla.",
         ),
       };
+    }
+
+    case "casa/aListaCompra": {
+      const t = e.casa.find((x) => x.id === accion.id);
+      if (!t?.compra) return e;
+      return reducir(e, { tipo: "manual/anadir", nombre: t.compra });
     }
 
     case "casa/hecha":

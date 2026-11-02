@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { esCumpleRepetido } from "@/dominio/cuenta-atras";
+import { ComidaDelDia } from "../comida-del-dia";
 import { useCalendarioFamilia } from "../usar-calendario-familia";
 import { useMemo, useState } from "react";
 import {
@@ -169,6 +170,7 @@ export function CalendarioVista() {
                       {largo(f)}
                       {esHoy && " (hoy)"}
                       {estado.colegio[f] && <span> 🎒</span>}
+                      {estado.almuerzos.some((a) => a.fecha === f) && <span> ☀️</span>}
                       {eventos[f] && <span> {eventos[f]?.emoji}</span>}
                     </span>
                     <span className="truncate text-sm font-normal">
@@ -230,7 +232,8 @@ export function CalendarioVista() {
             })}
           </div>
           <p className="text-tinta-suave text-sm">
-            🎒 hay menú del cole · el emoji es el tipo de plato de la cena elegida
+            🎒 hay menú del cole · ☀️ hay comida apuntada · el emoji es el tipo de plato de la cena
+            elegida
           </p>
         </section>
 
@@ -254,6 +257,8 @@ export function CalendarioVista() {
           )}
 
           <TarjetaCole cole={cole} fecha={sel} />
+
+          <ComidaDelDia fecha={sel} puedeApuntar={planificable} />
 
           {elegida ? (
             <div className="flex flex-col gap-2">

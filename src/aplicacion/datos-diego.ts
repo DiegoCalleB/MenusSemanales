@@ -688,6 +688,7 @@ export function estadoModoDiego(hoy: string): EstadoHogar {
     // Solo se conoce el cumpleaños de Ana; el resto de fechas las añade la familia en «Cumples».
     agenda: [],
     casa: [],
+    almuerzos: [],
     cumples: [
       {
         id: "c-ana",
