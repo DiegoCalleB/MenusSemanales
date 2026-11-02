@@ -1,5 +1,5 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
-import type { Database } from "./database.types";
+import type { Database, Json } from "./database.types";
 
 type Cliente = SupabaseClient<Database>;
 
@@ -20,6 +20,7 @@ export function mensajeDeError(error: { message?: string; code?: string } | null
     return "Demasiados intentos: espera un poco.";
   if (m.includes("invalid") && m.includes("token"))
     return "El código no es correcto o ha caducado.";
+  if (error?.code === "22023" || error?.code === "42501") return error.message ?? "No permitido.";
   if (m.includes("failed to fetch") || m.includes("network"))
     return "Sin conexión. Inténtalo de nuevo.";
   return "No se ha podido completar. Inténtalo de nuevo.";
@@ -57,6 +58,18 @@ export const crearInvitacion = (cliente: Cliente, hogarId: string) =>
   cliente.rpc("crear_invitacion", { p_hogar_id: hogarId, p_rol: "miembro" });
 export const unirseConCodigo = (cliente: Cliente, codigo: string) =>
   cliente.rpc("unirse_a_hogar", { p_codigo: codigo });
+
+/** Código para que una persona concreta entre y quede vinculada a su cuenta (D-091). */
+export const crearInvitacionDePersona = (cliente: Cliente, hogarId: string, personaId: string) =>
+  cliente.rpc("crear_invitacion_persona", { p_hogar_id: hogarId, p_persona_id: personaId });
+export const vincularmeAPersona = (cliente: Cliente, hogarId: string, personaId: string) =>
+  cliente.rpc("vincular_persona_propia", { p_hogar_id: hogarId, p_persona_id: personaId });
+export const miPersonaEnElHogar = (cliente: Cliente, hogarId: string) =>
+  cliente.rpc("mi_persona", { p_hogar_id: hogarId });
+export const leerHogarDeTablas = (cliente: Cliente, hogarId: string) =>
+  cliente.rpc("leer_hogar_tablas", { p_hogar_id: hogarId });
+export const aplicarCambiosATablas = (cliente: Cliente, hogarId: string, cambios: Json) =>
+  cliente.rpc("aplicar_cambios_tablas", { p_hogar_id: hogarId, p_cambios: cambios });
 
 /** Enlace secreto del calendario del hogar (D-083). Con `renovar`, el anterior deja de valer. */
 export const enlaceDelCalendario = (cliente: Cliente, hogarId: string, renovar = false) =>

@@ -739,3 +739,12 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **Cómo:** `crear_invitacion_persona(hogar, persona)` (solo administrador; un código vivo por persona; un solo uso; caduca a los 7 días); `unirse_a_hogar` vincula la cuenta a esa persona si el código era para una; `vincular_persona_propia` para que el administrador elija quién es él; `mi_persona(hogar)` dice cuál es la mía. Una cuenta, una persona por hogar.
 - **Límite:** quien tenga el código (o un administrador) podría vincularse a otra persona antes que ella: es confianza dentro del hogar.
 - **Siguiente:** pantalla de personas que use estas funciones e importación única del documento a tablas (con vista previa y copia de seguridad).
+
+## D-092 — Pantalla «Familia»: personas y vínculo con la cuenta
+
+- **Estado:** hecha (2026-11-02). `/personas`, en el pilar «Más» (pestaña «Familia»).
+- **Qué permite:** añadir personas, cambiar nombre, adulto o niño y ración (pequeña a grande), y dejar de contar o volver a contar a alguien (se desactiva, no se borra: se esconde antes de borrarse). Siempre queda al menos una persona que cuenta. Las personas nuevas nacen con id UUID (D-089).
+- **Vincular cuentas (con la nube conectada):** «Soy X» (el administrador elige quién es él) y «Código para X» (código de un solo uso que se envía por WhatsApp o se copia; quien lo canjea queda vinculado a esa persona, D-091). La pantalla indica quién tiene ya cuenta.
+- **Cómo encaja con el documento:** el estado de la app sigue siendo el documento (aún no hay motor por tablas). Las personas **se llevan a la tabla `persona` al abrir la pantalla y al vincular** (con `aplicar_cambios_tablas`, idempotente, ids antiguos convertidos a UUID estable). Es el primer agregado en tablas; el vínculo del secreto del regalo ya tiene dónde apoyarse.
+- **Límites:** (1) las personas se suben a la tabla solo desde esta pantalla, no en cada cambio: el motor de sincronización por tablas lo generalizará. (2) No se pueden borrar personas ni desvincular cuentas desde la app (a propósito: desvincular podría destapar un regalo). (3) La pantalla no se ha probado contra el Supabase real desde un navegador, solo las funciones SQL y los tests de pantalla con la nube desconectada.
+- **Pruebas:** 3 tests de reductor nuevos, E2E de 10 tamaños con accesibilidad y un flujo de añadir/desactivar (409 E2E en total en verde).

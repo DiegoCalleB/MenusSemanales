@@ -1099,6 +1099,26 @@ export type Database = {
         Args: { p_nombre: string; p_seccion?: string; p_unidad: string }
         Returns: string
       }
+      crear_invitacion_persona: {
+        Args: { p_hogar_id: string; p_persona_id: string }
+        Returns: string
+      }
+      vincular_persona_propia: {
+        Args: { p_hogar_id: string; p_persona_id: string }
+        Returns: undefined
+      }
+      mi_persona: {
+        Args: { p_hogar_id: string }
+        Returns: string
+      }
+      leer_hogar_tablas: {
+        Args: { p_hogar_id: string }
+        Returns: Json
+      }
+      aplicar_cambios_tablas: {
+        Args: { p_hogar_id: string; p_cambios: Json }
+        Returns: undefined
+      }
       crear_invitacion: {
         Args: { p_hogar_id: string; p_rol?: string }
         Returns: string

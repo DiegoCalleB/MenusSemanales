@@ -1323,3 +1323,66 @@ describe("ids UUID derivados de idBase (D-089)", () => {
     expect(b).toMatchObject({ idBase: "otro" });
   });
 });
+
+describe("personas de la familia (D-092)", () => {
+  const base = "0b1b0c1e-8f4e-4a4e-9c0e-2f0f7b6f0a11";
+
+  it("añade una persona con id UUID, la edita y la desactiva", () => {
+    const e = estadoInicialDemo();
+    const a = reducir(e, {
+      tipo: "persona/guardar",
+      nombre: "  Lola ",
+      personaTipo: "nino",
+      factorRacion: 0.5,
+      idBase: base,
+    });
+    const lola = a.personas.at(-1)!;
+    expect(lola).toMatchObject({ nombre: "Lola", tipo: "nino", factorRacion: 0.5, activa: true });
+    expect(esUuid(lola.id)).toBe(true);
+    const b = reducir(a, {
+      tipo: "persona/guardar",
+      id: lola.id,
+      nombre: "Lola B",
+      personaTipo: "adulto",
+      factorRacion: 1,
+    });
+    expect(b.personas.find((p) => p.id === lola.id)).toMatchObject({
+      nombre: "Lola B",
+      tipo: "adulto",
+      factorRacion: 1,
+    });
+    expect(b.personas).toHaveLength(a.personas.length);
+    const c = reducir(b, { tipo: "persona/activar", id: lola.id, activa: false });
+    expect(c.personas.find((p) => p.id === lola.id)?.activa).toBe(false);
+  });
+
+  it("rechaza nombre vacío, repetido o ración fuera de rango", () => {
+    const e = estadoInicialDemo();
+    const existente = e.personas[0]!;
+    for (const accion of [
+      { tipo: "persona/guardar", nombre: "   ", personaTipo: "adulto", factorRacion: 1 },
+      {
+        tipo: "persona/guardar",
+        nombre: existente.nombre.toUpperCase(),
+        personaTipo: "adulto",
+        factorRacion: 1,
+      },
+      { tipo: "persona/guardar", nombre: "X", personaTipo: "adulto", factorRacion: 0 },
+      { tipo: "persona/guardar", nombre: "X", personaTipo: "adulto", factorRacion: 3 },
+    ] as const) {
+      const r = reducir(e, accion);
+      expect(r.personas).toHaveLength(e.personas.length);
+      expect(r.aviso?.tipo).toBe("error");
+    }
+  });
+
+  it("no deja desactivar a la última persona que cuenta", () => {
+    let e = estadoInicialDemo();
+    const ids = e.personas.filter((p) => p.activa).map((p) => p.id);
+    for (const id of ids.slice(0, -1))
+      e = reducir(e, { tipo: "persona/activar", id, activa: false });
+    const r = reducir(e, { tipo: "persona/activar", id: ids.at(-1)!, activa: false });
+    expect(r.personas.filter((p) => p.activa)).toHaveLength(1);
+    expect(r.aviso?.tipo).toBe("error");
+  });
+});

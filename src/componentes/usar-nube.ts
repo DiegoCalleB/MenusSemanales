@@ -4,12 +4,19 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Accion, EstadoHogar } from "@/aplicacion/estado";
 import { type EstadoSync, Sincronizador } from "@/aplicacion/sincronizacion";
+import { aUuid, cambiosDePersonas } from "@/aplicacion/tablas";
+import type { Persona } from "@/dominio/tipos";
 import { crearClienteNavegador } from "@/infraestructura/supabase/cliente-navegador";
 import {
   type HogarDeUsuario,
   crearHogarNuevo,
+  aplicarCambiosATablas,
   crearInvitacion,
+  crearInvitacionDePersona,
   entrarSinCorreo,
+  leerHogarDeTablas,
+  miPersonaEnElHogar,
+  vincularmeAPersona,
   hogarDelUsuario,
   mensajeDeError,
   pedirCodigoPorCorreo,
@@ -20,11 +27,36 @@ import {
 } from "@/infraestructura/supabase/cuenta";
 import { type EstadoConfigNube, diagnosticarEnvPublico } from "@/infraestructura/env";
 import { guardarRespaldoAntesDeLaNube } from "@/infraestructura/respaldo";
-import type { Database } from "@/infraestructura/supabase/database.types";
+import type { Database, Json } from "@/infraestructura/supabase/database.types";
 import { crearNube } from "@/infraestructura/supabase/nube";
+
+/** Asegura que las personas del estado están en la tabla `persona` (con ids UUID estables). */
+async function llevarPersonas(
+  c: SupabaseClient<Database>,
+  hogarId: string,
+  personas: Persona[],
+): Promise<Resultado> {
+  try {
+    const { error } = await aplicarCambiosATablas(
+      c,
+      hogarId,
+      cambiosDePersonas(hogarId, personas) as unknown as Json,
+    );
+    return error ? { ok: false, mensaje: mensajeDeError(error) } : { ok: true };
+  } catch (e) {
+    return { ok: false, mensaje: mensajeDeError({ message: e instanceof Error ? e.message : "" }) };
+  }
+}
 
 export type FaseCuenta = "sin-configurar" | "cargando" | "sin-sesion" | "sin-hogar" | "conectado";
 export type Resultado = { ok: true } | { ok: false; mensaje: string };
+
+/** Qué personas tienen ya cuenta y cuál soy yo (ids tal y como están en el estado de la app). */
+export interface VinculosPersonas {
+  mia: string | null;
+  vinculadas: string[];
+  esAdmin: boolean;
+}
 
 export interface CuentaContexto {
   fase: FaseCuenta;
@@ -38,6 +70,15 @@ export interface CuentaContexto {
   crearHogar: (nombre: string) => Promise<Resultado>;
   unirse: (codigo: string) => Promise<Resultado>;
   invitar: () => Promise<{ ok: true; codigo: string } | { ok: false; mensaje: string }>;
+  /** Lleva las personas a la tabla y dice quién tiene cuenta (D-092). */
+  vinculos: (
+    personas: Persona[],
+  ) => Promise<({ ok: true } & VinculosPersonas) | { ok: false; mensaje: string }>;
+  invitarPersona: (
+    personas: Persona[],
+    personaId: string,
+  ) => Promise<{ ok: true; codigo: string } | { ok: false; mensaje: string }>;
+  vincularme: (personas: Persona[], personaId: string) => Promise<Resultado>;
   salir: () => Promise<void>;
 }
 
@@ -246,6 +287,54 @@ export function useNube(
       return error || !data
         ? { ok: false, mensaje: mensajeDeError(error) }
         : { ok: true, codigo: data };
+    },
+    vinculos: async (personas) => {
+      const c = cliente.current;
+      if (!c || !hogar) return { ok: false, mensaje: "Primero crea el hogar." };
+      const subida = await llevarPersonas(c, hogar.id, personas);
+      if (!subida.ok) return subida;
+      const [lectura, mia] = await Promise.all([
+        leerHogarDeTablas(c, hogar.id),
+        miPersonaEnElHogar(c, hogar.id),
+      ]);
+      if (lectura.error || mia.error) {
+        return { ok: false, mensaje: mensajeDeError(lectura.error ?? mia.error) };
+      }
+      const filas = (
+        lectura.data as { personas?: Array<{ id: string; vinculada: boolean }> } | null
+      )?.personas;
+      const deUuid = new Map(personas.map((p) => [aUuid(hogar.id, p.id), p.id]));
+      return {
+        ok: true,
+        mia: mia.data ? (deUuid.get(mia.data) ?? null) : null,
+        vinculadas: (filas ?? [])
+          .filter((f) => f.vinculada)
+          .map((f) => deUuid.get(f.id))
+          .filter((id): id is string => id !== undefined),
+        esAdmin: hogar.rol === "admin",
+      };
+    },
+    invitarPersona: async (personas, personaId) => {
+      const c = cliente.current;
+      if (!c || !hogar) return { ok: false, mensaje: "Primero crea el hogar." };
+      const subida = await llevarPersonas(c, hogar.id, personas);
+      if (!subida.ok) return subida;
+      const { data, error } = await crearInvitacionDePersona(
+        c,
+        hogar.id,
+        aUuid(hogar.id, personaId),
+      );
+      return error || !data
+        ? { ok: false, mensaje: mensajeDeError(error) }
+        : { ok: true, codigo: data };
+    },
+    vincularme: async (personas, personaId) => {
+      const c = cliente.current;
+      if (!c || !hogar) return { ok: false, mensaje: "Primero crea el hogar." };
+      const subida = await llevarPersonas(c, hogar.id, personas);
+      if (!subida.ok) return subida;
+      const { error } = await vincularmeAPersona(c, hogar.id, aUuid(hogar.id, personaId));
+      return error ? { ok: false, mensaje: mensajeDeError(error) } : { ok: true };
     },
     salir: async () => {
       const c = cliente.current;

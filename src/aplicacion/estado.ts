@@ -83,6 +83,8 @@ import type {
  * operaciones sin cambiar esta lógica.
  */
 
+export const MAX_LARGO_NOMBRE_PERSONA = 60;
+
 export interface ArticuloManual {
   id: string;
   nombre: string;
@@ -180,6 +182,16 @@ export type Accion =
       idBase?: string;
     }
   | { tipo: "cumple/importar"; texto: string; relacion: Relacion; idBase?: string }
+  | {
+      tipo: "persona/guardar";
+      /** Sin `id`, se crea una persona nueva. */
+      id?: string;
+      nombre: string;
+      personaTipo: Persona["tipo"];
+      factorRacion: number;
+      idBase?: string;
+    }
+  | { tipo: "persona/activar"; id: string; activa: boolean }
   | { tipo: "agenda/anadir"; texto: string; personaId: string | null; idBase?: string }
   | { tipo: "agenda/borrar"; id: string }
   | { tipo: "almuerzo/anadir"; fecha: FechaIso; texto?: string; platoId?: string; idBase?: string }
@@ -240,6 +252,7 @@ export type Accion =
 export const ACCIONES_QUE_CREAN = [
   "cumple/anadir",
   "cumple/importar",
+  "persona/guardar",
   "agenda/anadir",
   "almuerzo/anadir",
   "casa/anadir",
@@ -825,6 +838,80 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
         ],
         siguienteId: e.siguienteId + 1,
         aviso: ok(e, `Cumpleaños de ${nombre} guardado.`),
+      };
+    }
+
+    case "persona/guardar": {
+      const nombre = accion.nombre.replace(/\s+/g, " ").trim();
+      const factor = Math.round(accion.factorRacion * 100) / 100;
+      if (
+        nombre === "" ||
+        nombre.length > MAX_LARGO_NOMBRE_PERSONA ||
+        !(factor > 0 && factor <= 2) ||
+        (accion.personaTipo !== "adulto" && accion.personaTipo !== "nino")
+      ) {
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: error(
+            e,
+            `Escribe un nombre (hasta ${MAX_LARGO_NOMBRE_PERSONA} letras) y una ración entre 0,1 y 2.`,
+          ),
+        };
+      }
+      const repetida = e.personas.some(
+        (p) => p.id !== accion.id && claveArticulo(p.nombre) === claveArticulo(nombre),
+      );
+      if (repetida) {
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: error(e, `Ya hay alguien que se llama ${nombre}.`),
+        };
+      }
+      if (accion.id) {
+        if (!e.personas.some((p) => p.id === accion.id)) return e;
+        return {
+          ...e,
+          personas: e.personas.map((p) =>
+            p.id === accion.id
+              ? { ...p, nombre, tipo: accion.personaTipo, factorRacion: factor }
+              : p,
+          ),
+          aviso: ok(e, `${nombre} guardado.`),
+        };
+      }
+      return {
+        ...e,
+        personas: [
+          ...e.personas,
+          {
+            id: idNuevo(accion.idBase, "persona", "0", `p-${e.siguienteId}`),
+            nombre,
+            tipo: accion.personaTipo,
+            factorRacion: factor,
+            activa: true,
+          },
+        ],
+        siguienteId: e.siguienteId + 1,
+        aviso: ok(e, `${nombre} añadido a la familia.`),
+      };
+    }
+
+    case "persona/activar": {
+      const persona = e.personas.find((p) => p.id === accion.id);
+      if (!persona || persona.activa === accion.activa) return e;
+      // Siempre debe quedar alguien que coma en casa.
+      if (!accion.activa && e.personas.filter((p) => p.activa).length <= 1) {
+        return { ...e, aviso: error(e, "Tiene que quedar al menos una persona en casa.") };
+      }
+      return {
+        ...e,
+        personas: e.personas.map((p) => (p.id === accion.id ? { ...p, activa: accion.activa } : p)),
+        aviso: ok(
+          e,
+          accion.activa ? `${persona.nombre} vuelve a contar.` : `${persona.nombre} ya no cuenta.`,
+        ),
       };
     }
 

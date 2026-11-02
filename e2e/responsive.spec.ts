@@ -31,6 +31,7 @@ const RUTAS = [
   "/compartir",
   "/tareas",
   "/cuenta",
+  "/personas",
   "/cumples",
   "/fechas",
   "/casa",
@@ -480,6 +481,22 @@ test.describe("flujos en móvil", () => {
     await pagina.getByRole("button", { name: "Sí, borrar y recargar" }).click();
     await expect(pagina.getByRole("heading", { level: 1, name: /Próximas fechas/ })).toBeVisible();
     await expect(pagina.getByRole("list", { name: "Apuntes" })).toHaveCount(0);
+    await contexto.close();
+  });
+
+  test("familia: añadir a alguien, cambiar su ración y dejar de contarlo", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/personas");
+    await pagina.getByLabel("Nombre", { exact: true }).last().fill("Lola");
+    await pagina.getByRole("button", { name: "Añadir", exact: true }).click();
+    await expect(pagina.getByRole("heading", { name: "Familia" })).toBeVisible();
+    await expect(pagina.locator('input[value="Lola"]')).toHaveCount(1);
+    await pagina.getByRole("button", { name: "Ya no cuenta Lola" }).click();
+    await expect(pagina.getByRole("button", { name: "Volver a contar a Lola" })).toBeVisible();
+    const axe = await new AxeBuilder({ page: pagina })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+      .analyze();
+    expect(axe.violations).toEqual([]);
     await contexto.close();
   });
 

@@ -128,6 +128,11 @@ function filaPersona(h: string, p: Persona): FilaPersona {
   };
 }
 
+/** Las personas como filas, para llevarlas a la tabla (el resto del estado sigue en el documento). */
+export function cambiosDePersonas(hogarId: string, personas: Persona[]): CambiosTablas {
+  return { personas: { upsert: personas.map((p) => filaPersona(hogarId, p)) } };
+}
+
 function regaloDe(c: Cumple): NonNullable<FilaCumple["regalo"]> {
   return {
     estado: c.estado,

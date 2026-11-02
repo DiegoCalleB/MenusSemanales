@@ -64,6 +64,7 @@ export const PILARES: readonly Pilar[] = [
     Icono: IconoOpciones,
     pestanas: [
       { href: "/cuenta", texto: "Cuenta" },
+      { href: "/personas", texto: "Familia" },
       { href: "/compartir", texto: "Enviar" },
     ],
   },
