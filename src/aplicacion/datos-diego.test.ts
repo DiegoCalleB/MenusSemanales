@@ -166,10 +166,16 @@ describe("modo Diego: datos reales de la familia", () => {
     expect(catalogoOrdenado(e, "2027-06-01")).toEqual([]); // fuera de plazo
   });
 
-  it("el cumpleaños de Ana ya está y avisa a menos de un mes", () => {
-    expect(e.cumples.map((c) => c.nombre)).toEqual(["Ana"]);
+  it("los cumpleaños de la familia ya están y el de Ana avisa a menos de un mes", () => {
+    expect(e.cumples.map((c) => [c.nombre, c.dia, c.mes, c.anio])).toEqual([
+      ["Ana", 7, 11, 1984],
+      ["Diego", 3, 1, 1985],
+      ["Alba", 4, 2, 2017],
+      ["Emma", 24, 6, 2021],
+    ]);
     const avisos = cumplesProximos(e);
-    expect(avisos[0]).toMatchObject({ dias: 6, urgencia: "esta-semana" });
+    expect(avisos).toHaveLength(1); // los demás quedan a más de un mes
+    expect(avisos[0]).toMatchObject({ dias: 6, urgencia: "esta-semana", edad: 42 });
   });
 
   it("«hoy» se puede actualizar a la fecha real", () => {
