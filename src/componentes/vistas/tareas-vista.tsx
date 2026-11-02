@@ -4,6 +4,7 @@ import { type FormEvent, useState } from "react";
 import type { FrecuenciaTarea } from "@/dominio/tareas";
 import { estaHecha, resumenDeTareas, tareasDeHoy } from "@/dominio/tareas";
 import { useHogar } from "../proveedor-hogar";
+import { useYo } from "../yo";
 
 /**
  * Las tareas de cada persona de la familia: rutinas que se repiten cada día (dientes, hacer la
@@ -14,7 +15,10 @@ import { useHogar } from "../proveedor-hogar";
 export function TareasVista() {
   const { estado, despachar } = useHogar();
   const personas = estado.personas.filter((p) => p.activa);
-  const [personaId, setPersonaId] = useState(personas[0]?.id ?? "");
+  const [yo] = useYo();
+  const [elegida, setPersonaId] = useState<string | null>(null);
+  // Por defecto, las tareas de quien usa este móvil.
+  const personaId = elegida ?? (personas.some((p) => p.id === yo) ? yo : (personas[0]?.id ?? ""));
   const [texto, setTexto] = useState("");
   const [frecuencia, setFrecuencia] = useState<FrecuenciaTarea>("puntual");
   const [editando, setEditando] = useState(false);

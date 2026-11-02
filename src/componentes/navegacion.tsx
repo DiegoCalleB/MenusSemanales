@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ComponentType, SVGProps } from "react";
+import { articulosPendientes } from "@/aplicacion/estado";
+import { useHogar } from "./proveedor-hogar";
 import { BotonTema } from "./tema";
 import { IconoAgenda, IconoCompra, IconoDespensa, IconoMenu, IconoReparto } from "./iconos";
 
@@ -18,11 +20,33 @@ const ENLACES: ReadonlyArray<{
   { href: "/reparto", texto: "Reparto", Icono: IconoReparto },
 ];
 
+/** Cuántas cosas faltan por comprar (lo calculado y lo apuntado a mano): para acordarse al verlo. */
+function usePendientesDeCompra(): number {
+  const { estado } = useHogar();
+  return articulosPendientes(estado).length + estado.manuales.filter((m) => !m.comprado).length;
+}
+
+function Contador({ n, flotante = false }: { n: number; flotante?: boolean }) {
+  if (n <= 0) return null;
+  return (
+    <>
+      <span
+        aria-hidden="true"
+        className={`bg-marca text-sobre-marca inline-flex min-w-5 items-center justify-center rounded-full px-1 text-xs font-bold ${flotante ? "absolute -top-1 right-0" : "ml-1"}`}
+      >
+        {n > 99 ? "99+" : n}
+      </span>
+      <span className="sr-only"> ({n} pendientes)</span>
+    </>
+  );
+}
+
 const activo = (ruta: string, href: string) => ruta === href || ruta.startsWith(`${href}/`);
 
 /** Móvil: barra de pestañas fija abajo, al alcance del pulgar y respetando la zona segura del iPhone. */
 export function NavegacionInferior() {
   const ruta = usePathname();
+  const pendientes = usePendientesDeCompra();
   return (
     <nav
       aria-label="Principal"
@@ -41,9 +65,10 @@ export function NavegacionInferior() {
                 }`}
               >
                 <span
-                  className={`flex h-8 w-14 items-center justify-center rounded-full ${esActivo ? "bg-suave-1" : ""}`}
+                  className={`relative flex h-8 w-14 items-center justify-center rounded-full ${esActivo ? "bg-suave-1" : ""}`}
                 >
                   <Icono />
+                  {href === "/compra" && <Contador n={pendientes} flotante />}
                 </span>
                 {texto}
               </Link>
@@ -58,6 +83,7 @@ export function NavegacionInferior() {
 /** Tablet y escritorio: barra lateral con el nombre de la app y las secciones. */
 export function NavegacionLateral() {
   const ruta = usePathname();
+  const pendientes = usePendientesDeCompra();
   return (
     <aside className="border-borde bg-superficie sticky top-0 hidden h-dvh w-56 shrink-0 flex-col gap-6 border-r p-4 md:flex lg:w-64">
       <Link
@@ -89,6 +115,7 @@ export function NavegacionLateral() {
                 >
                   <Icono />
                   {texto}
+                  {href === "/compra" && <Contador n={pendientes} />}
                 </Link>
               </li>
             );

@@ -5,6 +5,7 @@ import {
   NOMBRE_CATEGORIA,
   claveArticulo,
   clasificarArticulo,
+  habitualesPorCategoria,
   partirDictado,
   sugerencias,
 } from "./habituales";
@@ -89,5 +90,17 @@ describe("sugerencias de lo de siempre", () => {
   });
   it("los habituales no tienen duplicados", () => {
     expect(new Set(HABITUALES.map(claveArticulo)).size).toBe(HABITUALES.length);
+  });
+});
+
+describe("habitualesPorCategoria", () => {
+  it("agrupa todos los habituales por sección, en orden de tienda y sin perder ninguno", () => {
+    const grupos = habitualesPorCategoria();
+    expect(grupos.flatMap((g) => g.articulos).sort()).toEqual([...HABITUALES].sort());
+    const orden = grupos.map((g) => CATEGORIAS.indexOf(g.categoria));
+    expect(orden).toEqual([...orden].sort((a, b) => a - b));
+    expect(grupos.find((g) => g.categoria === "lacteos")?.articulos).toContain("Kéfir");
+    expect(grupos.find((g) => g.categoria === "higiene")?.articulos).toContain("Pañales");
+    expect(grupos.every((g) => g.articulos.length > 0)).toBe(true);
   });
 });

@@ -211,3 +211,16 @@ export function sugerencias(texto: string, yaEnLista: ReadonlySet<string>, maxim
     return !yaEnLista.has(n) && (n.startsWith(q) || n.split(" ").some((p) => p.startsWith(q)));
   }).slice(0, maximo);
 }
+
+/** Los habituales agrupados por sección del súper, en el orden de la tienda: para repasar la despensa. */
+export function habitualesPorCategoria(): Array<{ categoria: Categoria; articulos: string[] }> {
+  const grupos = new Map<Categoria, string[]>();
+  for (const h of HABITUALES) {
+    const c = clasificarArticulo(h);
+    grupos.set(c, [...(grupos.get(c) ?? []), h]);
+  }
+  return CATEGORIAS.filter((c) => grupos.has(c)).map((c) => ({
+    categoria: c,
+    articulos: grupos.get(c) ?? [],
+  }));
+}

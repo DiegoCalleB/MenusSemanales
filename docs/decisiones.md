@@ -510,3 +510,11 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 ## D-065 · Migraciones `hogar_estado` y `privilegios_minimos` aplicadas en producción
 
 - **Estado:** aplicadas (2026-11-02), versiones `20261102100000` y `20261102100100`. La primera la ejecutó Diego en el editor SQL; la segunda se aplicó con `execute_sql` (una transacción) al ser una corrección de seguridad de mi propio trabajo. Las versiones se anotaron a mano en `supabase_migrations.schema_migrations`.
+
+## D-066 · Repasar qué queda poco, contador de la compra y «¿Quién eres?»
+
+- **Estado:** aceptada (2026-11-02)
+- **Petición de Diego:** que la despensa ayude a acordarse de comprar cuando queda poco de algo.
+- **Decisión:** la familia no lleva el stock al gramo, así que en vez de exigir cantidades, la despensa tiene **«🔎 Revisar qué queda poco»**: los ~70 artículos de siempre agrupados por sección; se toca lo que queda poco y **se apunta a la compra**, y al tocarlo otra vez se quita. Además, la pestaña **Compra** muestra un **contador** con lo pendiente (calculado + apuntado a mano) para acordarse con solo ver la barra. Quien sí lleve cantidades sigue teniendo el stock mínimo automático.
+- **«¿Quién eres?»**: cada móvil recuerda quién lo usa («Soy Ana»), solo en ese móvil. Sirve para saludar por el nombre, abrir sus tareas por defecto, enseñar «Tus tareas de hoy» y, importante, **no enseñar el botón «Preparar un regalo» a nadie que no sea Diego** (para no destripar la sorpresa).
+- **Pendiente:** avisos push («queda poco de leche») cuando haya cuentas, y que «queda poco» recuerde cuántas veces se repite para ordenar «lo de siempre».

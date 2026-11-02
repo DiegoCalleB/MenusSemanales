@@ -11,6 +11,7 @@ import {
   pasoDe,
 } from "../formato";
 import { IconoAlerta, IconoMas, IconoMenos, IconoReloj } from "../iconos";
+import { claveArticulo, habitualesPorCategoria, NOMBRE_CATEGORIA } from "@/dominio/habituales";
 import { useHogar } from "../proveedor-hogar";
 
 export function DespensaVista() {
@@ -89,6 +90,8 @@ export function DespensaVista() {
           </ul>
         </section>
       )}
+
+      <RevisarDespensa />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_20rem] lg:items-start">
         <section aria-label="Existencias" className="flex min-w-0 flex-col gap-4">
@@ -354,5 +357,62 @@ function PanelCocinar() {
         Cocinar y descontar
       </button>
     </section>
+  );
+}
+
+/**
+ * Repaso rápido de la nevera y la despensa sin contar cantidades: se toca lo que queda poco y pasa
+ * a la lista de la compra; si se toca otra vez, sale de la lista. Así no hace falta llevar el
+ * stock al gramo para acordarse de comprar (D-066).
+ */
+function RevisarDespensa() {
+  const { estado, despachar } = useHogar();
+  const pendientes = new Map(
+    estado.manuales.filter((m) => !m.comprado).map((m) => [claveArticulo(m.nombre), m.id]),
+  );
+  return (
+    <details className="tarjeta py-0">
+      <summary className="flex min-h-14 cursor-pointer items-center justify-between gap-2 text-lg font-semibold">
+        <h2>🔎 Revisar qué queda poco</h2>
+        <span className="text-tinta-suave text-base font-normal">
+          {pendientes.size} en la lista
+        </span>
+      </summary>
+      <div className="flex flex-col gap-3 pb-4">
+        <p className="text-tinta-suave text-base">
+          Toca lo que queda poco y se apunta a la compra. Tócalo otra vez para quitarlo.
+        </p>
+        {habitualesPorCategoria().map(({ categoria, articulos }) => (
+          <section key={categoria} aria-label={NOMBRE_CATEGORIA[categoria].nombre}>
+            <h3 className="mb-1 text-base font-bold">
+              <span aria-hidden="true">{NOMBRE_CATEGORIA[categoria].emoji} </span>
+              {NOMBRE_CATEGORIA[categoria].nombre}
+            </h3>
+            <ul className="flex flex-wrap gap-2">
+              {articulos.map((a) => {
+                const id = pendientes.get(claveArticulo(a));
+                return (
+                  <li key={a}>
+                    <button
+                      type="button"
+                      aria-pressed={id !== undefined}
+                      className={id !== undefined ? "boton" : "boton-suave"}
+                      onClick={() =>
+                        id !== undefined
+                          ? despachar({ tipo: "manual/borrar", id })
+                          : despachar({ tipo: "manual/anadir", nombre: a })
+                      }
+                    >
+                      {id !== undefined ? "✓ " : ""}
+                      {a}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ))}
+      </div>
+    </details>
   );
 }

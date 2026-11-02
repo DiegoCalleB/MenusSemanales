@@ -502,6 +502,46 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 
+  test("despensa: repasar qué queda poco lo apunta a la compra y se ve el contador", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/despensa");
+    await pagina.getByText(/Revisar qué queda poco/).click();
+    const kefir = pagina.getByRole("button", { name: /Kéfir/ });
+    await kefir.click();
+    await expect(kefir).toHaveAttribute("aria-pressed", "true");
+    await expect(pagina.getByText(/\d+ en la lista/).first()).toBeVisible();
+    await expect(pagina.getByRole("link", { name: /\(\d+ pendientes\)/ })).toBeVisible();
+    await pagina.getByRole("link", { name: /Compra/ }).click();
+    await expect(pagina.getByRole("checkbox", { name: /Kéfir/ })).toBeVisible();
+    // Tocarlo otra vez lo quita.
+    await pagina.getByRole("link", { name: /Despensa/ }).click();
+    await pagina.getByText(/Revisar qué queda poco/).click();
+    await pagina.getByRole("button", { name: /Kéfir/ }).click();
+    await expect(pagina.getByRole("button", { name: /Kéfir/ })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    await contexto.close();
+  });
+
+  test("quién eres: saluda por el nombre y no enseña el regalo a quien no es Diego", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/");
+    await expect(pagina.getByRole("heading", { level: 2, name: "¿Quién eres?" })).toBeVisible();
+    await expect(pagina.getByRole("link", { name: /Preparar un regalo/ })).toHaveCount(0);
+    await pagina.getByRole("button", { name: "Soy Ana" }).click();
+    await expect(pagina.getByText("¡Hola, Ana! 👋")).toBeVisible();
+    await expect(pagina.getByRole("link", { name: /Preparar un regalo/ })).toHaveCount(0);
+    await pagina.reload({ waitUntil: "networkidle" });
+    await expect(pagina.getByText("¡Hola, Ana! 👋")).toBeVisible();
+    await expect(pagina.getByRole("heading", { level: 2, name: "¿Quién eres?" })).toHaveCount(0);
+    await contexto.close();
+  });
+
   test("añadir un artículo a mano y marcarlo", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/compra");
