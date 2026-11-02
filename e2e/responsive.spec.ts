@@ -27,6 +27,7 @@ const RUTAS = [
   "/calendario",
   "/menu/emergencia",
   "/menu/platos",
+  "/compartir",
   "/compra",
   "/despensa",
   "/reparto",
@@ -396,6 +397,25 @@ test.describe("flujos en móvil", () => {
       .first()
       .click();
     await expect(pagina.getByRole("button", { name: /^Quitar / })).toHaveCount(1);
+    await contexto.close();
+  });
+
+  test("enviar: WhatsApp, copiar y archivo de calendario", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/compartir");
+    const whatsapp = pagina.getByRole("link", { name: "Enviar por WhatsApp" });
+    await expect(whatsapp).toHaveCount(2);
+    expect(await whatsapp.first().getAttribute("href")).toMatch(/^https:\/\/wa\.me\/\?text=/);
+    await pagina.getByText("Ver mensaje").first().click();
+    await expect(pagina.locator("pre").first()).toContainText("Hecho con Menús Semanales");
+    // El archivo de calendario se descarga con eventos de cena.
+    const descarga = pagina.waitForEvent("download");
+    await pagina.getByRole("button", { name: /Calendario \(\.ics\)/ }).click();
+    const archivo = await descarga;
+    expect(archivo.suggestedFilename()).toBe("menus-semanales.ics");
+    await expect(
+      pagina.getByRole("status").filter({ hasText: "Archivo descargado" }),
+    ).toBeVisible();
     await contexto.close();
   });
 

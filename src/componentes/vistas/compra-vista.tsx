@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { type FormEvent, useState } from "react";
 import { articulosPendientes } from "@/aplicacion/estado";
 import type { ArticuloCompra } from "@/dominio/compra";
@@ -77,6 +78,9 @@ export function CompraVista() {
         <h1 className="text-2xl font-extrabold tracking-tight">
           Lista de la compra <span aria-hidden="true">🛒</span>
         </h1>
+        <Link href="/compartir" className="boton-suave w-fit">
+          📤 Enviar la lista
+        </Link>
         <div className="flex items-center gap-3">
           <progress
             max={Math.max(total, 1)}

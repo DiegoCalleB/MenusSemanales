@@ -129,6 +129,9 @@ export function MenuVista() {
         <Link href="/menu/cole" className="boton-suave">
           Cole
         </Link>
+        <Link href="/compartir" className="boton-suave">
+          📤 Enviar
+        </Link>
       </div>
 
       <ul className="flex flex-col gap-2">
