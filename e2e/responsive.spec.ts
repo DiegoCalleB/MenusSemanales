@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import AxeBuilder from "@axe-core/playwright";
 import { type Browser, type Page, expect, test } from "@playwright/test";
 
@@ -667,6 +668,61 @@ test.describe("flujos en móvil", () => {
     await pagina.getByRole("button", { name: "Copiar" }).click();
     await expect(
       pagina.getByRole("status").filter({ hasText: /Copiado|No se ha podido copiar/ }),
+    ).toBeVisible();
+    await contexto.close();
+  });
+
+  test("copia de seguridad: se descarga, se cambia algo, se restaura el archivo y vuelve", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    // Un apunte que sí queremos conservar.
+    await cargar(pagina, "/fechas");
+    await pagina.getByLabel(/Escribe como en una nota/).fill("5 Noviembre Excursión Emma");
+    await pagina.getByRole("button", { name: "Apuntar", exact: true }).click();
+    await expect(pagina.getByRole("list", { name: "Apuntes" })).toBeVisible();
+
+    await pagina.goto("/cuenta", { waitUntil: "networkidle" });
+    const descarga = pagina.waitForEvent("download");
+    await pagina.getByRole("button", { name: "Descargar copia de este móvil" }).click();
+    const archivo = await descarga;
+    expect(archivo.suggestedFilename()).toMatch(
+      /^respaldo-menus-semanales-\d{4}-\d{2}-\d{2}\.json$/,
+    );
+    const ruta = await archivo.path();
+    const contenido = JSON.parse(readFileSync(ruta, "utf8"));
+    expect(contenido).toMatchObject({ app: "menus-semanales", version: 1, motivo: "manual" });
+    expect(contenido.estado.agenda.map((a: { titulo: string }) => a.titulo)).toContain(
+      "Excursión Emma",
+    );
+
+    // Se quita el apunte y se comprueba que ya no está.
+    await pagina.goto("/fechas", { waitUntil: "networkidle" });
+    await pagina.getByRole("button", { name: "Quitar Excursión Emma" }).first().click();
+    await expect(pagina.getByRole("list", { name: "Apuntes" })).toHaveCount(0);
+
+    // Un archivo que no vale se rechaza con un motivo.
+    await pagina.goto("/cuenta", { waitUntil: "networkidle" });
+    const entrada = pagina.locator('input[type="file"]');
+    await entrada.setInputFiles({
+      name: "malo.json",
+      mimeType: "application/json",
+      buffer: Buffer.from("{no json"),
+    });
+    await expect(
+      pagina.getByRole("status").filter({ hasText: /No es un archivo de copia/ }),
+    ).toBeVisible();
+
+    // Restaurar el bueno: pide confirmar y devuelve el apunte.
+    await entrada.setInputFiles(ruta);
+    await expect(
+      pagina.getByRole("alert").filter({ hasText: /sustituye todo lo de este móvil/ }),
+    ).toBeVisible();
+    await pagina.getByRole("button", { name: "Sí, sustituir lo de este móvil" }).click();
+    await expect(pagina.getByRole("status").filter({ hasText: "Copia restaurada" })).toBeVisible();
+    await pagina.goto("/fechas", { waitUntil: "networkidle" });
+    await expect(
+      pagina.getByRole("list", { name: "Apuntes" }).getByText(/Excursión Emma/),
     ).toBeVisible();
     await contexto.close();
   });

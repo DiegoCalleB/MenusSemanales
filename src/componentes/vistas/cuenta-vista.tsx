@@ -3,6 +3,8 @@
 import { ESTADO_NUBE } from "../usar-nube";
 import { type FormEvent, useState } from "react";
 import { enlaceWhatsApp } from "@/dominio/compartir";
+import { DiagnosticoAcceso } from "../diagnostico-acceso";
+import { PanelRespaldo } from "../panel-respaldo";
 import { MODO_DATOS, useCuenta, useHogar } from "../proveedor-hogar";
 
 const ETIQUETA_SYNC = {
@@ -87,6 +89,8 @@ export function CuentaVista() {
 
       {cuenta.fase === "cargando" && <p className="text-base">Comprobando tu sesión…</p>}
 
+      {cuenta.fase === "sin-sesion" && <DiagnosticoAcceso />}
+
       {cuenta.fase === "sin-sesion" && (
         <>
           <EntrarConCorreo cuenta={cuenta} ocupado={ocupado} ejecutar={ejecutar} />
@@ -152,6 +156,8 @@ export function CuentaVista() {
           </button>
         </section>
       )}
+
+      <PanelRespaldo />
     </div>
   );
 }

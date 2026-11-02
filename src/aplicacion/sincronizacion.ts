@@ -34,6 +34,8 @@ export interface EntornoLocal {
   leer: () => EstadoHogar;
   escribir: (estado: EstadoHogar) => void;
   avisar: (estado: EstadoSync) => void;
+  /** Se llama justo antes de que el estado de la nube sustituya al de este dispositivo. */
+  antesDeAdoptar?: (local: EstadoHogar, nube: EstadoHogar) => void;
 }
 
 /** Acciones que no son cambios del hogar: no se sincronizan. */
@@ -84,6 +86,11 @@ export class Sincronizador {
       if (remoto) {
         this.version = remoto.version;
         this.pendientes = [];
+        // Lo de este dispositivo se va a sustituir por lo de la familia: que quede una copia.
+        this.entorno.antesDeAdoptar?.(
+          this.entorno.leer(),
+          desdeNube(remoto.estado, this.entorno.leer()),
+        );
         this.entorno.escribir(desdeNube(remoto.estado, this.entorno.leer()));
         this.entorno.avisar("al-dia");
         return "adoptado";

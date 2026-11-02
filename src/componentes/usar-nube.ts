@@ -19,6 +19,7 @@ import {
   verificarCodigo,
 } from "@/infraestructura/supabase/cuenta";
 import { type EstadoConfigNube, diagnosticarEnvPublico } from "@/infraestructura/env";
+import { guardarRespaldoAntesDeLaNube } from "@/infraestructura/respaldo";
 import type { Database } from "@/infraestructura/supabase/database.types";
 import { crearNube } from "@/infraestructura/supabase/nube";
 
@@ -48,6 +49,16 @@ export const ESTADO_NUBE: EstadoConfigNube = diagnosticarEnvPublico({
 
 /** ¿Está bien configurada la nube en esta versión? */
 export const NUBE_DISPONIBLE = ESTADO_NUBE === "ok";
+
+/** Aviso interno: hay una copia automática nueva (la pantalla de Cuenta la enseña). */
+export const EVENTO_RESPALDOS = "menus-semanales:respaldos";
+const almacenamientoLocal = (): Storage | null => {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+};
 
 const ESPERA_GUARDADO_MS = 800;
 
@@ -92,6 +103,10 @@ export function useNube(
         leer: () => leer.current(),
         escribir: (e) => escribir.current(e),
         avisar: setSync,
+        antesDeAdoptar: (local, remoto) => {
+          const r = guardarRespaldoAntesDeLaNube(almacenamientoLocal(), local, remoto, new Date());
+          if (r === "guardada") window.dispatchEvent(new Event(EVENTO_RESPALDOS));
+        },
       });
       try {
         await s.iniciar();

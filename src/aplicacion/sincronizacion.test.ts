@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { estadoInicialDemo } from "./datos-demo";
 import { type Accion, type EstadoHogar, reducir } from "./estado";
 import {
@@ -198,5 +198,41 @@ describe("estado de la nube guardado antes de existir la agenda", () => {
       estadoInicialDemo(),
     );
     expect(e.agenda).toHaveLength(1);
+  });
+});
+
+describe("antes de adoptar el estado de la nube", () => {
+  it("avisa con el estado del dispositivo y el de la nube, una vez, solo al adoptar", async () => {
+    const nube = new NubeFalsa();
+    const primero = dispositivo(nube);
+    primero.hacer({ tipo: "manual/anadir", nombre: "Leche de la familia" });
+    await primero.d.s.iniciar(); // la nube está vacía: sube, no adopta
+    const llamadas: Array<[string | undefined, string | undefined]> = [];
+    // Un segundo móvil con datos propios distintos.
+    const d2 = {
+      estado: reducir(estadoInicialDemo(), { tipo: "manual/anadir", nombre: "Cosa mía" }),
+    };
+    const s2 = new Sincronizador(nube, {
+      leer: () => d2.estado,
+      escribir: (e) => (d2.estado = e),
+      avisar: () => undefined,
+      antesDeAdoptar: (local, remoto) =>
+        llamadas.push([local.manuales.at(-1)?.nombre, remoto.manuales.at(-1)?.nombre]),
+    });
+    expect(await s2.iniciar()).toBe("adoptado");
+    expect(llamadas).toEqual([["Cosa mía", "Leche de la familia"]]);
+    expect(d2.estado.manuales.at(-1)?.nombre).toBe("Leche de la familia");
+    expect(nombres(d2.estado)).not.toContain("Cosa mía");
+    // El primer móvil subió: no había nada que adoptar ni que avisar.
+    const sin = vi.fn();
+    const nubeVacia = new NubeFalsa();
+    const s3 = new Sincronizador(nubeVacia, {
+      leer: () => estadoInicialDemo(),
+      escribir: () => undefined,
+      avisar: () => undefined,
+      antesDeAdoptar: sin,
+    });
+    expect(await s3.iniciar()).toBe("subido");
+    expect(sin).not.toHaveBeenCalled();
   });
 });
