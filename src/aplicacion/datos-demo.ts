@@ -446,6 +446,7 @@ export function estadoInicialDemo(): EstadoHogar {
     valoraciones: {},
     eventos: {},
     tareas: [],
+    cumples: [],
     saltados: [],
     llegoTarde: [],
     personas,

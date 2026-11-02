@@ -30,6 +30,7 @@ const RUTAS = [
   "/compartir",
   "/tareas",
   "/cuenta",
+  "/cumples",
   "/compra",
   "/despensa",
   "/reparto",
@@ -558,6 +559,60 @@ test.describe("flujos en móvil", () => {
     await pagina.getByLabel("Buscar en todos los platos").fill("pisto");
     await lista.getByRole("button", { name: /^Elegir Pisto/ }).click();
     await expect(pagina.getByRole("button", { name: /^Quitar Pisto/ })).toBeVisible();
+    await contexto.close();
+  });
+
+  test("cumples: añadir, avisar un mes antes, pensar ideas y la sorpresa no se enseña a quien cumple", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/cumples");
+    await pagina.getByLabel("Nombre").fill("Lucas");
+    await pagina.getByLabel(/Fecha/).fill("20/11/2017");
+    await pagina.getByRole("button", { name: "Guardar cumpleaños" }).click();
+    await pagina.getByText("Pegar varios de una vez").click();
+    await pagina.getByLabel(/Uno por línea/).fill("Ana 10/11\nAbuela Rosa 20 de enero");
+    await pagina.getByRole("button", { name: "Guardar todos" }).click();
+    await expect(pagina.getByRole("heading", { level: 2, name: /Lucas/ })).toBeVisible();
+
+    // Fecha mal escrita: lo dice.
+    await pagina.getByLabel("Nombre").fill("Error");
+    await pagina.getByLabel(/Fecha/).fill("31/2");
+    await pagina.getByRole("button", { name: "Guardar cumpleaños" }).click();
+    await expect(
+      pagina.getByRole("alert").filter({ hasText: "No entiendo la fecha" }),
+    ).toBeVisible();
+
+    // Lucas: ideas y estado.
+    await pagina.getByRole("button", { name: /Lucas/ }).click();
+    await pagina
+      .getByRole("button", { name: /^\+ Libro/ })
+      .first()
+      .click();
+    await expect(pagina.getByRole("button", { name: /^Quitar la idea Libro/ })).toBeVisible();
+    await pagina.getByRole("button", { name: "Comprado", exact: true }).click();
+    await expect(pagina.getByRole("button", { name: "Comprado", exact: true })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    // La portada avisa de los que faltan menos de un mes.
+    await pagina.goto("/", { waitUntil: "networkidle" });
+    await expect(pagina.getByRole("heading", { level: 2, name: /Próximos cumples/ })).toBeVisible();
+    await expect(pagina.getByText(/Ana.* en 6 días/)).toBeVisible();
+
+    // Ana no ve las ideas de su propio cumple ni su aviso de regalo.
+    await pagina.getByRole("button", { name: "Soy Ana" }).click();
+    await expect(pagina.getByRole("heading", { level: 2, name: /Próximos cumples/ })).toHaveCount(
+      0,
+    );
+    await pagina.goto("/cumples", { waitUntil: "networkidle" });
+    await pagina
+      .getByRole("button", { name: /^10 NOV|Ana/ })
+      .first()
+      .click();
+    await expect(pagina.getByText(/Es sorpresa/)).toBeVisible();
+    await expect(pagina.getByRole("heading", { level: 3, name: /Ideas para Ana/ })).toHaveCount(0);
     await contexto.close();
   });
 

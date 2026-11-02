@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { type Cumple, estadoVigente } from "@/dominio/cumples";
 import { estadoInicialDemo } from "./datos-demo";
 import {
   type Accion,
@@ -9,6 +10,7 @@ import {
   menuDeLaSemana,
   opcionesParaFecha,
   comidasDe,
+  cumplesProximos,
   reducir,
   repartoDeLaSemana,
   ubicacionDeCompra,
@@ -575,6 +577,94 @@ describe("calendario", () => {
     const grupos = opcionesParaFecha(e, "2026-11-12").map((o) => o.plato.grupo);
     expect(grupos.length).toBeGreaterThan(0);
     for (const g of grupos) expect(["verdura", "pasta", "arroz", "carne", "pescado"]).toContain(g);
+  });
+});
+
+describe("cumpleaños y regalos", () => {
+  const con = (...a: Accion[]) => aplicar(estadoInicialDemo(), ...a);
+  const alba = {
+    tipo: "cumple/anadir",
+    nombre: "Alba",
+    dia: 12,
+    mes: 3,
+    anio: 2017,
+    relacion: "familia",
+  } as const;
+
+  it("guarda un cumpleaños, enlaza con la persona del hogar y no lo repite", () => {
+    const e = con(alba);
+    expect(e.cumples).toHaveLength(1);
+    expect(e.cumples[0]).toMatchObject({
+      nombre: "Alba",
+      dia: 12,
+      mes: 3,
+      anio: 2017,
+      personaId: "alba",
+      estado: "sin-pensar",
+    });
+    const repetido = aplicar(e, { ...alba, nombre: "alba" });
+    expect(repetido.cumples).toHaveLength(1);
+    expect(repetido.aviso?.texto).toBe("alba ya estaba.");
+  });
+
+  it("rechaza fechas imposibles y nombres vacíos", () => {
+    for (const mala of [
+      { ...alba, dia: 31, mes: 4 },
+      { ...alba, mes: 13 },
+      { ...alba, dia: 0 },
+      { ...alba, nombre: "  " },
+    ]) {
+      expect(con(mala).cumples).toEqual([]);
+    }
+  });
+
+  it("importa varias personas de una vez y avisa de lo que no entiende", () => {
+    const e = con({
+      tipo: "cumple/importar",
+      relacion: "cole",
+      texto: "Lucas 3/5/2017, Marta 14/10\nRaro sin fecha",
+    });
+    expect(e.cumples.map((c) => [c.nombre, c.relacion])).toEqual([
+      ["Lucas", "cole"],
+      ["Marta", "cole"],
+    ]);
+    expect(e.aviso?.texto).toBe("Guardados 2. No he entendido: Raro sin fecha.");
+    expect(con({ tipo: "cumple/importar", relacion: "cole", texto: "nada" }).aviso?.tipo).toBe(
+      "error",
+    );
+  });
+
+  it("las ideas se añaden sin repetir, pasan el estado a «idea» y se quitan", () => {
+    let e = con(alba);
+    const id = e.cumples[0]?.id ?? "";
+    e = aplicar(
+      e,
+      { tipo: "cumple/idea", id, texto: "Libro de aventuras" },
+      { tipo: "cumple/idea", id, texto: "libro de aventuras" },
+      { tipo: "cumple/idea", id, texto: "  " },
+    );
+    expect(e.cumples[0]?.ideas).toEqual(["Libro de aventuras"]);
+    expect(e.cumples[0]?.estado).toBe("idea");
+    expect(
+      aplicar(e, { tipo: "cumple/quitarIdea", id, texto: "Libro de aventuras" }).cumples[0]?.ideas,
+    ).toEqual([]);
+  });
+
+  it("el estado del regalo es del año de la próxima celebración y deja de avisar al comprarlo", () => {
+    let e = con({ ...alba, dia: 20, mes: 11 }); // en 16 días desde el 4 de noviembre
+    expect(cumplesProximos(e)).toHaveLength(1);
+    expect(cumplesProximos(e)[0]).toMatchObject({ dias: 16, urgencia: "pensar", edad: 9 });
+    e = aplicar(e, { tipo: "cumple/estado", id: e.cumples[0]?.id ?? "", estado: "comprado" });
+    expect(e.cumples[0]?.anioEstado).toBe(2026);
+    expect(cumplesProximos(e)).toEqual([]);
+    // Al año siguiente vuelve a empezar de cero.
+    const otroAnio = aplicar(e, { tipo: "hogar/hoy", fecha: "2026-11-25" });
+    expect(estadoVigente(otroAnio.cumples[0] as Cumple, otroAnio.hoy)).toBe("sin-pensar");
+  });
+
+  it("borra un cumpleaños", () => {
+    const e = con(alba);
+    expect(aplicar(e, { tipo: "cumple/borrar", id: e.cumples[0]?.id ?? "" }).cumples).toEqual([]);
   });
 });
 

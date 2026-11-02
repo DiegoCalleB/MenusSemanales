@@ -2,7 +2,7 @@ import type { AlmacenHogar } from "@/aplicacion/almacen";
 import type { EstadoHogar } from "@/aplicacion/estado";
 
 /** Súbela cuando cambie la forma del estado: lo guardado con otra versión se descarta. */
-export const VERSION_ALMACEN = 6;
+export const VERSION_ALMACEN = 7;
 const CLAVE = "menus-semanales:prueba";
 
 const COLECCIONES = [
@@ -21,6 +21,7 @@ const COLECCIONES = [
   "llegoTarde",
   "saltados",
   "tareas",
+  "cumples",
 ] as const;
 
 /** Comprobación estructural mínima: lo guardado es del propio usuario, pero puede ser antiguo o estar roto. */

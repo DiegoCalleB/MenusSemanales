@@ -5,7 +5,10 @@ import { comidasDe, proximoDiaConCole } from "@/aplicacion/estado";
 import { diasEntre } from "@/dominio/fechas";
 import { TarjetaCole, fechaCorta } from "../cole";
 import { EMOJI_GRUPO } from "../formato";
+import { cumplesProximos } from "@/aplicacion/estado";
+import { TEXTO_URGENCIA } from "@/dominio/cumples";
 import { useHogar } from "../proveedor-hogar";
+import { AyudaInstalarIos } from "../instalar-ios";
 import { useYo } from "../yo";
 import { resumenDeTareas } from "@/dominio/tareas";
 
@@ -23,6 +26,8 @@ export function InicioVista() {
     .sort(([a], [b]) => a.localeCompare(b))[0];
   const faltan = proximo ? diasEntre(estado.hoy, proximo[0]) : 0;
   const diaCole = proximoDiaConCole(estado, estado.hoy);
+  // A quien cumple no se le enseñan los avisos de su propio regalo.
+  const avisosCumples = cumplesProximos(estado).filter((a) => !yo || a.cumple.personaId !== yo.id);
 
   return (
     <div className="flex flex-col gap-4">
@@ -61,8 +66,34 @@ export function InicioVista() {
           <Link href="/tareas" className="boton-suave">
             🧹 Zafarrancho
           </Link>
+          <Link href="/cumples" className="boton-suave">
+            🎂 Cumples
+          </Link>
         </div>
       </section>
+
+      <AyudaInstalarIos />
+
+      {avisosCumples.length > 0 && (
+        <section aria-labelledby="cumples" className="tarjeta flex flex-col gap-2">
+          <h2 id="cumples" className="text-lg font-extrabold">
+            🎁 Próximos cumples
+          </h2>
+          <ul className="flex flex-col gap-1">
+            {avisosCumples.slice(0, 3).map((a) => (
+              <li key={a.cumple.id} className="text-base">
+                <strong>{a.cumple.nombre}</strong>
+                {a.edad !== null && ` (${a.edad})`} ·{" "}
+                {a.dias === 0 ? "¡hoy!" : a.dias === 1 ? "mañana" : `en ${a.dias} días`}
+                <span className="text-tinta-suave block text-sm">{TEXTO_URGENCIA[a.urgencia]}</span>
+              </li>
+            ))}
+          </ul>
+          <Link href="/cumples" className="boton-suave w-fit">
+            Pensar los regalos
+          </Link>
+        </section>
+      )}
 
       {!yo && adultos.length > 0 && (
         <section aria-labelledby="quien" className="tarjeta flex flex-col gap-2">

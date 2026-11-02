@@ -527,3 +527,22 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **Qué mira:** la semana completa (de lunes a domingo) con el cole y las cenas ya elegidas **antes y después** de ese día, y los dos días vecinos. No mira todavía el equilibrio entre semanas distintas.
 - **Comidas:** solo se planifican cenas. La comida de lunes a viernes es la del cole (ya contada en el equilibrio); las comidas de fin de semana en casa no están modeladas todavía.
 - **Pendiente:** modelar la comida de fin de semana y que el equilibrio mire los 7 días anteriores aunque caigan en la semana pasada.
+
+## D-068 · Cumpleaños de todos y avisos con un mes de margen
+
+- **Estado:** aceptada (2026-11-02)
+- **Petición de Diego:** meter las fechas de cumpleaños de todos y que **un mes antes** avise a todos o a los interesados para ir pensando regalos, con propuestas.
+- **Decisión:** pantalla `/cumples` («🎂 Cumples y regalos»): alta de uno en uno o **pegando varios** («Alba 12/3/2017», «Abuela Rosa 20 de enero»), con relación (familia, amigo, cole), gustos y año de nacimiento (para saber la edad). Por cada cumpleaños: **estado del regalo** (sin pensar, con idea, comprado, entregado; se reinicia cada año), **ideas propias** y **propuestas** según la edad y los gustos (`ideasDeRegalo`: categorías, no productos inventados).
+- **Avisos:** a **30 días** «Empezad a pensar el regalo», a **14** «Hay que comprar», a **7** «Esta semana», y el propio día. Salen en la **portada** («🎁 Próximos cumples») y dejan de salir cuando el regalo está comprado. Además, el **archivo de calendario (.ics)** incluye cada cumpleaños y sus dos avisos como **eventos anuales con alarma a las 9:00**, de modo que el móvil avisa solo, sin abrir la app y cada año.
+- **Sorpresa:** a quien cumple (la persona del hogar con ese nombre) **no se le enseñan** las ideas, el estado del regalo ni el aviso («🙈 Es sorpresa»). Las niñas no tienen móvil, así que la protección es para el uso compartido de los dispositivos de los padres; ver el plan para el secreto fuerte.
+- **Datos:** solo se conoce el cumpleaños de Ana (7 de noviembre); el resto lo añade la familia. La app marca los miembros del hogar sin fecha.
+- **Límites:** los avisos dentro de la app solo se ven al abrirla; el aviso sin abrir depende del calendario del móvil. Las notificaciones push quedan para más adelante. Las ideas son genéricas: una IA podrá personalizarlas con lo que se sepa de cada persona (D-041).
+
+## D-069 · iPhone: lo que cambia
+
+- **Estado:** aceptada (2026-11-02). Ana usa iPhone.
+- **Instalar en la pantalla de inicio** («Compartir → Añadir a pantalla de inicio»): la app se abre a pantalla completa y, además, **Safari borra los datos de las páginas web que no se usan en 7 días** pero no los de las apps instaladas. La portada enseña una ayuda para hacerlo, solo en iPhone/iPad y mientras no esté instalada. Se añadieron los iconos (`apple-icon.png`, `icon.png`, 192 y 512) y se actualizaron los colores del manifiesto.
+- **La app instalada tiene almacenamiento aparte de Safari:** una sesión iniciada en Safari **no** pasa a la app del icono. Hay que entrar y unirse al hogar **dentro de la app instalada**.
+- **Avisos:** las notificaciones push en iOS solo existen para apps instaladas (iOS 16.4 o posterior) y con permiso. Por eso la vía fiable son las alarmas del **calendario** (el archivo `.ics` se abre en Calendario con «Añadir todos»).
+- **Voz:** el botón 🎤 de la app puede no funcionar en Safari; el dictado del teclado de iOS funciona igual porque el campo acepta varias cosas separadas por comas o «y».
+- **Sin verificar:** solo se ha probado con Chromium; **no se ha probado en un iPhone real ni con WebKit**. Es la primera cosa que hay que revisar en un dispositivo.

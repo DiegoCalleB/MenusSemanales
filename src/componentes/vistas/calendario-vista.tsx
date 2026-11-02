@@ -9,6 +9,7 @@ import {
   nombreDia,
   opcionesParaFecha,
 } from "@/aplicacion/estado";
+import { fechaEnAnio } from "@/dominio/cumples";
 import { diaSemanaIso, sumarDias, type FechaIso } from "@/dominio/fechas";
 import { EMOJI_GRUPO } from "../formato";
 import { TarjetaCole } from "../cole";
@@ -54,6 +55,13 @@ export function CalendarioVista() {
   const [sel, setSel] = useState<FechaIso>(estado.hoy);
 
   const [anio, nMes] = mes.split("-").map(Number);
+  // Fechas señaladas y cumpleaños del año que se está viendo.
+  const eventos: Record<string, { titulo: string; emoji: string }> = { ...estado.eventos };
+  for (const c of estado.cumples) {
+    for (const a of [(anio ?? 2026) - 1, anio ?? 2026, (anio ?? 2026) + 1]) {
+      eventos[fechaEnAnio(a, c.mes, c.dia)] ??= { titulo: `Cumple de ${c.nombre}`, emoji: "🎂" };
+    }
+  }
   const diasEnMes = new Date(Date.UTC(anio ?? 2026, nMes ?? 1, 0)).getUTCDate();
   const huecos = diaSemanaIso(mes) - 1;
   const celdas: Array<FechaIso | null> = [
@@ -143,7 +151,7 @@ export function CalendarioVista() {
                       {largo(f)}
                       {esHoy && " (hoy)"}
                       {estado.colegio[f] && <span> 🎒</span>}
-                      {estado.eventos[f] && <span> {estado.eventos[f]?.emoji}</span>}
+                      {eventos[f] && <span> {eventos[f]?.emoji}</span>}
                     </span>
                     <span className="truncate text-sm font-normal">
                       {cena
@@ -166,7 +174,7 @@ export function CalendarioVista() {
               if (!f) return <div key={`h${i}`} aria-hidden="true" />;
               const cena = cenaDe(f);
               const hayCole = estado.colegio[f] !== undefined;
-              const evento = estado.eventos[f];
+              const evento = eventos[f];
               const esHoy = f === estado.hoy;
               const esSel = f === sel;
               const pasado = f < estado.hoy;
@@ -220,10 +228,10 @@ export function CalendarioVista() {
             )}
           </div>
 
-          {estado.eventos[sel] && (
+          {eventos[sel] && (
             <p className="bg-suave-1 rounded-2xl p-3 text-base font-bold">
-              <span aria-hidden="true">{estado.eventos[sel]?.emoji} </span>
-              {estado.eventos[sel]?.titulo}
+              <span aria-hidden="true">{eventos[sel]?.emoji} </span>
+              {eventos[sel]?.titulo}
             </p>
           )}
 

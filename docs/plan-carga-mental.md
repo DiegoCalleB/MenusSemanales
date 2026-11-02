@@ -105,3 +105,9 @@ Un panel neutro con la carga de cada uno **incluyendo la invisible** (acordarse,
 - **Privacidad de menores** (D-029): los regalos y los dientes son datos de las niñas; hay que revisarlo antes de abrir la app a otras familias.
 - **Secreto frente a sincronización:** hoy todo el plan viaja en un documento único; los regalos no deben ir ahí.
 - **Qué usar para avisar** (calendario, push, correo o WhatsApp), y **quién lleva qué** de lo recurrente: se decide con los dos.
+
+## 7. Respuestas de Diego y lo que cambian (2026-11-02)
+
+- **Las niñas no tienen móvil.** El secreto de los regalos no necesita, por ahora, modo infantil por dispositivo: basta con ocultar a la persona que cumple su propia sorpresa (ya hecho en cumpleaños) y con que las ideas estén recogidas cuando se comparte la pantalla. El PIN y el almacenamiento separado quedan para cuando la sección Regalos sea mayor.
+- **Ana usa iPhone.** Los avisos fiables son los del calendario de Apple; las notificaciones push solo funcionan con la app instalada. Ver D-069.
+- **Cumpleaños de todos con aviso a un mes:** hecho (D-068). Falta que la familia añada las fechas.

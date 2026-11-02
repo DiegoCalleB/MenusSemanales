@@ -685,6 +685,22 @@ export function estadoModoDiego(hoy: string): EstadoHogar {
     eventos: { [FECHA_CUMPLE_ANA]: { titulo: "Cumpleaños de Ana", emoji: "🎂" } },
     // El lunes 2 no hay menú del cole y la planificación de ahora es de martes a viernes.
     saltados: ["2026-11-02"],
+    // Solo se conoce el cumpleaños de Ana; el resto de fechas las añade la familia en «Cumples».
+    cumples: [
+      {
+        id: "c-ana",
+        nombre: "Ana",
+        dia: 7,
+        mes: 11,
+        anio: null,
+        relacion: "familia",
+        personaId: "ana",
+        gustos: [],
+        ideas: [],
+        estado: "sin-pensar",
+        anioEstado: null,
+      },
+    ],
     tareas: TAREAS_FAMILIA.map(([personaId, frecuencia, texto], i) => ({
       id: `t-${i}`,
       personaId,

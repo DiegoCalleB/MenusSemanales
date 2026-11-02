@@ -21,6 +21,14 @@ import {
   clasificarArticulo,
   partirDictado,
 } from "@/dominio/habituales";
+import {
+  type Cumple,
+  type EstadoRegalo,
+  type Relacion,
+  avisosDeCumples,
+  parsearCumples,
+  proximaFecha,
+} from "@/dominio/cumples";
 import { type FrecuenciaTarea, type Tarea, alternarTarea } from "@/dominio/tareas";
 import { contarSemana } from "@/dominio/equilibrio";
 import { faltanComponentes } from "@/dominio/componentes";
@@ -114,6 +122,8 @@ export interface EstadoHogar {
   valoraciones: Record<string, Record<string, number>>;
   /** Fechas señaladas (cumpleaños, fiestas): se ven en el calendario y no se autocompletan. */
   eventos: Record<FechaIso, { titulo: string; emoji: string }>;
+  /** Cumpleaños (familia, amigos, cole) con las ideas y el estado del regalo. */
+  cumples: Cumple[];
   /** Tareas de cada persona (rutinas diarias y cosas puntuales). */
   tareas: Tarea[];
   /** Días en que no se planifica cena en casa (salir, comer fuera, no hace falta). */
@@ -141,6 +151,21 @@ export type Accion =
   | { tipo: "tirarCaducado"; ingredienteId: string; ubicacion: Ubicacion }
   | { tipo: "deshacer"; operacionId: string }
   | { tipo: "menu/elegir"; fecha: FechaIso; platoId: string }
+  | {
+      tipo: "cumple/anadir";
+      nombre: string;
+      dia: number;
+      mes: number;
+      anio?: number | null;
+      relacion: Relacion;
+      gustos?: string[];
+      personaId?: string | null;
+    }
+  | { tipo: "cumple/importar"; texto: string; relacion: Relacion }
+  | { tipo: "cumple/borrar"; id: string }
+  | { tipo: "cumple/idea"; id: string; texto: string }
+  | { tipo: "cumple/quitarIdea"; id: string; texto: string }
+  | { tipo: "cumple/estado"; id: string; estado: EstadoRegalo }
   | { tipo: "tarea/anadir"; personaId: string; texto: string; frecuencia: FrecuenciaTarea }
   | { tipo: "tarea/alternar"; id: string }
   | { tipo: "tarea/borrar"; id: string }
@@ -240,6 +265,10 @@ export function catalogoOrdenado(e: EstadoHogar, fecha: FechaIso, anadir = false
     ...(anadir ? { complemento: true, excluirPlatos: ya.map((c) => c.plato.id) } : {}),
   });
 }
+
+/** Cumpleaños a menos de un mes con su urgencia (pensar, comprar, esta semana, hoy). */
+export const cumplesProximos = (e: EstadoHogar, dias = 30) =>
+  avisosDeCumples(e.cumples, e.hoy, dias);
 
 /** Máximo de platos en una misma cena. */
 export const MAX_PLATOS_POR_CENA = 3;
@@ -645,6 +674,123 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
         ),
       };
     }
+
+    case "cumple/anadir": {
+      const nombre = accion.nombre.trim();
+      const maxDia = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][accion.mes - 1];
+      if (
+        nombre === "" ||
+        nombre.length > 60 ||
+        !maxDia ||
+        !Number.isInteger(accion.dia) ||
+        accion.dia < 1 ||
+        accion.dia > maxDia
+      ) {
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: error(e, "Revisa el nombre y la fecha."),
+        };
+      }
+      if (
+        e.cumples.some(
+          (c) =>
+            claveArticulo(c.nombre) === claveArticulo(nombre) &&
+            c.dia === accion.dia &&
+            c.mes === accion.mes,
+        )
+      ) {
+        return { ...e, siguienteId: e.siguienteId + 1, aviso: ok(e, `${nombre} ya estaba.`) };
+      }
+      const persona =
+        accion.personaId ??
+        e.personas.find((p) => claveArticulo(p.nombre) === claveArticulo(nombre))?.id ??
+        null;
+      return {
+        ...e,
+        cumples: [
+          ...e.cumples,
+          {
+            id: `c-${e.siguienteId}`,
+            nombre,
+            dia: accion.dia,
+            mes: accion.mes,
+            anio: accion.anio ?? null,
+            relacion: accion.relacion,
+            personaId: persona,
+            gustos: (accion.gustos ?? [])
+              .map((g) => g.trim())
+              .filter(Boolean)
+              .slice(0, 10),
+            ideas: [],
+            estado: "sin-pensar",
+            anioEstado: null,
+          },
+        ],
+        siguienteId: e.siguienteId + 1,
+        aviso: ok(e, `Cumpleaños de ${nombre} guardado.`),
+      };
+    }
+
+    case "cumple/importar": {
+      const { validos, erroneos } = parsearCumples(accion.texto);
+      let actual = e;
+      for (const v of validos) {
+        actual = reducir(actual, { tipo: "cumple/anadir", relacion: accion.relacion, ...v });
+      }
+      const nuevos = actual.cumples.length - e.cumples.length;
+      const texto =
+        erroneos.length > 0
+          ? `Guardados ${nuevos}. No he entendido: ${erroneos.join("; ")}.`
+          : `Guardados ${nuevos} cumpleaños.`;
+      return {
+        ...actual,
+        siguienteId: actual.siguienteId + 1,
+        aviso: nuevos === 0 && erroneos.length > 0 ? error(actual, texto) : ok(actual, texto),
+      };
+    }
+
+    case "cumple/borrar":
+      return { ...e, cumples: e.cumples.filter((c) => c.id !== accion.id) };
+
+    case "cumple/idea": {
+      const texto = accion.texto.trim().slice(0, 120);
+      if (texto === "") return e;
+      return {
+        ...e,
+        cumples: e.cumples.map((c) =>
+          c.id === accion.id && !c.ideas.some((i) => claveArticulo(i) === claveArticulo(texto))
+            ? {
+                ...c,
+                ideas: [...c.ideas, texto].slice(0, 30),
+                estado: c.estado === "sin-pensar" ? "idea" : c.estado,
+              }
+            : c,
+        ),
+      };
+    }
+
+    case "cumple/quitarIdea":
+      return {
+        ...e,
+        cumples: e.cumples.map((c) =>
+          c.id === accion.id ? { ...c, ideas: c.ideas.filter((i) => i !== accion.texto) } : c,
+        ),
+      };
+
+    case "cumple/estado":
+      return {
+        ...e,
+        cumples: e.cumples.map((c) =>
+          c.id === accion.id
+            ? {
+                ...c,
+                estado: accion.estado,
+                anioEstado: Number(proximaFecha(c, e.hoy).slice(0, 4)),
+              }
+            : c,
+        ),
+      };
 
     case "tarea/anadir": {
       const persona = e.personas.find((p) => p.id === accion.personaId && p.activa);

@@ -3,7 +3,8 @@ import {
   type EventoCalendario,
   type SeccionCompra,
 } from "@/dominio/compartir";
-import { type FechaIso } from "@/dominio/fechas";
+import { type FechaIso, sumarDias } from "@/dominio/fechas";
+import { proximaFecha } from "@/dominio/cumples";
 import { CATEGORIAS, NOMBRE_CATEGORIA, clasificarArticulo } from "@/dominio/habituales";
 import { EMOJI_GRUPO, cantidadEnTexto } from "@/dominio/texto";
 import { SECCIONES } from "@/dominio/tipos";
@@ -116,6 +117,34 @@ export function eventosDeCalendario(e: EstadoHogar): EventoCalendario[] {
     }
     const ev = e.eventos[fecha];
     if (ev) eventos.push({ fecha, titulo: `${ev.emoji} ${ev.titulo}`, descripcion: ev.titulo });
+  }
+  // Cumpleaños: el día, y los avisos para pensar (30 días antes) y comprar (14 antes) el regalo.
+  // Se repiten cada año, así el móvil avisa solo sin tener que abrir la app.
+  for (const c of e.cumples) {
+    const dia = proximaFecha(c, e.hoy);
+    eventos.push(
+      {
+        fecha: dia,
+        titulo: `🎂 Cumple de ${c.nombre}`,
+        descripcion: `Cumpleaños de ${c.nombre}`,
+        anual: true,
+        aviso: true,
+      },
+      {
+        fecha: sumarDias(dia, -30),
+        titulo: `🎁 Pensar el regalo de ${c.nombre}`,
+        descripcion: `Faltan 30 días para el cumple de ${c.nombre}: ¡a pensar ideas!`,
+        anual: true,
+        aviso: true,
+      },
+      {
+        fecha: sumarDias(dia, -14),
+        titulo: `🎁 Comprar el regalo de ${c.nombre}`,
+        descripcion: `Faltan 14 días para el cumple de ${c.nombre}: hay que comprar el regalo.`,
+        anual: true,
+        aviso: true,
+      },
+    );
   }
   return eventos;
 }

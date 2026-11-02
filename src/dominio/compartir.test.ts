@@ -87,6 +87,25 @@ describe("archivo de calendario", () => {
     expect(ics).toContain("UID:20261130-0@menus-semanales");
     expect(ics.split("\r\n").every((l) => !l.includes("\n"))).toBe(true);
   });
+  it("un evento anual lleva su regla de repetición", () => {
+    const anual = generarIcs(
+      "x",
+      [{ fecha: "2026-11-07", titulo: "🎂 Cumple de Ana", descripcion: "", anual: true }],
+      new Date(0),
+    );
+    expect(anual).toContain("RRULE:FREQ=YEARLY");
+    expect(ics).not.toContain("RRULE");
+  });
+  it("un evento con aviso lleva una alarma a las 9:00 del propio día", () => {
+    const con = generarIcs(
+      "x",
+      [{ fecha: "2026-11-07", titulo: "Pensar", descripcion: "d", aviso: true }],
+      new Date(0),
+    );
+    expect(con).toContain("BEGIN:VALARM\r\nACTION:DISPLAY");
+    expect(con).toContain("TRIGGER:PT9H");
+    expect(ics).not.toContain("VALARM");
+  });
   it("escapa comas, puntos y coma, barras y saltos de línea", () => {
     expect(ics).toContain("X-WR-CALNAME:Cenas\; de\\, casa");
     expect(ics).toContain("SUMMARY:🍽️ Cena: Tortilla\\, ensalada");

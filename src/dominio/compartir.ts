@@ -77,6 +77,10 @@ export interface EventoCalendario {
   fecha: FechaIso;
   titulo: string;
   descripcion: string;
+  /** Se repite cada año (cumpleaños y sus avisos). */
+  anual?: boolean;
+  /** Con aviso en el móvil a las 9:00 del propio día (el calendario lo muestra como notificación). */
+  aviso?: boolean;
 }
 
 const escaparIcs = (t: string) =>
@@ -128,8 +132,19 @@ export function generarIcs(
       `DTSTAMP:${sello}`,
       `DTSTART;VALUE=DATE:${sinGuiones(e.fecha)}`,
       `DTEND;VALUE=DATE:${sinGuiones(sumarDias(e.fecha, 1))}`,
+      ...(e.anual ? ["RRULE:FREQ=YEARLY"] : []),
       `SUMMARY:${escaparIcs(e.titulo)}`,
       `DESCRIPTION:${escaparIcs(e.descripcion)}`,
+      ...(e.aviso
+        ? [
+            "BEGIN:VALARM",
+            "ACTION:DISPLAY",
+            `DESCRIPTION:${escaparIcs(e.titulo)}`,
+            // En eventos de todo el día, el aviso se cuenta desde las 00:00: +9 horas = 9:00.
+            "TRIGGER:PT9H",
+            "END:VALARM",
+          ]
+        : []),
       "END:VEVENT",
     );
   });

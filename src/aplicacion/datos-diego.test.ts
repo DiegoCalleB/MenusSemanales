@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { validarPlato } from "@/dominio/catalogo";
 import { calcularCompra } from "@/dominio/compra";
-import { catalogoOrdenado, explicacionDe } from "./estado";
+import { catalogoOrdenado, cumplesProximos, explicacionDe } from "./estado";
 import { opcionesParaFecha } from "./estado";
 import { type Accion, type EstadoHogar, articulosPendientes, diasDelMenu, reducir } from "./estado";
 import { estadoModoDiego, FECHA_CUMPLE_ANA } from "./datos-diego";
@@ -164,6 +164,12 @@ describe("modo Diego: datos reales de la familia", () => {
     const burger = todos.find((o) => o.plato.id === "hamburguesas-ternera");
     expect(burger?.rechazos.some((r) => r.tipo === "cole")).toBe(true);
     expect(catalogoOrdenado(e, "2027-06-01")).toEqual([]); // fuera de plazo
+  });
+
+  it("el cumpleaños de Ana ya está y avisa a menos de un mes", () => {
+    expect(e.cumples.map((c) => c.nombre)).toEqual(["Ana"]);
+    const avisos = cumplesProximos(e);
+    expect(avisos[0]).toMatchObject({ dias: 6, urgencia: "esta-semana" });
   });
 
   it("«hoy» se puede actualizar a la fecha real", () => {
