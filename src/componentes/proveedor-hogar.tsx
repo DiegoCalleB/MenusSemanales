@@ -15,7 +15,7 @@ import {
 import type { AlmacenHogar } from "@/aplicacion/almacen";
 import { estadoInicialDemo } from "@/aplicacion/datos-demo";
 import { estadoModoDiego } from "@/aplicacion/datos-diego";
-import { type Accion, type EstadoHogar, reducir } from "@/aplicacion/estado";
+import { type Accion, type EstadoHogar, conIdBase, reducir } from "@/aplicacion/estado";
 import { crearAlmacenLocal } from "@/infraestructura/almacen-local";
 import { type CuentaContexto, useNube } from "./usar-nube";
 
@@ -68,7 +68,10 @@ export function ProveedorHogar({
   );
   // Cada cambio se aplica al instante en este dispositivo y se apunta para subirlo a la nube.
   const despachar = useCallback(
-    (accion: Accion) => {
+    (original: Accion) => {
+      // El id de lo que se cree se decide aquí, una sola vez, para que sea el mismo en este
+      // dispositivo, en la nube y en cualquier repetición de la acción (D-089).
+      const accion = conIdBase(original, () => crypto.randomUUID());
       despacharLocal(accion);
       registrar(accion);
     },

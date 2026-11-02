@@ -41,6 +41,7 @@ import {
   repartirEntre,
 } from "@/dominio/casa";
 import { contarSemana } from "@/dominio/equilibrio";
+import { idDerivado } from "@/dominio/identificadores";
 import { faltanComponentes } from "@/dominio/componentes";
 import { explicarOpcion, type ExplicacionOpcion } from "@/dominio/explicacion";
 import { cenaDeEmergencia, type OpcionEmergencia } from "@/dominio/emergencia";
@@ -176,14 +177,21 @@ export type Accion =
       relacion: Relacion;
       gustos?: string[];
       personaId?: string | null;
+      idBase?: string;
     }
-  | { tipo: "cumple/importar"; texto: string; relacion: Relacion }
-  | { tipo: "agenda/anadir"; texto: string; personaId: string | null }
+  | { tipo: "cumple/importar"; texto: string; relacion: Relacion; idBase?: string }
+  | { tipo: "agenda/anadir"; texto: string; personaId: string | null; idBase?: string }
   | { tipo: "agenda/borrar"; id: string }
-  | { tipo: "almuerzo/anadir"; fecha: FechaIso; texto?: string; platoId?: string }
+  | { tipo: "almuerzo/anadir"; fecha: FechaIso; texto?: string; platoId?: string; idBase?: string }
   | { tipo: "almuerzo/borrar"; id: string }
-  | { tipo: "casa/anadir"; titulo: string; cadaDias: number; responsableId: string | null }
-  | { tipo: "casa/plantilla"; conjunto?: ConjuntoCasa }
+  | {
+      tipo: "casa/anadir";
+      titulo: string;
+      cadaDias: number;
+      responsableId: string | null;
+      idBase?: string;
+    }
+  | { tipo: "casa/plantilla"; conjunto?: ConjuntoCasa; idBase?: string }
   | { tipo: "casa/aListaCompra"; id: string }
   | { tipo: "casa/hecha"; id: string }
   | { tipo: "casa/aplazar"; id: string }
@@ -194,7 +202,13 @@ export type Accion =
   | { tipo: "cumple/idea"; id: string; texto: string }
   | { tipo: "cumple/quitarIdea"; id: string; texto: string }
   | { tipo: "cumple/estado"; id: string; estado: EstadoRegalo }
-  | { tipo: "tarea/anadir"; personaId: string; texto: string; frecuencia: FrecuenciaTarea }
+  | {
+      tipo: "tarea/anadir";
+      personaId: string;
+      texto: string;
+      frecuencia: FrecuenciaTarea;
+      idBase?: string;
+    }
   | { tipo: "tarea/alternar"; id: string }
   | { tipo: "tarea/borrar"; id: string }
   | { tipo: "menu/anadir"; fecha: FechaIso; platoId: string }
@@ -216,6 +230,38 @@ export type Accion =
   | { tipo: "reparto/asignarResponsable"; cargaId: string; personaId: string | null }
   | { tipo: "reparto/proponerRotacion" }
   | { tipo: "reparto/estadoTurno"; cargaId: string; fecha: FechaIso; estado: Turno["estado"] };
+
+/**
+ * Acciones que crean filas guardadas en tablas. Quien despacha les pone un `idBase` (UUID) y el
+ * reductor deriva de él el id de cada fila, de modo que el resultado no depende de ningún
+ * contador y repetir la acción da los mismos ids (D-089). Sin `idBase` (tests, datos antiguos)
+ * se usa el contador de siempre.
+ */
+export const ACCIONES_QUE_CREAN = [
+  "cumple/anadir",
+  "cumple/importar",
+  "agenda/anadir",
+  "almuerzo/anadir",
+  "casa/anadir",
+  "casa/plantilla",
+  "tarea/anadir",
+] as const;
+
+export function conIdBase<A extends Accion>(accion: A, nuevoId: () => string): A {
+  if (!(ACCIONES_QUE_CREAN as readonly string[]).includes(accion.tipo)) return accion;
+  if ("idBase" in accion && accion.idBase) return accion;
+  return { ...accion, idBase: nuevoId() };
+}
+
+/** Id de una fila nueva: derivado del `idBase` de la acción o, sin él, el de contador de siempre. */
+function idNuevo(
+  idBase: string | undefined,
+  prefijo: string,
+  clave: string,
+  antiguo: string,
+): string {
+  return idBase ? idDerivado(idBase, `${prefijo}:${clave}`) : antiguo;
+}
 
 // --------------------------------------------------------------------------------------------
 // Consultas (derivan datos del estado; no lo modifican)
@@ -761,7 +807,7 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
         cumples: [
           ...e.cumples,
           {
-            id: `c-${e.siguienteId}`,
+            id: idNuevo(accion.idBase, "cumple", "0", `c-${e.siguienteId}`),
             nombre,
             dia: accion.dia,
             mes: accion.mes,
@@ -785,9 +831,14 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
     case "cumple/importar": {
       const { validos, erroneos } = parsearCumples(accion.texto);
       let actual = e;
-      for (const v of validos) {
-        actual = reducir(actual, { tipo: "cumple/anadir", relacion: accion.relacion, ...v });
-      }
+      validos.forEach((v, i) => {
+        actual = reducir(actual, {
+          tipo: "cumple/anadir",
+          relacion: accion.relacion,
+          ...v,
+          ...(accion.idBase ? { idBase: idDerivado(accion.idBase, `importar:${i}`) } : {}),
+        });
+      });
       const nuevos = actual.cumples.length - e.cumples.length;
       const texto =
         erroneos.length > 0
@@ -830,11 +881,17 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
         (noEntendido.length > 0 ? ` No he entendido: ${noEntendido.join("; ")}.` : "");
       return {
         ...e,
-        agenda: [...e.agenda, ...nuevos.map((a, i) => ({ id: `a-${e.siguienteId}-${i}`, ...a }))],
+        agenda: [
+          ...e.agenda,
+          ...nuevos.map((a, i) => ({
+            id: idNuevo(accion.idBase, "agenda", String(i), `a-${e.siguienteId}-${i}`),
+            ...a,
+          })),
+        ],
         tareas: [
           ...e.tareas,
           ...tareasNuevas.map((t, i) => ({
-            id: `t-${e.siguienteId}-a${i}`,
+            id: idNuevo(accion.idBase, "tarea", `a${i}`, `t-${e.siguienteId}-a${i}`),
             personaId: persona?.id ?? "",
             texto: t,
             frecuencia: "puntual" as const,
@@ -872,7 +929,12 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
         ...e,
         almuerzos: [
           ...e.almuerzos,
-          { id: `m-${e.siguienteId}`, fecha: accion.fecha, texto, platoId: plato?.id ?? null },
+          {
+            id: idNuevo(accion.idBase, "almuerzo", "0", `m-${e.siguienteId}`),
+            fecha: accion.fecha,
+            texto,
+            platoId: plato?.id ?? null,
+          },
         ],
         siguienteId: e.siguienteId + 1,
         aviso: ok(
@@ -905,7 +967,7 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
         casa: [
           ...e.casa,
           {
-            id: `c-${e.siguienteId}`,
+            id: idNuevo(accion.idBase, "casa", "0", `c-${e.siguienteId}`),
             titulo,
             emoji: "🏠",
             cadaDias: Math.round(accion.cadaDias),
@@ -928,7 +990,7 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
         casa: [
           ...e.casa,
           ...nuevas.map((p, i) => ({
-            id: `c-${e.siguienteId}-${i}`,
+            id: idNuevo(accion.idBase, "casa", String(i), `c-${e.siguienteId}-${i}`),
             titulo: p.titulo,
             emoji: p.emoji,
             cadaDias: p.cadaDias,
@@ -1057,7 +1119,7 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
         tareas: [
           ...e.tareas,
           ...nuevas.map((texto, i) => ({
-            id: `t-${e.siguienteId}-${i}`,
+            id: idNuevo(accion.idBase, "tarea", String(i), `t-${e.siguienteId}-${i}`),
             personaId: persona.id,
             texto,
             frecuencia: accion.frecuencia,

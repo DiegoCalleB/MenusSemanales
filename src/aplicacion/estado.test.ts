@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { sumarDias } from "@/dominio/fechas";
+import { esUuid } from "@/dominio/identificadores";
 import { type Cumple, estadoVigente } from "@/dominio/cumples";
 import { estadoInicialDemo } from "./datos-demo";
 import {
@@ -11,6 +12,7 @@ import {
   menuDeLaSemana,
   opcionesParaFecha,
   comidasDe,
+  conIdBase,
   cumplesProximos,
   reducir,
   repartoDeLaSemana,
@@ -1239,5 +1241,85 @@ describe("el archivo de calendario no destripa el regalo", () => {
     expect(regalos(null)).toEqual([]);
     expect(regalos("nadie")).toEqual([]);
     expect(eventosDeCalendario(e, "ana").some((x) => x.titulo === "🎂 Cumple de Ana")).toBe(true);
+  });
+});
+
+describe("ids UUID derivados de idBase (D-089)", () => {
+  const base = "0b1b0c1e-8f4e-4a4e-9c0e-2f0f7b6f0a11";
+
+  it("la misma acción con el mismo idBase da los mismos ids, sin tocar el contador de ids", () => {
+    const e = estadoInicialDemo();
+    const a = reducir(e, { tipo: "casa/plantilla", conjunto: "gatos", idBase: base });
+    const b = reducir(e, { tipo: "casa/plantilla", conjunto: "gatos", idBase: base });
+    expect(a.casa.map((t) => t.id)).toEqual(b.casa.map((t) => t.id));
+    expect(a.casa.every((t) => esUuid(t.id))).toBe(true);
+    expect(new Set(a.casa.map((t) => t.id)).size).toBe(a.casa.length);
+  });
+
+  it("dos acciones con idBase distinto no chocan", () => {
+    const e = estadoInicialDemo();
+    const a = reducir(e, {
+      tipo: "casa/anadir",
+      titulo: "Cambiar filtros",
+      cadaDias: 90,
+      responsableId: null,
+      idBase: base,
+    });
+    const b = reducir(a, {
+      tipo: "casa/anadir",
+      titulo: "Limpiar nevera",
+      cadaDias: 30,
+      responsableId: null,
+      idBase: "1c2c1d2f-9a5f-4b5f-8d1f-3a1a8c7a1b22",
+    });
+    const ids = b.casa.map((t) => t.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("los cumples importados en bloque reciben un id distinto cada uno", () => {
+    const e = estadoInicialDemo();
+    const r = reducir(e, {
+      tipo: "cumple/importar",
+      texto: "Lucía 3/4\nMartín 9/10",
+      relacion: "amigo",
+      idBase: base,
+    });
+    const nuevos = r.cumples.filter((c) => !e.cumples.some((x) => x.id === c.id));
+    expect(nuevos).toHaveLength(2);
+    expect(nuevos.every((c) => esUuid(c.id))).toBe(true);
+    expect(new Set(nuevos.map((c) => c.id)).size).toBe(2);
+  });
+
+  it("agenda y tareas apuntadas de una vez tienen ids UUID únicos", () => {
+    const e = estadoInicialDemo();
+    const persona = e.personas.find((p) => p.activa)!;
+    const r = reducir(e, {
+      tipo: "agenda/anadir",
+      texto: "17 marzo Reunión del cole\n20 marzo Médico\nComprar regalo",
+      personaId: persona.id,
+      idBase: base,
+    });
+    const ids = [...r.agenda, ...r.tareas].map((x) => x.id).filter(esUuid);
+    expect(ids.length).toBeGreaterThanOrEqual(3);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("sin idBase se usa el contador de siempre (datos antiguos y tests)", () => {
+    const e = estadoInicialDemo();
+    const r = reducir(e, {
+      tipo: "casa/anadir",
+      titulo: "Cambiar filtros",
+      cadaDias: 90,
+      responsableId: null,
+    });
+    expect(r.casa.at(-1)?.id).toBe(`c-${e.siguienteId}`);
+  });
+
+  it("conIdBase solo toca las acciones que crean y respeta el idBase que ya traen", () => {
+    expect(conIdBase({ tipo: "cerrarAviso" }, () => base)).toEqual({ tipo: "cerrarAviso" });
+    const a = conIdBase({ tipo: "casa/plantilla" }, () => base);
+    expect(a).toMatchObject({ idBase: base });
+    const b = conIdBase({ tipo: "casa/plantilla", idBase: "otro" }, () => base);
+    expect(b).toMatchObject({ idBase: "otro" });
   });
 });
