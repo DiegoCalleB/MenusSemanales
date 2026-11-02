@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parsearEnvPublico } from "./env";
+import { diagnosticarEnvPublico, parsearEnvPublico } from "./env";
 
 const validas = {
   NEXT_PUBLIC_SUPABASE_URL: "https://ejemplo.supabase.co",
@@ -28,5 +28,23 @@ describe("parsearEnvPublico", () => {
     expect(() =>
       parsearEnvPublico({ ...validas, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_secret_xyz" }),
     ).toThrow(/publishable/);
+  });
+});
+
+describe("diagnosticarEnvPublico", () => {
+  const url = "https://ejemplo.supabase.co";
+  it("distingue lo que falta de lo que está mal puesto, sin devolver los valores", () => {
+    expect(diagnosticarEnvPublico({ url, clave: "sb_publishable_abc" })).toBe("ok");
+    expect(diagnosticarEnvPublico({ url: undefined, clave: undefined })).toBe("ausente");
+    expect(diagnosticarEnvPublico({ url: "", clave: "" })).toBe("ausente");
+    expect(diagnosticarEnvPublico({ url: "no-es-url", clave: "sb_publishable_abc" })).toBe(
+      "url-invalida",
+    );
+    expect(diagnosticarEnvPublico({ url, clave: undefined })).toBe("clave-invalida");
+    // La clave antigua (JWT) y la secreta no valen como publishable.
+    expect(diagnosticarEnvPublico({ url, clave: "eyJhbGciOiJIUzI1NiJ9.x.y" })).toBe(
+      "clave-invalida",
+    );
+    expect(diagnosticarEnvPublico({ url, clave: "sb_secret_abc" })).toBe("clave-invalida");
   });
 });

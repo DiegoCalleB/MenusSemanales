@@ -18,6 +18,7 @@ import {
   usuarioActual,
   verificarCodigo,
 } from "@/infraestructura/supabase/cuenta";
+import { type EstadoConfigNube, diagnosticarEnvPublico } from "@/infraestructura/env";
 import type { Database } from "@/infraestructura/supabase/database.types";
 import { crearNube } from "@/infraestructura/supabase/nube";
 
@@ -39,10 +40,14 @@ export interface CuentaContexto {
   salir: () => Promise<void>;
 }
 
-/** ¿Está configurada la nube en esta versión? (las claves públicas se incrustan al construir). */
-export const NUBE_DISPONIBLE = Boolean(
-  process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
-);
+/** Estado de las variables de Supabase de esta versión (se incrustan al construir). */
+export const ESTADO_NUBE: EstadoConfigNube = diagnosticarEnvPublico({
+  url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+  clave: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+});
+
+/** ¿Está bien configurada la nube en esta versión? */
+export const NUBE_DISPONIBLE = ESTADO_NUBE === "ok";
 
 const ESPERA_GUARDADO_MS = 800;
 

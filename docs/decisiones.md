@@ -668,3 +668,10 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
   - **El plan debe estar en la nube:** solo funciona con la cuenta conectada y el hogar guardado; una tarea que solo existe en un móvil sin sincronizar no sale.
   - Una tarea diaria («limpiar los areneros») es **un solo evento** que se mueve; no genera uno por día.
   - **No son notificaciones push** y no avisan «a otro»: cada móvil se suscribe a lo suyo.
+
+## D-084 — La app dice cuándo la nube está mal configurada (y por qué Supabase estaba vacío)
+
+- **Qué se encontró (2026-11-02):** las 14 tablas de Supabase tenían **0 filas y 0 usuarios** (ni anónimos ni con correo), y los registros del proyecto no mostraban **ninguna petición de la app** (solo comprobaciones internas de Supabase): la app desplegada **nunca ha hablado con Supabase**. Todo lo que se ha hecho en la app vive en el almacenamiento del navegador de cada móvil.
+- **Causa probable (no confirmada, no veo Railway):** las variables de Supabase en Railway no tienen la forma esperada (p. ej. la clave antigua `eyJ…` en vez de `sb_publishable_…`). Con eso la app **se caía** (D-077) y, tras arreglarlo, **seguía enseñando «Entrar»** y, al pulsarlo, «la sincronización aún no está activada»: engañoso. El arreglo de D-077 evitó la caída pero **escondió el problema**.
+- **Arreglo:** `diagnosticarEnvPublico` distingue «sin variables», «URL inválida» y «clave inválida» (sin devolver nunca los valores). La barra superior pasa a decir **«⚠️ Nube sin configurar bien»** y «Cuenta» explica qué variable corregir en Railway. Sin variables, dice que los datos están solo en el dispositivo y **se pierden si se borra el navegador**.
+- **Aviso importante:** aunque la nube funcione, **solo se rellenan `hogar`, `miembro`, `invitacion`, `hogar_estado` (y `hogar_calendario`)**. `persona`, `plato`, `ingrediente`, `despensa_item`, `lista_compra_articulo`, `comida_planificada`… **no se usan**: la app guarda todo como un único documento por hogar (D-063), no en tablas relacionales. Llevarlo a tablas es una tarea pendiente aparte.

@@ -1,5 +1,6 @@
 "use client";
 
+import { ESTADO_NUBE } from "../usar-nube";
 import { type FormEvent, useState } from "react";
 import { enlaceWhatsApp } from "@/dominio/compartir";
 import { MODO_DATOS, useCuenta, useHogar } from "../proveedor-hogar";
@@ -43,12 +44,44 @@ export function CuentaVista() {
       )}
 
       {cuenta.fase === "sin-configurar" && (
-        <section className="tarjeta flex flex-col gap-2">
-          <h2 className="text-lg font-extrabold">Solo en este dispositivo</h2>
-          <p className="text-base">
-            La sincronización entre móviles aún no está activada en esta versión. Mientras tanto,
-            los datos se guardan solo en este dispositivo.
-          </p>
+        <section
+          className="tarjeta flex flex-col gap-2"
+          role={ESTADO_NUBE === "ok" || ESTADO_NUBE === "ausente" ? undefined : "alert"}
+        >
+          <h2 className="text-lg font-extrabold">
+            {ESTADO_NUBE === "ausente"
+              ? "Solo en este dispositivo"
+              : "⚠️ La nube no está bien configurada"}
+          </h2>
+          {ESTADO_NUBE === "ausente" && (
+            <p className="text-base">
+              Esta instalación no tiene configurada la sincronización. Los datos se guardan solo en
+              este dispositivo: <strong>si se borran los datos del navegador, se pierden</strong>.
+            </p>
+          )}
+          {ESTADO_NUBE === "clave-invalida" && (
+            <p className="text-base">
+              La clave de Supabase de esta instalación no tiene la forma esperada: tiene que ser la
+              clave <strong>«Publishable»</strong> y empezar por <code>sb_publishable_</code> (no la
+              «anon», que empieza por <code>eyJ</code>, ni la «secret»). Corrige{" "}
+              <code>NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code> en Railway y vuelve a desplegar.
+              Mientras tanto, los datos se guardan <strong>solo en este dispositivo</strong>.
+            </p>
+          )}
+          {ESTADO_NUBE === "url-invalida" && (
+            <p className="text-base">
+              La dirección de Supabase de esta instalación no es válida: tiene que ser una URL
+              entera como <code>https://xxxx.supabase.co</code>, sin comillas ni espacios. Corrige{" "}
+              <code>NEXT_PUBLIC_SUPABASE_URL</code> en Railway y vuelve a desplegar. Mientras tanto,
+              los datos se guardan <strong>solo en este dispositivo</strong>.
+            </p>
+          )}
+          {ESTADO_NUBE === "ok" && (
+            <p className="text-base">
+              No se ha podido iniciar la conexión con la nube en este navegador. Recarga la página;
+              si sigue igual, los datos se guardan solo en este dispositivo.
+            </p>
+          )}
         </section>
       )}
 

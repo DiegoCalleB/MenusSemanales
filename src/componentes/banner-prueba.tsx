@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { MODO_DATOS, useCuenta, useHogar } from "./proveedor-hogar";
-import { NUBE_DISPONIBLE } from "./usar-nube";
+import { ESTADO_NUBE, NUBE_DISPONIBLE } from "./usar-nube";
 
 const ESTADO = {
   inactivo: "☁️",
@@ -35,7 +35,11 @@ export function BannerPrueba() {
           </>
         )}
       </p>
-      {NUBE_DISPONIBLE ? (
+      {ESTADO_NUBE === "url-invalida" || ESTADO_NUBE === "clave-invalida" ? (
+        <Link href="/cuenta" className="boton-suave shrink-0">
+          ⚠️ Nube sin configurar bien
+        </Link>
+      ) : NUBE_DISPONIBLE ? (
         <Link href="/cuenta" className="boton-suave shrink-0">
           {conectado ? ESTADO[cuenta.sync] : "Entrar"}
         </Link>

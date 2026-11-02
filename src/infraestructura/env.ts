@@ -37,3 +37,20 @@ export function envPublico(): EnvPublico {
   });
   return cache;
 }
+
+export type EstadoConfigNube = "ok" | "ausente" | "url-invalida" | "clave-invalida";
+
+/**
+ * ¿Está bien configurada la nube? Distingue «no hay variables» de «hay, pero con otra forma» (por
+ * ejemplo la clave antigua `eyJ…` en vez de `sb_publishable_…`): así la app puede decir qué falla
+ * en vez de parecer que la sincronización «no está activada» (D-084). Nunca devuelve los valores.
+ */
+export function diagnosticarEnvPublico(valores: {
+  url: string | undefined;
+  clave: string | undefined;
+}): EstadoConfigNube {
+  if (!valores.url && !valores.clave) return "ausente";
+  if (!z.url().safeParse(valores.url ?? "").success) return "url-invalida";
+  if (!(valores.clave ?? "").startsWith("sb_publishable_")) return "clave-invalida";
+  return "ok";
+}
