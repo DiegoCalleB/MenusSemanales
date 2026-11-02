@@ -25,12 +25,17 @@ select pg_temp.fin();
 
 -- Personas del hogar A: Diego (cuenta A), Ana (cuenta B, vinculada) y Alba (niña, sin cuenta).
 select pg_temp.como('aaaaaaaa-0000-0000-0000-00000000000a');
-insert into public.persona (hogar_id, nombre, tipo, user_id)
-  select id, 'Diego', 'adulto', 'aaaaaaaa-0000-0000-0000-00000000000a' from _ids where clave = 'HA';
-insert into public.persona (hogar_id, nombre, tipo, user_id)
-  select id, 'Ana', 'adulto', 'bbbbbbbb-0000-0000-0000-00000000000b' from _ids where clave = 'HA';
+insert into public.persona (hogar_id, nombre, tipo)
+  select id, 'Diego', 'adulto' from _ids where clave = 'HA';
+insert into public.persona (hogar_id, nombre, tipo)
+  select id, 'Ana', 'adulto' from _ids where clave = 'HA';
 insert into public.persona (hogar_id, nombre, tipo)
   select id, 'Alba', 'nino' from _ids where clave = 'HA';
+-- Vincular una persona a una cuenta no se puede hacer directamente (D-088): lo simula quien administra.
+select pg_temp.fin();
+update public.persona set user_id = 'bbbbbbbb-0000-0000-0000-00000000000b' where nombre = 'Ana';
+update public.persona set user_id = 'aaaaaaaa-0000-0000-0000-00000000000a' where nombre = 'Diego';
+select pg_temp.como('aaaaaaaa-0000-0000-0000-00000000000a');
 
 -- Cumpleaños de Ana (7/11), con su regalo e ideas, y el de Alba.
 insert into public.cumple (hogar_id, persona_id, nombre, dia, mes, anio)
