@@ -546,3 +546,10 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **Avisos:** las notificaciones push en iOS solo existen para apps instaladas (iOS 16.4 o posterior) y con permiso. Por eso la vía fiable son las alarmas del **calendario** (el archivo `.ics` se abre en Calendario con «Añadir todos»).
 - **Voz:** el botón 🎤 de la app puede no funcionar en Safari; el dictado del teclado de iOS funciona igual porque el campo acepta varias cosas separadas por comas o «y».
 - **Sin verificar:** solo se ha probado con Chromium; **no se ha probado en un iPhone real ni con WebKit**. Es la primera cosa que hay que revisar en un dispositivo.
+
+## D-070 — La app felicita el día del cumpleaños
+
+- **Qué:** el día del cumpleaños, la portada abre con una tarjeta de fiesta. A quien cumple (según «¿Quién eres?») le dice «¡Feliz cumpleaños, X! Hoy cumples N»; a los demás les avisa «Hoy cumple X, no os olvidéis de felicitarle» y ofrece un botón que abre WhatsApp con la felicitación escrita.
+- **Por qué:** quitar otra cosa que recordar (carga mental). Los avisos de regalo ya existían; faltaba el momento de felicitar.
+- **Cómo:** `felicitacionesDeHoy` es una función pura del dominio, con tests. La animación (CSS) se detiene con `prefers-reduced-motion`.
+- **Límites:** la felicitación solo se ve si alguien abre la app ese día; no hay notificación push (en iPhone solo funciona con la app instalada). El aviso sin abrir la app sigue siendo el evento anual del calendario. No hay prueba E2E del día exacto porque los datos de ejemplo no tienen cumpleaños en su «hoy».

@@ -6,6 +6,7 @@ import {
   edadQueCumple,
   estadoVigente,
   fechaEnAnio,
+  felicitacionesDeHoy,
   parsearCumples,
   parsearFecha,
   proximaFecha,
@@ -125,5 +126,25 @@ describe("ideas de regalo", () => {
     expect(ideasDeRegalo({ edad: null, relacion: "familia" }).join(" ")).toContain("experiencia");
     expect(ideasDeRegalo({ edad: 1, relacion: "familia" })[0]).toContain("apilar");
     expect(ideasDeRegalo({ edad: 15, relacion: "familia" }).length).toBeGreaterThan(0);
+  });
+});
+
+describe("felicitacionesDeHoy", () => {
+  it("solo felicita a quien cumple hoy, con su edad", () => {
+    const f = felicitacionesDeHoy(
+      [c({ anio: 2017 }), c({ id: "x", nombre: "Emma", dia: 13 })],
+      "2026-03-12",
+    );
+    expect(f).toHaveLength(1);
+    expect(f[0]).toMatchObject({ edad: 9 });
+    expect(f[0]?.paraEl).toContain("Feliz cumpleaños, Alba");
+    expect(f[0]?.paraEl).toContain("cumples 9");
+    expect(f[0]?.mensaje).toContain("Alba");
+  });
+  it("sin año no inventa la edad y no felicita otros días", () => {
+    expect(felicitacionesDeHoy([c({ anio: null })], "2026-03-12")[0]?.paraEl).not.toContain(
+      "cumples",
+    );
+    expect(felicitacionesDeHoy([c()], "2026-03-11")).toEqual([]);
   });
 });

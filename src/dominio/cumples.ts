@@ -183,3 +183,32 @@ export function parsearCumples(texto: string): {
   }
   return { validos, erroneos };
 }
+
+export interface Felicitacion {
+  cumple: Cumple;
+  edad: number | null;
+  /** Lo que se le dice a quien cumple. */
+  paraEl: string;
+  /** Lo que se les dice a los demás para que no se les olvide felicitar. */
+  paraLosDemas: string;
+  /** Mensaje listo para mandar por WhatsApp. */
+  mensaje: string;
+}
+
+/** Quién cumple hoy y qué decirle: la app felicita y recuerda felicitar (D-070). */
+export function felicitacionesDeHoy(cumples: readonly Cumple[], hoy: FechaIso): Felicitacion[] {
+  return cumples
+    .filter((c) => diasHasta(c, hoy) === 0)
+    .map((cumple) => {
+      const edad = edadQueCumple(cumple, hoy);
+      const cuantos = edad !== null ? ` ${edad} añitos` : "";
+      return {
+        cumple,
+        edad,
+        paraEl: `¡Feliz cumpleaños, ${cumple.nombre}!${edad !== null ? ` Hoy cumples ${edad}.` : ""} Hoy es tu día: que te mimen mucho. 🎉`,
+        paraLosDemas: `Hoy es el cumple de ${cumple.nombre}${edad !== null ? ` (${edad})` : ""}. ¡No os olvidéis de felicitarle!`,
+        mensaje: `🎂 ¡Felicidades, ${cumple.nombre}! Que cumplas${cuantos} muy feliz y que te quieran muchísimo. 🎉🥳`,
+      };
+    })
+    .sort((a, b) => a.cumple.nombre.localeCompare(b.cumple.nombre, "es"));
+}

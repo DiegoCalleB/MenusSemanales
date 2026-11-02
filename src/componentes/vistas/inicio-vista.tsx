@@ -6,7 +6,8 @@ import { diasEntre } from "@/dominio/fechas";
 import { TarjetaCole, fechaCorta } from "../cole";
 import { EMOJI_GRUPO } from "../formato";
 import { cumplesProximos } from "@/aplicacion/estado";
-import { TEXTO_URGENCIA } from "@/dominio/cumples";
+import { TEXTO_URGENCIA, felicitacionesDeHoy } from "@/dominio/cumples";
+import { enlaceWhatsApp } from "@/dominio/compartir";
 import { useHogar } from "../proveedor-hogar";
 import { AyudaInstalarIos } from "../instalar-ios";
 import { useYo } from "../yo";
@@ -29,8 +30,38 @@ export function InicioVista() {
   // A quien cumple no se le enseñan los avisos de su propio regalo.
   const avisosCumples = cumplesProximos(estado).filter((a) => !yo || a.cumple.personaId !== yo.id);
 
+  const felicitaciones = felicitacionesDeHoy(estado.cumples, estado.hoy);
+
   return (
     <div className="flex flex-col gap-4">
+      {felicitaciones.map((f) => {
+        const esMio = !!yo && f.cumple.personaId === yo.id;
+        return (
+          <section
+            key={f.cumple.id}
+            aria-label={`Cumpleaños de ${f.cumple.nombre}`}
+            className="from-suave-2 to-suave-3 border-borde flex flex-col gap-2 rounded-3xl border bg-linear-to-br p-4 text-center sm:p-6"
+          >
+            <p aria-hidden="true" className="fiesta text-5xl">
+              🎂
+            </p>
+            <h2 className="text-2xl font-extrabold">
+              {esMio ? `¡Feliz cumpleaños, ${f.cumple.nombre}!` : `Hoy cumple ${f.cumple.nombre}`}
+            </h2>
+            <p className="text-base font-semibold">{esMio ? f.paraEl : f.paraLosDemas}</p>
+            {!esMio && (
+              <a
+                className="boton mx-auto"
+                href={enlaceWhatsApp(f.mensaje)}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Felicitar por WhatsApp
+              </a>
+            )}
+          </section>
+        );
+      })}
       <section
         aria-labelledby="hoy"
         className="from-suave-1 to-suave-2 border-borde flex flex-col gap-3 rounded-3xl border bg-linear-to-br p-4 sm:p-6"
