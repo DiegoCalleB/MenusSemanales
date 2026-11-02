@@ -30,6 +30,7 @@ import { proximosACaducar } from "@/dominio/despensa";
 import { redondear } from "@/dominio/numeros";
 import { type FechaIso, semanaDe, sumarDias, diaSemanaIso } from "@/dominio/fechas";
 import {
+  ordenarCatalogo,
   proponerMenu,
   type DiaMenu,
   type GrupoPlato,
@@ -214,6 +215,31 @@ export const fechaPlanificable = (e: EstadoHogar, fecha: FechaIso): boolean =>
 /** Platos elegidos para una cena (puede haber varios si son pequeños). */
 export const comidasDe = (e: EstadoHogar, fecha: FechaIso): ComidaPlanificada[] =>
   e.comidas.filter((c) => c.fecha === fecha);
+
+/**
+ * TODO el catálogo ordenado para una fecha: primero lo que encaja con el cole y con los días
+ * vecinos (lo ya comido y lo ya planificado), después lo que no, con el motivo. Con `anadir`, se
+ * buscan complementos para lo ya elegido.
+ */
+export function catalogoOrdenado(e: EstadoHogar, fecha: FechaIso, anadir = false) {
+  if (!fechaPlanificable(e, fecha)) return [];
+  const ya = comidasDe(e, fecha);
+  const dia = diaMenuDe(e, fecha);
+  if (anadir) {
+    const usados = ya.reduce((suma, c) => suma + ((c.plato as PlatoMenu).minutosActivos ?? 0), 0);
+    dia.minutosMax = Math.max(5, dia.minutosMax - usados);
+  }
+  return ordenarCatalogo({
+    hoy: e.hoy,
+    dias: [dia],
+    catalogo: e.platos.filter((p) => !p.noProponer),
+    despensa: e.despensa,
+    excluirIngredientes: e.excluirIngredientes,
+    colegio: e.colegio,
+    elegidos: elegidosPrincipales(e, fecha),
+    ...(anadir ? { complemento: true, excluirPlatos: ya.map((c) => c.plato.id) } : {}),
+  });
+}
 
 /** Máximo de platos en una misma cena. */
 export const MAX_PLATOS_POR_CENA = 3;

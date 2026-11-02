@@ -15,6 +15,7 @@ import { TarjetaCole } from "../cole";
 import { EMOJI_GRUPO, formatearNumero } from "../formato";
 import { useHogar } from "../proveedor-hogar";
 import { Razones } from "../razones";
+import { TodosLosPlatos } from "../todos-los-platos";
 
 const mayuscula = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 const largo = (f: string) => {
@@ -81,6 +82,7 @@ export function MenuVista() {
   const propuesta = useMemo(() => menuDeLaSemana(estado), [estado]);
   const eleccion = (fecha: string) => comidasDe(estado, fecha)[0];
   const [anadiendo, setAnadiendo] = useState<string | null>(null);
+  const [verTodos, setVerTodos] = useState<string | null>(null);
   // Solo un día abierto a la vez: por defecto, el primero que aún no tiene cena.
   const primeraSinCena = dias.find(
     (d) => !estado.saltados.includes(d.fecha) && !eleccion(d.fecha),
@@ -360,6 +362,35 @@ export function MenuVista() {
                         </li>
                       ))}
                     </ul>
+                  )}
+
+                  {(!elegida || anadiendo === dia.fecha) && (
+                    <>
+                      <button
+                        type="button"
+                        className="boton-suave w-fit"
+                        aria-expanded={verTodos === dia.fecha}
+                        onClick={() => setVerTodos(verTodos === dia.fecha ? null : dia.fecha)}
+                      >
+                        📚 Ver todos los platos
+                      </button>
+                      {verTodos === dia.fecha && (
+                        <TodosLosPlatos
+                          fecha={dia.fecha}
+                          anadir={anadiendo === dia.fecha}
+                          alElegir={(platoId) => {
+                            despachar({
+                              tipo: anadiendo === dia.fecha ? "menu/anadir" : "menu/elegir",
+                              fecha: dia.fecha,
+                              platoId,
+                            });
+                            setAnadiendo(null);
+                            setVerTodos(null);
+                            setAbierto(dia.fecha);
+                          }}
+                        />
+                      )}
+                    </>
                   )}
 
                   <div className="flex flex-wrap items-center gap-2">

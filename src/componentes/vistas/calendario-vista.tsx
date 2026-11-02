@@ -13,6 +13,7 @@ import { diaSemanaIso, sumarDias, type FechaIso } from "@/dominio/fechas";
 import { EMOJI_GRUPO } from "../formato";
 import { TarjetaCole } from "../cole";
 import { Razones } from "../razones";
+import { TodosLosPlatos } from "../todos-los-platos";
 import { useHogar } from "../proveedor-hogar";
 
 const MESES = [
@@ -66,6 +67,7 @@ export function CalendarioVista() {
       .map((c) => c.plato.nombre)
       .join(" + ");
   const [anadiendoA, setAnadiendoA] = useState<FechaIso | null>(null);
+  const [verTodosEn, setVerTodosEn] = useState<FechaIso | null>(null);
   const cocinaDe = (f: FechaIso) => {
     const turno = estado.turnos.find((t) => t.cargaId === "cenas" && t.fecha === f);
     return turno ? estado.personas.find((p) => p.id === turno.personaId)?.nombre : undefined;
@@ -266,6 +268,34 @@ export function CalendarioVista() {
             <p className="text-tinta-suave text-base">
               {planificable ? "Aún no hay cena elegida." : "Este día ya ha pasado."}
             </p>
+          )}
+
+          {planificable && (!elegida || anadiendo) && (
+            <>
+              <button
+                type="button"
+                className="boton-suave w-fit"
+                aria-expanded={verTodosEn === sel}
+                onClick={() => setVerTodosEn(verTodosEn === sel ? null : sel)}
+              >
+                📚 Ver todos los platos
+              </button>
+              {verTodosEn === sel && (
+                <TodosLosPlatos
+                  fecha={sel}
+                  anadir={anadiendo}
+                  alElegir={(platoId) => {
+                    despachar({
+                      tipo: anadiendo ? "menu/anadir" : "menu/elegir",
+                      fecha: sel,
+                      platoId,
+                    });
+                    setAnadiendoA(null);
+                    setVerTodosEn(null);
+                  }}
+                />
+              )}
+            </>
           )}
 
           {planificable && (

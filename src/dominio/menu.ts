@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { proximosACaducar, stockUtilizable } from "./despensa";
-import { contarSemana, estadoDelGrupo } from "./equilibrio";
+import { type EstadoEquilibrio, contarSemana, estadoDelGrupo } from "./equilibrio";
 import { type FechaIso, diasEntre, sumarDias } from "./fechas";
 import { redondear } from "./numeros";
+import { NOMBRE_GRUPO_ES } from "./texto";
 import { type ItemDespensa, fechaIsoSchema, platoSchema } from "./tipos";
 
 /**
@@ -322,3 +323,123 @@ export function proponerMenu(ctx: ContextoMenu): MenuPropuesto {
 
   return { dias };
 }
+
+// --------------------------------------------------------------------------------------------
+// Todo el catálogo, ordenado por lo que más conviene
+// --------------------------------------------------------------------------------------------
+
+export type TipoRechazo = "tiempo" | "cole" | "vecino" | "excluido" | "repetido";
+
+export interface Rechazo {
+  tipo: TipoRechazo;
+  /** Por qué no conviene, en una frase. */
+  detalle: string;
+}
+
+export interface OpcionCatalogo extends Opcion {
+  /** Sin ningún problema para ese día. */
+  compatible: boolean;
+  rechazos: Rechazo[];
+  /** Cómo va ese grupo en la semana (cole + cenas) antes de esta cena. */
+  semana: { estado: EstadoEquilibrio; n: number; nombre: string; min: number; max: number } | null;
+}
+
+/**
+ * Todos los platos del catálogo para UN día, no solo los tres mejores: primero los que encajan con
+ * el cole y no chocan con los días vecinos, ordenados por lo que más conviene (equilibrio de la
+ * semana contando lo comido y lo ya planificado, gusto, caducidad, tiempo…); después los que tienen
+ * algún problema, con el motivo explicado; al final, los que llevan algo que no queréis. Así se
+ * puede elegir cualquier plato sabiendo qué se sacrifica.
+ */
+export function ordenarCatalogo(ctx: ContextoMenu): OpcionCatalogo[] {
+  const dia = ctx.dias[0];
+  if (!dia) return [];
+  const excluidos = new Set(ctx.excluirIngredientes);
+  const stock = stockUtilizable(ctx.despensa, ctx.hoy);
+  const caducan = new Set(proximosACaducar(ctx.despensa, ctx.hoy, 3).map((i) => i.ingredienteId));
+  const porId = new Map(ctx.catalogo.map((p) => [p.id, p]));
+  const elegidos = ctx.elegidos ?? {};
+  const colegio: Record<FechaIso, MenuCole> =
+    ctx.colegio ?? Object.fromEntries(ctx.dias.flatMap((d) => (d.cole ? [[d.fecha, d.cole]] : [])));
+  const cenasPorGrupo: Record<FechaIso, GrupoPlato> = {};
+  for (const [f, id] of Object.entries(elegidos)) {
+    const g = porId.get(id)?.grupo;
+    if (g) cenasPorGrupo[f] = g;
+  }
+  const semana = contarSemana(dia.fecha, colegio, cenasPorGrupo);
+  const vecinos: Array<{ cuando: string; grupo: GrupoPlato }> = [];
+  for (const [delta, cuando] of [
+    [-1, "el día anterior"],
+    [1, "el día siguiente"],
+  ] as const) {
+    const v = elegidos[sumarDias(dia.fecha, delta)];
+    const g = v ? porId.get(v)?.grupo : undefined;
+    if (g) vecinos.push({ cuando, grupo: g });
+  }
+  const recomendados = recomendadosParaCenar(dia.cole);
+  const comidoCole = [dia.cole?.primero, dia.cole?.segundo]
+    .filter((g): g is GrupoPlato => !!g)
+    .map((g) => NOMBRE_GRUPO_ES[g]);
+
+  return ctx.catalogo
+    .filter((p) => !(ctx.excluirPlatos ?? []).includes(p.id))
+    .map((plato): OpcionCatalogo => {
+      const rechazos: Rechazo[] = [];
+      if (plato.minutosActivos > dia.minutosMax) {
+        rechazos.push({
+          tipo: "tiempo",
+          detalle: `Son ${plato.minutosActivos} min y ese día hay ${dia.minutosMax}.`,
+        });
+      }
+      if (recomendados && !recomendados.has(plato.grupo)) {
+        rechazos.push({
+          tipo: "cole",
+          detalle: `En el cole: ${comidoCole.join(" y ")}. Tras eso se aconseja ${[...recomendados].map((g) => NOMBRE_GRUPO_ES[g]).join(", ")}, no ${NOMBRE_GRUPO_ES[plato.grupo]}.`,
+        });
+      }
+      for (const v of vecinos) {
+        if (v.grupo === plato.grupo) {
+          rechazos.push({
+            tipo: "vecino",
+            detalle: `${mayusc(v.cuando)} ya hay ${NOMBRE_GRUPO_ES[v.grupo]}.`,
+          });
+        }
+      }
+      for (const [f, id] of Object.entries(elegidos)) {
+        if (id === plato.id && Math.abs(diasEntre(f, dia.fecha)) < DISTANCIA_MINIMA_REPETIR) {
+          rechazos.push({ tipo: "repetido", detalle: "Ya lo tenéis elegido esa misma semana." });
+          break;
+        }
+      }
+      if (plato.ingredientes.some((i) => !i.opcional && excluidos.has(i.ingredienteId))) {
+        rechazos.push({ tipo: "excluido", detalle: "Lleva un ingrediente que no queréis." });
+      }
+      const opcion = puntuar(plato, dia, ctx, stock, caducan, new Set(), semana);
+      const eq = estadoDelGrupo(plato.grupo, semana);
+      return {
+        ...opcion,
+        compatible: rechazos.length === 0,
+        rechazos,
+        semana: eq
+          ? {
+              estado: eq.estado,
+              n: eq.n,
+              nombre: eq.objetivo.nombre,
+              min: eq.objetivo.min,
+              max: eq.objetivo.max,
+            }
+          : null,
+      };
+    })
+    .sort(
+      (a, b) =>
+        Number(b.compatible) - Number(a.compatible) ||
+        Number(a.rechazos.some((r) => r.tipo === "excluido")) -
+          Number(b.rechazos.some((r) => r.tipo === "excluido")) ||
+        a.rechazos.length - b.rechazos.length ||
+        b.puntuacion - a.puntuacion ||
+        a.plato.id.localeCompare(b.plato.id),
+    );
+}
+
+const mayusc = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);

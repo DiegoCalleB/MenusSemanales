@@ -26,3 +26,16 @@ export const EMOJI_GRUPO: Record<string, string> = {
   lacteo: "🥛",
   otro: "🍽️",
 };
+
+/** Nombre de cada grupo de plato en una frase («legumbres», «pescado»). */
+export const NOMBRE_GRUPO_ES: Record<string, string> = {
+  verdura: "verdura",
+  legumbre: "legumbres",
+  pasta: "pasta",
+  arroz: "arroz",
+  pescado: "pescado",
+  carne: "carne",
+  huevo: "huevo",
+  lacteo: "lácteos",
+  otro: "otro tipo de plato",
+};

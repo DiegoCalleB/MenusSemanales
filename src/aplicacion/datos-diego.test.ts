@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { validarPlato } from "@/dominio/catalogo";
 import { calcularCompra } from "@/dominio/compra";
-import { explicacionDe } from "./estado";
+import { catalogoOrdenado, explicacionDe } from "./estado";
 import { opcionesParaFecha } from "./estado";
 import { type Accion, type EstadoHogar, articulosPendientes, diasDelMenu, reducir } from "./estado";
 import { estadoModoDiego, FECHA_CUMPLE_ANA } from "./datos-diego";
@@ -149,6 +149,21 @@ describe("modo Diego: datos reales de la familia", () => {
       "Hacer cama",
     );
     expect(new Set(e.tareas.map((t) => t.id)).size).toBe(e.tareas.length);
+  });
+
+  it("el catálogo completo de un día: encajan primero, el resto con su motivo", () => {
+    const todos = catalogoOrdenado(e, "2026-11-04"); // cole: verdura + carne
+    expect(todos.length).toBe(e.platos.length);
+    const primerNoCompatible = todos.findIndex((o) => !o.compatible);
+    expect(primerNoCompatible).toBeGreaterThan(0);
+    expect(todos.slice(0, primerNoCompatible).every((o) => o.compatible)).toBe(true);
+    expect(
+      todos.slice(primerNoCompatible).every((o) => !o.compatible && o.rechazos.length > 0),
+    ).toBe(true);
+    // Tras verdura y carne en el cole, una hamburguesa (carne) no encaja y lo dice.
+    const burger = todos.find((o) => o.plato.id === "hamburguesas-ternera");
+    expect(burger?.rechazos.some((r) => r.tipo === "cole")).toBe(true);
+    expect(catalogoOrdenado(e, "2027-06-01")).toEqual([]); // fuera de plazo
   });
 
   it("«hoy» se puede actualizar a la fecha real", () => {

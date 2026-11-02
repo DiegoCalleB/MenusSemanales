@@ -542,6 +542,25 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 
+  test("menú: ver todos los platos ordenados, con el motivo de lo que no encaja, y elegir uno", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/menu");
+    await pagina.getByRole("button", { name: "📚 Ver todos los platos" }).click();
+    const lista = pagina.getByRole("list", { name: "Catálogo ordenado" });
+    await expect(pagina.getByText(/platos · \d+ encajan/)).toBeVisible();
+    // El primero encaja; más abajo hay platos que no, y dicen por qué.
+    await expect(lista.getByRole("listitem").first()).toContainText("✓ Encaja");
+    await pagina.getByLabel("Buscar en todos los platos").fill("tortilla");
+    await expect(lista.getByText(/⚠️/).first()).toBeVisible();
+    // Se puede elegir aunque no encaje: la app avisa, no impide.
+    await pagina.getByLabel("Buscar en todos los platos").fill("pisto");
+    await lista.getByRole("button", { name: /^Elegir Pisto/ }).click();
+    await expect(pagina.getByRole("button", { name: /^Quitar Pisto/ })).toBeVisible();
+    await contexto.close();
+  });
+
   test("añadir un artículo a mano y marcarlo", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/compra");
