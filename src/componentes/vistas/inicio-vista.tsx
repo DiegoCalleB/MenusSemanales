@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { comidasDe, proximoDiaConCole } from "@/aplicacion/estado";
+import { articulosPendientes, comidasDe, proximoDiaConCole } from "@/aplicacion/estado";
 import { cuentaAtras } from "@/dominio/cuenta-atras";
 import { TarjetaCole, fechaCorta } from "../cole";
 import { EMOJI_GRUPO } from "../formato";
@@ -45,6 +45,8 @@ export function InicioVista() {
     (t) => t.responsableId === null || t.responsableId === yo?.id,
   );
 
+  const porComprar =
+    articulosPendientes(estado).length + estado.manuales.filter((m) => !m.comprado).length;
   const comidaHoy = almuerzosDe(estado.almuerzos, estado.hoy);
   const felicitaciones = felicitacionesDeHoy(estado.cumples, estado.hoy);
 
@@ -122,22 +124,19 @@ export function InicioVista() {
           <Link href="/menu/emergencia" className="boton-suave">
             Hoy llego tarde
           </Link>
-          <Link href="/tareas" className="boton-suave">
-            🧹 Zafarrancho
-          </Link>
-          <Link href="/casa" className="boton-suave">
-            🏠 Casa
-          </Link>
-          <Link href="/fechas" className="boton-suave">
-            📌 Fechas
-          </Link>
-          <Link href="/cumples" className="boton-suave">
-            🎂 Cumples
-          </Link>
         </div>
       </section>
 
       <AyudaInstalarIos />
+
+      {porComprar > 0 && (
+        <Link href="/compra" className="tarjeta flex items-center justify-between gap-3">
+          <span className="text-base font-bold">
+            <span aria-hidden="true">🛒 </span>Falta por comprar
+          </span>
+          <span className="text-base font-semibold tabular-nums">{porComprar}</span>
+        </Link>
+      )}
 
       {casaHoy.length > 0 && (
         <section aria-labelledby="casa-hoy" className="tarjeta flex flex-col gap-2">

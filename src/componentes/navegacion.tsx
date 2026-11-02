@@ -2,24 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ComponentType, SVGProps } from "react";
 import { articulosPendientes } from "@/aplicacion/estado";
 import { useHogar } from "./proveedor-hogar";
 import { BotonPerfil } from "./perfiles";
 import { BotonTema } from "./tema";
-import { IconoAgenda, IconoCompra, IconoDespensa, IconoMenu, IconoReparto } from "./iconos";
-
-const ENLACES: ReadonlyArray<{
-  href: string;
-  texto: string;
-  Icono: ComponentType<SVGProps<SVGSVGElement>>;
-}> = [
-  { href: "/menu", texto: "Menú", Icono: IconoMenu },
-  { href: "/calendario", texto: "Agenda", Icono: IconoAgenda },
-  { href: "/compra", texto: "Compra", Icono: IconoCompra },
-  { href: "/despensa", texto: "Despensa", Icono: IconoDespensa },
-  { href: "/reparto", texto: "Reparto", Icono: IconoReparto },
-];
+import { PILARES, pestanaActiva, pilarDe } from "./pilares";
 
 /** Cuántas cosas faltan por comprar (lo calculado y lo apuntado a mano): para acordarse al verlo. */
 function usePendientesDeCompra(): number {
@@ -42,22 +29,21 @@ function Contador({ n, flotante = false }: { n: number; flotante?: boolean }) {
   );
 }
 
-const activo = (ruta: string, href: string) => ruta === href || ruta.startsWith(`${href}/`);
-
 /** Móvil: barra de pestañas fija abajo, al alcance del pulgar y respetando la zona segura del iPhone. */
 export function NavegacionInferior() {
   const ruta = usePathname();
   const pendientes = usePendientesDeCompra();
+  const actual = pilarDe(ruta)?.id;
   return (
     <nav
       aria-label="Principal"
       className="border-borde bg-superficie fixed inset-x-0 bottom-0 z-30 border-t pb-[env(safe-area-inset-bottom)] md:hidden"
     >
       <ul className="mx-auto grid max-w-lg grid-cols-5">
-        {ENLACES.map(({ href, texto, Icono }) => {
-          const esActivo = activo(ruta, href);
+        {PILARES.map(({ id, href, texto, Icono }) => {
+          const esActivo = actual === id;
           return (
-            <li key={href}>
+            <li key={id}>
               <Link
                 href={href}
                 aria-current={esActivo ? "page" : undefined}
@@ -69,7 +55,7 @@ export function NavegacionInferior() {
                   className={`relative flex h-8 w-14 items-center justify-center rounded-full ${esActivo ? "bg-suave-1" : ""}`}
                 >
                   <Icono />
-                  {href === "/compra" && <Contador n={pendientes} flotante />}
+                  {id === "comer" && actual !== "comer" && <Contador n={pendientes} flotante />}
                 </span>
                 {texto}
               </Link>
@@ -85,6 +71,7 @@ export function NavegacionInferior() {
 export function NavegacionLateral() {
   const ruta = usePathname();
   const pendientes = usePendientesDeCompra();
+  const actual = pilarDe(ruta)?.id;
   return (
     <aside className="border-borde bg-superficie sticky top-0 hidden h-dvh w-56 shrink-0 flex-col gap-6 border-r p-4 md:flex lg:w-64">
       <Link
@@ -101,10 +88,10 @@ export function NavegacionLateral() {
       </Link>
       <nav aria-label="Principal">
         <ul className="flex flex-col gap-1">
-          {ENLACES.map(({ href, texto, Icono }) => {
-            const esActivo = activo(ruta, href);
+          {PILARES.map(({ id, href, texto, Icono }) => {
+            const esActivo = actual === id;
             return (
-              <li key={href}>
+              <li key={id}>
                 <Link
                   href={href}
                   aria-current={esActivo ? "page" : undefined}
@@ -116,7 +103,7 @@ export function NavegacionLateral() {
                 >
                   <Icono />
                   {texto}
-                  {href === "/compra" && <Contador n={pendientes} />}
+                  {id === "comer" && actual !== "comer" && <Contador n={pendientes} />}
                 </Link>
               </li>
             );
@@ -131,5 +118,42 @@ export function NavegacionLateral() {
         Modo prueba: datos de ejemplo guardados solo en este dispositivo.
       </p>
     </aside>
+  );
+}
+
+/**
+ * Las pantallas del pilar abierto, en una fila de pestañas pegada arriba (con desplazamiento
+ * lateral si no caben). La portada no lleva. Sirve igual en móvil y en escritorio.
+ */
+export function Pestanas() {
+  const ruta = usePathname();
+  const pendientes = usePendientesDeCompra();
+  const pilar = pilarDe(ruta);
+  if (!pilar || pilar.pestanas.length === 0) return null;
+  const activa = pestanaActiva(pilar, ruta);
+  return (
+    <nav aria-label="Apartados" className="-mx-4 mb-4 md:mx-0">
+      <ul className="flex gap-2 overflow-x-auto px-4 pb-1 md:flex-wrap md:overflow-visible md:px-0">
+        {pilar.pestanas.map((t) => {
+          const esActiva = activa?.href === t.href;
+          return (
+            <li key={t.href} className="shrink-0">
+              <Link
+                href={t.href}
+                aria-current={esActiva ? "page" : undefined}
+                className={`flex min-h-11 items-center rounded-full border px-4 text-base whitespace-nowrap ${
+                  esActiva
+                    ? "bg-suave-1 border-marca text-marca-fuerte font-bold"
+                    : "border-borde bg-superficie text-tinta font-medium"
+                }`}
+              >
+                {t.texto}
+                {t.href === "/compra" && <Contador n={pendientes} />}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
   );
 }

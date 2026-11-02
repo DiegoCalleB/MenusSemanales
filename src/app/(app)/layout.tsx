@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { BannerPrueba } from "@/componentes/banner-prueba";
 import { AnadirRapido } from "@/componentes/anadir-rapido";
 import { AvisoGlobal } from "@/componentes/aviso";
-import { NavegacionInferior, NavegacionLateral } from "@/componentes/navegacion";
+import { NavegacionInferior, NavegacionLateral, Pestanas } from "@/componentes/navegacion";
 import { BotonTema, ProveedorTema } from "@/componentes/tema";
 import { BotonPerfil, PuertaDePerfil } from "@/componentes/perfiles";
 import { ProveedorHogar } from "@/componentes/proveedor-hogar";
@@ -45,6 +45,7 @@ export default function LayoutApp({ children }: { children: ReactNode }) {
                 id="contenido"
                 className="mx-auto w-full max-w-5xl flex-1 px-4 pt-5 pb-32 md:px-8 md:pt-8 md:pb-12"
               >
+                <Pestanas />
                 {children}
               </main>
             </div>

@@ -574,6 +574,58 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 
+  test("navegación: cuatro pilares y «Más», y todas las pantallas a dos toques", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/");
+    const principal = pagina.getByRole("navigation", { name: "Principal" });
+    await expect(principal.getByRole("link")).toHaveText([/Hoy/, /Comer/, /Casa/, /Fechas/, /Más/]);
+    await expect(principal.getByRole("link", { name: "Hoy" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    // La portada ya no es un menú de botones: lo que cuelga de un pilar no está suelto.
+    for (const suelto of [/Zafarrancho/, /^🏠 Casa$/, /Fechas/, /Cumples/]) {
+      await expect(pagina.getByRole("main").getByRole("link", { name: suelto })).toHaveCount(0);
+    }
+
+    const recorrido: Array<[string, string, string]> = [
+      ["Comer", "Cena", "/menu"],
+      ["Comer", "Cole", "/menu/cole"],
+      ["Comer", "Compra", "/compra"],
+      ["Comer", "Despensa", "/despensa"],
+      ["Comer", "Platos", "/menu/platos"],
+      ["Comer", "Llego tarde", "/menu/emergencia"],
+      ["Casa", "Recurrente", "/casa"],
+      ["Casa", "Por persona", "/tareas"],
+      ["Casa", "Reparto", "/reparto"],
+      ["Fechas", "Próximas", "/fechas"],
+      ["Fechas", "Calendario", "/calendario"],
+      ["Fechas", "Cumples", "/cumples"],
+      ["Más", "Cuenta", "/cuenta"],
+      ["Más", "Enviar", "/compartir"],
+    ];
+    for (const [pilar, pestana, ruta] of recorrido) {
+      await pagina.goto("/", { waitUntil: "networkidle" });
+      await principal.getByRole("link", { name: pilar }).click();
+      await pagina
+        .getByRole("navigation", { name: "Apartados" })
+        .getByRole("link", { name: pestana })
+        .click();
+      await pagina.waitForURL(`**${ruta}`);
+      await expect(pagina.getByRole("heading", { level: 1 })).toBeVisible();
+      await expect(principal.getByRole("link", { name: pilar })).toHaveAttribute(
+        "aria-current",
+        "page",
+      );
+      await expect(
+        pagina.getByRole("navigation", { name: "Apartados" }).getByRole("link", { name: pestana }),
+      ).toHaveAttribute("aria-current", "page");
+    }
+    await contexto.close();
+  });
+
   test("enviar: WhatsApp, copiar y archivo de calendario", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/compartir");

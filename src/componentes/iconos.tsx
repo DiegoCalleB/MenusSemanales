@@ -91,3 +91,24 @@ export const IconoAgenda = (p: SVGProps<SVGSVGElement>) => (
     <circle cx="12" cy="18" r="1" />
   </Icono>
 );
+
+export const IconoHoy = (p: SVGProps<SVGSVGElement>) => (
+  <Icono {...p}>
+    <circle cx="12" cy="12" r="4" />
+    <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+  </Icono>
+);
+export const IconoCasa = (p: SVGProps<SVGSVGElement>) => (
+  <Icono {...p}>
+    <path d="M3 11l9-8 9 8" />
+    <path d="M5 10v10h14V10" />
+    <path d="M10 20v-6h4v6" />
+  </Icono>
+);
+export const IconoOpciones = (p: SVGProps<SVGSVGElement>) => (
+  <Icono {...p}>
+    <circle cx="5" cy="12" r="1.5" />
+    <circle cx="12" cy="12" r="1.5" />
+    <circle cx="19" cy="12" r="1.5" />
+  </Icono>
+);

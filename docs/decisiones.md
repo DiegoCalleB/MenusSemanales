@@ -633,3 +633,12 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **Estado:** propuesta (2026-11-02). Diego pidió «llamar a Marie Kondo» y una visión distinta para móvil y para escritorio. Se ha escrito primero el plan, sin tocar código: `docs/plan-reorganizacion.md`.
 - **Idea:** 4 pilares (Hoy, Comer, Casa, Fechas) y «Más», con pestañas dentro de cada uno; portada de máximo 5 bloques con una acción principal; escritorio con composiciones propias, no una versión estirada del móvil. Cuatro fases, la primera sin cambiar datos ni URL.
 - **Pendiente de Diego y Ana:** si se fusiona Reparto y Tareas en Casa, cuánto se hace antes del 7 de noviembre (recomendado: solo la fase 1), qué se tira, el botón «＋ Apuntar» único y para qué se usará el escritorio.
+
+## D-081 — Reorganización, fase 1: cuatro pilares, pestañas y portada corta
+
+- **Estado:** hecha (2026-11-02), solo la fase 1 del plan (`docs/plan-reorganizacion.md`), como pidió Diego antes del cumple de Ana. Sin cambios de datos ni de URL.
+- **Navegación:** la barra inferior (móvil) y la lateral (escritorio) pasan de 5 pantallas sueltas a **5 entradas: Hoy, Comer, Casa, Fechas y Más**. Dentro de cada pilar hay una **fila de pestañas** (Comer: Cena, Cole, Compra, Despensa, Platos, Llego tarde; Casa: Recurrente, Por persona, Reparto; Fechas: Próximas, Calendario, Cumples; Más: Cuenta, Enviar). Las 15 pantallas quedan a **dos toques** (hay un E2E que recorre las 14 de los pilares).
+- **Portada:** se quitan los accesos que ya son pilares (Zafarrancho, Casa, Fechas, Cumples). Queda la cena y la comida de hoy con «Ver el menú» y «Hoy llego tarde», lo que toca en casa, un enlace a lo que falta por comprar, el cole, los avisos de regalo y la felicitación. En Menú se quitan los botones Platos, Emergencia y Cole, que duplicaban las pestañas.
+- **El contador de la compra** sale en «Comer» cuando se está en otro pilar y en la pestaña «Compra» cuando se está dentro, para que no salga dos veces.
+- **Se desvía del plan:** en escritorio la barra lateral solo lleva los pilares (no los apartados desplegados) porque las pestañas de arriba ya los muestran; el enlace «Preparar un regalo» de Diego sigue en la portada hasta la fase 2; el botón «＋ Apuntar» único no se ha hecho (queda el «Añadir rápido» de la compra y la caja de «Próximas»).
+- **Sin hacer (fases 2 a 4):** fusionar Casa/Tareas/Reparto y Fechas/Calendario/Cumples, vistas propias de escritorio, repaso final. **Sin probar en un iPhone real.**
