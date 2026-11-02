@@ -5,6 +5,11 @@
 begin;
 \i supabase/tests/lib/helpers.sql
 
+-- Este test prueba los mecanismos del catálogo partiendo de uno vacío: se quita lo sembrado por
+-- la migración de catálogos de fábrica (la transacción lo deshace al terminar).
+delete from public.plato_compartido;
+delete from public.ingrediente;
+
 -- P es el administrador de la plataforma; A y B, dueños de hogares; C, de otro hogar; Z, sin hogar.
 insert into auth.users (id, email) values
   ('00000000-0000-0000-0000-0000000000a0', 'p@ejemplo.test'),

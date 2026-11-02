@@ -6,7 +6,7 @@ import type { Relacion } from "./cumples";
  * se sabe de cada persona (D-041), siempre a partir de estos datos.
  */
 
-const POR_EDAD: ReadonlyArray<{ hasta: number; ideas: readonly string[] }> = [
+export const IDEAS_POR_EDAD: ReadonlyArray<{ hasta: number; ideas: readonly string[] }> = [
   {
     hasta: 2,
     ideas: [
@@ -74,7 +74,7 @@ const POR_EDAD: ReadonlyArray<{ hasta: number; ideas: readonly string[] }> = [
   },
 ];
 
-const PARA_AMIGOS_DEL_COLE: readonly string[] = [
+export const IDEAS_AMIGOS_DEL_COLE: readonly string[] = [
   "Un libro o cuento",
   "Set de pegatinas y manualidades pequeño",
   "Juego de cartas o de mesa pequeño",
@@ -95,7 +95,7 @@ export function ideasDeRegalo(args: {
     .map((g) => `Algo de ${g}`);
   const base =
     args.relacion === "cole" && args.edad !== null && args.edad <= 12
-      ? PARA_AMIGOS_DEL_COLE
-      : (POR_EDAD.find((r) => (args.edad ?? 99) <= r.hasta)?.ideas ?? []);
+      ? IDEAS_AMIGOS_DEL_COLE
+      : (IDEAS_POR_EDAD.find((r) => (args.edad ?? 99) <= r.hasta)?.ideas ?? []);
   return [...new Set([...deGustos, ...base])].slice(0, 8);
 }

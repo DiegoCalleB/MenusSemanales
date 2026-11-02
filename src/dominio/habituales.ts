@@ -47,7 +47,7 @@ const normalizar = (t: string) =>
 export const claveArticulo = normalizar;
 
 /** Palabras clave por categoría; la primera categoría que coincide gana (más específicas primero). */
-const REGLAS: ReadonlyArray<readonly [Categoria, RegExp]> = [
+export const REGLAS_CATEGORIA: ReadonlyArray<readonly [Categoria, RegExp]> = [
   ["mascotas", /\bgato|\bgatos|pienso|arena (verde|gato)|premios/],
   [
     "higiene",
@@ -96,7 +96,7 @@ const REGLAS: ReadonlyArray<readonly [Categoria, RegExp]> = [
 /** Sección del súper de un artículo escrito a mano; «otros» si no se reconoce. */
 export function clasificarArticulo(nombre: string): Categoria {
   const n = normalizar(nombre);
-  for (const [categoria, regla] of REGLAS) if (regla.test(n)) return categoria;
+  for (const [categoria, regla] of REGLAS_CATEGORIA) if (regla.test(n)) return categoria;
   return "otros";
 }
 

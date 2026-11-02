@@ -1,6 +1,6 @@
 # Plan: todo el dato principal en tablas, sin datos «a mano» en el código
 
-**Estado:** propuesta para revisar (2026-11-02). No se ha tocado código. Es el cambio de arquitectura más grande de la app: afecta a todo lo que se ve. Las decisiones que faltan están en la sección 9.
+**Estado (2026-11-02):** fases 0, 1 y 2 hechas (ver D-086 y D-087). La app todavía **lee y escribe el documento**; las demás fases esperan al cumpleaños de Ana. Es el cambio de arquitectura más grande de la app: afecta a todo lo que se ve. Las decisiones que faltan están en la sección 9.
 
 ## 1. Lo que se pide
 
