@@ -4,6 +4,7 @@ import {
   type SeccionCompra,
 } from "@/dominio/compartir";
 import { type FechaIso } from "@/dominio/fechas";
+import { CATEGORIAS, NOMBRE_CATEGORIA, clasificarArticulo } from "@/dominio/habituales";
 import { EMOJI_GRUPO, cantidadEnTexto } from "@/dominio/texto";
 import { SECCIONES } from "@/dominio/tipos";
 import {
@@ -76,7 +77,20 @@ export function seccionesDeCompra(e: EstadoHogar): {
     ...SECCION[s],
     lineas: porSeccion.get(s) ?? [],
   }));
-  return { secciones, manuales: e.manuales.filter((m) => !m.comprado).map((m) => m.nombre) };
+  // Lo apuntado a mano se agrupa por sección igual que lo automático.
+  const manuales = new Map<string, string[]>();
+  for (const m of e.manuales.filter((x) => !x.comprado)) {
+    const c = m.categoria ?? clasificarArticulo(m.nombre);
+    manuales.set(c, [...(manuales.get(c) ?? []), m.nombre]);
+  }
+  for (const c of CATEGORIAS) {
+    const lineas = manuales.get(c);
+    if (!lineas) continue;
+    const existente = secciones.find((s) => s.nombre === NOMBRE_CATEGORIA[c].nombre);
+    if (existente) (existente.lineas as string[]).push(...lineas);
+    else secciones.push({ ...NOMBRE_CATEGORIA[c], lineas });
+  }
+  return { secciones, manuales: [] };
 }
 
 /** Eventos de calendario: una cena por día y las fechas señaladas (cumpleaños…). */

@@ -14,6 +14,13 @@ import {
   type IngredienteNuevo,
   type PlatoEditable,
 } from "@/dominio/catalogo";
+import {
+  type Categoria,
+  MAX_LARGO_ARTICULO,
+  claveArticulo,
+  clasificarArticulo,
+  partirDictado,
+} from "@/dominio/habituales";
 import { contarSemana } from "@/dominio/equilibrio";
 import { faltanComponentes } from "@/dominio/componentes";
 import { explicarOpcion, type ExplicacionOpcion } from "@/dominio/explicacion";
@@ -59,6 +66,8 @@ export interface ArticuloManual {
   id: string;
   nombre: string;
   comprado: boolean;
+  /** Sección del súper deducida del nombre (leche → lácteos, pañales → higiene…). */
+  categoria?: Categoria;
 }
 
 export interface CompraRealizada {
@@ -445,18 +454,44 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
     }
 
     case "manual/anadir": {
-      const nombre = accion.nombre.trim();
-      if (nombre === "" || nombre.length > 80)
+      // Acepta varios artículos a la vez («leche, huevos y pan»): así sirve también para dictar.
+      const nombres = partirDictado(accion.nombre);
+      if (nombres.length === 0 || nombres.some((n) => n.length > MAX_LARGO_ARTICULO)) {
         return {
           ...e,
           siguienteId: e.siguienteId + 1,
-          aviso: error(e, "Escribe un nombre (hasta 80 caracteres)."),
+          aviso: error(e, `Escribe un nombre (hasta ${MAX_LARGO_ARTICULO} caracteres).`),
         };
+      }
+      const yaEstan = new Set(
+        e.manuales.filter((m) => !m.comprado).map((m) => claveArticulo(m.nombre)),
+      );
+      const nuevos = nombres.filter((n) => !yaEstan.has(claveArticulo(n)));
+      if (nuevos.length === 0) {
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: ok(
+            e,
+            nombres.length === 1
+              ? `${nombres[0]} ya estaba en la lista.`
+              : "Ya estaba todo en la lista.",
+          ),
+        };
+      }
       return {
         ...e,
-        manuales: [...e.manuales, { id: `m-${e.siguienteId}`, nombre, comprado: false }],
+        manuales: [
+          ...e.manuales,
+          ...nuevos.map((nombre, i) => ({
+            id: `m-${e.siguienteId}-${i}`,
+            nombre,
+            comprado: false,
+            categoria: clasificarArticulo(nombre),
+          })),
+        ],
         siguienteId: e.siguienteId + 1,
-        aviso: null,
+        aviso: ok(e, `Añadido: ${nuevos.join(", ")}.`),
       };
     }
     case "manual/alternar":

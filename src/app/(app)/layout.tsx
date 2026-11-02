@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { BannerPrueba } from "@/componentes/banner-prueba";
+import { AnadirRapido } from "@/componentes/anadir-rapido";
 import { AvisoGlobal } from "@/componentes/aviso";
 import { NavegacionInferior, NavegacionLateral } from "@/componentes/navegacion";
 import { BotonTema, ProveedorTema } from "@/componentes/tema";
@@ -46,6 +47,7 @@ export default function LayoutApp({ children }: { children: ReactNode }) {
           </div>
         </div>
         <NavegacionInferior />
+        <AnadirRapido />
         <AvisoGlobal />
       </ProveedorHogar>
     </ProveedorTema>

@@ -1,11 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { type FormEvent, useState } from "react";
+import { useState } from "react";
 import { articulosPendientes } from "@/aplicacion/estado";
 import type { ArticuloCompra } from "@/dominio/compra";
 import { formatearCantidad, NOMBRE_SECCION } from "../formato";
-import { IconoMas } from "../iconos";
+import { EntradaCompra } from "../entrada-compra";
+import {
+  CATEGORIAS,
+  NOMBRE_CATEGORIA,
+  claveArticulo,
+  clasificarArticulo,
+} from "@/dominio/habituales";
 import { useHogar } from "../proveedor-hogar";
 
 function agruparPorSeccion(articulos: readonly ArticuloCompra[]) {
@@ -54,7 +60,6 @@ function Fila({ nombre, detalle, cantidad, marcado, alCambiar }: FilaProps) {
 
 export function CompraVista() {
   const { estado, despachar } = useHogar();
-  const [nuevo, setNuevo] = useState("");
   const [ocultarComprado, setOcultarComprado] = useState(false);
 
   const pendientes = articulosPendientes(estado);
@@ -65,12 +70,6 @@ export function CompraVista() {
   const total = pendientes.length + estado.compras.length + estado.manuales.length;
   const hechos = estado.compras.length + manualesComprados.length;
   const hayComprado = hechos > 0;
-
-  function anadir(evento: FormEvent) {
-    evento.preventDefault();
-    despachar({ tipo: "manual/anadir", nombre: nuevo });
-    setNuevo("");
-  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -94,28 +93,14 @@ export function CompraVista() {
         </div>
       </header>
 
-      <form
-        onSubmit={anadir}
-        className="flex flex-col gap-2 sm:flex-row"
-        aria-label="Añadir un artículo"
-      >
-        <label htmlFor="nuevo-articulo" className="sr-only">
-          Añadir algo a la lista
-        </label>
-        <input
-          id="nuevo-articulo"
-          className="campo sm:flex-1"
-          placeholder="Añadir algo a la lista (papel de cocina…)"
-          value={nuevo}
-          maxLength={80}
-          autoComplete="off"
-          onChange={(e) => setNuevo(e.target.value)}
-        />
-        <button type="submit" className="boton sm:w-auto" disabled={nuevo.trim() === ""}>
-          <IconoMas width={20} height={20} />
-          Añadir
-        </button>
-      </form>
+      <EntradaCompra
+        yaEnLista={
+          new Set([
+            ...pendientes.map((a) => claveArticulo(a.nombre)),
+            ...manualesPendientes.map((m) => claveArticulo(m.nombre)),
+          ])
+        }
+      />
 
       <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
         {grupos.length === 0 && manualesPendientes.length === 0 ? (
@@ -146,23 +131,30 @@ export function CompraVista() {
                 </ul>
               </section>
             ))}
-            {manualesPendientes.length > 0 && (
-              <section aria-labelledby="s-manual" className="tarjeta">
-                <h2 id="s-manual" className="mb-1 text-lg font-semibold">
-                  Añadido a mano
-                </h2>
-                <ul>
-                  {manualesPendientes.map((m) => (
-                    <Fila
-                      key={m.id}
-                      nombre={m.nombre}
-                      marcado={false}
-                      alCambiar={() => despachar({ tipo: "manual/alternar", id: m.id })}
-                    />
-                  ))}
-                </ul>
-              </section>
-            )}
+            {CATEGORIAS.map((c) => {
+              const items = manualesPendientes.filter(
+                (m) => (m.categoria ?? clasificarArticulo(m.nombre)) === c,
+              );
+              if (items.length === 0) return null;
+              return (
+                <section key={`m-${c}`} aria-labelledby={`m-${c}`} className="tarjeta">
+                  <h2 id={`m-${c}`} className="mb-1 text-lg font-semibold">
+                    <span aria-hidden="true">{NOMBRE_CATEGORIA[c].emoji} </span>
+                    {NOMBRE_CATEGORIA[c].nombre}
+                  </h2>
+                  <ul>
+                    {items.map((m) => (
+                      <Fila
+                        key={m.id}
+                        nombre={m.nombre}
+                        marcado={false}
+                        alCambiar={() => despachar({ tipo: "manual/alternar", id: m.id })}
+                      />
+                    ))}
+                  </ul>
+                </section>
+              );
+            })}
           </>
         )}
       </div>

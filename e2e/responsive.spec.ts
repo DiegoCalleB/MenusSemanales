@@ -432,6 +432,50 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 
+  test("compra: varias cosas de una vez, sugerencias y «lo de siempre»", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/compra");
+    await pagina.getByLabel("Añadir algo a la lista").fill("pañales, cervezas y bolsas de basura");
+    await pagina.getByRole("button", { name: "Añadir", exact: true }).click();
+    await expect(pagina.getByRole("checkbox", { name: /Pañales/ })).toBeVisible();
+    await expect(pagina.getByRole("checkbox", { name: /Cervezas/ })).toBeVisible();
+    await expect(pagina.getByRole("checkbox", { name: /Bolsas de basura/ })).toBeVisible();
+    // Cada cosa en su sección del súper.
+    await expect(pagina.getByRole("heading", { level: 2, name: /Higiene y bebé/ })).toBeVisible();
+    await expect(pagina.getByRole("heading", { level: 2, name: /Bebidas/ })).toBeVisible();
+    // Sugerencia mientras se escribe.
+    await pagina.getByLabel("Añadir algo a la lista").fill("kef");
+    await pagina.getByRole("button", { name: "+ Kéfir" }).click();
+    await expect(pagina.getByRole("checkbox", { name: /Kéfir/ })).toBeVisible();
+    // «Lo de siempre»: un toque.
+    await pagina.getByText(/Lo de siempre/).click();
+    const siempre = pagina.getByRole("list", { name: "Lo de siempre" });
+    await siempre.getByRole("button", { name: "+ Plátanos" }).click();
+    await expect(pagina.getByRole("checkbox", { name: /Plátanos/ })).toBeVisible();
+    await expect(siempre.getByRole("button", { name: "+ Plátanos" })).toHaveCount(0);
+    await contexto.close();
+  });
+
+  test("botón flotante: apuntar a la compra desde cualquier pantalla", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/menu");
+    await pagina.getByRole("button", { name: "Apuntar a la lista de la compra" }).click();
+    const dialogo = pagina.getByRole("dialog", { name: "Apuntar a la lista de la compra" });
+    await dialogo.getByLabel("Añadir algo a la lista").fill("crema solar y pilas");
+    await dialogo.getByRole("button", { name: "Añadir", exact: true }).click();
+    await expect(
+      pagina.getByRole("status").filter({ hasText: "Añadido: Crema solar, Pilas." }),
+    ).toBeVisible();
+    await pagina.keyboard.press("Escape");
+    await expect(dialogo).toHaveCount(0);
+    await pagina.getByRole("link", { name: "Compra" }).click();
+    await expect(pagina.getByRole("checkbox", { name: /Crema solar/ })).toBeVisible();
+    await expect(
+      pagina.getByRole("button", { name: "Apuntar a la lista de la compra" }),
+    ).toHaveCount(0);
+    await contexto.close();
+  });
+
   test("añadir un artículo a mano y marcarlo", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/compra");

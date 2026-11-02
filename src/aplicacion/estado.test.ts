@@ -578,6 +578,47 @@ describe("calendario", () => {
   });
 });
 
+describe("apuntar a mano, también dictando", () => {
+  it("«leche, pañales y pan» añade tres artículos, cada uno en su sección", () => {
+    const e = aplicar(estadoInicialDemo(), {
+      tipo: "manual/anadir",
+      nombre: "leche fresca, pañales y pan",
+    });
+    const nuevos = e.manuales.slice(-3);
+    expect(nuevos.map((m) => [m.nombre, m.categoria])).toEqual([
+      ["Leche fresca", "lacteos"],
+      ["Pañales", "higiene"],
+      ["Pan", "panaderia"],
+    ]);
+    expect(new Set(e.manuales.map((m) => m.id)).size).toBe(e.manuales.length);
+    expect(e.aviso?.texto).toBe("Añadido: Leche fresca, Pañales, Pan.");
+  });
+
+  it("no repite lo que ya está pendiente, pero sí lo ya comprado", () => {
+    let e = aplicar(estadoInicialDemo(), { tipo: "manual/anadir", nombre: "Kéfir" });
+    const antes = e.manuales.length;
+    e = aplicar(e, { tipo: "manual/anadir", nombre: "kefir, yogures" });
+    expect(e.manuales.length).toBe(antes + 1);
+    expect(e.aviso?.texto).toBe("Añadido: Yogures.");
+    const repetido = aplicar(e, { tipo: "manual/anadir", nombre: "Kéfir" });
+    expect(repetido.manuales).toEqual(e.manuales);
+    expect(repetido.aviso?.texto).toBe("Kéfir ya estaba en la lista.");
+    expect(aplicar(e, { tipo: "manual/anadir", nombre: "kéfir, yogures" }).aviso?.texto).toBe(
+      "Ya estaba todo en la lista.",
+    );
+    const comprado = aplicar(e, { tipo: "manual/alternar", id: e.manuales.at(-2)?.id ?? "" });
+    expect(aplicar(comprado, { tipo: "manual/anadir", nombre: "Kéfir" }).manuales.length).toBe(
+      comprado.manuales.length + 1,
+    );
+  });
+
+  it("rechaza vacío o nombres de más de 80 caracteres", () => {
+    const e = estadoInicialDemo();
+    expect(reducir(e, { tipo: "manual/anadir", nombre: "  ,  " }).aviso?.tipo).toBe("error");
+    expect(reducir(e, { tipo: "manual/anadir", nombre: "x".repeat(81) }).manuales).toBe(e.manuales);
+  });
+});
+
 describe("varios platos en una cena", () => {
   const base = () =>
     aplicar(estadoInicialDemo(), {
