@@ -50,7 +50,7 @@ export function DespensaVista() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <header className="flex flex-col gap-2">
         <h1 className="text-2xl font-extrabold tracking-tight">
           Despensa y nevera <span aria-hidden="true">🧊</span>

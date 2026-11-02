@@ -72,7 +72,7 @@ export function CompraVista() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <header className="flex flex-col gap-3">
         <h1 className="text-2xl font-extrabold tracking-tight">
           Lista de la compra <span aria-hidden="true">🛒</span>
@@ -113,7 +113,7 @@ export function CompraVista() {
         </button>
       </form>
 
-      <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+      <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
         {grupos.length === 0 && manualesPendientes.length === 0 ? (
           <p className="tarjeta text-tinta-suave text-base lg:col-span-2">
             No falta nada por comprar. Cuando elijáis la próxima cena, lo que haga falta aparecerá

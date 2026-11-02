@@ -172,15 +172,15 @@ export function RepartoVista() {
       : `Esta semana hay ${formatearNumero(reparto.diferenciaPuntos)} puntos de diferencia entre personas. Puede ser lo que habéis acordado; si no, se puede repartir de otra forma.`;
 
   return (
-    <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-2">
+    <div className="flex flex-col gap-4">
+      <header>
         <h1 className="text-2xl font-extrabold tracking-tight">
-          Reparto de la semana <span aria-hidden="true">🤝</span>
+          Reparto <span aria-hidden="true">🤝</span>
         </h1>
       </header>
 
-      <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
-        <section aria-labelledby="carga" className="tarjeta flex flex-col gap-4">
+      <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+        <section aria-labelledby="carga" className="tarjeta flex flex-col gap-3">
           <h2 id="carga" className="text-lg font-semibold">
             Carga de cada persona
           </h2>
@@ -197,28 +197,29 @@ export function RepartoVista() {
           </button>
         </section>
 
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4">
           {reparto.sinResponsable.length > 0 && (
             <section
               aria-labelledby="sin"
-              className="tarjeta border-aviso-texto/30 bg-aviso-fondo text-aviso-texto"
+              className="tarjeta border-aviso-texto/30 bg-aviso-fondo text-aviso-texto py-3"
             >
-              <h2 id="sin" className="mb-2 flex items-center gap-2 text-lg font-semibold">
-                <IconoAlerta width={22} height={22} />
+              <h2 id="sin" className="flex items-center gap-2 text-base font-semibold">
+                <IconoAlerta width={20} height={20} />
                 Sin responsable
               </h2>
               <p className="text-base">
                 {reparto.sinResponsable.map((c) => c.nombre).join(", ")}. Si nadie se encarga, nadie
-                se acuerda: asignadla abajo.
+                se acuerda.
               </p>
             </section>
           )}
 
-          <section aria-labelledby="turnos" className="tarjeta">
-            <h2 id="turnos" className="mb-2 text-lg font-semibold">
-              Turnos de la semana
-            </h2>
-            <ol className="flex flex-col gap-3">
+          <details className="tarjeta py-0">
+            <summary className="flex min-h-14 cursor-pointer items-center justify-between gap-2 text-lg font-semibold">
+              <h2>Turnos de la semana</h2>
+              <span className="text-tinta-suave text-base font-normal">{estado.turnos.length}</span>
+            </summary>
+            <ol className="flex flex-col gap-3 pb-4">
               {dias.map((dia) => (
                 <li key={dia}>
                   <h3 className="text-base font-semibold capitalize">{nombreDia(dia)}</h3>
@@ -260,56 +261,48 @@ export function RepartoVista() {
                 </li>
               ))}
             </ol>
-          </section>
+          </details>
         </div>
       </div>
 
-      <section aria-labelledby="cargas" className="flex flex-col gap-3">
-        <h2 id="cargas" className="text-xl font-semibold">
+      <section aria-labelledby="cargas" className="tarjeta flex flex-col gap-2">
+        <h2 id="cargas" className="text-lg font-semibold">
           Quién se encarga de cada cosa
         </h2>
-        <p className="text-tinta-suave max-w-prose text-base">
-          Quien es responsable de algo se acuerda, lo organiza y decide cómo se hace. Quién lo
-          ejecuta cada vez puede rotar.
-        </p>
-        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <ul className="divide-borde divide-y">
           {cargas.map((c) => {
             const id = `${idBase}-${c.id}`;
             return (
-              <li key={c.id} className="tarjeta flex flex-col gap-3">
-                <div>
-                  <h3 className="text-lg leading-snug font-semibold">{c.nombre}</h3>
+              <li key={c.id} className="flex items-center justify-between gap-3 py-2">
+                <div className="min-w-0">
+                  <h3 className="text-base leading-snug font-semibold">{c.nombre}</h3>
                   <p className="text-tinta-suave text-sm">
-                    {c.esfuerzoMin} min cada vez
-                    {c.planificacionMin > 0
-                      ? ` · ${c.planificacionMin} min a la semana organizando`
-                      : ""}
+                    {c.esfuerzoMin} min
+                    {c.planificacionMin > 0 ? ` + ${c.planificacionMin} organizando` : ""}
                   </p>
                 </div>
-                <div className="flex flex-col gap-1">
-                  <label htmlFor={id} className="text-base font-medium">
-                    Responsable
-                  </label>
-                  <select
-                    id={id}
-                    className="campo"
-                    value={c.responsableId ?? ""}
-                    onChange={(e) =>
-                      despachar({
-                        tipo: "reparto/asignarResponsable",
-                        cargaId: c.id,
-                        personaId: e.target.value === "" ? null : e.target.value,
-                      })
-                    }
-                  >
-                    <option value="">Sin responsable</option>
-                    {adultas.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.nombre}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <label htmlFor={id} className="sr-only">
+                  Responsable de {c.nombre}
+                </label>
+                <select
+                  id={id}
+                  className="campo w-36 shrink-0"
+                  value={c.responsableId ?? ""}
+                  onChange={(e) =>
+                    despachar({
+                      tipo: "reparto/asignarResponsable",
+                      cargaId: c.id,
+                      personaId: e.target.value === "" ? null : e.target.value,
+                    })
+                  }
+                >
+                  <option value="">Sin asignar</option>
+                  {adultas.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.nombre}
+                    </option>
+                  ))}
+                </select>
               </li>
             );
           })}
