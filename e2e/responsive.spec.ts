@@ -29,6 +29,7 @@ const RUTAS = [
   "/menu/platos",
   "/compartir",
   "/tareas",
+  "/cuenta",
   "/compra",
   "/despensa",
   "/reparto",

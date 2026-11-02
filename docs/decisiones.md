@@ -487,3 +487,12 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **Datos (modo Diego):** se cargan las tareas de la foto. Las rutinas de las niñas van como «cada día»; lo demás, como puntuales. «Chill out», «Transportín» y «Cutxa ska» se copiaron tal cual sin saber a qué se refieren.
 - **Pendiente:** repartir las tareas de la casa (limpiar cristales, bajar sillas) entre quienes cabe de forma justa con la rotación del reparto, un modo «niña» con letra grande y pegatinas, y enviar la lista de una persona por WhatsApp.
 - **Base de datos (pendiente):** hará falta una tabla `tarea` y `tarea_hecha` (por hogar y persona) al conectar la app a Supabase.
+
+## D-063 · Cuenta y sincronización del hogar
+
+- **Estado:** aceptada (2026-11-02). Detalle y configuración en [sincronizacion.md](sincronizacion.md).
+- **Decisión:** el plan del hogar se guarda en la nube como **un documento versionado** (`hogar_estado`) en vez de pasar ya a tablas relacionales: es lo más corto que da sincronización real entre móviles y reutiliza el reductor probado. Escritura solo con `guardar_estado_hogar` (control de versión: si otro guardó antes, error 40001) y lectura por RLS a los miembros del hogar. Los dispositivos se enteran por Realtime. Los conflictos se resuelven **reaplicando las acciones propias sobre el estado nuevo** (`Sincronizador`, `src/aplicacion/sincronizacion.ts`), no con «el último gana».
+- **Acceso:** correo con código de 6 cifras (OTP) o sesión anónima («sin correo»); el hogar se crea y se comparte con el código de invitación que ya existía (`crear_hogar`, `crear_invitacion`, `unirse_a_hogar`, que guardan solo el hash).
+- **Verificación:** 9 pruebas del sincronizador con una nube simulada (incluido el caso de dos dispositivos a la vez y el de sin red), 20 comprobaciones SQL con 2 mutaciones detectadas (versión y pertenencia) y la build en los dos modos. **No** se ha probado con Supabase Auth real ni con correo real: el primer uso real es la prueba.
+- **Por qué no tablas todavía:** las tablas relacionales (platos, despensa, tareas…) siguen diseñadas y con RLS, pero migrar cada pantalla a consultas llevaría semanas; el documento permite usar la app compartida ya y migrar por partes después sin cambiar las pantallas.
+- **Pendiente:** CAPTCHA y límites para sesiones anónimas, vincular un correo a una sesión anónima, persistir la cola de cambios sin conexión entre recargas y conectar los permisos por rol (administrador/miembro).

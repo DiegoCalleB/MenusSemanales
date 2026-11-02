@@ -17,6 +17,18 @@ export type Database = {
   }
   public: {
     Tables: {
+      hogar_estado: {
+        Row: {
+          actualizado_en: string
+          actualizado_por: string | null
+          estado: Json
+          hogar_id: string
+          version: number
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
       administrador_plataforma: {
         Row: {
           creado_en: string
@@ -1049,6 +1061,10 @@ export type Database = {
         Returns: string
       }
       crear_hogar: { Args: { p_nombre: string }; Returns: string }
+      guardar_estado_hogar: {
+        Args: { p_hogar_id: string; p_version_esperada: number; p_estado: Json }
+        Returns: number
+      }
       crear_ingrediente: {
         Args: { p_nombre: string; p_seccion?: string; p_unidad: string }
         Returns: string

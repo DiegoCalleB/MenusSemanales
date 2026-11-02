@@ -4,6 +4,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useCallback,
   useMemo,
   useReducer,
   useRef,
@@ -15,6 +16,7 @@ import { estadoInicialDemo } from "@/aplicacion/datos-demo";
 import { estadoModoDiego } from "@/aplicacion/datos-diego";
 import { type Accion, type EstadoHogar, reducir } from "@/aplicacion/estado";
 import { crearAlmacenLocal } from "@/infraestructura/almacen-local";
+import { type CuentaContexto, useNube } from "./usar-nube";
 
 /**
  * Qué datos de prueba se usan. Por defecto, el «modo Diego» (la familia real de Diego, D-053). Los
@@ -38,6 +40,7 @@ interface ContextoHogar {
 }
 
 const Contexto = createContext<ContextoHogar | null>(null);
+const ContextoCuenta = createContext<CuentaContexto | null>(null);
 
 /**
  * Mantiene el estado del hogar mientras se navega entre pantallas y lo guarda en el `almacen`.
@@ -51,7 +54,23 @@ export function ProveedorHogar({
   children: ReactNode;
   almacen?: AlmacenHogar;
 }) {
-  const [estado, despachar] = useReducer(reducir, undefined, estadoInicial);
+  const [estado, despacharLocal] = useReducer(reducir, undefined, estadoInicial);
+  const estadoActual = useRef(estado);
+  useEffect(() => {
+    estadoActual.current = estado;
+  });
+  const { cuenta, registrar } = useNube(
+    () => estadoActual.current,
+    (e) => despacharLocal({ tipo: "hogar/sustituir", estado: e }),
+  );
+  // Cada cambio se aplica al instante en este dispositivo y se apunta para subirlo a la nube.
+  const despachar = useCallback(
+    (accion: Accion) => {
+      despacharLocal(accion);
+      registrar(accion);
+    },
+    [registrar],
+  );
   const primera = useRef(true);
   const almacenActual = useRef<AlmacenHogar | null>(null);
 
@@ -59,8 +78,8 @@ export function ProveedorHogar({
     const a = almacen ?? crearAlmacenLocal(window.localStorage);
     almacenActual.current = a;
     const guardado = a.cargar();
-    if (guardado) despachar({ tipo: "hogar/sustituir", estado: guardado });
-    if (MODO_DATOS === "diego") despachar({ tipo: "hogar/hoy", fecha: hoyLocal() });
+    if (guardado) despacharLocal({ tipo: "hogar/sustituir", estado: guardado });
+    if (MODO_DATOS === "diego") despacharLocal({ tipo: "hogar/hoy", fecha: hoyLocal() });
   }, [almacen]);
 
   useEffect(() => {
@@ -78,18 +97,28 @@ export function ProveedorHogar({
       despachar,
       restablecer: () => {
         almacenActual.current?.borrar();
-        despachar({ tipo: "hogar/sustituir", estado: estadoInicial() });
-        if (MODO_DATOS === "diego") despachar({ tipo: "hogar/hoy", fecha: hoyLocal() });
+        despacharLocal({ tipo: "hogar/sustituir", estado: estadoInicial() });
+        if (MODO_DATOS === "diego") despacharLocal({ tipo: "hogar/hoy", fecha: hoyLocal() });
       },
     }),
-    [estado],
+    [estado, despachar],
   );
 
-  return <Contexto.Provider value={valor}>{children}</Contexto.Provider>;
+  return (
+    <Contexto.Provider value={valor}>
+      <ContextoCuenta.Provider value={cuenta}>{children}</ContextoCuenta.Provider>
+    </Contexto.Provider>
+  );
 }
 
 export function useHogar(): ContextoHogar {
   const contexto = useContext(Contexto);
   if (!contexto) throw new Error("useHogar debe usarse dentro de <ProveedorHogar>");
+  return contexto;
+}
+
+export function useCuenta(): CuentaContexto {
+  const contexto = useContext(ContextoCuenta);
+  if (!contexto) throw new Error("useCuenta debe usarse dentro de <ProveedorHogar>");
   return contexto;
 }
