@@ -1099,6 +1099,10 @@ export type Database = {
         Args: { p_nombre: string; p_seccion?: string; p_unidad: string }
         Returns: string
       }
+      usar_ia: {
+        Args: { p_hogar_id: string }
+        Returns: Json
+      }
       crear_invitacion_persona: {
         Args: { p_hogar_id: string; p_persona_id: string }
         Returns: string

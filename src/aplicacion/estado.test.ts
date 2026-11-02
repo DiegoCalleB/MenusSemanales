@@ -1554,3 +1554,34 @@ describe("lista de la compra editable (D-097)", () => {
     );
   });
 });
+
+describe("importar artículos propuestos (manual/importar, D-098)", () => {
+  it("añade lo propuesto con cantidad y sección, sin repetir lo que ya estaba", () => {
+    const e = estadoInicialDemo();
+    const yaHay = e.manuales.find((m) => !m.comprado)!.nombre;
+    const r = reducir(e, {
+      tipo: "manual/importar",
+      articulos: [
+        { nombre: "  leche ", cantidad: "2", categoria: "lacteos" },
+        { nombre: yaHay.toUpperCase(), cantidad: "", categoria: "otros" },
+        { nombre: "Leche", cantidad: "9", categoria: "lacteos" },
+        { nombre: "", cantidad: "", categoria: "otros" },
+      ],
+    });
+    const nuevos = r.manuales.slice(e.manuales.length);
+    expect(nuevos).toHaveLength(1);
+    expect(nuevos[0]).toMatchObject({
+      nombre: "Leche",
+      cantidad: "2",
+      categoria: "lacteos",
+      comprado: false,
+    });
+  });
+
+  it("no hace nada raro si no hay nada nuevo", () => {
+    const e = estadoInicialDemo();
+    const r = reducir(e, { tipo: "manual/importar", articulos: [] });
+    expect(r.manuales).toEqual(e.manuales);
+    expect(r.aviso?.tipo).toBe("ok");
+  });
+});

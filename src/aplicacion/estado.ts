@@ -15,6 +15,7 @@ import {
   type PlatoEditable,
 } from "@/dominio/catalogo";
 import {
+  CATEGORIAS,
   type Categoria,
   MAX_LARGO_ARTICULO,
   claveArticulo,
@@ -179,6 +180,10 @@ export type Accion =
   | { tipo: "comprar"; ingredienteId: string }
   | { tipo: "manual/anadir"; nombre: string }
   | { tipo: "manual/alternar"; id: string }
+  | {
+      tipo: "manual/importar";
+      articulos: ReadonlyArray<{ nombre: string; cantidad: string; categoria: Categoria }>;
+    }
   | { tipo: "manual/editar"; id: string; nombre?: string; cantidad?: string }
   | { tipo: "compra/cantidad"; ingredienteId: string; cantidad: number }
   | { tipo: "compra/restablecer"; ingredienteId: string }
@@ -687,6 +692,48 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
 
     case "compra/restablecer":
       return { ...e, ajustesCompra: sinClave(e.ajustesCompra, accion.ingredienteId) };
+
+    case "manual/importar": {
+      // Artículos propuestos (p. ej. por la IA) y ya revisados por la persona: se validan igual.
+      const yaEstan = new Set(
+        e.manuales.filter((m) => !m.comprado).map((m) => claveArticulo(m.nombre)),
+      );
+      const nuevos: Array<{ nombre: string; cantidad: string; categoria: Categoria }> = [];
+      for (const a of accion.articulos) {
+        const nombre = a.nombre.replace(/\s+/g, " ").trim();
+        const k = claveArticulo(nombre);
+        if (nombre === "" || nombre.length > MAX_LARGO_ARTICULO || yaEstan.has(k)) continue;
+        yaEstan.add(k);
+        nuevos.push({
+          nombre: nombre.charAt(0).toUpperCase() + nombre.slice(1),
+          cantidad: a.cantidad.replace(/\s+/g, " ").trim().slice(0, MAX_LARGO_CANTIDAD),
+          categoria: CATEGORIAS.includes(a.categoria) ? a.categoria : clasificarArticulo(nombre),
+        });
+        if (nuevos.length >= 40) break;
+      }
+      if (nuevos.length === 0) {
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: ok(e, "Ya estaba todo en la lista."),
+        };
+      }
+      return {
+        ...e,
+        manuales: [
+          ...e.manuales,
+          ...nuevos.map((n, i) => ({
+            id: `m-${e.siguienteId}-${i}`,
+            nombre: n.nombre,
+            comprado: false,
+            categoria: n.categoria,
+            ...(n.cantidad ? { cantidad: n.cantidad } : {}),
+          })),
+        ],
+        siguienteId: e.siguienteId + 1,
+        aviso: ok(e, `Añadidos ${nuevos.length}: ${nuevos.map((n) => n.nombre).join(", ")}.`),
+      };
+    }
 
     case "manual/editar": {
       const actual = e.manuales.find((m) => m.id === accion.id);

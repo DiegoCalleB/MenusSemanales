@@ -15,6 +15,7 @@ import {
 import type { Unidad } from "@/dominio/tipos";
 import { BotonesCompartir } from "../compartir-botones";
 import { EntradaCompra } from "../entrada-compra";
+import { OrdenarConIa } from "../ordenar-con-ia";
 import { formatearCantidad } from "../formato";
 import { useHogar } from "../proveedor-hogar";
 
@@ -191,6 +192,8 @@ export function CompraVista() {
       {!modoTienda && (
         <EntradaCompra yaEnLista={new Set(pendientes.map((i) => claveArticulo(i.nombre)))} />
       )}
+
+      {!modoTienda && <OrdenarConIa yaEnLista={pendientes.map((i) => i.nombre)} />}
 
       {pendientes.length === 0 ? (
         <p className="tarjeta text-tinta-suave text-base">
