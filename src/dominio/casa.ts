@@ -178,3 +178,12 @@ export function repartirEntre(
     return { ...t, responsableId: elegido[0] };
   });
 }
+
+/** «toca hoy», «toca desde hace 3 días», «toca en 5 días»: sin tono de reproche. */
+export function cuandoToca(dias: number): string {
+  if (dias < -1) return `toca desde hace ${-dias} días`;
+  if (dias === -1) return "tocaba ayer";
+  if (dias === 0) return "toca hoy";
+  if (dias === 1) return "toca mañana";
+  return `toca en ${dias} días`;
+}

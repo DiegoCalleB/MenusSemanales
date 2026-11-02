@@ -15,6 +15,8 @@ export interface DiaParaCompartir {
   cole: string;
   /** Platos de la cena (vacío si aún no hay). */
   platos: readonly string[];
+  /** Lo apuntado para la comida del mediodía (vacío si no se piensa ese día). */
+  comida?: readonly string[];
   evento: { emoji: string; titulo: string } | null;
 }
 
@@ -26,7 +28,13 @@ export function textoMenu(titulo: string, dias: readonly DiaParaCompartir[]): st
   for (const d of dias) {
     lineas.push(`*${d.etiqueta}*${d.cole ? `  🎒 ${d.cole}` : ""}`);
     if (d.evento) lineas.push(`${d.evento.emoji} ${d.evento.titulo}`);
-    lineas.push(d.platos.length > 0 ? `🍴 ${d.platos.join(" + ")}` : "🍴 _sin decidir_");
+    if (d.comida && d.comida.length > 0) lineas.push(`☀️ Comida: ${d.comida.join(" + ")}`);
+    const hayComida = !!d.comida && d.comida.length > 0;
+    lineas.push(
+      d.platos.length > 0
+        ? `🍴 ${hayComida ? "Cena: " : ""}${d.platos.join(" + ")}`
+        : `🍴 _${hayComida ? "cena " : ""}sin decidir_`,
+    );
     lineas.push("");
   }
   lineas.push("_Hecho con Menús Semanales_");
@@ -58,6 +66,54 @@ export function textoCompra(
     lineas.push("");
   }
   return recortar(lineas.join("\n").trimEnd());
+}
+
+export interface FechaParaCompartir {
+  /** «Sáb 7 nov». */
+  etiqueta: string;
+  emoji: string;
+  titulo: string;
+  hora: string | null;
+  /** «hoy», «mañana», «5 días». */
+  cuando: string;
+}
+
+/** Próximas fechas (cumples, apuntes, eventos) para mandar a quien tenga que saberlo. */
+export function textoFechas(fechas: readonly FechaParaCompartir[]): string {
+  const lineas: string[] = ["📌 *Próximas fechas*", ""];
+  if (fechas.length === 0) lineas.push("Nada apuntado en los próximos días.");
+  for (const f of fechas) {
+    lineas.push(
+      `*${f.etiqueta}*${f.hora ? ` ${f.hora}` : ""} · ${f.emoji} ${f.titulo} _(${f.cuando})_`,
+    );
+  }
+  lineas.push("", "_Hecho con Menús Semanales_");
+  return recortar(lineas.join("\n"));
+}
+
+export interface TareaParaCompartir {
+  emoji: string;
+  titulo: string;
+  /** Quién la lleva: «Diego», «Los dos». */
+  quien: string;
+  /** «hoy», «desde hace 2 días», «en 3 días». */
+  cuando: string;
+}
+
+/** Lo que toca en casa, agrupado por quién lo lleva: sin señalar, solo «esto toca y le toca a…». */
+export function textoCasa(tareas: readonly TareaParaCompartir[]): string {
+  const lineas: string[] = ["🏠 *Lo que toca en casa*", ""];
+  if (tareas.length === 0) lineas.push("Nada pendiente 🎉");
+  const quienes = [...new Set(tareas.map((t) => t.quien))];
+  for (const q of quienes) {
+    lineas.push(`*${q}*`);
+    for (const t of tareas.filter((x) => x.quien === q)) {
+      lineas.push(`☐ ${t.emoji} ${t.titulo} _(${t.cuando})_`);
+    }
+    lineas.push("");
+  }
+  lineas.push("_Hecho con Menús Semanales_");
+  return recortar(lineas.join("\n"));
 }
 
 function recortar(texto: string): string {

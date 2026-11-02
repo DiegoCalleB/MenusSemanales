@@ -4,6 +4,9 @@ import {
   type SeccionCompra,
 } from "@/dominio/compartir";
 import { type FechaIso, sumarDias } from "@/dominio/fechas";
+import { cuandoToca, diasParaCasa, ordenadasPorFecha } from "@/dominio/casa";
+import { cuentaAtras } from "@/dominio/cuenta-atras";
+import type { FechaParaCompartir, TareaParaCompartir } from "@/dominio/compartir";
 import { proximaFecha } from "@/dominio/cumples";
 import { CATEGORIAS, NOMBRE_CATEGORIA, clasificarArticulo } from "@/dominio/habituales";
 import { EMOJI_GRUPO, cantidadEnTexto } from "@/dominio/texto";
@@ -38,7 +41,13 @@ const SECCION: Record<(typeof SECCIONES)[number], { nombre: string; emoji: strin
 export function planParaCompartir(e: EstadoHogar): { titulo: string; dias: DiaParaCompartir[] } {
   const dias: DiaParaCompartir[] = diasDelMenu(e)
     .filter((d) => !e.saltados.includes(d.fecha))
-    .filter((d) => comidasDe(e, d.fecha).length > 0 || e.colegio[d.fecha] || e.eventos[d.fecha])
+    .filter(
+      (d) =>
+        comidasDe(e, d.fecha).length > 0 ||
+        e.colegio[d.fecha] ||
+        e.eventos[d.fecha] ||
+        e.almuerzos.some((a) => a.fecha === d.fecha),
+    )
     .map((d) => {
       const cole = e.colegio[d.fecha];
       return {
@@ -49,6 +58,7 @@ export function planParaCompartir(e: EstadoHogar): { titulo: string; dias: DiaPa
           .map((g) => EMOJI_GRUPO[g])
           .join(" "),
         platos: comidasDe(e, d.fecha).map((c) => c.plato.nombre),
+        comida: e.almuerzos.filter((a) => a.fecha === d.fecha).map((a) => a.texto),
         evento: e.eventos[d.fecha] ?? null,
       };
     });
@@ -166,4 +176,47 @@ export function eventosDeCalendario(e: EstadoHogar): EventoCalendario[] {
     });
   }
   return eventos;
+}
+
+const etiquetaFecha = (f: FechaIso) =>
+  new Intl.DateTimeFormat("es-ES", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  })
+    .format(new Date(`${f}T12:00:00Z`))
+    .replace(/\./g, "");
+
+/** Lo próximo (cumples, apuntes y fechas señaladas, 45 días) listo para compartir. */
+export function fechasParaCompartir(e: EstadoHogar): FechaParaCompartir[] {
+  return cuentaAtras(e.cumples, e.eventos, e.hoy, {
+    maxDias: 45,
+    max: 25,
+    externos: e.agenda.map((a) => ({
+      fecha: a.fecha,
+      titulo: a.titulo,
+      hora: a.hora,
+      hasta: a.hasta,
+    })),
+  }).map((c) => ({
+    etiqueta: etiquetaFecha(c.fecha),
+    emoji: c.emoji,
+    titulo: c.titulo,
+    hora: c.hora,
+    cuando: c.dias === 0 ? "hoy" : c.dias === 1 ? "mañana" : `en ${c.dias} días`,
+  }));
+}
+
+/** Lo que toca en casa hoy y esta semana, con quién lo lleva. */
+export function casaParaCompartir(e: EstadoHogar): TareaParaCompartir[] {
+  const nombre = (id: string | null) => e.personas.find((p) => p.id === id)?.nombre ?? "Los dos";
+  return ordenadasPorFecha(e.casa, e.hoy)
+    .filter((t) => diasParaCasa(t, e.hoy) <= 7)
+    .map((t) => ({
+      emoji: t.emoji,
+      titulo: t.titulo,
+      quien: nombre(t.responsableId),
+      cuando: cuandoToca(diasParaCasa(t, e.hoy)).replace(/^toca /, ""),
+    }));
 }

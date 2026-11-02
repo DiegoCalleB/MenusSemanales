@@ -1,8 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
+import { seccionesDeCompra } from "@/aplicacion/compartir";
 import { articulosPendientes } from "@/aplicacion/estado";
+import { textoCompra } from "@/dominio/compartir";
+import { BotonesCompartir } from "../compartir-botones";
 import type { ArticuloCompra } from "@/dominio/compra";
 import { formatearCantidad, NOMBRE_SECCION } from "../formato";
 import { EntradaCompra } from "../entrada-compra";
@@ -63,6 +65,8 @@ export function CompraVista() {
   const [ocultarComprado, setOcultarComprado] = useState(false);
 
   const pendientes = articulosPendientes(estado);
+  const compra = seccionesDeCompra(estado);
+  const textoDeCompra = textoCompra(compra.secciones, compra.manuales);
   const grupos = agruparPorSeccion(pendientes);
   const manualesPendientes = estado.manuales.filter((m) => !m.comprado);
   const manualesComprados = estado.manuales.filter((m) => m.comprado);
@@ -77,9 +81,7 @@ export function CompraVista() {
         <h1 className="text-2xl font-extrabold tracking-tight">
           Lista de la compra <span aria-hidden="true">🛒</span>
         </h1>
-        <Link href="/compartir" className="boton-suave w-fit">
-          📤 Enviar la lista
-        </Link>
+        <BotonesCompartir titulo="Lista de la compra" texto={textoDeCompra} />
         <div className="flex items-center gap-3">
           <progress
             max={Math.max(total, 1)}

@@ -626,11 +626,56 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 
+  test("compartir: cada pantalla manda por WhatsApp lo que enseña, con comidas, fechas y casa", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    const mensaje = async () => {
+      const href =
+        (await pagina
+          .getByRole("link", { name: "Enviar por WhatsApp" })
+          .first()
+          .getAttribute("href")) ?? "";
+      expect(href).toMatch(/^https:\/\/wa\.me\/\?text=/);
+      return decodeURIComponent(href.replace("https://wa.me/?text=", ""));
+    };
+    // La comida del mediodía entra en el mensaje del menú.
+    await cargar(pagina, "/calendario");
+    const comida = pagina.getByRole("region", { name: "Comida del mediodía" });
+    await comida.getByLabel("Qué se come").fill("Paella de los domingos");
+    await comida.getByRole("button", { name: "Apuntar", exact: true }).click();
+    await pagina.goto("/menu", { waitUntil: "networkidle" });
+    expect(await mensaje()).toContain("☀️ Comida: Paella de los domingos");
+    // La compra, desde la propia lista.
+    await pagina.goto("/compra", { waitUntil: "networkidle" });
+    expect(await mensaje()).toContain("🛒 *Lista de la compra*");
+    // Las fechas apuntadas.
+    await pagina.goto("/fechas", { waitUntil: "networkidle" });
+    await pagina.getByLabel(/Escribe como en una nota/).fill("5 Noviembre 18:15 Psicotécnico");
+    await pagina.getByRole("button", { name: "Apuntar", exact: true }).click();
+    await expect(pagina.getByRole("list", { name: "Apuntes" })).toBeVisible();
+    expect(await mensaje()).toMatch(/Psicotécnico/);
+    expect(await mensaje()).toContain("18:15");
+    // Lo que toca en casa, agrupado por quién.
+    await pagina.goto("/casa", { waitUntil: "networkidle" });
+    await pagina.getByRole("button", { name: "Añadir la plantilla de la casa" }).click();
+    await pagina.getByRole("button", { name: /Repartir las/ }).click();
+    const casa = await mensaje();
+    expect(casa).toContain("🏠 *Lo que toca en casa*");
+    expect(casa).toMatch(/\*(Diego|Ana)\*/);
+    // «Copiar» avisa y «Compartir…» solo sale si el navegador lo ofrece.
+    await pagina.getByRole("button", { name: "Copiar" }).click();
+    await expect(
+      pagina.getByRole("status").filter({ hasText: /Copiado|No se ha podido copiar/ }),
+    ).toBeVisible();
+    await contexto.close();
+  });
+
   test("enviar: WhatsApp, copiar y archivo de calendario", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/compartir");
     const whatsapp = pagina.getByRole("link", { name: "Enviar por WhatsApp" });
-    await expect(whatsapp).toHaveCount(2);
+    await expect(whatsapp).toHaveCount(4); // menú, compra, fechas y casa
     expect(await whatsapp.first().getAttribute("href")).toMatch(/^https:\/\/wa\.me\/\?text=/);
     await pagina.getByText("Ver mensaje").first().click();
     await expect(pagina.locator("pre").first()).toContainText("Hecho con Menús Semanales");

@@ -3,6 +3,7 @@
 import { type FormEvent, useState } from "react";
 import {
   FRECUENCIAS_CASA,
+  cuandoToca,
   PLANTILLA_GATOS,
   type TareaCasa,
   diasParaCasa,
@@ -10,16 +11,11 @@ import {
   ordenadasPorFecha,
   textoFrecuencia,
 } from "@/dominio/casa";
+import { casaParaCompartir } from "@/aplicacion/compartir";
+import { textoCasa } from "@/dominio/compartir";
+import { BotonesCompartir } from "../compartir-botones";
 import { useHogar } from "../proveedor-hogar";
 import { useYo } from "../yo";
-
-export function cuandoToca(dias: number): string {
-  if (dias < -1) return `toca desde hace ${-dias} días`;
-  if (dias === -1) return "tocaba ayer";
-  if (dias === 0) return "toca hoy";
-  if (dias === 1) return "toca mañana";
-  return `toca en ${dias} días`;
-}
 
 const fechaCorta = (f: string) =>
   new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "short", timeZone: "UTC" }).format(
@@ -77,6 +73,13 @@ export function CasaVista() {
         Lo que se repite en casa. Cada cosa sabe cuándo toca y a quién; al marcarla hecha se
         reprograma sola, así que nadie tiene que acordarse.
       </p>
+
+      {estado.casa.length > 0 && (
+        <BotonesCompartir
+          titulo="Lo que toca en casa"
+          texto={textoCasa(casaParaCompartir(estado))}
+        />
+      )}
 
       {estado.casa.length === 0 && (
         <section aria-labelledby="empezar" className="tarjeta flex flex-col gap-3">

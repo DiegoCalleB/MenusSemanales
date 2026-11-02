@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { cantidadEnTexto } from "./texto";
-import { enlaceWhatsApp, generarIcs, textoCompra, textoMenu } from "./compartir";
+import {
+  enlaceWhatsApp,
+  generarIcs,
+  textoCasa,
+  textoCompra,
+  textoFechas,
+  textoMenu,
+} from "./compartir";
 
 const dias = [
   {
@@ -142,5 +149,65 @@ describe("generarIcs: apuntes con hora y de varios días", () => {
     expect(ics).toContain("DTSTART;VALUE=DATE:20261117");
     expect(ics).toContain("DTEND;VALUE=DATE:20261120");
     expect(ics).toContain("DTEND:20261106T235900");
+  });
+});
+
+describe("compartir: comidas, fechas y lo que toca en casa", () => {
+  it("el menú incluye la comida del mediodía y distingue la cena cuando hay las dos", () => {
+    const t = textoMenu("Menú del 7 al 8 de noviembre", [
+      {
+        fecha: "2026-11-07",
+        etiqueta: "Sábado 7",
+        cole: "",
+        platos: ["Pizza casera"],
+        comida: ["Paella", "Ensalada"],
+        evento: null,
+      },
+      {
+        fecha: "2026-11-08",
+        etiqueta: "Domingo 8",
+        cole: "",
+        platos: [],
+        comida: ["Por decidir"],
+        evento: null,
+      },
+      { fecha: "2026-11-09", etiqueta: "Lunes 9", cole: "", platos: ["Sopa"], evento: null },
+    ]);
+    expect(t).toContain("☀️ Comida: Paella + Ensalada");
+    expect(t).toContain("🍴 Cena: Pizza casera");
+    expect(t).toContain("☀️ Comida: Por decidir");
+    expect(t).toContain("🍴 _cena sin decidir_");
+    // Sin comida, la cena sale como siempre (sin «Cena:»).
+    expect(t).toContain("🍴 Sopa");
+    expect(t).not.toContain("Cena: Sopa");
+  });
+
+  it("las próximas fechas se leen de una vez, con la hora y el «cuándo»", () => {
+    const t = textoFechas([
+      { etiqueta: "sáb 7 nov", emoji: "🎂", titulo: "Ana (42)", hora: null, cuando: "en 5 días" },
+      {
+        etiqueta: "jue 12 nov",
+        emoji: "📌",
+        titulo: "Psicotécnico",
+        hora: "18:15",
+        cuando: "en 10 días",
+      },
+    ]);
+    expect(t).toContain("📌 *Próximas fechas*");
+    expect(t).toContain("*sáb 7 nov* · 🎂 Ana (42) _(en 5 días)_");
+    expect(t).toContain("*jue 12 nov* 18:15 · 📌 Psicotécnico");
+    expect(textoFechas([])).toContain("Nada apuntado");
+  });
+
+  it("lo que toca en casa va agrupado por quién lo lleva, sin repetir el nombre", () => {
+    const t = textoCasa([
+      { emoji: "🛏️", titulo: "Cambiar sábanas", quien: "Diego", cuando: "hoy" },
+      { emoji: "🐱", titulo: "Limpiar areneros", quien: "Los dos", cuando: "desde hace 2 días" },
+      { emoji: "🛁", titulo: "Cambiar toallas", quien: "Diego", cuando: "en 3 días" },
+    ]);
+    expect(t.match(/\*Diego\*/g)).toHaveLength(1);
+    expect(t).toContain("☐ 🛏️ Cambiar sábanas _(hoy)_");
+    expect(t).toContain("*Los dos*\n☐ 🐱 Limpiar areneros _(desde hace 2 días)_");
+    expect(textoCasa([])).toContain("Nada pendiente");
   });
 });

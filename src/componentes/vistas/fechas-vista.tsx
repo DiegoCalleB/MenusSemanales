@@ -5,7 +5,10 @@ import { useState } from "react";
 import { enlaceGoogleCalendar, textoParaKeep } from "@/dominio/agenda";
 import { type EventoCalendario, generarIcs } from "@/dominio/compartir";
 import { type CuentaAtras, cuentaAtras } from "@/dominio/cuenta-atras";
+import { fechasParaCompartir } from "@/aplicacion/compartir";
+import { textoFechas } from "@/dominio/compartir";
 import { Apuntar } from "../apuntar";
+import { BotonesCompartir } from "../compartir-botones";
 import { useHogar, useCuenta } from "../proveedor-hogar";
 import { useCalendarioFamilia } from "../usar-calendario-familia";
 
@@ -147,6 +150,11 @@ export function FechasVista() {
           </ul>
         )}
 
+        <BotonesCompartir
+          titulo="Próximas fechas"
+          texto={textoFechas(fechasParaCompartir(estado))}
+          deshabilitado={lista.length === 0}
+        />
         <div className="flex flex-wrap gap-2">
           <button
             type="button"

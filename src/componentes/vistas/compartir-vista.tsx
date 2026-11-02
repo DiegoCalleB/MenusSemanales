@@ -1,68 +1,38 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useSyncExternalStore } from "react";
-import { eventosDeCalendario, planParaCompartir, seccionesDeCompra } from "@/aplicacion/compartir";
-import { enlaceWhatsApp, generarIcs, textoCompra, textoMenu } from "@/dominio/compartir";
+import { useMemo, useState } from "react";
+import {
+  casaParaCompartir,
+  eventosDeCalendario,
+  fechasParaCompartir,
+  planParaCompartir,
+  seccionesDeCompra,
+} from "@/aplicacion/compartir";
+import { generarIcs, textoCasa, textoCompra, textoFechas, textoMenu } from "@/dominio/compartir";
+import { BotonesCompartir } from "../compartir-botones";
 import { useHogar } from "../proveedor-hogar";
-
-const nadie = () => () => {};
 
 function Tarjeta({
   titulo,
   emoji,
   texto,
   children,
-  onAviso,
 }: {
   titulo: string;
   emoji: string;
   texto: string;
   children?: React.ReactNode;
-  onAviso: (t: string) => void;
 }) {
-  const puedeCompartir = useSyncExternalStore(
-    nadie,
-    () => typeof navigator.share === "function",
-    () => false,
-  );
-
-  async function compartir() {
-    try {
-      await navigator.share({ title: titulo, text: texto });
-    } catch {
-      // la persona canceló el cuadro de compartir: no es un error
-    }
-  }
-  async function copiar() {
-    try {
-      await navigator.clipboard.writeText(texto);
-      onAviso("Copiado. Pégalo donde quieras (WhatsApp, Keep, notas…).");
-    } catch {
-      onAviso("No se ha podido copiar: abre «Ver mensaje», selecciónalo y cópialo a mano.");
-    }
-  }
-
   return (
     <section className="tarjeta flex flex-col gap-3" aria-label={titulo}>
       <h2 className="text-xl font-extrabold">
         <span aria-hidden="true">{emoji} </span>
         {titulo}
       </h2>
-      <div className="flex flex-wrap gap-2">
-        <a className="boton" href={enlaceWhatsApp(texto)} target="_blank" rel="noopener noreferrer">
-          Enviar por WhatsApp
-        </a>
-        {puedeCompartir && (
-          <button type="button" className="boton-suave" onClick={compartir}>
-            Compartir…
-          </button>
-        )}
-        <button type="button" className="boton-suave" onClick={copiar}>
-          Copiar
-        </button>
+      <BotonesCompartir titulo={titulo} texto={texto}>
         {children}
-      </div>
+      </BotonesCompartir>
       <details>
         <summary className="text-marca-fuerte flex min-h-11 cursor-pointer items-center text-base font-semibold">
           Ver mensaje
@@ -82,6 +52,8 @@ export function CompartirVista() {
   const plan = useMemo(() => planParaCompartir(estado), [estado]);
   const compra = useMemo(() => seccionesDeCompra(estado), [estado]);
   const textoDelMenu = useMemo(() => textoMenu(plan.titulo, plan.dias), [plan]);
+  const textoDeFechas = useMemo(() => textoFechas(fechasParaCompartir(estado)), [estado]);
+  const textoDeCasa = useMemo(() => textoCasa(casaParaCompartir(estado)), [estado]);
   const textoDeCompra = useMemo(() => textoCompra(compra.secciones, compra.manuales), [compra]);
   const hayEventos = estado.comidas.length > 0 || Object.keys(estado.eventos).length > 0;
 
@@ -109,13 +81,15 @@ export function CompartirVista() {
         </Link>
       </header>
 
-      <Tarjeta titulo={plan.titulo} emoji="🍽️" texto={textoDelMenu} onAviso={setAviso}>
+      <Tarjeta titulo={plan.titulo} emoji="🍽️" texto={textoDelMenu}>
         <button type="button" className="boton-suave" disabled={!hayEventos} onClick={descargarIcs}>
           📅 Calendario (.ics)
         </button>
       </Tarjeta>
 
-      <Tarjeta titulo="Lista de la compra" emoji="🛒" texto={textoDeCompra} onAviso={setAviso} />
+      <Tarjeta titulo="Lista de la compra" emoji="🛒" texto={textoDeCompra} />
+      <Tarjeta titulo="Próximas fechas" emoji="📌" texto={textoDeFechas} />
+      <Tarjeta titulo="Lo que toca en casa" emoji="🏠" texto={textoDeCasa} />
 
       <p className="text-tinta-suave text-base">
         En Google Keep: «Compartir…» → Keep, o «Copiar» y pegar en una nota. En Google Calendar:

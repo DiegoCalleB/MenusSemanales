@@ -1181,3 +1181,35 @@ describe("comida del mediodía (D-079)", () => {
     ).toEqual([]);
   });
 });
+
+describe("compartir desde el estado de la app", () => {
+  it("el menú lleva la comida apuntada y las fechas y la casa se preparan para enviar", async () => {
+    const { planParaCompartir, fechasParaCompartir, casaParaCompartir } =
+      await import("./compartir");
+    const base = estadoInicialDemo();
+    const hoy = base.hoy;
+    let e = aplicar(
+      base,
+      { tipo: "almuerzo/anadir", fecha: hoy, texto: "Paella" },
+      {
+        tipo: "agenda/anadir",
+        texto: `${Number(hoy.slice(8)) + 2} ${["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"][Number(hoy.slice(5, 7)) - 1]} 18:15 Cita`,
+        personaId: null,
+      },
+      { tipo: "casa/plantilla", conjunto: "gatos" },
+    );
+    expect(planParaCompartir(e).dias.find((d) => d.fecha === hoy)?.comida).toEqual(["Paella"]);
+    const fechas = fechasParaCompartir(e);
+    expect(fechas.map((f) => f.titulo)).toContain("Cita");
+    expect(fechas.find((f) => f.titulo === "Cita")).toMatchObject({
+      hora: "18:15",
+      cuando: "en 2 días",
+    });
+    e = aplicar(e, { tipo: "casa/asignar", id: e.casa[0]?.id ?? "", responsableId: "ana" });
+    const casa = casaParaCompartir(e);
+    expect(casa.length).toBeGreaterThan(0);
+    expect(casa.some((t) => t.quien === "Ana")).toBe(true);
+    expect(casa.some((t) => t.quien === "Los dos")).toBe(true);
+    expect(casa.every((t) => !t.cuando.startsWith("toca"))).toBe(true);
+  });
+});

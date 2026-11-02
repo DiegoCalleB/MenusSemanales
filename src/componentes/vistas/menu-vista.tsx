@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
   MAX_PLATOS_POR_CENA,
@@ -11,6 +10,9 @@ import {
   opcionesParaFecha,
 } from "@/aplicacion/estado";
 import type { Opcion } from "@/dominio/menu";
+import { planParaCompartir } from "@/aplicacion/compartir";
+import { textoMenu } from "@/dominio/compartir";
+import { BotonesCompartir } from "../compartir-botones";
 import { TarjetaCole } from "../cole";
 import { EMOJI_GRUPO, formatearNumero } from "../formato";
 import { useHogar } from "../proveedor-hogar";
@@ -80,6 +82,7 @@ export function MenuVista() {
   const { estado, despachar } = useHogar();
   const dias = useMemo(() => diasDelMenu(estado), [estado]);
   const propuesta = useMemo(() => menuDeLaSemana(estado), [estado]);
+  const plan = useMemo(() => planParaCompartir(estado), [estado]);
   const eleccion = (fecha: string) => comidasDe(estado, fecha)[0];
   const [anadiendo, setAnadiendo] = useState<string | null>(null);
   const [verTodos, setVerTodos] = useState<string | null>(null);
@@ -122,10 +125,9 @@ export function MenuVista() {
             </button>
           ))}
         </div>
-        <Link href="/compartir" className="boton-suave">
-          📤 Enviar
-        </Link>
       </div>
+
+      <BotonesCompartir titulo={plan.titulo} texto={textoMenu(plan.titulo, plan.dias)} />
 
       <ul className="flex flex-col gap-2">
         {dias.map((dia) => {
