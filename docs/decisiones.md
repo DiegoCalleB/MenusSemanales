@@ -731,3 +731,11 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **Lectura:** `leerTablas` valida con zod el JSON de `leer_hogar_tablas` y `aplicarLecturaDeTablas` lo vuelca en el estado sin tocar platos, despensa ni compra. A quien cumple el regalo le llega nulo: queda «sin pensar» y sin ideas.
 - **Límites:** `interesados` de un cumple (no usado en la interfaz) no se guarda en tablas. La prueba de ida y vuelta es contra el formato, no contra Postgres: la comprobación real con la base de datos llegará con el motor de sincronización.
 - **Siguiente:** pantalla de personas (hoy no se pueden añadir ni editar), vincular persona y cuenta, y el motor de sincronización por tablas con actualización en directo.
+
+## D-091 — Vincular cada persona con su cuenta mediante código de invitación
+
+- **Estado:** migración `20261102180000_vincular_personas.sql` escrita y probada en local (`vincular_personas.test.sql`, con mutación comprobada). **Pendiente de aplicar en Supabase** (el servidor pidió confirmación y no llegó respuesta a tiempo).
+- **Decisión de Diego:** código de invitación para cada persona.
+- **Cómo:** `crear_invitacion_persona(hogar, persona)` (solo administrador; un código vivo por persona; un solo uso; caduca a los 7 días); `unirse_a_hogar` vincula la cuenta a esa persona si el código era para una; `vincular_persona_propia` para que el administrador elija quién es él; `mi_persona(hogar)` dice cuál es la mía. Una cuenta, una persona por hogar.
+- **Límite:** quien tenga el código (o un administrador) podría vincularse a otra persona antes que ella: es confianza dentro del hogar.
+- **Siguiente:** pantalla de personas que use estas funciones e importación única del documento a tablas (con vista previa y copia de seguridad).
