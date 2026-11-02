@@ -583,3 +583,183 @@ export function resumenDeLectura(l: LecturaTablas): ResumenTablas {
     dias: new Set([...l.llegoTarde, ...l.saltados]).size,
   };
 }
+
+// --------------------------------------------------------------------------------------------
+// Motor por tablas: estado ↔ lectura y mezcla de cambios (D-095)
+// --------------------------------------------------------------------------------------------
+
+/** El estado, con la misma forma que devuelve `leer_hogar_tablas` (solo lo que vive en tablas). */
+export function lecturaDeEstado(e: EstadoHogar, hogarId: string): LecturaTablas {
+  return {
+    personas: e.personas.map((p) => ({ ...filaPersona(hogarId, p), vinculada: false })),
+    horizonte: e.horizonte,
+    llegoTarde: [...e.llegoTarde].sort(),
+    saltados: [...e.saltados].sort(),
+    cumples: e.cumples.map((c) => {
+      const f = filaCumple(hogarId, c);
+      return { ...f, regalo: f.regalo ?? null, ideas: f.ideas ?? [] };
+    }),
+    agenda: e.agenda.map((a) => filaApunte(hogarId, a)),
+    fechas: Object.entries(e.eventos).map(([fecha, v]) => ({
+      fecha,
+      titulo: v.titulo,
+      emoji: v.emoji,
+    })),
+    casa: e.casa.map((t) => filaCasa(hogarId, t)),
+    tareas: e.tareas.map((t) => {
+      const f = filaTarea(hogarId, t);
+      return { ...f, hechas: f.hechas ?? [] };
+    }),
+  };
+}
+
+function mezclar<T, N>(
+  actuales: T[],
+  grupo: { upsert?: N[]; borrar?: string[] } | undefined,
+  clave: (x: T | N) => string,
+  unir: (previa: T | undefined, nueva: N) => T,
+): T[] {
+  if (!grupo) return actuales;
+  const mapa = new Map(actuales.map((x) => [clave(x), x]));
+  for (const nueva of grupo.upsert ?? []) {
+    mapa.set(clave(nueva), unir(mapa.get(clave(nueva)), nueva));
+  }
+  for (const k of grupo.borrar ?? []) mapa.delete(k);
+  return [...mapa.values()];
+}
+
+/**
+ * Aplica unos cambios (los que se envían a `aplicar_cambios_tablas`) a una lectura, con las mismas
+ * reglas que la función SQL: «regalo» e «ideas» ausentes = se conserva lo que había; «hechas»
+ * ausente = igual; un día sin ninguna marca desaparece.
+ */
+export function aplicarCambiosALectura(l: LecturaTablas, c: CambiosTablas): LecturaTablas {
+  const dias = new Map<string, { llegaTarde: boolean; saltado: boolean }>();
+  for (const f of l.llegoTarde) dias.set(f, { llegaTarde: true, saltado: false });
+  for (const f of l.saltados)
+    dias.set(f, { llegaTarde: dias.get(f)?.llegaTarde ?? false, saltado: true });
+  for (const d of c.dias?.upsert ?? [])
+    dias.set(d.fecha, { llegaTarde: d.llegaTarde, saltado: d.saltado });
+  for (const f of c.dias?.borrar ?? []) dias.delete(f);
+  const fechasDias = [...dias.entries()].filter(([, v]) => v.llegaTarde || v.saltado);
+
+  return {
+    personas: mezclar(
+      l.personas,
+      c.personas,
+      (x) => x.id,
+      (prev, n) => ({
+        ...n,
+        vinculada: prev?.vinculada ?? false,
+      }),
+    ),
+    horizonte: c.horizonte ?? l.horizonte,
+    llegoTarde: fechasDias
+      .filter(([, v]) => v.llegaTarde)
+      .map(([f]) => f)
+      .sort(),
+    saltados: fechasDias
+      .filter(([, v]) => v.saltado)
+      .map(([f]) => f)
+      .sort(),
+    cumples: mezclar(
+      l.cumples,
+      c.cumples,
+      (x) => x.id,
+      (prev, n) => ({
+        id: n.id,
+        nombre: n.nombre,
+        dia: n.dia,
+        mes: n.mes,
+        anio: n.anio,
+        relacion: n.relacion,
+        personaId: n.personaId,
+        regalo: n.regalo !== undefined ? n.regalo : (prev?.regalo ?? null),
+        ideas: n.ideas !== undefined ? n.ideas : (prev?.ideas ?? []),
+      }),
+    ),
+    agenda: mezclar(
+      l.agenda,
+      c.agenda,
+      (x) => x.id,
+      (_p, n) => n,
+    ),
+    fechas: mezclar(
+      l.fechas,
+      c.fechas,
+      (x) => x.fecha,
+      (_p, n) => n,
+    ),
+    casa: mezclar(
+      l.casa,
+      c.casa,
+      (x) => x.id,
+      (_p, n) => n,
+    ),
+    tareas: mezclar(
+      l.tareas,
+      c.tareas,
+      (x) => x.id,
+      (prev, n) => ({
+        id: n.id,
+        personaId: n.personaId,
+        texto: n.texto,
+        frecuencia: n.frecuencia,
+        hechas: n.hechas !== undefined ? n.hechas : (prev?.hechas ?? []),
+      }),
+    ),
+  };
+}
+
+/** ¿Ya hay un hogar en tablas? (Sin personas no se ha llevado nada: sigue mandando el documento.) */
+export const hayHogarEnTablas = (l: LecturaTablas): boolean => l.personas.length > 0;
+
+/**
+ * Pasa todos los ids de persona del estado a UUID: los de personas y todo lo que las nombra
+ * (reparto, valoraciones, cumples, casa, tareas). Es idempotente y lo hace igual en cada móvil.
+ */
+export function migrarIdsDePersonas(e: EstadoHogar, hogarId: string): EstadoHogar {
+  const id = (x: string) => aUuid(hogarId, x);
+  const idONulo = (x: string | null | undefined) => (x ? id(x) : null);
+  return {
+    ...e,
+    personas: e.personas.map((p) => ({ ...p, id: id(p.id) })),
+    cargas: e.cargas.map((c) => ({ ...c, responsableId: idONulo(c.responsableId) })),
+    turnos: e.turnos.map((t) => ({ ...t, personaId: id(t.personaId) })),
+    valoraciones: Object.fromEntries(
+      Object.entries(e.valoraciones).map(([plato, porPersona]) => [
+        plato,
+        Object.fromEntries(Object.entries(porPersona).map(([p, v]) => [id(p), v])),
+      ]),
+    ),
+    cumples: e.cumples.map((c) => (c.personaId ? { ...c, personaId: id(c.personaId) } : c)),
+    casa: e.casa.map((t) => ({ ...t, responsableId: idONulo(t.responsableId) })),
+    tareas: e.tareas.map((t) => (t.personaId ? { ...t, personaId: id(t.personaId) } : t)),
+  };
+}
+
+/**
+ * Cuando manda el motor por tablas, lo que llega del documento no debe pisar lo que viene de las
+ * tablas: se queda lo de `actual` en esos campos (y los ids de persona, en UUID).
+ */
+export function conservarCamposDeTablas(
+  nuevo: EstadoHogar,
+  actual: EstadoHogar,
+  hogarId: string,
+): EstadoHogar {
+  return migrarIdsDePersonas(
+    {
+      ...nuevo,
+      personas: actual.personas,
+      horizonte: actual.horizonte,
+      llegoTarde: actual.llegoTarde,
+      saltados: actual.saltados,
+      cumples: actual.cumples,
+      agenda: actual.agenda,
+      eventos: actual.eventos,
+      casa: actual.casa,
+      tareas: actual.tareas,
+    },
+    hogarId,
+  );
+}

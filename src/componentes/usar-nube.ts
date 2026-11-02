@@ -4,11 +4,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Accion, EstadoHogar } from "@/aplicacion/estado";
 import { type EstadoSync, Sincronizador } from "@/aplicacion/sincronizacion";
+import { SincronizadorTablas } from "@/aplicacion/sincronizacion-tablas";
 import {
   type ResumenTablas,
   aUuid,
   cambiosDePersonas,
   cambiosParaImportar,
+  conservarCamposDeTablas,
   leerTablas,
   resumenDeCambios,
   resumenDeLectura,
@@ -40,6 +42,7 @@ import {
 } from "@/infraestructura/respaldo";
 import type { Database, Json } from "@/infraestructura/supabase/database.types";
 import { crearNube } from "@/infraestructura/supabase/nube";
+import { crearNubeTablas } from "@/infraestructura/supabase/nube-tablas";
 
 /** Asegura que las personas del estado están en la tabla `persona` (con ids UUID estables). */
 async function llevarPersonas(
@@ -138,6 +141,9 @@ export function useNube(
   const [sync, setSync] = useState<EstadoSync>("inactivo");
   const cliente = useRef<SupabaseClient<Database> | null>(null);
   const sincronizador = useRef<Sincronizador | null>(null);
+  const tablas = useRef<SincronizadorTablas | null>(null);
+  const cerrarTablas = useRef<(() => void) | null>(null);
+  const temporizadorTablas = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cerrar = useRef<(() => void) | null>(null);
   const temporizador = useRef<ReturnType<typeof setTimeout> | null>(null);
   const leer = useRef(leerEstado);
@@ -150,10 +156,55 @@ export function useNube(
   const desconectar = useCallback(() => {
     cerrar.current?.();
     cerrar.current = null;
+    cerrarTablas.current?.();
+    cerrarTablas.current = null;
+    tablas.current = null;
+    if (temporizadorTablas.current) clearTimeout(temporizadorTablas.current);
     sincronizador.current = null;
     if (temporizador.current) clearTimeout(temporizador.current);
     setSync("inactivo");
   }, []);
+
+  /**
+   * Enciende el motor por tablas si el hogar ya tiene sus datos en ellas (D-095). Si no, sigue
+   * mandando el documento hasta que se lleven a tablas desde «Cuenta».
+   */
+  const activarTablas = useCallback(
+    async (c: SupabaseClient<Database>, h: HogarDeUsuario): Promise<boolean> => {
+      cerrarTablas.current?.();
+      cerrarTablas.current = null;
+      tablas.current = null;
+      const nube = crearNubeTablas(c, h.id);
+      const motor = new SincronizadorTablas(nube, {
+        hogarId: h.id,
+        leer: () => leer.current(),
+        escribir: (e) => escribir.current(e),
+        avisar: () => undefined,
+        antesDeAdoptar: (local, nuevo) => {
+          const r = guardarRespaldoAntesDeLaNube(almacenamientoLocal(), local, nuevo, new Date());
+          if (r === "guardada") window.dispatchEvent(new Event(EVENTO_RESPALDOS));
+        },
+      });
+      try {
+        if ((await motor.iniciar()) !== "activo") return false;
+      } catch (e) {
+        console.error(e);
+        return false;
+      }
+      tablas.current = motor;
+      let espera: ReturnType<typeof setTimeout> | null = null;
+      const baja = nube.suscribir(() => {
+        if (espera) clearTimeout(espera);
+        espera = setTimeout(() => void motor.recibir(), 300);
+      });
+      cerrarTablas.current = () => {
+        baja();
+        if (espera) clearTimeout(espera);
+      };
+      return true;
+    },
+    [],
+  );
 
   const conectar = useCallback(
     async (c: SupabaseClient<Database>, h: HogarDeUsuario): Promise<Resultado> => {
@@ -161,7 +212,9 @@ export function useNube(
       const nube = crearNube(c, h.id);
       const s = new Sincronizador(nube, {
         leer: () => leer.current(),
-        escribir: (e) => escribir.current(e),
+        // Si mandan las tablas, lo que llega del documento no pisa lo que viene de ellas.
+        escribir: (e) =>
+          escribir.current(tablas.current ? conservarCamposDeTablas(e, leer.current(), h.id) : e),
         avisar: setSync,
         antesDeAdoptar: (local, remoto) => {
           const r = guardarRespaldoAntesDeLaNube(almacenamientoLocal(), local, remoto, new Date());
@@ -174,9 +227,12 @@ export function useNube(
         return { ok: false, mensaje: e instanceof Error ? e.message : "No se pudo sincronizar." };
       }
       sincronizador.current = s;
+      await activarTablas(c, h);
       const baja = nube.suscribir((r) => s.recibir(r));
       const alVolver = () => {
         if (document.visibilityState !== "visible") return;
+        void tablas.current?.recibir();
+        void tablas.current?.sincronizar();
         void nube
           .leer()
           .then((r) => r && s.recibir(r))
@@ -194,7 +250,7 @@ export function useNube(
       setFase("conectado");
       return { ok: true };
     },
-    [desconectar],
+    [desconectar, activarTablas],
   );
 
   const resolverSesion = useCallback(
@@ -242,6 +298,11 @@ export function useNube(
   const registrar = useCallback((accion: Accion) => {
     const s = sincronizador.current;
     if (!s) return;
+    if (tablas.current) {
+      const motor = tablas.current;
+      if (temporizadorTablas.current) clearTimeout(temporizadorTablas.current);
+      temporizadorTablas.current = setTimeout(() => void motor.sincronizar(), ESPERA_GUARDADO_MS);
+    }
     s.registrar(accion);
     if (temporizador.current) clearTimeout(temporizador.current);
     temporizador.current = setTimeout(() => void s.sincronizar(), ESPERA_GUARDADO_MS);
@@ -395,7 +456,10 @@ export function useNube(
         hogar.id,
         cambiosParaImportar(estado, hogar.id, miId) as unknown as Json,
       );
-      return error ? { ok: false, mensaje: mensajeDeError(error) } : { ok: true };
+      if (error) return { ok: false, mensaje: mensajeDeError(error) };
+      // Desde ahora mandan las tablas: se enciende el motor sin tocar la sincronización del documento.
+      await activarTablas(c, hogar);
+      return { ok: true };
     },
     salir: async () => {
       const c = cliente.current;
