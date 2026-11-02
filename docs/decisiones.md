@@ -627,3 +627,9 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **Comidas:** en la pantalla **Calendario**, el panel de cada día tiene «☀️ Comida»: se apunta un **texto libre** («Paella en casa de los abuelos»), **«❓ Por decidir»** (para marcar que ese día falta pensarla) o **un plato del catálogo**, que además mete sus ingredientes en la lista de la compra. El día lleva ☀️ en el calendario, la portada enseña «Comida: …» el propio día y el archivo `.ics` las incluye como eventos de todo el día.
 - **Cómo:** lista nueva `almuerzos` en el estado (se sincroniza con el resto; `normalizar` la completa en lo guardado antes). Un día solo admite apuntes desde hoy y hasta dentro de 60 días, como las cenas.
 - **Límites:** el motor del menú **no propone ni equilibra** las comidas: es una elección manual (la semana equilibrada y las reglas del cole siguen siendo solo de la cena). No se pueden apuntar días pasados. La raciones se cuentan como en la cena (todos los activos). Los avisos de «hoy toca» de los gatos solo se ven al abrir la app (ver D-078).
+
+## D-080 — Plan para reorganizar y simplificar la app (propuesta, sin decidir)
+
+- **Estado:** propuesta (2026-11-02). Diego pidió «llamar a Marie Kondo» y una visión distinta para móvil y para escritorio. Se ha escrito primero el plan, sin tocar código: `docs/plan-reorganizacion.md`.
+- **Idea:** 4 pilares (Hoy, Comer, Casa, Fechas) y «Más», con pestañas dentro de cada uno; portada de máximo 5 bloques con una acción principal; escritorio con composiciones propias, no una versión estirada del móvil. Cuatro fases, la primera sin cambiar datos ni URL.
+- **Pendiente de Diego y Ana:** si se fusiona Reparto y Tareas en Casa, cuánto se hace antes del 7 de noviembre (recomendado: solo la fase 1), qué se tira, el botón «＋ Apuntar» único y para qué se usará el escritorio.
