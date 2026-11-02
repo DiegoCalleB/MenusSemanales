@@ -2,7 +2,15 @@ import { describe, expect, it } from "vitest";
 import { esUuid, idDeLegado } from "@/dominio/identificadores";
 import { estadoInicialDemo } from "./datos-demo";
 import { type EstadoHogar, reducir } from "./estado";
-import { aUuid, aplicarLecturaDeTablas, cambiosCompletos, diferencias, leerTablas } from "./tablas";
+import {
+  aUuid,
+  aplicarLecturaDeTablas,
+  cambiosCompletos,
+  cambiosParaImportar,
+  diferencias,
+  leerTablas,
+  resumenDeCambios,
+} from "./tablas";
 
 const HOGAR = "5f3d4e1a-6b7c-4d8e-9f0a-1b2c3d4e5f60";
 const BASE = "0b1b0c1e-8f4e-4a4e-9c0e-2f0f7b6f0a11";
@@ -338,5 +346,54 @@ describe("ida y vuelta", () => {
     expect(fila?.nombre).toBe("Otro nombre");
     expect(fila).not.toHaveProperty("regalo");
     expect(fila).not.toHaveProperty("ideas");
+  });
+});
+
+describe("importación única (D-094)", () => {
+  const conCumples = (): EstadoHogar => {
+    let e = base();
+    e = reducir(e, {
+      tipo: "cumple/anadir",
+      nombre: "Ana",
+      dia: 7,
+      mes: 11,
+      relacion: "familia",
+      idBase: BASE,
+    });
+    e = reducir(e, { tipo: "cumple/idea", id: e.cumples[0]!.id, texto: "Sorpresa" });
+    return e;
+  };
+
+  it("lleva todo lo que el documento tiene, con ids UUID, y es repetible", () => {
+    const e = conCumples();
+    const a = cambiosParaImportar(e, HOGAR, null);
+    const b = cambiosParaImportar(e, HOGAR, null);
+    expect(a).toEqual(b);
+    expect(a.personas?.upsert?.length).toBe(e.personas.length);
+    expect(a.cumples?.upsert?.[0]?.regalo?.estado).toBe("idea");
+    expect(a.cumples?.upsert?.[0]?.ideas).toHaveLength(1);
+    for (const f of a.personas!.upsert!) expect(esUuid(f.id)).toBe(true);
+  });
+
+  it("no manda el regalo ni las ideas del cumple de quien importa", () => {
+    const e = conCumples();
+    const ana = e.personas[0]!;
+    const conVinculo: EstadoHogar = {
+      ...e,
+      cumples: e.cumples.map((c) => ({ ...c, personaId: ana.id })),
+    };
+    const sinMia = cambiosParaImportar(conVinculo, HOGAR, null).cumples!.upsert![0]!;
+    expect(sinMia.regalo).toBeDefined();
+    const conMia = cambiosParaImportar(conVinculo, HOGAR, ana.id).cumples!.upsert![0]!;
+    expect(conMia).not.toHaveProperty("regalo");
+    expect(conMia).not.toHaveProperty("ideas");
+    expect(conMia.nombre).toBe("Ana");
+  });
+
+  it("los resúmenes cuentan filas", () => {
+    const e = conCumples();
+    const r = resumenDeCambios(cambiosParaImportar(e, HOGAR, null));
+    expect(r.personas).toBe(e.personas.length);
+    expect(r.cumples).toBe(1);
   });
 });

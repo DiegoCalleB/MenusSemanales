@@ -19,7 +19,7 @@ export interface Respaldo {
   version: number;
   creado: string;
   /** Por qué se hizo: «manual» (descargada) o «antes-de-la-nube» (automática). */
-  motivo: "manual" | "antes-de-la-nube";
+  motivo: "manual" | "antes-de-la-nube" | "antes-de-importar";
   estado: EstadoHogar;
 }
 
@@ -74,7 +74,8 @@ export function leerRespaldo(texto: string): LecturaRespaldo {
       app: APP_RESPALDO,
       version: r.version,
       creado: typeof r.creado === "string" ? r.creado : "",
-      motivo: r.motivo === "antes-de-la-nube" ? "antes-de-la-nube" : "manual",
+      motivo:
+        r.motivo === "antes-de-la-nube" || r.motivo === "antes-de-importar" ? r.motivo : "manual",
       estado: normalizar({ ...r.estado, aviso: null }),
     },
   };
@@ -110,6 +111,29 @@ export function guardarRespaldoAntesDeLaNube(
     const previas = leerRespaldosAutomaticos(almacen);
     if (previas[0] && huella(previas[0].estado) === huella(local)) return "sin-cambios";
     const nuevas = [crearRespaldo(local, ahora, "antes-de-la-nube"), ...previas].slice(
+      0,
+      MAX_AUTOMATICAS,
+    );
+    almacen?.setItem(CLAVE_AUTOMATICAS, JSON.stringify(nuevas.map(textoDeRespaldo)));
+    return "guardada";
+  } catch {
+    return "no-se-pudo";
+  }
+}
+
+/**
+ * Copia automática justo antes de llevar los datos a tablas (D-094). Siempre se guarda (salvo que
+ * la última copia sea idéntica): es el seguro de una operación que no se puede hacer a ciegas.
+ */
+export function guardarRespaldoAntesDeImportar(
+  almacen: Almacenamiento | null,
+  estado: EstadoHogar,
+  ahora: Date,
+): "guardada" | "sin-cambios" | "no-se-pudo" {
+  try {
+    const previas = leerRespaldosAutomaticos(almacen);
+    if (previas[0] && huella(previas[0].estado) === huella(estado)) return "sin-cambios";
+    const nuevas = [crearRespaldo(estado, ahora, "antes-de-importar"), ...previas].slice(
       0,
       MAX_AUTOMATICAS,
     );

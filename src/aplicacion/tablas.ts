@@ -520,3 +520,66 @@ export function aplicarLecturaDeTablas(e: EstadoHogar, lectura: LecturaTablas): 
     })),
   };
 }
+
+// --------------------------------------------------------------------------------------------
+// Importación única del documento a tablas (D-094)
+// --------------------------------------------------------------------------------------------
+
+/**
+ * Todo lo que el documento tiene y las tablas guardan, listo para `aplicar_cambios_tablas`.
+ * Quien importa no puede escribir su propio regalo (secreto, D-087): si es una de las personas
+ * con cumpleaños, el regalo y las ideas de ese cumple se dejan fuera (se conserva lo que ya haya).
+ */
+export function cambiosParaImportar(
+  e: EstadoHogar,
+  hogarId: string,
+  miPersonaId: string | null,
+): CambiosTablas {
+  const c = cambiosCompletos(e, hogarId);
+  const mia = miPersonaId ? aUuid(hogarId, miPersonaId) : null;
+  if (mia && c.cumples?.upsert) {
+    c.cumples.upsert = c.cumples.upsert.map((f) => {
+      if (f.personaId !== mia) return f;
+      const sinSecreto = { ...f };
+      delete sinSecreto.regalo;
+      delete sinSecreto.ideas;
+      return sinSecreto;
+    });
+  }
+  return c;
+}
+
+export interface ResumenTablas {
+  personas: number;
+  cumples: number;
+  apuntes: number;
+  fechas: number;
+  tareasCasa: number;
+  tareasPersona: number;
+  dias: number;
+}
+
+/** Cuántas filas de cada tipo contienen unos cambios (o un estado ya leído de las tablas). */
+export function resumenDeCambios(c: CambiosTablas): ResumenTablas {
+  return {
+    personas: c.personas?.upsert?.length ?? 0,
+    cumples: c.cumples?.upsert?.length ?? 0,
+    apuntes: c.agenda?.upsert?.length ?? 0,
+    fechas: c.fechas?.upsert?.length ?? 0,
+    tareasCasa: c.casa?.upsert?.length ?? 0,
+    tareasPersona: c.tareas?.upsert?.length ?? 0,
+    dias: c.dias?.upsert?.length ?? 0,
+  };
+}
+
+export function resumenDeLectura(l: LecturaTablas): ResumenTablas {
+  return {
+    personas: l.personas.length,
+    cumples: l.cumples.length,
+    apuntes: l.agenda.length,
+    fechas: l.fechas.length,
+    tareasCasa: l.casa.length,
+    tareasPersona: l.tareas.length,
+    dias: new Set([...l.llegoTarde, ...l.saltados]).size,
+  };
+}

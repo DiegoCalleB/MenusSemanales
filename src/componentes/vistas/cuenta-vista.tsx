@@ -5,6 +5,7 @@ import { type FormEvent, useState } from "react";
 import { enlaceWhatsApp } from "@/dominio/compartir";
 import { DiagnosticoAcceso } from "../diagnostico-acceso";
 import { PanelRespaldo } from "../panel-respaldo";
+import { PanelTablas } from "../panel-tablas";
 import { MODO_DATOS, useCuenta, useHogar } from "../proveedor-hogar";
 
 const ETIQUETA_SYNC = {
@@ -158,6 +159,7 @@ export function CuentaVista() {
       )}
 
       <PanelRespaldo />
+      <PanelTablas />
     </div>
   );
 }

@@ -757,3 +757,11 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **Qué se guarda:** acción `plato/rapido` (nombre, tipo de plato, id UUID derivado de `idBase`, D-089). Nace **sin ingredientes y sin proponerse solo** (`noProponer`), con 20 minutos de trabajo como valor provisional; se puede elegir a mano. En «Platos» sale marcado «Faltan los ingredientes: sin ellos no entra en la compra»; al guardarle ingredientes desde el editor pasa a proponerse.
 - **Límites:** un plato así no aporta nada a la lista de la compra hasta completar sus ingredientes (a propósito: no se inventan). Los 20 minutos son un valor por defecto, no un dato real.
 - **Pruebas:** 3 tests de reductor, 1 E2E nuevo con accesibilidad y 2 E2E existentes adaptados (410 E2E en verde).
+
+## D-094 — Llevar los datos del documento a tablas (importación única)
+
+- **Estado:** hecha (2026-11-02), en «Cuenta» (solo con la nube conectada). **No probada contra el Supabase real desde la app**: sí las funciones SQL (D-088) y la parte pura (tests).
+- **Qué hace:** «Ver qué se llevará» enseña, por tipo, cuántas filas tiene la app y cuántas hay ya en tablas. «Llevar a tablas ahora» (1) guarda una copia en este móvil —si no puede, no sigue—, (2) sube las personas, (3) manda todo lo demás en una sola operación (todo o nada) y (4) vuelve a leer las tablas para comprobar que hay al menos lo enviado.
+- **Qué lleva:** personas, cumpleaños con su regalo e ideas, apuntes, fechas señaladas, tareas de casa y por persona, días de «llego tarde» y «no cenamos», horizonte. **No lleva aún** platos, ingredientes, despensa, compra, comidas planificadas, reparto, menú del cole, valoraciones ni comidas del mediodía (esos agregados vienen después).
+- **Seguridad de la operación:** no borra nada, ni en el documento ni en las tablas; usa los mismos ids estables (D-089/D-090), así que repetirla no duplica. Si quien importa es una persona con cumpleaños, su regalo y sus ideas se dejan fuera (no puede escribirlos: secreto, D-087) y se conservan los que haya.
+- **Límite importante:** el documento sigue siendo la fuente que usa la app. Las tablas son, por ahora, la copia ordenada: lo que se cambie después en la app **no** llega a las tablas hasta que exista el motor de sincronización por tablas (siguiente paso). Hay que repetir la importación o esperar a ese motor.

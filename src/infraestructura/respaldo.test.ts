@@ -3,6 +3,7 @@ import { estadoInicialDemo } from "@/aplicacion/datos-demo";
 import { type EstadoHogar, reducir } from "@/aplicacion/estado";
 import {
   crearRespaldo,
+  guardarRespaldoAntesDeImportar,
   guardarRespaldoAntesDeLaNube,
   leerRespaldo,
   leerRespaldosAutomaticos,
@@ -120,5 +121,22 @@ describe("copia automática antes de que la nube sustituya lo del móvil", () =>
       leerRespaldosAutomaticos(memoria({ "menus-semanales:respaldos-previos": '["x",5]' })),
     ).toEqual([]);
     expect(leerRespaldosAutomaticos(null)).toEqual([]);
+  });
+});
+
+describe("copia antes de importar a tablas", () => {
+  it("guarda siempre una copia con su motivo, no repite la idéntica y no lanza si falla", () => {
+    const m = memoria();
+    const e = con("Para importar");
+    expect(guardarRespaldoAntesDeImportar(m, e, AHORA)).toBe("guardada");
+    expect(leerRespaldosAutomaticos(m)[0]?.motivo).toBe("antes-de-importar");
+    expect(guardarRespaldoAntesDeImportar(m, e, AHORA)).toBe("sin-cambios");
+    const roto = {
+      getItem: () => null,
+      setItem: () => {
+        throw new Error("lleno");
+      },
+    };
+    expect(guardarRespaldoAntesDeImportar(roto, con("Otro"), AHORA)).toBe("no-se-pudo");
   });
 });

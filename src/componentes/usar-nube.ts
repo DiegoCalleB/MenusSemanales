@@ -4,7 +4,15 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Accion, EstadoHogar } from "@/aplicacion/estado";
 import { type EstadoSync, Sincronizador } from "@/aplicacion/sincronizacion";
-import { aUuid, cambiosDePersonas } from "@/aplicacion/tablas";
+import {
+  type ResumenTablas,
+  aUuid,
+  cambiosDePersonas,
+  cambiosParaImportar,
+  leerTablas,
+  resumenDeCambios,
+  resumenDeLectura,
+} from "@/aplicacion/tablas";
 import type { Persona } from "@/dominio/tipos";
 import { crearClienteNavegador } from "@/infraestructura/supabase/cliente-navegador";
 import {
@@ -26,7 +34,10 @@ import {
   verificarCodigo,
 } from "@/infraestructura/supabase/cuenta";
 import { type EstadoConfigNube, diagnosticarEnvPublico } from "@/infraestructura/env";
-import { guardarRespaldoAntesDeLaNube } from "@/infraestructura/respaldo";
+import {
+  guardarRespaldoAntesDeImportar,
+  guardarRespaldoAntesDeLaNube,
+} from "@/infraestructura/respaldo";
 import type { Database, Json } from "@/infraestructura/supabase/database.types";
 import { crearNube } from "@/infraestructura/supabase/nube";
 
@@ -79,6 +90,14 @@ export interface CuentaContexto {
     personaId: string,
   ) => Promise<{ ok: true; codigo: string } | { ok: false; mensaje: string }>;
   vincularme: (personas: Persona[], personaId: string) => Promise<Resultado>;
+  /** Qué se llevaría a las tablas y qué hay ya en ellas (D-094). */
+  vistaPreviaTablas: (
+    estado: EstadoHogar,
+  ) => Promise<
+    { ok: true; seLlevaria: ResumenTablas; yaHay: ResumenTablas } | { ok: false; mensaje: string }
+  >;
+  /** Lleva los datos del documento a las tablas, tras guardar una copia en este móvil. */
+  importarATablas: (estado: EstadoHogar) => Promise<Resultado>;
   salir: () => Promise<void>;
 }
 
@@ -334,6 +353,48 @@ export function useNube(
       const subida = await llevarPersonas(c, hogar.id, personas);
       if (!subida.ok) return subida;
       const { error } = await vincularmeAPersona(c, hogar.id, aUuid(hogar.id, personaId));
+      return error ? { ok: false, mensaje: mensajeDeError(error) } : { ok: true };
+    },
+    vistaPreviaTablas: async (estado) => {
+      const c = cliente.current;
+      if (!c || !hogar) return { ok: false, mensaje: "Primero crea el hogar." };
+      const { data, error } = await leerHogarDeTablas(c, hogar.id);
+      if (error) return { ok: false, mensaje: mensajeDeError(error) };
+      try {
+        return {
+          ok: true,
+          seLlevaria: resumenDeCambios(cambiosParaImportar(estado, hogar.id, null)),
+          yaHay: resumenDeLectura(leerTablas(data)),
+        };
+      } catch {
+        return { ok: false, mensaje: "Las tablas devolvieron algo que no entiendo." };
+      }
+    },
+    importarATablas: async (estado) => {
+      const c = cliente.current;
+      if (!c || !hogar) return { ok: false, mensaje: "Primero crea el hogar." };
+      // 1. Copia en este móvil. Si no se puede guardar, no se sigue: sin red de seguridad no se importa.
+      const copia = guardarRespaldoAntesDeImportar(almacenamientoLocal(), estado, new Date());
+      if (copia === "no-se-pudo") {
+        return {
+          ok: false,
+          mensaje: "No se ha podido guardar la copia de seguridad en este móvil: no importo nada.",
+        };
+      }
+      if (copia === "guardada") window.dispatchEvent(new Event(EVENTO_RESPALDOS));
+      // 2. Las personas primero (para saber cuál soy yo y no tocar mi propio regalo).
+      const subida = await llevarPersonas(c, hogar.id, estado.personas);
+      if (!subida.ok) return subida;
+      const mia = await miPersonaEnElHogar(c, hogar.id);
+      if (mia.error) return { ok: false, mensaje: mensajeDeError(mia.error) };
+      const deUuid = new Map(estado.personas.map((p) => [aUuid(hogar.id, p.id), p.id]));
+      const miId = mia.data ? (deUuid.get(mia.data) ?? null) : null;
+      // 3. Todo lo demás, de una vez (todo o nada).
+      const { error } = await aplicarCambiosATablas(
+        c,
+        hogar.id,
+        cambiosParaImportar(estado, hogar.id, miId) as unknown as Json,
+      );
       return error ? { ok: false, mensaje: mensajeDeError(error) } : { ok: true };
     },
     salir: async () => {
