@@ -615,6 +615,36 @@ const cargas: Carga[] = [
   },
 ];
 
+/**
+ * Tareas de cada uno, de la lista que Ana escribió a mano (2026-11-02, foto en docs/contexto/).
+ * Las rutinas de las niñas se repiten cada día; lo demás son tareas puntuales. «Chill out»,
+ * «Transportín» y «Cutxa ska» se copian tal cual: no sé exactamente a qué se refieren.
+ */
+const TAREAS_FAMILIA: ReadonlyArray<readonly [string, "diaria" | "puntual", string]> = [
+  ["emma", "diaria", "Dientes"],
+  ["emma", "diaria", "Vestir"],
+  ["emma", "diaria", "Hacer cama"],
+  ["emma", "diaria", "Recoger habitación"],
+  ["emma", "puntual", "Recoger manualidades"],
+  ["alba", "diaria", "Dientes"],
+  ["alba", "diaria", "Vestir"],
+  ["alba", "diaria", "Hacer cama"],
+  ["alba", "puntual", "Limpiar botella"],
+  ["alba", "puntual", "Recoger manualidades"],
+  ["alba", "puntual", "Deberes"],
+  ["alba", "puntual", "Examen"],
+  ["diego", "puntual", "Chill out"],
+  ["diego", "puntual", "Transportín"],
+  ["diego", "puntual", "Cutxa ska"],
+  ["diego", "puntual", "Crema Emma"],
+  ["diego", "puntual", "Limpiar cristales"],
+  ["diego", "puntual", "Bajar sillas"],
+  ["ana", "puntual", "Halloween"],
+  ["ana", "puntual", "Ropa"],
+  ["ana", "puntual", "Habitación"],
+  ["ana", "puntual", "Cocina"],
+];
+
 /** Cumpleaños de Ana: sábado 7 de noviembre de 2026. */
 export const FECHA_CUMPLE_ANA = "2026-11-07";
 
@@ -655,6 +685,13 @@ export function estadoModoDiego(hoy: string): EstadoHogar {
     eventos: { [FECHA_CUMPLE_ANA]: { titulo: "Cumpleaños de Ana", emoji: "🎂" } },
     // El lunes 2 no hay menú del cole y la planificación de ahora es de martes a viernes.
     saltados: ["2026-11-02"],
+    tareas: TAREAS_FAMILIA.map(([personaId, frecuencia, texto], i) => ({
+      id: `t-${i}`,
+      personaId,
+      texto,
+      frecuencia,
+      hechas: [],
+    })),
     personas: PERSONAS_DIEGO,
     despensa: [],
     comidas: [],

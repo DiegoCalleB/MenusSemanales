@@ -578,6 +578,79 @@ describe("calendario", () => {
   });
 });
 
+describe("tareas por persona", () => {
+  const con = (...a: Accion[]) => aplicar(estadoInicialDemo(), ...a);
+
+  it("añade varias tareas a una persona, con su frecuencia, sin repetir", () => {
+    const e = con({
+      tipo: "tarea/anadir",
+      personaId: "alba",
+      texto: "deberes, recoger mesa y dientes",
+      frecuencia: "diaria",
+    });
+    expect(e.tareas.map((t) => [t.personaId, t.texto, t.frecuencia])).toEqual([
+      ["alba", "Deberes", "diaria"],
+      ["alba", "Recoger mesa", "diaria"],
+      ["alba", "Dientes", "diaria"],
+    ]);
+    expect(e.aviso?.texto).toBe("Añadido a Alba: Deberes, Recoger mesa, Dientes.");
+    const repetida = aplicar(e, {
+      tipo: "tarea/anadir",
+      personaId: "alba",
+      texto: "deberes",
+      frecuencia: "diaria",
+    });
+    expect(repetida.tareas).toHaveLength(3);
+    expect(repetida.aviso?.texto).toBe("Ya estaba en la lista.");
+    // Misma tarea para otra persona o con otra frecuencia sí se admite.
+    expect(
+      aplicar(e, {
+        tipo: "tarea/anadir",
+        personaId: "emma",
+        texto: "deberes",
+        frecuencia: "diaria",
+      }).tareas,
+    ).toHaveLength(4);
+    expect(
+      aplicar(e, {
+        tipo: "tarea/anadir",
+        personaId: "alba",
+        texto: "deberes",
+        frecuencia: "puntual",
+      }).tareas,
+    ).toHaveLength(4);
+  });
+
+  it("rechaza persona inexistente, vacío o textos demasiado largos", () => {
+    expect(
+      con({ tipo: "tarea/anadir", personaId: "nadie", texto: "x", frecuencia: "puntual" }).tareas,
+    ).toEqual([]);
+    expect(
+      con({ tipo: "tarea/anadir", personaId: "ana", texto: " , ", frecuencia: "puntual" }).aviso
+        ?.tipo,
+    ).toBe("error");
+    expect(
+      con({ tipo: "tarea/anadir", personaId: "ana", texto: "x".repeat(81), frecuencia: "puntual" })
+        .tareas,
+    ).toEqual([]);
+  });
+
+  it("marcar, desmarcar y borrar; una diaria vuelve a estar pendiente al día siguiente", () => {
+    let e = con({ tipo: "tarea/anadir", personaId: "ana", texto: "Cocina", frecuencia: "diaria" });
+    const id = e.tareas[0]?.id ?? "";
+    e = aplicar(e, { tipo: "tarea/alternar", id });
+    expect(e.tareas[0]?.hechas).toEqual([e.hoy]);
+    const mañana = aplicar(e, { tipo: "hogar/hoy", fecha: "2026-11-05" });
+    expect(estaHechaHoy(mañana, id)).toBe(false);
+    expect(aplicar(e, { tipo: "tarea/alternar", id }).tareas[0]?.hechas).toEqual([]);
+    expect(aplicar(e, { tipo: "tarea/borrar", id }).tareas).toEqual([]);
+  });
+});
+const estaHechaHoy = (e: EstadoHogar, id: string) => {
+  const t = e.tareas.find((x) => x.id === id);
+  return !!t && t.hechas.includes(e.hoy);
+};
+
 describe("apuntar a mano, también dictando", () => {
   it("«leche, pañales y pan» añade tres artículos, cada uno en su sección", () => {
     const e = aplicar(estadoInicialDemo(), {

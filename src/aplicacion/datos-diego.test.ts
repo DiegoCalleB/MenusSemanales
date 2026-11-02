@@ -125,6 +125,32 @@ describe("modo Diego: datos reales de la familia", () => {
     expect(con.comidas.filter((c) => c.fecha === martes)).toHaveLength(2);
   });
 
+  it("trae las tareas de la lista que escribió Ana: rutinas de las niñas y tareas de cada uno", () => {
+    const de = (id: string) => e.tareas.filter((t) => t.personaId === id).map((t) => t.texto);
+    expect(de("emma")).toEqual([
+      "Dientes",
+      "Vestir",
+      "Hacer cama",
+      "Recoger habitación",
+      "Recoger manualidades",
+    ]);
+    expect(de("alba")).toEqual([
+      "Dientes",
+      "Vestir",
+      "Hacer cama",
+      "Limpiar botella",
+      "Recoger manualidades",
+      "Deberes",
+      "Examen",
+    ]);
+    expect(de("diego")).toContain("Bajar sillas");
+    expect(de("ana")).toEqual(["Halloween", "Ropa", "Habitación", "Cocina"]);
+    expect(e.tareas.filter((t) => t.frecuencia === "diaria").map((t) => t.texto)).toContain(
+      "Hacer cama",
+    );
+    expect(new Set(e.tareas.map((t) => t.id)).size).toBe(e.tareas.length);
+  });
+
   it("«hoy» se puede actualizar a la fecha real", () => {
     expect(reducir(e, { tipo: "hogar/hoy", fecha: "2026-11-02" }).hoy).toBe("2026-11-02");
     expect(reducir(e, { tipo: "hogar/hoy", fecha: DOMINGO })).toBe(e);

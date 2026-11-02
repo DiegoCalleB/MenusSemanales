@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useId } from "react";
 import { repartoDeLaSemana } from "@/aplicacion/estado";
 import type { CargaDePersona } from "@/dominio/reparto";
@@ -174,9 +175,14 @@ export function RepartoVista() {
   return (
     <div className="flex flex-col gap-4">
       <header>
-        <h1 className="text-2xl font-extrabold tracking-tight">
-          Reparto <span aria-hidden="true">🤝</span>
-        </h1>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h1 className="text-2xl font-extrabold tracking-tight">
+            Reparto <span aria-hidden="true">🤝</span>
+          </h1>
+          <Link href="/tareas" className="boton-suave">
+            🧹 Día de zafarrancho
+          </Link>
+        </div>
       </header>
 
       <div className="grid gap-4 lg:grid-cols-2 lg:items-start">

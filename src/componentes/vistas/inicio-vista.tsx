@@ -52,6 +52,9 @@ export function InicioVista() {
           <Link href="/menu/emergencia" className="boton-suave">
             Hoy llego tarde
           </Link>
+          <Link href="/tareas" className="boton-suave">
+            🧹 Zafarrancho
+          </Link>
         </div>
       </section>
 

@@ -478,3 +478,12 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **No hecho aún:** agrupar por **tienda** (Mercadona, Primor…) además de por sección, aprender qué compráis con más frecuencia para ordenar «lo de siempre», y un modo «estoy en el súper» con letra grande.
 - **Base de datos (pendiente):** las categorías `higiene` y `mascotas` no existen en el `check` de `lista_compra_articulo.seccion`; hará falta una migración al conectar la app a Supabase.
 - **Nota:** el texto pegado incluía restos de la interfaz de Google Docs («Edit with the Docs app… NO, THANKS USE THE APP»); no era contenido de la lista y se ha ignorado.
+
+## D-062 · Día de zafarrancho: tareas de cada persona
+
+- **Estado:** aceptada (2026-11-02)
+- **Origen:** Ana escribió a mano una lista con lo que tiene que hacer cada miembro de la familia (foto en `docs/contexto/lista-tareas-ana.jpg`): rutinas de las niñas (dientes, vestirse, hacer la cama, recoger la habitación y las manualidades), deberes y un examen de Alba, y tareas de Diego y de Ana (limpiar cristales, bajar las sillas, ropa, cocina, Halloween…). Encaja con el propósito de la app: **hacer visible el reparto de lo que cada uno lleva** (D-032), también las tareas de los adultos.
+- **Decisión:** pantalla `/tareas`, llamada **«Día de zafarrancho» 🧹** (idea de Diego): una lista por persona con casillas grandes, el progreso de la persona y el de la **familia entera**, y añadir tareas igual que en la compra (varias de una vez, «deberes, recoger la mesa»). Hay dos tipos: **cada día** (se marcan hoy y mañana vuelven a estar pendientes) y **una vez** (se hacen y desaparecen al día siguiente). Sin puntos, premios ni comparaciones entre personas: solo ver lo pendiente y celebrar al terminar.
+- **Datos (modo Diego):** se cargan las tareas de la foto. Las rutinas de las niñas van como «cada día»; lo demás, como puntuales. «Chill out», «Transportín» y «Cutxa ska» se copiaron tal cual sin saber a qué se refieren.
+- **Pendiente:** repartir las tareas de la casa (limpiar cristales, bajar sillas) entre quienes cabe de forma justa con la rotación del reparto, un modo «niña» con letra grande y pegatinas, y enviar la lista de una persona por WhatsApp.
+- **Base de datos (pendiente):** hará falta una tabla `tarea` y `tarea_hecha` (por hogar y persona) al conectar la app a Supabase.

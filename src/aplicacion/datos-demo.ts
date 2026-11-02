@@ -445,6 +445,7 @@ export function estadoInicialDemo(): EstadoHogar {
     horizonte: "semana",
     valoraciones: {},
     eventos: {},
+    tareas: [],
     saltados: [],
     llegoTarde: [],
     personas,

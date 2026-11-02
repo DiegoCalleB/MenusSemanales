@@ -21,6 +21,7 @@ import {
   clasificarArticulo,
   partirDictado,
 } from "@/dominio/habituales";
+import { type FrecuenciaTarea, type Tarea, alternarTarea } from "@/dominio/tareas";
 import { contarSemana } from "@/dominio/equilibrio";
 import { faltanComponentes } from "@/dominio/componentes";
 import { explicarOpcion, type ExplicacionOpcion } from "@/dominio/explicacion";
@@ -112,6 +113,8 @@ export interface EstadoHogar {
   valoraciones: Record<string, Record<string, number>>;
   /** Fechas señaladas (cumpleaños, fiestas): se ven en el calendario y no se autocompletan. */
   eventos: Record<FechaIso, { titulo: string; emoji: string }>;
+  /** Tareas de cada persona (rutinas diarias y cosas puntuales). */
+  tareas: Tarea[];
   /** Días en que no se planifica cena en casa (salir, comer fuera, no hace falta). */
   saltados: FechaIso[];
   personas: Persona[];
@@ -137,6 +140,9 @@ export type Accion =
   | { tipo: "tirarCaducado"; ingredienteId: string; ubicacion: Ubicacion }
   | { tipo: "deshacer"; operacionId: string }
   | { tipo: "menu/elegir"; fecha: FechaIso; platoId: string }
+  | { tipo: "tarea/anadir"; personaId: string; texto: string; frecuencia: FrecuenciaTarea }
+  | { tipo: "tarea/alternar"; id: string }
+  | { tipo: "tarea/borrar"; id: string }
   | { tipo: "menu/anadir"; fecha: FechaIso; platoId: string }
   | { tipo: "menu/quitar"; fecha: FechaIso; platoId?: string }
   | { tipo: "menu/llegoTarde"; fecha: FechaIso }
@@ -613,6 +619,51 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
         ),
       };
     }
+
+    case "tarea/anadir": {
+      const persona = e.personas.find((p) => p.id === accion.personaId && p.activa);
+      const textos = partirDictado(accion.texto).filter((t) => t.length <= MAX_LARGO_ARTICULO);
+      if (!persona || textos.length === 0) {
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: error(e, `Escribe la tarea (hasta ${MAX_LARGO_ARTICULO} caracteres).`),
+        };
+      }
+      const ya = new Set(
+        e.tareas
+          .filter((t) => t.personaId === persona.id)
+          .map((t) => `${t.frecuencia}|${claveArticulo(t.texto)}`),
+      );
+      const nuevas = textos.filter((t) => !ya.has(`${accion.frecuencia}|${claveArticulo(t)}`));
+      if (nuevas.length === 0) {
+        return { ...e, siguienteId: e.siguienteId + 1, aviso: ok(e, "Ya estaba en la lista.") };
+      }
+      return {
+        ...e,
+        tareas: [
+          ...e.tareas,
+          ...nuevas.map((texto, i) => ({
+            id: `t-${e.siguienteId}-${i}`,
+            personaId: persona.id,
+            texto,
+            frecuencia: accion.frecuencia,
+            hechas: [],
+          })),
+        ],
+        siguienteId: e.siguienteId + 1,
+        aviso: ok(e, `Añadido a ${persona.nombre}: ${nuevas.join(", ")}.`),
+      };
+    }
+
+    case "tarea/alternar":
+      return {
+        ...e,
+        tareas: e.tareas.map((t) => (t.id === accion.id ? alternarTarea(t, e.hoy) : t)),
+      };
+
+    case "tarea/borrar":
+      return { ...e, tareas: e.tareas.filter((t) => t.id !== accion.id) };
 
     case "menu/anadir": {
       const plato = e.platos.find((p) => p.id === accion.platoId);

@@ -28,6 +28,7 @@ const RUTAS = [
   "/menu/emergencia",
   "/menu/platos",
   "/compartir",
+  "/tareas",
   "/compra",
   "/despensa",
   "/reparto",
@@ -473,6 +474,30 @@ test.describe("flujos en móvil", () => {
     await expect(
       pagina.getByRole("button", { name: "Apuntar a la lista de la compra" }),
     ).toHaveCount(0);
+    await contexto.close();
+  });
+
+  test("tareas: apuntar para una persona, marcar, recargar y quitar", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/tareas");
+    await pagina.getByRole("button", { name: /^Alba/ }).click();
+    await pagina.getByLabel("Añadir una tarea a Alba").fill("deberes y recoger la mesa");
+    await pagina.getByLabel("Se repite cada día").check();
+    await pagina.getByRole("button", { name: "Añadir", exact: true }).click();
+    await expect(pagina.getByRole("checkbox", { name: /Deberes/ })).toBeVisible();
+    await pagina.getByRole("checkbox", { name: /Deberes/ }).check();
+    await expect(pagina.getByText("1 de 2", { exact: true })).toBeVisible();
+    await expect(pagina.getByText("Familia: 1 de 2")).toBeVisible();
+    await pagina.reload({ waitUntil: "networkidle" });
+    await pagina.getByRole("button", { name: /^Alba/ }).click();
+    await expect(pagina.getByRole("checkbox", { name: /Deberes/ })).toBeChecked();
+    // Otra persona no ve las tareas de Alba.
+    await pagina.getByRole("button", { name: /^Ana/ }).click();
+    await expect(pagina.getByRole("checkbox", { name: /Deberes/ })).toHaveCount(0);
+    await pagina.getByRole("button", { name: /^Alba/ }).click();
+    await pagina.getByRole("button", { name: "Editar" }).click();
+    await pagina.getByRole("button", { name: "Quitar la tarea Deberes" }).click();
+    await expect(pagina.getByRole("checkbox", { name: /Deberes/ })).toHaveCount(0);
     await contexto.close();
   });
 
