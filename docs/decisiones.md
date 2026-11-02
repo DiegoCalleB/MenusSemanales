@@ -721,3 +721,13 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **Datos antiguos:** `idDeLegado(hogar, idAntiguo)` da un UUID estable para cada id antiguo, para la importación única a tablas (repetirla no duplica).
 - **Límites:** las acciones de platos, ingredientes, compra, despensa y reparto aún usan el contador; se cambiarán cuando esos agregados pasen a tablas.
 - **Siguiente:** cálculo de diferencias entre estados (`diferencias`) y su traducción a `aplicar_cambios_tablas`.
+
+## D-090 — Puente entre el estado y las tablas: cálculo de diferencias y lectura
+
+- **Estado:** hecho y probado con tests unitarios (`src/aplicacion/tablas.ts`, 16 tests). **Aún no lo usa nada:** la app sigue guardando el documento. Es la pieza pura que usará el motor de sincronización por tablas.
+- **`diferencias(antes, después, hogar)`:** compara por identificador y devuelve solo lo que hay que escribir en `aplicar_cambios_tablas` (altas/cambios y bajas por agregado), o `null` si el cambio no toca estas tablas (compra, despensa…). Cubre personas, horizonte, días («llego tarde» y «no cenamos»), cumpleaños, apuntes, fechas señaladas, tareas de la casa y tareas por persona.
+- **Secreto del regalo:** el regalo y las ideas de un cumple solo se mandan **si cambiaron**. Así, cambiar el nombre de un cumple no reescribe un regalo que quien cumple no puede ni ver ni escribir. Lo mismo con los días hechos de una tarea.
+- **Ids antiguos:** `aUuid(hogar, id)` respeta los UUID y convierte los ids antiguos (`c-3`, `diego`) en un UUID estable por hogar, también en las referencias (responsable, persona de un cumple o tarea). Las ideas de un cumple, que en la app son solo texto, reciben un id derivado del cumple y del texto.
+- **Lectura:** `leerTablas` valida con zod el JSON de `leer_hogar_tablas` y `aplicarLecturaDeTablas` lo vuelca en el estado sin tocar platos, despensa ni compra. A quien cumple el regalo le llega nulo: queda «sin pensar» y sin ideas.
+- **Límites:** `interesados` de un cumple (no usado en la interfaz) no se guarda en tablas. La prueba de ida y vuelta es contra el formato, no contra Postgres: la comprobación real con la base de datos llegará con el motor de sincronización.
+- **Siguiente:** pantalla de personas (hoy no se pueden añadir ni editar), vincular persona y cuenta, y el motor de sincronización por tablas con actualización en directo.
