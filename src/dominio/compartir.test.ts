@@ -27,6 +27,41 @@ const dias = [
   },
 ];
 
+describe("el cole y el porqué de la cena en el mensaje", () => {
+  const dia = {
+    fecha: "2026-11-03",
+    etiqueta: "Martes 3",
+    cole: "🫘 🐟",
+    coleTexto: "Lentejas estofadas + Merluza al horno",
+    porque: "Como en el cole comerán legumbres y pescado, propongo de cena Pollo con patatas",
+    platos: ["Pollo con patatas"],
+    nota: "o lomo, que lo tenemos ya hecho en la nevera",
+    evento: null,
+  };
+
+  it("lleva lo que comen en el cole, el motivo de la cena y la nota, en ese orden", () => {
+    const t = textoMenu("Menú", [dia]);
+    const orden = [
+      "*Martes 3*\n",
+      "🎒 Cole: Lentejas estofadas + Merluza al horno",
+      "🍴 Pollo con patatas",
+      "💡 Como en el cole comerán legumbres y pescado, propongo de cena Pollo con patatas",
+      "📝 o lomo, que lo tenemos ya hecho en la nevera",
+    ].map((x) => t.indexOf(x));
+    expect(orden.every((i) => i >= 0)).toBe(true);
+    expect([...orden].sort((a, b) => a - b)).toEqual(orden);
+    // Con el texto del cole los emojis ya no van junto al día.
+    expect(t).not.toContain("*Martes 3*  🎒");
+  });
+
+  it("sin cena no se explica nada, y sin texto del cole quedan los emojis de siempre", () => {
+    expect(textoMenu("Menú", [{ ...dia, platos: [] }])).not.toContain("💡");
+    const t = textoMenu("Menú", [{ ...dia, coleTexto: undefined }]);
+    expect(t).toContain("*Martes 3*  🎒 🫘 🐟");
+    expect(t).not.toContain("🎒 Cole:");
+  });
+});
+
 describe("nota de la cena en el mensaje", () => {
   it("sale justo debajo de la cena, y solo si existe", () => {
     const t = textoMenu("Menú", [{ ...dias[0]!, nota: "o igual lomo, depende" }, { ...dias[1]! }]);

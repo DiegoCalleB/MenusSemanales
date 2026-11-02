@@ -20,6 +20,10 @@ export interface DiaParaCompartir {
   evento: { emoji: string; titulo: string } | null;
   /** Nota de la cena: «o igual lomo, depende». */
   nota?: string;
+  /** Lo que han comido las niñas en el cole, con las palabras del menú del cole. */
+  coleTexto?: string;
+  /** Por qué se propone esa cena: «Como en el cole comen legumbres y pescado, propongo…». */
+  porque?: string;
 }
 
 const MAX_WHATSAPP = 3800; // WhatsApp admite más, pero los enlaces largos fallan en algunos móviles
@@ -28,7 +32,9 @@ const MAX_WHATSAPP = 3800; // WhatsApp admite más, pero los enlaces largos fall
 export function textoMenu(titulo: string, dias: readonly DiaParaCompartir[]): string {
   const lineas: string[] = [`🍽️ *${titulo}*`, ""];
   for (const d of dias) {
-    lineas.push(`*${d.etiqueta}*${d.cole ? `  🎒 ${d.cole}` : ""}`);
+    // Con el texto del menú del cole va en su propia línea; si no, los emojis junto al día.
+    lineas.push(`*${d.etiqueta}*${d.cole && !d.coleTexto ? `  🎒 ${d.cole}` : ""}`);
+    if (d.coleTexto) lineas.push(`🎒 Cole: ${d.coleTexto}`);
     if (d.evento) lineas.push(`${d.evento.emoji} ${d.evento.titulo}`);
     if (d.comida && d.comida.length > 0) lineas.push(`☀️ Comida: ${d.comida.join(" + ")}`);
     const hayComida = !!d.comida && d.comida.length > 0;
@@ -37,6 +43,7 @@ export function textoMenu(titulo: string, dias: readonly DiaParaCompartir[]): st
         ? `🍴 ${hayComida ? "Cena: " : ""}${d.platos.join(" + ")}`
         : `🍴 _${hayComida ? "cena " : ""}sin decidir_`,
     );
+    if (d.porque && d.platos.length > 0) lineas.push(`💡 ${d.porque}`);
     if (d.nota) lineas.push(`📝 ${d.nota}`);
     lineas.push("");
   }

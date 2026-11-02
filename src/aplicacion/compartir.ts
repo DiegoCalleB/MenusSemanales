@@ -9,7 +9,8 @@ import { cuentaAtras } from "@/dominio/cuenta-atras";
 import type { FechaParaCompartir, TareaParaCompartir } from "@/dominio/compartir";
 import { proximaFecha } from "@/dominio/cumples";
 import { CATEGORIAS, NOMBRE_CATEGORIA, clasificarArticulo } from "@/dominio/habituales";
-import { EMOJI_GRUPO, cantidadEnTexto } from "@/dominio/texto";
+import { EMOJI_GRUPO, NOMBRE_GRUPO_ES, cantidadEnTexto, formatearLista } from "@/dominio/texto";
+import type { MenuCole } from "@/dominio/menu";
 import { SECCIONES } from "@/dominio/tipos";
 import {
   type EstadoHogar,
@@ -37,6 +38,34 @@ const SECCION: Record<(typeof SECCIONES)[number], { nombre: string; emoji: strin
   otros: { nombre: "Otros", emoji: "🛒" },
 };
 
+/**
+ * Lo del cole de un día, para el mensaje del menú: lo que comieron (con las palabras del cole) y
+ * por qué se propone esa cena. Sale solo de datos: si no se sabe, no se dice nada.
+ */
+export function coleParaCompartir(
+  cole: MenuCole,
+  fecha: string,
+  hoy: string,
+  cenas: readonly string[],
+): { coleTexto?: string; porque?: string } {
+  const textos = [cole.textoPrimero, cole.textoSegundo]
+    .map((t) => (t ?? "").trim())
+    .filter((t) => t !== "");
+  const grupos = [cole.primero, cole.segundo]
+    .filter((g): g is NonNullable<typeof g> => !!g && g !== "otro")
+    .map((g) => NOMBRE_GRUPO_ES[g] ?? g);
+  const unicos = [...new Set(grupos)];
+  const verbo = fecha < hoy ? "comieron" : fecha === hoy ? "comen" : "comerán";
+  return {
+    ...(textos.length > 0 ? { coleTexto: textos.join(" + ") } : {}),
+    ...(unicos.length > 0 && cenas.length > 0
+      ? {
+          porque: `Como en el cole ${verbo} ${formatearLista(unicos)}, propongo de cena ${cenas.join(" + ")}`,
+        }
+      : {}),
+  };
+}
+
 /** Días del plan con algo que contar (cena elegida o menú del cole), listos para compartir. */
 export function planParaCompartir(e: EstadoHogar): { titulo: string; dias: DiaParaCompartir[] } {
   const dias: DiaParaCompartir[] = diasDelMenu(e)
@@ -61,6 +90,14 @@ export function planParaCompartir(e: EstadoHogar): { titulo: string; dias: DiaPa
         comida: e.almuerzos.filter((a) => a.fecha === d.fecha).map((a) => a.texto),
         evento: e.eventos[d.fecha] ?? null,
         ...(e.notasMenu[d.fecha] ? { nota: e.notasMenu[d.fecha] } : {}),
+        ...(cole
+          ? coleParaCompartir(
+              cole,
+              d.fecha,
+              e.hoy,
+              comidasDe(e, d.fecha).map((c) => c.plato.nombre),
+            )
+          : {}),
       };
     });
   const primero = dias[0]?.fecha;
