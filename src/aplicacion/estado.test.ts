@@ -13,6 +13,7 @@ import {
   opcionesParaFecha,
   comidasDe,
   conIdBase,
+  idDePlatoRapido,
   cumplesProximos,
   reducir,
   repartoDeLaSemana,
@@ -1384,5 +1385,69 @@ describe("personas de la familia (D-092)", () => {
     const r = reducir(e, { tipo: "persona/activar", id: ids.at(-1)!, activa: false });
     expect(r.personas.filter((p) => p.activa)).toHaveLength(1);
     expect(r.aviso?.tipo).toBe("error");
+  });
+});
+
+describe("plato nuevo al vuelo (plato/rapido)", () => {
+  const base = "0b1b0c1e-8f4e-4a4e-9c0e-2f0f7b6f0a11";
+
+  it("crea un plato sin ingredientes, que no se propone solo, y se puede elegir en seguida", () => {
+    const e = estadoInicialDemo();
+    const a = reducir(e, {
+      tipo: "plato/rapido",
+      nombre: " Fideuà ",
+      grupo: "pasta",
+      idBase: base,
+    });
+    const nuevo = a.platos.at(-1)!;
+    expect(nuevo).toMatchObject({
+      nombre: "Fideuà",
+      grupo: "pasta",
+      ingredientes: [],
+      noProponer: true,
+    });
+    expect(nuevo.id).toBe(idDePlatoRapido(base));
+    const fecha = sumarDias(e.hoy, 1);
+    const b = reducir(a, { tipo: "menu/elegir", fecha, platoId: idDePlatoRapido(base) });
+    expect(b.comidas.some((c) => c.fecha === fecha && c.plato.nombre === "Fideuà")).toBe(true);
+    // Y no entra en la propuesta automática.
+    expect(
+      menuDeLaSemana(a)
+        .dias.flatMap((d) => d.opciones ?? [])
+        .some((o) => o.plato.id === nuevo.id),
+    ).toBe(false);
+  });
+
+  it("no duplica un plato que ya existe (sin tildes ni mayúsculas) ni acepta nombres vacíos", () => {
+    const e = estadoInicialDemo();
+    const existente = e.platos[0]!;
+    const a = reducir(e, {
+      tipo: "plato/rapido",
+      nombre: existente.nombre.toUpperCase(),
+      grupo: "otro",
+    });
+    expect(a.platos).toHaveLength(e.platos.length);
+    const b = reducir(e, { tipo: "plato/rapido", nombre: " ", grupo: "otro" });
+    expect(b.platos).toHaveLength(e.platos.length);
+    expect(b.aviso?.tipo).toBe("error");
+  });
+
+  it("al completarle ingredientes con `plato/guardar`, vuelve a proponerse", () => {
+    const e = estadoInicialDemo();
+    const a = reducir(e, { tipo: "plato/rapido", nombre: "Fideuà", grupo: "pasta", idBase: base });
+    const id = idDePlatoRapido(base);
+    const ing = e.ingredientes[0]!;
+    const b = reducir(a, {
+      tipo: "plato/guardar",
+      id,
+      plato: {
+        nombre: "Fideuà",
+        grupo: "pasta",
+        minutosActivos: 30,
+        pasos: null,
+        ingredientes: [{ ingredienteId: ing.id, cantidadPorRacion: 100, opcional: false }],
+      },
+    });
+    expect(b.platos.find((p) => p.id === id)?.noProponer).toBeUndefined();
   });
 });

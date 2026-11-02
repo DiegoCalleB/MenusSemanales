@@ -748,3 +748,12 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **Cómo encaja con el documento:** el estado de la app sigue siendo el documento (aún no hay motor por tablas). Las personas **se llevan a la tabla `persona` al abrir la pantalla y al vincular** (con `aplicar_cambios_tablas`, idempotente, ids antiguos convertidos a UUID estable). Es el primer agregado en tablas; el vínculo del secreto del regalo ya tiene dónde apoyarse.
 - **Límites:** (1) las personas se suben a la tabla solo desde esta pantalla, no en cada cambio: el motor de sincronización por tablas lo generalizará. (2) No se pueden borrar personas ni desvincular cuentas desde la app (a propósito: desvincular podría destapar un regalo). (3) La pantalla no se ha probado contra el Supabase real desde un navegador, solo las funciones SQL y los tests de pantalla con la nube desconectada.
 - **Pruebas:** 3 tests de reductor nuevos, E2E de 10 tamaños con accesibilidad y un flujo de añadir/desactivar (409 E2E en total en verde).
+
+## D-093 — Plato nuevo al vuelo: añadirlo (o no) a los platos del hogar
+
+- **Estado:** hecho (2026-11-02). Petición de Diego: al poner en una comida o cena un plato que no está en los platos del hogar, poder elegir si se añade o no.
+- **Comida del mediodía** (texto libre): si el texto coincide con un plato de la casa (sin tildes ni mayúsculas) se apunta ese plato, para que entre en la compra (antes quedaba como texto). Si no coincide, pregunta: «Añadir a mis platos y apuntarlo», «Solo apuntarlo esta vez» (para planes como «en casa de los abuelos») o cancelar.
+- **Cena** («Ver todos los platos»): si lo buscado no existe, ofrece crearlo y elegirlo/añadirlo a la cena. Una cena no admite texto libre (necesita un plato para calcular la compra), así que ahí la alternativa a añadir es no crearlo.
+- **Qué se guarda:** acción `plato/rapido` (nombre, tipo de plato, id UUID derivado de `idBase`, D-089). Nace **sin ingredientes y sin proponerse solo** (`noProponer`), con 20 minutos de trabajo como valor provisional; se puede elegir a mano. En «Platos» sale marcado «Faltan los ingredientes: sin ellos no entra en la compra»; al guardarle ingredientes desde el editor pasa a proponerse.
+- **Límites:** un plato así no aporta nada a la lista de la compra hasta completar sus ingredientes (a propósito: no se inventan). Los 20 minutos son un valor por defecto, no un dato real.
+- **Pruebas:** 3 tests de reductor, 1 E2E nuevo con accesibilidad y 2 E2E existentes adaptados (410 E2E en verde).

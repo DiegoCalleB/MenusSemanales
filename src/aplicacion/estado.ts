@@ -227,6 +227,7 @@ export type Accion =
   | { tipo: "menu/quitar"; fecha: FechaIso; platoId?: string }
   | { tipo: "menu/llegoTarde"; fecha: FechaIso }
   | { tipo: "plato/guardar"; id?: string; plato: PlatoEditable }
+  | { tipo: "plato/rapido"; nombre: string; grupo: GrupoPlato; idBase?: string }
   | { tipo: "plato/proponer"; id: string; proponer: boolean }
   | { tipo: "plato/borrar"; id: string }
   | { tipo: "ingrediente/crear"; ingrediente: IngredienteNuevo }
@@ -253,12 +254,16 @@ export const ACCIONES_QUE_CREAN = [
   "cumple/anadir",
   "cumple/importar",
   "persona/guardar",
+  "plato/rapido",
   "agenda/anadir",
   "almuerzo/anadir",
   "casa/anadir",
   "casa/plantilla",
   "tarea/anadir",
 ] as const;
+
+/** Id del plato que crea `plato/rapido` con ese `idBase`: así se puede usar en la misma jugada. */
+export const idDePlatoRapido = (idBase: string): string => idDerivado(idBase, "plato:0");
 
 export function conIdBase<A extends Accion>(accion: A, nuevoId: () => string): A {
   if (!(ACCIONES_QUE_CREAN as readonly string[]).includes(accion.tipo)) return accion;
@@ -1273,6 +1278,39 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
           : [...e.llegoTarde, accion.fecha],
       };
 
+    case "plato/rapido": {
+      const nombre = accion.nombre.replace(/\s+/g, " ").trim();
+      if (nombre.length < 2 || nombre.length > 120) {
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: error(e, "El nombre del plato necesita entre 2 y 120 letras."),
+        };
+      }
+      const clave = normalizarNombre(nombre);
+      if (e.platos.some((p) => normalizarNombre(p.nombre) === clave)) {
+        return { ...e, siguienteId: e.siguienteId + 1, aviso: ok(e, `${nombre} ya estaba.`) };
+      }
+      // Sin ingredientes todavía: no se propone solo, pero se puede elegir a mano. Al guardarle
+      // ingredientes desde «Platos» pasa a proponerse (ver `plato/guardar`).
+      const nuevo: PlatoMenu = {
+        id: accion.idBase ? idDePlatoRapido(accion.idBase) : `p-${e.siguienteId}`,
+        nombre,
+        grupo: accion.grupo,
+        minutosActivos: 20,
+        ingredientes: [],
+        ultimaVez: null,
+        valoracion: null,
+        noProponer: true,
+      };
+      return {
+        ...e,
+        platos: [...e.platos, nuevo],
+        siguienteId: e.siguienteId + 1,
+        aviso: ok(e, `${nombre} añadido a vuestros platos. Completa sus ingredientes en «Platos».`),
+      };
+    }
+
     case "plato/guardar": {
       const r = validarPlato(accion.plato, new Set(e.ingredientes.map((i) => i.id)));
       if (!r.ok) {
@@ -1297,7 +1335,8 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
         id: existente?.id ?? `p-${e.siguienteId}`,
         ultimaVez: existente?.ultimaVez ?? null,
         valoracion: existente?.valoracion ?? null,
-        ...(existente?.noProponer ? { noProponer: true } : {}),
+        // Un plato creado «al vuelo» (sin ingredientes) empieza sin proponerse; al completarlo, sí.
+        ...(existente?.noProponer && existente.ingredientes.length > 0 ? { noProponer: true } : {}),
         ...(r.valor.ligero ? { ligero: true } : {}),
       };
       const platos = existente

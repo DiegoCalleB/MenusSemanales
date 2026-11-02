@@ -4,6 +4,7 @@ import { type FormEvent, useId, useState } from "react";
 import { almuerzosDe, POR_DECIDIR } from "@/dominio/almuerzos";
 import type { FechaIso } from "@/dominio/fechas";
 import { EMOJI_GRUPO } from "./formato";
+import { OfrecerPlatoNuevo, existePlato, useCrearPlato } from "./plato-nuevo";
 import { useHogar } from "./proveedor-hogar";
 
 const sinTildes = (t: string) => t.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
@@ -14,6 +15,8 @@ const sinTildes = (t: string) => t.toLowerCase().normalize("NFD").replace(/[̀-�
  */
 export function ComidaDelDia({ fecha, puedeApuntar }: { fecha: FechaIso; puedeApuntar: boolean }) {
   const { estado, despachar } = useHogar();
+  const crearPlato = useCrearPlato();
+  const [ofrecer, setOfrecer] = useState<string | null>(null);
   const id = useId();
   const [texto, setTexto] = useState("");
   const [buscando, setBuscando] = useState(false);
@@ -25,8 +28,18 @@ export function ComidaDelDia({ fecha, puedeApuntar }: { fecha: FechaIso; puedeAp
 
   function apuntar(e: FormEvent) {
     e.preventDefault();
-    despachar({ tipo: "almuerzo/anadir", fecha, texto });
-    setTexto("");
+    const nombre = texto.trim();
+    const coincide = estado.platos.find((p) => existePlato([p.nombre], nombre));
+    if (coincide) {
+      // Es un plato de la casa: se apunta como tal, para que entre en la compra.
+      despachar({ tipo: "almuerzo/anadir", fecha, platoId: coincide.id });
+      setTexto("");
+    } else if (nombre.length >= 2) {
+      setOfrecer(nombre);
+    } else {
+      despachar({ tipo: "almuerzo/anadir", fecha, texto });
+      setTexto("");
+    }
   }
 
   return (
@@ -76,6 +89,28 @@ export function ComidaDelDia({ fecha, puedeApuntar }: { fecha: FechaIso; puedeAp
               Apuntar
             </button>
           </form>
+          {ofrecer && (
+            <OfrecerPlatoNuevo
+              nombre={ofrecer}
+              textoAnadir="Añadir a mis platos y apuntarlo"
+              textoSoloEstaVez="Solo apuntarlo esta vez"
+              onAnadir={(grupo) => {
+                despachar({
+                  tipo: "almuerzo/anadir",
+                  fecha,
+                  platoId: crearPlato(ofrecer, grupo),
+                });
+                setOfrecer(null);
+                setTexto("");
+              }}
+              onSoloEstaVez={() => {
+                despachar({ tipo: "almuerzo/anadir", fecha, texto: ofrecer });
+                setOfrecer(null);
+                setTexto("");
+              }}
+              onCancelar={() => setOfrecer(null)}
+            />
+          )}
           <div className="flex flex-wrap gap-2">
             <button
               type="button"

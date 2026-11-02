@@ -484,6 +484,37 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 
+  test("plato nuevo: se ofrece añadirlo a los platos al apuntar una comida y al elegir una cena", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/calendario");
+    const comida = pagina.getByRole("region", { name: "Comida del mediodía" });
+    await comida.getByLabel("Qué se come").fill("Fideuà de la abuela");
+    await comida.getByRole("button", { name: "Apuntar", exact: true }).click();
+    await expect(
+      comida.getByRole("group", { name: /Fideuà de la abuela no está en vuestros platos/ }),
+    ).toBeVisible();
+    const axe = await new AxeBuilder({ page: pagina })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+      .analyze();
+    expect(axe.violations).toEqual([]);
+    await comida.getByRole("button", { name: "Añadir a mis platos y apuntarlo" }).click();
+    await expect(comida.getByText("Fideuà de la abuela")).toBeVisible();
+
+    // Ya es un plato de la casa: la próxima vez se apunta sin preguntar.
+    await comida.getByRole("button", { name: /^Quitar comida/ }).click();
+    await comida.getByLabel("Qué se come").fill("fideua de la abuela");
+    await comida.getByRole("button", { name: "Apuntar", exact: true }).click();
+    await expect(comida.getByRole("group")).toHaveCount(0);
+    await expect(comida.getByText("Fideuà de la abuela")).toBeVisible();
+
+    // Aparece en «Platos» pidiendo sus ingredientes.
+    await pagina.goto("/menu/platos", { waitUntil: "networkidle" });
+    await expect(pagina.getByText("Faltan los ingredientes").first()).toBeVisible();
+    await contexto.close();
+  });
+
   test("familia: añadir a alguien, cambiar su ración y dejar de contarlo", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/personas");
@@ -572,6 +603,7 @@ test.describe("flujos en móvil", () => {
     await expect(comida.getByText("Sin comida pensada.")).toBeVisible();
     await comida.getByLabel("Qué se come").fill("Paella en casa de los abuelos");
     await comida.getByRole("button", { name: "Apuntar", exact: true }).click();
+    await comida.getByRole("button", { name: "Solo apuntarlo esta vez" }).click();
     await expect(comida.getByText("Paella en casa de los abuelos")).toBeVisible();
     await comida.getByRole("button", { name: /Por decidir/ }).click();
     await expect(comida.getByRole("button", { name: "Quitar comida: Por decidir" })).toBeVisible();
@@ -662,6 +694,7 @@ test.describe("flujos en móvil", () => {
     const comida = pagina.getByRole("region", { name: "Comida del mediodía" });
     await comida.getByLabel("Qué se come").fill("Paella de los domingos");
     await comida.getByRole("button", { name: "Apuntar", exact: true }).click();
+    await comida.getByRole("button", { name: "Solo apuntarlo esta vez" }).click();
     await pagina.goto("/menu", { waitUntil: "networkidle" });
     expect(await mensaje()).toContain("☀️ Comida: Paella de los domingos");
     // La compra, desde la propia lista.

@@ -5,6 +5,7 @@ import { catalogoOrdenado } from "@/aplicacion/estado";
 import type { FechaIso } from "@/dominio/fechas";
 import { NOMBRE_GRUPO_ES } from "@/dominio/texto";
 import { EMOJI_GRUPO, formatearNumero } from "./formato";
+import { OfrecerPlatoNuevo, existePlato, useCrearPlato } from "./plato-nuevo";
 import { useHogar } from "./proveedor-hogar";
 
 const POR_PAGINA = 10;
@@ -24,6 +25,7 @@ export function TodosLosPlatos({
   alElegir: (platoId: string) => void;
 }) {
   const { estado } = useHogar();
+  const crearPlato = useCrearPlato();
   const id = useId();
   const [busqueda, setBusqueda] = useState("");
   const [limite, setLimite] = useState(POR_PAGINA);
@@ -109,6 +111,21 @@ export function TodosLosPlatos({
       {visibles.length === 0 && (
         <p className="text-tinta-suave text-base">Ningún plato coincide.</p>
       )}
+      {busqueda.trim().length >= 2 &&
+        !existePlato(
+          estado.platos.map((p) => p.nombre),
+          busqueda,
+        ) && (
+          <OfrecerPlatoNuevo
+            nombre={busqueda.trim()}
+            textoAnadir={`Añadir a mis platos y ${anadir ? "añadirlo" : "elegirlo"}`}
+            onAnadir={(grupo) => {
+              alElegir(crearPlato(busqueda.trim(), grupo));
+              setBusqueda("");
+            }}
+            onCancelar={() => setBusqueda("")}
+          />
+        )}
       {visibles.length > limite && (
         <button
           type="button"
