@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { comidasDe, proximoDiaConCole } from "@/aplicacion/estado";
-import { diasEntre } from "@/dominio/fechas";
+import { cuentaAtras } from "@/dominio/cuenta-atras";
 import { TarjetaCole, fechaCorta } from "../cole";
 import { EMOJI_GRUPO } from "../formato";
 import { cumplesProximos } from "@/aplicacion/estado";
@@ -21,10 +21,7 @@ export function InicioVista() {
   const misTareas = yo ? resumenDeTareas(estado.tareas, yo.id, estado.hoy) : null;
   const cenas = comidasDe(estado, estado.hoy);
   const cena = cenas[0];
-  const proximo = Object.entries(estado.eventos)
-    .filter(([f]) => f >= estado.hoy && diasEntre(estado.hoy, f) <= 14)
-    .sort(([a], [b]) => a.localeCompare(b))[0];
-  const faltan = proximo ? diasEntre(estado.hoy, proximo[0]) : 0;
+  const proximos = cuentaAtras(estado.cumples, estado.eventos, estado.hoy);
   const diaCole = proximoDiaConCole(estado, estado.hoy);
   // A quien cumple no se le enseñan los avisos de su propio regalo.
   const avisosCumples = cumplesProximos(estado).filter((a) => !yo || a.cumple.personaId !== yo.id);
@@ -61,19 +58,25 @@ export function InicioVista() {
           </section>
         );
       })}
+      {proximos.length > 0 && (
+        <ul aria-label="Cuenta atrás" className="flex flex-wrap gap-2">
+          {proximos.map((p) => (
+            <li
+              key={p.clave}
+              className="bg-suave-1 border-borde rounded-full border px-3 py-1 text-sm font-bold"
+            >
+              <span aria-hidden="true">{p.emoji} </span>
+              {p.titulo} · {p.dias <= 1 ? p.texto : `en ${p.texto}`}
+            </li>
+          ))}
+        </ul>
+      )}
       <section
         aria-labelledby="hoy"
         className="from-suave-1 to-suave-2 border-borde flex flex-col gap-3 rounded-3xl border bg-linear-to-br p-4 sm:p-6"
       >
         <p className="text-tinta-suave text-base font-semibold">
           {yo ? `¡Hola, ${yo.nombre}! 👋` : "¡Hola! 👋"}
-          {proximo && (
-            <span className="bg-superficie/80 ml-2 inline-block rounded-full px-3 py-0.5 font-bold">
-              <span aria-hidden="true">{proximo[1].emoji} </span>
-              {proximo[1].titulo} ·{" "}
-              {faltan === 0 ? "¡hoy!" : faltan === 1 ? "mañana" : `en ${faltan} días`}
-            </span>
-          )}
         </p>
         <h1 id="hoy" className="text-2xl font-extrabold tracking-tight">
           {cena ? "Hoy cenáis…" : "¿Qué cenamos hoy?"}

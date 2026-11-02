@@ -566,3 +566,10 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **Qué:** tras elegir un plato, la lista para añadir más se queda abierta (platos pequeños primero) y se va marcando uno tras otro hasta llenar la cena (3 platos) o pulsar «Listo». Antes, al elegir se ocultaba el resto.
 - **Por qué:** Diego pidió poder seleccionar varios platos más rápido, sin volver a abrir la lista cada vez. Sustituye al «ocultar tras elegir» anterior, que dejaba la pantalla limpia pero obligaba a más toques.
 - **Límite:** la lista tras el primer plato ofrece complementos, no otra vez los principales.
+
+## D-073 — Cuenta atrás de cumpleaños y eventos
+
+- **Qué:** una fila de píldoras en la portada («🎂 Ana (41) · en 5 días», «🥾 Excursión · mañana») con lo próximo en los siguientes 30 días: máximo 3, de lo más cercano a lo más lejano. Ocupa una línea. Sustituye a la píldora del único evento próximo que había en el saludo.
+- **Fuente:** los cumpleaños y las fechas señaladas de la app (`eventos`). El propio día del cumple no sale: lo cubre la tarjeta de felicitación (D-070).
+- **Cómo:** `cuentaAtras` es una función pura del dominio, con tests.
+- **Pendiente (decisión de Diego):** sincronizar con el Google Calendar «Familia». Ver el mensaje de la sesión: opciones de solo lectura por enlace secreto iCal frente a OAuth completo.

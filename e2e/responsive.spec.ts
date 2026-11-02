@@ -625,7 +625,13 @@ test.describe("flujos en móvil", () => {
     // La portada avisa de los que faltan menos de un mes.
     await pagina.goto("/", { waitUntil: "networkidle" });
     await expect(pagina.getByRole("heading", { level: 2, name: /Próximos cumples/ })).toBeVisible();
-    await expect(pagina.getByText(/Ana.* en 6 días/)).toBeVisible();
+    await expect(pagina.getByText(/Ana.* en 6 días/)).toHaveCount(2); // cuenta atrás + tarjeta
+    await expect(
+      pagina
+        .getByRole("list", { name: "Cuenta atrás" })
+        .getByRole("listitem")
+        .filter({ hasText: /Ana.* en 6 días/ }),
+    ).toHaveCount(1);
 
     // Ana no ve las ideas de su propio cumple ni su aviso de regalo.
     await pagina.getByRole("button", { name: /Cambiar de perfil/ }).click();
