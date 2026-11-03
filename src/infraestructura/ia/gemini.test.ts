@@ -48,6 +48,19 @@ describe("llamarGemini", () => {
     expect(f).toHaveBeenCalledTimes(1);
   });
 
+  it("si el modelo rechaza un ajuste opcional (400) repite con el cuerpo simple", async () => {
+    const f = vi.fn().mockResolvedValueOnce(respuesta(400)).mockResolvedValueOnce(respuesta(200));
+    const r = await llamarGemini(
+      "k",
+      { con: true },
+      { plazoMs: 5000, llamar: f, espera: sinEspera, sinAjustes: { con: false } },
+    );
+    expect(r.status).toBe(200);
+    expect(f).toHaveBeenCalledTimes(2);
+    expect(urlDe(f, 0)).toBe(urlDe(f, 1));
+    expect((f.mock.calls[1]?.[1] as RequestInit).body).toBe('{"con":false}');
+  });
+
   it("la clave va en la cabecera, nunca en la URL", async () => {
     const f = vi.fn().mockResolvedValue(respuesta(200));
     await llamarGemini("secreta", {}, { plazoMs: 5000, llamar: f, espera: sinEspera });

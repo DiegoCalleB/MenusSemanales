@@ -7,7 +7,14 @@ import {
 import { llamarGemini } from "./gemini";
 import { IaNoConfigurada } from "./lista";
 
-export function cuerpoDeTranscripcion(archivo: { mime: TipoArchivoCole; base64: string }) {
+/**
+ * Transcribir no necesita «pensar»: con el razonamiento del modelo por defecto la respuesta tarda
+ * más de un minuto. Se pide poco razonamiento; si el modelo no admite el ajuste, se repite sin él.
+ */
+export function cuerpoDeTranscripcion(
+  archivo: { mime: TipoArchivoCole; base64: string },
+  conAjustes = true,
+) {
   return {
     systemInstruction: { parts: [{ text: INSTRUCCIONES_TRANSCRIPCION }] },
     contents: [
@@ -28,6 +35,7 @@ export function cuerpoDeTranscripcion(archivo: { mime: TipoArchivoCole; base64: 
       },
       temperature: 0,
       maxOutputTokens: 12000,
+      ...(conAjustes ? { thinkingConfig: { thinkingLevel: "low" } } : {}),
     },
   };
 }
@@ -43,6 +51,7 @@ export async function transcribirMenuCole(
   const clave = process.env.GEMINI_API_KEY;
   if (!clave) throw new IaNoConfigurada();
   const r = await llamarGemini(clave, cuerpoDeTranscripcion(archivo), {
+    sinAjustes: cuerpoDeTranscripcion(archivo, false),
     plazoMs: 55_000,
     llamar,
   });

@@ -28,7 +28,12 @@ const dormir = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export async function llamarGemini(
   clave: string,
   cuerpo: unknown,
-  opciones: { plazoMs: number; llamar?: typeof fetch; espera?: (ms: number) => Promise<unknown> },
+  opciones: {
+    plazoMs: number;
+    sinAjustes?: unknown;
+    llamar?: typeof fetch;
+    espera?: (ms: number) => Promise<unknown>;
+  },
 ): Promise<Response> {
   const llamar = opciones.llamar ?? fetch;
   const espera = opciones.espera ?? dormir;
@@ -39,6 +44,8 @@ export async function llamarGemini(
       : [MODELO_IA, MODELO_RESPALDO];
   const intentos = modelos.flatMap((m) => [m, m]);
   let primero = 0;
+  // Si el modelo rechaza algún ajuste opcional (400), se repite ese intento con el cuerpo simple.
+  let cuerpoActual = cuerpo;
   for (let i = 0; i < intentos.length; i++) {
     const restante = limite - Date.now();
     if (restante <= 0) break;
@@ -47,13 +54,22 @@ export async function llamarGemini(
       {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-goog-api-key": clave },
-        body: JSON.stringify(cuerpo),
+        body: JSON.stringify(cuerpoActual),
         signal: AbortSignal.timeout(restante),
         cache: "no-store",
       },
     );
     if (r.ok) return r;
     primero ||= r.status; // el error del modelo principal es el que explica qué pasa
+    if (
+      r.status === 400 &&
+      opciones.sinAjustes !== undefined &&
+      cuerpoActual !== opciones.sinAjustes
+    ) {
+      cuerpoActual = opciones.sinAjustes;
+      i--; // mismo modelo, cuerpo simple
+      continue;
+    }
     if (!REINTENTABLES.has(r.status)) break;
     // Antes de repetir con el mismo modelo se espera un poco; al cambiar de modelo, no.
     if (intentos[i] === intentos[i + 1]) await espera(ESPERA_MS);
