@@ -18,6 +18,12 @@ export function mensajeDeError(error: { message?: string; code?: string } | null
     return "Entrar sin correo no está activado todavía en esta app.";
   if (m.includes("rate limit") || m.includes("too many"))
     return "Demasiados intentos: espera un poco.";
+  if (m.includes("invalid login credentials"))
+    return "El correo o la contraseña no son correctos. Si aún no has puesto contraseña, entra con un código.";
+  if (m.includes("should be different") || m.includes("same password"))
+    return "Esa ya es tu contraseña. Elige otra distinta.";
+  if (m.includes("password") && (m.includes("weak") || m.includes("least") || m.includes("short")))
+    return "Esa contraseña es demasiado débil. Usa al menos 10 caracteres.";
   if (m.includes("invalid") && m.includes("token"))
     return "El código no es correcto o ha caducado.";
   if (error?.code === "22023" || error?.code === "42501") return error.message ?? "No permitido.";
@@ -48,6 +54,13 @@ export const pedirCodigoPorCorreo = (cliente: Cliente, correo: string) =>
 
 export const verificarCodigo = (cliente: Cliente, correo: string, codigo: string) =>
   cliente.auth.verifyOtp({ email: correo, token: codigo, type: "email" });
+
+/** Entrar con contraseña: no depende de que llegue un correo (que tiene tope de envíos por hora). */
+export const entrarConContrasena = (cliente: Cliente, correo: string, contrasena: string) =>
+  cliente.auth.signInWithPassword({ email: correo, password: contrasena });
+/** Pone o cambia la contraseña de quien ya ha entrado. */
+export const ponerContrasenaNueva = (cliente: Cliente, contrasena: string) =>
+  cliente.auth.updateUser({ password: contrasena });
 
 export const entrarSinCorreo = (cliente: Cliente) => cliente.auth.signInAnonymously();
 export const salir = (cliente: Cliente) => cliente.auth.signOut();

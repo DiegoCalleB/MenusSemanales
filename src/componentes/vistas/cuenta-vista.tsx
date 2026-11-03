@@ -144,6 +144,9 @@ export function CuentaVista() {
               Salir de este dispositivo
             </button>
           </section>
+          {!cuenta.anonimo && (
+            <PonerContrasena cuenta={cuenta} ocupado={ocupado} ejecutar={ejecutar} />
+          )}
         </>
       )}
 
@@ -174,6 +177,12 @@ function EntrarConCorreo({ cuenta, ocupado, ejecutar }: Props) {
   const [correo, setCorreo] = useState("");
   const [codigo, setCodigo] = useState("");
   const [enviado, setEnviado] = useState(false);
+  const [contrasena, setContrasena] = useState("");
+
+  async function conContrasena(e: FormEvent) {
+    e.preventDefault();
+    await ejecutar(() => cuenta.entrarConContrasena(correo.trim(), contrasena));
+  }
 
   async function pedir(e: FormEvent) {
     e.preventDefault();
@@ -196,7 +205,7 @@ function EntrarConCorreo({ cuenta, ocupado, ejecutar }: Props) {
       <h2 id="con-correo" className="text-lg font-extrabold">
         Entrar con tu correo
       </h2>
-      <form onSubmit={pedir} className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2">
         <label htmlFor="correo" className="text-base font-semibold">
           Correo
         </label>
@@ -204,11 +213,41 @@ function EntrarConCorreo({ cuenta, ocupado, ejecutar }: Props) {
           id="correo"
           type="email"
           className="campo"
-          autoComplete="email"
+          autoComplete="username"
           value={correo}
           onChange={(e) => setCorreo(e.target.value)}
         />
-        <button type="submit" className="boton w-fit" disabled={ocupado || !correo.includes("@")}>
+      </div>
+      <form onSubmit={conContrasena} className="flex flex-col gap-2">
+        <label htmlFor="contrasena" className="text-base font-semibold">
+          Contraseña
+        </label>
+        <input
+          id="contrasena"
+          type="password"
+          className="campo"
+          autoComplete="current-password"
+          value={contrasena}
+          onChange={(e) => setContrasena(e.target.value)}
+        />
+        <button
+          type="submit"
+          className="boton w-fit"
+          disabled={ocupado || !correo.includes("@") || contrasena.length < 6}
+        >
+          Entrar con contraseña
+        </button>
+      </form>
+      <p className="text-tinta-suave text-base">
+        ¿Sin contraseña o la has olvidado? Te mando un código por correo (Google limita los envíos:
+        si no llega, espera una hora):
+      </p>
+      <form onSubmit={pedir} className="flex flex-col gap-2">
+        <button
+          type="submit"
+          className="boton-suave w-fit"
+          disabled={ocupado || !correo.includes("@")}
+        >
           {enviado ? "Enviar otro código" : "Enviarme un código"}
         </button>
       </form>
@@ -235,6 +274,70 @@ function EntrarConCorreo({ cuenta, ocupado, ejecutar }: Props) {
           </button>
         </form>
       )}
+    </section>
+  );
+}
+
+function PonerContrasena({ cuenta, ocupado, ejecutar }: Props) {
+  const [nueva, setNueva] = useState("");
+  const [repetida, setRepetida] = useState("");
+  const distintas = repetida !== "" && nueva !== repetida;
+
+  async function guardar(e: FormEvent) {
+    e.preventDefault();
+    if (
+      await ejecutar(
+        () => cuenta.ponerContrasena(nueva),
+        "Contraseña guardada. Si se cierra la sesión, podrás entrar sin esperar un correo.",
+      )
+    ) {
+      setNueva("");
+      setRepetida("");
+    }
+  }
+
+  return (
+    <section className="tarjeta flex flex-col gap-3" aria-labelledby="contrasena-nueva">
+      <h2 id="contrasena-nueva" className="text-lg font-extrabold">
+        Contraseña
+      </h2>
+      <p className="text-tinta-suave text-base">
+        Ponla una vez y entrarás con ella cuando se cierre la sesión, sin depender del correo (que
+        tiene límite de envíos). Usa al menos 10 caracteres.
+      </p>
+      <form onSubmit={guardar} className="flex flex-col gap-2">
+        <label htmlFor="contrasena-1" className="text-base font-semibold">
+          Contraseña nueva
+        </label>
+        <input
+          id="contrasena-1"
+          type="password"
+          className="campo"
+          autoComplete="new-password"
+          minLength={10}
+          value={nueva}
+          onChange={(e) => setNueva(e.target.value)}
+        />
+        <label htmlFor="contrasena-2" className="text-base font-semibold">
+          Repítela
+        </label>
+        <input
+          id="contrasena-2"
+          type="password"
+          className="campo"
+          autoComplete="new-password"
+          value={repetida}
+          onChange={(e) => setRepetida(e.target.value)}
+        />
+        {distintas && <p className="text-aviso-texto text-base">No coinciden.</p>}
+        <button
+          type="submit"
+          className="boton w-fit"
+          disabled={ocupado || nueva.length < 10 || nueva !== repetida}
+        >
+          Guardar contraseña
+        </button>
+      </form>
     </section>
   );
 }

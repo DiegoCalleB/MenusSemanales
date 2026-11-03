@@ -908,3 +908,11 @@ Las tareas de Casa ocupaban una tarjeta cada una. Ahora son filas de una línea 
 **Contexto.** Se preguntó si el calendario de Google podía ser bidireccional. Hacerlo de verdad exige OAuth y la API de Google (proyecto en Google Cloud, un sitio seguro para el permiso de acceso, aviso de «app no verificada»…). Se decidió lo contrario: **la app es el único sitio donde se escribe** y Google Calendar es una ventana de lectura (el enlace .ics, D-109). Lo que se tenga en Google se lee en la app (D-074) mientras se pasa a la app.
 
 **Decisión.** Acción `agenda/cita` (título, día, hora opcional, último día opcional; sin duplicados; id UUID derivado del `idBase`, así que se guarda como fila de `apunte`). Componente `NuevaCita`: en el **calendario**, al elegir un día sale «Citas y eventos» con lo apuntado (con «Quitar»), lo de Google Calendar (solo lectura) y «＋ Cita o evento este día» con el día ya fijado; en **Hoy**, «＋ Cita» pide el día. El aviso de la fecha señalada o el cumpleaños sigue arriba, aparte de las citas.
+
+## D-111 — Entrar con contraseña (la sesión se pierde y el correo tiene tope)
+
+**Contexto.** «Cada vez que entro estoy así»: la sesión no sobrevive de un día para otro en el móvil. En los registros de autenticación de Supabase no hay ningún cierre de sesión ni revocación por el servidor entre dos usos: simplemente no hay intento de renovar; el navegador ha perdido la sesión (cookies o datos del sitio borrados; en Brave, p. ej., «Olvidarme cuando cierre este sitio»). Y volver a entrar cuesta un correo: el envío de Supabase tiene tope por hora y se vio «email rate limit exceeded» tras varios intentos.
+
+**Decisión.** (1) Entrar con **correo y contraseña**, sin correo de por medio, y poner o cambiar la contraseña en Cuenta → Contraseña (mínimo 10 caracteres; la fuerza la valida Supabase). (2) Pedir al navegador **almacenamiento persistente** (`navigator.storage.persist()`) al entrar, para que no borre la sesión ni los cambios sin enviar por falta de espacio. (3) Mensajes claros para contraseña incorrecta, débil o tope de correos.
+
+**Límite.** Si el navegador borra los datos del sitio al cerrarlo (ajuste del propio navegador), la sesión se perderá igual; con la contraseña volver a entrar es solo escribirla. Instalar la app en la pantalla de inicio también ayuda.

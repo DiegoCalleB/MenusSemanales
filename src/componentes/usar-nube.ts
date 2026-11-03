@@ -54,7 +54,9 @@ import {
   aplicarCambiosATablas,
   crearInvitacion,
   crearInvitacionDePersona,
+  entrarConContrasena,
   entrarSinCorreo,
+  ponerContrasenaNueva,
   leerHogarDeTablas,
   miPersonaEnElHogar,
   vincularmeAPersona,
@@ -184,6 +186,8 @@ export interface CuentaContexto {
   pedirCodigo: (correo: string) => Promise<Resultado>;
   verificar: (correo: string, codigo: string) => Promise<Resultado>;
   entrarSinCorreo: () => Promise<Resultado>;
+  entrarConContrasena: (correo: string, contrasena: string) => Promise<Resultado>;
+  ponerContrasena: (contrasena: string) => Promise<Resultado>;
   crearHogar: (nombre: string) => Promise<Resultado>;
   unirse: (codigo: string) => Promise<Resultado>;
   invitar: () => Promise<{ ok: true; codigo: string } | { ok: false; mensaje: string }>;
@@ -693,6 +697,8 @@ export function useNube(
       }
       setCorreo(usuario.email ?? null);
       setAnonimo(Boolean(usuario.is_anonymous));
+      // Pide al navegador que no borre los datos de este sitio (la sesión, los cambios sin enviar).
+      void navigator.storage?.persist?.().catch(() => undefined);
       let h = await hogarDelUsuario(c);
       if (!h && typeof navigator !== "undefined" && !navigator.onLine) {
         // Sin internet no se puede preguntar por el hogar: se usa el último conocido.
@@ -788,6 +794,12 @@ export function useNube(
       if (r.ok && cliente.current) await resolverSesion(cliente.current);
       return r;
     },
+    entrarConContrasena: async (mail, contrasena) => {
+      const r = await usar((c) => aResultado(entrarConContrasena(c, mail, contrasena)));
+      if (r.ok && cliente.current) await resolverSesion(cliente.current);
+      return r;
+    },
+    ponerContrasena: (contrasena) => usar((c) => aResultado(ponerContrasenaNueva(c, contrasena))),
     entrarSinCorreo: async () => {
       const r = await usar((c) => aResultado(entrarSinCorreo(c)));
       if (r.ok && cliente.current) await resolverSesion(cliente.current);
