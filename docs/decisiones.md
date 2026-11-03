@@ -902,3 +902,9 @@ Las tareas de Casa ocupaban una tarjeta cada una. Ahora son filas de una línea 
 **Decisión.** Migración `20261103220000_calendario_desde_tablas`: si el hogar tiene sus personas en tablas, el resumen sale de ellas (una entrada por plato de cada cena, en orden); si no, sigue saliendo del documento. Mismo resumen mínimo: nunca ideas, gustos ni regalo, compra, despensa, ingredientes ni cole. Test SQL nuevo (`calendario_tablas`) que comprueba que manda la tabla, que no sale nada del documento viejo ni del regalo, y que solo hay las siete claves de siempre.
 
 **Límites.** Google Calendar refresca los calendarios por URL cuando quiere (entre medio día y un día) y no se puede forzar; ignora las alarmas del archivo. La app de Google Calendar no deja añadir por URL: hay que hacerlo desde calendar.google.com en el navegador. El calendario es de lectura: lo que se cambia en Google no vuelve a la app.
+
+## D-110 — Todo se apunta en la app; el calendario permite añadir citas por día
+
+**Contexto.** Se preguntó si el calendario de Google podía ser bidireccional. Hacerlo de verdad exige OAuth y la API de Google (proyecto en Google Cloud, un sitio seguro para el permiso de acceso, aviso de «app no verificada»…). Se decidió lo contrario: **la app es el único sitio donde se escribe** y Google Calendar es una ventana de lectura (el enlace .ics, D-109). Lo que se tenga en Google se lee en la app (D-074) mientras se pasa a la app.
+
+**Decisión.** Acción `agenda/cita` (título, día, hora opcional, último día opcional; sin duplicados; id UUID derivado del `idBase`, así que se guarda como fila de `apunte`). Componente `NuevaCita`: en el **calendario**, al elegir un día sale «Citas y eventos» con lo apuntado (con «Quitar»), lo de Google Calendar (solo lectura) y «＋ Cita o evento este día» con el día ya fijado; en **Hoy**, «＋ Cita» pide el día. El aviso de la fecha señalada o el cumpleaños sigue arriba, aparte de las citas.

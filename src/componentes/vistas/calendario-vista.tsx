@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { esCumpleRepetido } from "@/dominio/cuenta-atras";
 import { ComidaDelDia } from "../comida-del-dia";
+import { NuevaCita } from "../nueva-cita";
 import { useCalendarioFamilia } from "../usar-calendario-familia";
 import { useMemo, useState } from "react";
 import {
@@ -69,6 +70,8 @@ export function CalendarioVista() {
       eventos[fechaEnAnio(a, c.mes, c.dia)] ??= { titulo: `Cumple de ${c.nombre}`, emoji: "🎂" };
     }
   }
+  // Fechas señaladas y cumpleaños: el detalle del día los enseña aparte de las citas.
+  const fijos = { ...eventos };
   // Lo apuntado a mano (D-075) y lo del Google Calendar «Familia», si está conectado (D-074).
   const apuntes = estado.agenda.map((a) => ({ fecha: a.fecha, titulo: a.titulo, hora: a.hora }));
   for (const ev of [...apuntes, ...deGoogle]) {
@@ -93,6 +96,7 @@ export function CalendarioVista() {
       .join(" + ");
   const [anadiendoA, setAnadiendoA] = useState<FechaIso | null>(null);
   const [verTodosEn, setVerTodosEn] = useState<FechaIso | null>(null);
+  const [anadiendoCita, setAnadiendoCita] = useState<FechaIso | null>(null);
   const cocinaDe = (f: FechaIso) => {
     const turno = estado.turnos.find((t) => t.cargaId === "cenas" && t.fecha === f);
     return turno ? estado.personas.find((p) => p.id === turno.personaId)?.nombre : undefined;
@@ -108,6 +112,8 @@ export function CalendarioVista() {
     () => (elegida && !anadiendo ? [] : opcionesParaFecha(estado, sel, anadiendo)),
     [estado, sel, elegida, anadiendo],
   );
+  const citasDelDia = estado.agenda.filter((a) => a.fecha <= sel && (a.hasta ?? a.fecha) >= sel);
+  const deGoogleDelDia = deGoogle.filter((g) => g.fecha === sel);
   const tarde = estado.llegoTarde.includes(sel);
   const cocina = cocinaDe(sel);
 
@@ -251,12 +257,68 @@ export function CalendarioVista() {
             )}
           </div>
 
-          {eventos[sel] && (
+          {fijos[sel] && (
             <p className="bg-suave-1 rounded-2xl p-3 text-base font-bold">
-              <span aria-hidden="true">{eventos[sel]?.emoji} </span>
-              {eventos[sel]?.titulo}
+              <span aria-hidden="true">{fijos[sel]?.emoji} </span>
+              {fijos[sel]?.titulo}
             </p>
           )}
+
+          <section aria-labelledby="citas-dia" className="flex flex-col gap-2">
+            <h3 id="citas-dia" className="text-tinta-suave text-sm font-bold">
+              Citas y eventos
+            </h3>
+            {citasDelDia.length === 0 && deGoogleDelDia.length === 0 && (
+              <p className="text-tinta-suave text-base">Nada apuntado este día.</p>
+            )}
+            <ul className="flex flex-col">
+              {citasDelDia.map((a) => (
+                <li
+                  key={a.id}
+                  className="border-borde flex min-h-11 items-center justify-between gap-2 border-b last:border-b-0"
+                >
+                  <span className="min-w-0 text-base">
+                    <span aria-hidden="true">📌 </span>
+                    {a.hora && <strong>{a.hora} </strong>}
+                    {a.titulo}
+                    {a.hasta && (
+                      <span className="text-tinta-suave text-sm">
+                        {" "}
+                        · hasta el {a.hasta.slice(8)}
+                      </span>
+                    )}
+                  </span>
+                  <button
+                    type="button"
+                    className="boton-suave px-4"
+                    aria-label={`Quitar la cita ${a.titulo}`}
+                    onClick={() => despachar({ tipo: "agenda/borrar", id: a.id })}
+                  >
+                    Quitar
+                  </button>
+                </li>
+              ))}
+              {deGoogleDelDia.map((g, i) => (
+                <li key={`g${i}`} className="min-h-11 py-2 text-base">
+                  <span aria-hidden="true">📅 </span>
+                  {g.hora && <strong>{g.hora} </strong>}
+                  {g.titulo}
+                  <span className="text-tinta-suave text-sm"> · de Google Calendar</span>
+                </li>
+              ))}
+            </ul>
+            {anadiendoCita === sel ? (
+              <NuevaCita fecha={sel} alGuardar={() => setAnadiendoCita(null)} />
+            ) : (
+              <button
+                type="button"
+                className="boton-suave w-fit"
+                onClick={() => setAnadiendoCita(sel)}
+              >
+                ＋ Cita o evento este día
+              </button>
+            )}
+          </section>
 
           <TarjetaCole cole={cole} fecha={sel} />
 

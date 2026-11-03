@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { articulosPendientes, comidasDe, proximoDiaConCole } from "@/aplicacion/estado";
 import { cuentaAtras } from "@/dominio/cuenta-atras";
 import { TarjetaCole, fechaCorta } from "../cole";
@@ -16,11 +17,13 @@ import { almuerzosDe } from "@/dominio/almuerzos";
 import { quePideHoy } from "@/dominio/casa";
 import { resumenDeTareas } from "@/dominio/tareas";
 import { LoDeHoy } from "../lo-de-hoy";
+import { NuevaCita } from "../nueva-cita";
 
 /** Portada: una sola pantalla, sin desplazarse: la cena de hoy, el cole de hoy y los accesos. */
 export function InicioVista() {
   const { estado, despachar } = useHogar();
   const [yoId] = useYo();
+  const [apuntandoCita, setApuntandoCita] = useState(false);
   const yo = estado.personas.find((p) => p.id === yoId && p.activa);
   const misTareas = yo ? resumenDeTareas(estado.tareas, yo.id, estado.hoy) : null;
   const cenas = comidasDe(estado, estado.hoy);
@@ -140,6 +143,25 @@ export function InicioVista() {
       )}
 
       {estado.personas.some((p) => p.activa) && <LoDeHoy />}
+
+      <section aria-labelledby="cita-rapida" className="tarjeta flex flex-col gap-2 p-3 sm:p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 id="cita-rapida" className="text-lg font-extrabold">
+            Citas y eventos
+          </h2>
+          <div className="flex gap-2">
+            {!apuntandoCita && (
+              <button type="button" className="boton" onClick={() => setApuntandoCita(true)}>
+                ＋ Cita
+              </button>
+            )}
+            <Link href="/calendario" className="boton-suave">
+              📅 Calendario
+            </Link>
+          </div>
+        </div>
+        {apuntandoCita && <NuevaCita alGuardar={() => setApuntandoCita(false)} />}
+      </section>
 
       {casaHoy.length > 0 && (
         <section aria-labelledby="casa-hoy" className="tarjeta flex flex-col gap-2">

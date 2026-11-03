@@ -224,6 +224,14 @@ export type Accion =
     }
   | { tipo: "persona/activar"; id: string; activa: boolean }
   | { tipo: "agenda/anadir"; texto: string; personaId: string | null; idBase?: string }
+  | {
+      tipo: "agenda/cita";
+      fecha: FechaIso;
+      hasta?: FechaIso | null;
+      hora?: string | null;
+      titulo: string;
+      idBase?: string;
+    }
   | { tipo: "agenda/borrar"; id: string }
   | { tipo: "almuerzo/anadir"; fecha: FechaIso; texto?: string; platoId?: string; idBase?: string }
   | { tipo: "almuerzo/borrar"; id: string }
@@ -290,6 +298,7 @@ export const ACCIONES_QUE_CREAN = [
   "persona/guardar",
   "plato/rapido",
   "agenda/anadir",
+  "agenda/cita",
   "almuerzo/anadir",
   "casa/anadir",
   "casa/plantilla",
@@ -1295,6 +1304,52 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
 
     case "casa/borrar":
       return { ...e, casa: e.casa.filter((t) => t.id !== accion.id) };
+
+    case "agenda/cita": {
+      const titulo = accion.titulo.replace(/\s+/g, " ").trim();
+      const hora = accion.hora && accion.hora !== "" ? accion.hora : null;
+      const hasta = accion.hasta && accion.hasta !== "" ? accion.hasta : null;
+      const fechaValida = /^\d{4}-\d{2}-\d{2}$/.test(accion.fecha);
+      const mal =
+        titulo === "" ||
+        titulo.length > 120 ||
+        !fechaValida ||
+        (hora !== null && !/^([01]\d|2[0-3]):[0-5]\d$/.test(hora)) ||
+        (hasta !== null && !(/^\d{4}-\d{2}-\d{2}$/.test(hasta) && hasta > accion.fecha));
+      if (mal) {
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: error(
+            e,
+            "Para apuntar una cita hace falta un título (hasta 120 letras), un día y, si la pones, una hora válida o un último día posterior.",
+          ),
+        };
+      }
+      const k = `${accion.fecha}|${claveArticulo(titulo)}`;
+      if (e.agenda.some((a) => `${a.fecha}|${claveArticulo(a.titulo)}` === k)) {
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: ok(e, `${titulo} ya estaba apuntado.`),
+        };
+      }
+      return {
+        ...e,
+        agenda: [
+          ...e.agenda,
+          {
+            id: idNuevo(accion.idBase, "agenda", "cita", `a-${e.siguienteId}-c`),
+            fecha: accion.fecha,
+            hasta,
+            hora,
+            titulo,
+          },
+        ],
+        siguienteId: e.siguienteId + 1,
+        aviso: ok(e, `Apuntado: ${titulo}.`),
+      };
+    }
 
     case "agenda/borrar":
       return { ...e, agenda: e.agenda.filter((a) => a.id !== accion.id) };

@@ -1656,3 +1656,53 @@ describe("lo de hoy: quién ha hecho qué (D-108)", () => {
     expect(normalizar(viejo).registro).toEqual([]);
   });
 });
+
+describe("citas con día elegido (agenda/cita)", () => {
+  const base = () => estadoInicialDemo();
+
+  it("apunta una cita con hora y otra de varios días", () => {
+    const e = base();
+    const r = aplicar(
+      e,
+      { tipo: "agenda/cita", fecha: "2026-11-12", titulo: " Dentista  de Alba ", hora: "18:15" },
+      { tipo: "agenda/cita", fecha: "2026-11-20", hasta: "2026-11-22", titulo: "Puente" },
+    );
+    const a = r.agenda.find((x) => x.titulo === "Dentista de Alba");
+    expect(a).toMatchObject({ fecha: "2026-11-12", hora: "18:15", hasta: null });
+    expect(r.agenda.find((x) => x.titulo === "Puente")).toMatchObject({
+      hasta: "2026-11-22",
+      hora: null,
+    });
+    expect(r.aviso?.tipo).toBe("ok");
+  });
+
+  it("lo mismo el mismo día no se duplica", () => {
+    const e = base();
+    const una = reducir(e, { tipo: "agenda/cita", fecha: "2026-11-12", titulo: "Dentista" });
+    const dos = reducir(una, { tipo: "agenda/cita", fecha: "2026-11-12", titulo: "  dentista " });
+    expect(dos.agenda).toHaveLength(una.agenda.length);
+  });
+
+  it("rechaza título vacío, hora mala o un último día que no es posterior", () => {
+    const e = base();
+    for (const accion of [
+      { tipo: "agenda/cita", fecha: "2026-11-12", titulo: "  " },
+      { tipo: "agenda/cita", fecha: "2026-11-12", titulo: "X", hora: "25:00" },
+      { tipo: "agenda/cita", fecha: "2026-11-12", titulo: "X", hasta: "2026-11-12" },
+      { tipo: "agenda/cita", fecha: "12/11", titulo: "X" },
+    ] as const) {
+      const r = reducir(e, accion);
+      expect(r.agenda).toHaveLength(e.agenda.length);
+      expect(r.aviso?.tipo).toBe("error");
+    }
+  });
+
+  it("con idBase el id es un UUID estable (se sincroniza como fila de tabla)", () => {
+    const e = base();
+    const idBase = "11111111-1111-4111-8111-111111111111";
+    const r = reducir(e, { tipo: "agenda/cita", fecha: "2026-11-12", titulo: "Dentista", idBase });
+    const r2 = reducir(e, { tipo: "agenda/cita", fecha: "2026-11-12", titulo: "Dentista", idBase });
+    expect(esUuid(r.agenda.at(-1)!.id)).toBe(true);
+    expect(r.agenda.at(-1)!.id).toBe(r2.agenda.at(-1)!.id);
+  });
+});

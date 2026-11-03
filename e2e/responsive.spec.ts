@@ -311,6 +311,37 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 
+  test("calendario: elegir un día y apuntar una cita; en Hoy, apuntar con el día elegido", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/calendario");
+    await pagina
+      .getByRole("button", { name: /16 de noviembre/ })
+      .first()
+      .click();
+    const citas = pagina.getByRole("region", { name: "Citas y eventos" });
+    await expect(citas.getByText("Nada apuntado este día.")).toBeVisible();
+    await citas.getByRole("button", { name: /Cita o evento este día/ }).click();
+    await citas.getByLabel("Qué hay que apuntar").fill("Dentista de Alba");
+    await citas.getByLabel("Hora (opcional)").fill("17:30");
+    await citas.getByRole("button", { name: "＋ Apuntar" }).click();
+    await expect(citas.getByText("Dentista de Alba")).toBeVisible();
+    await expect(citas.getByText("17:30")).toBeVisible();
+    await citas.getByRole("button", { name: "Quitar la cita Dentista de Alba" }).click();
+    await expect(citas.getByText("Nada apuntado este día.")).toBeVisible();
+
+    await cargar(pagina, "/");
+    const rapida = pagina.getByRole("region", { name: "Citas y eventos" });
+    await rapida.getByRole("button", { name: "＋ Cita" }).click();
+    await rapida.getByLabel("Qué hay que apuntar").fill("Reunión del cole");
+    await rapida.getByLabel("Día", { exact: true }).fill("2026-11-18");
+    await rapida.getByRole("button", { name: "＋ Apuntar" }).click();
+    await pagina.goto("/fechas", { waitUntil: "networkidle" });
+    await expect(pagina.getByText("Reunión del cole").first()).toBeVisible();
+    await contexto.close();
+  });
+
   test("menú: valorar la cena de hoy por persona", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/menu");
