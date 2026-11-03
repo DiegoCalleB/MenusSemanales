@@ -5,8 +5,18 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Accion, EstadoHogar } from "@/aplicacion/estado";
 import { peorEstado } from "@/aplicacion/guardado";
 import { type EstadoSync, Sincronizador, esErrorDeRed } from "@/aplicacion/sincronizacion";
-import { adaptadorMenu } from "@/aplicacion/adaptadores-tablas";
+import { adaptadorCole, adaptadorMenu } from "@/aplicacion/adaptadores-tablas";
 import { SincronizadorTablas } from "@/aplicacion/sincronizacion-tablas";
+import {
+  type CambiosCole,
+  type LecturaCole,
+  type ResumenCole,
+  cambiosCompletosCole,
+  conservarCamposDeCole,
+  leerCole,
+  resumenColeDeCambios,
+  resumenColeDeLectura,
+} from "@/aplicacion/tablas-cole";
 import {
   type CambiosMenu,
   type LecturaMenu,
@@ -57,6 +67,7 @@ import {
 } from "@/infraestructura/respaldo";
 import type { Database, Json } from "@/infraestructura/supabase/database.types";
 import { crearNube } from "@/infraestructura/supabase/nube";
+import { crearNubeCole } from "@/infraestructura/supabase/nube-cole";
 import { crearNubeMenu } from "@/infraestructura/supabase/nube-menu";
 import { crearNubeTablas } from "@/infraestructura/supabase/nube-tablas";
 
@@ -160,7 +171,7 @@ export interface CuentaContexto {
   /** El peor estado de guardado entre el documento y los motores por tablas. */
   sync: EstadoSync;
   /** Qué parte de los datos ya manda desde tablas (el resto sigue en el documento). */
-  tablas: { hogar: boolean; menu: boolean };
+  tablas: { hogar: boolean; menu: boolean; cole: boolean };
   /** ¿Tiene internet el móvil ahora mismo? */
   enLinea: boolean;
   pedirCodigo: (correo: string) => Promise<Resultado>;
@@ -179,10 +190,12 @@ export interface CuentaContexto {
   ) => Promise<{ ok: true; codigo: string } | { ok: false; mensaje: string }>;
   vincularme: (personas: Persona[], personaId: string) => Promise<Resultado>;
   /** Qué se llevaría a las tablas y qué hay ya en ellas (D-094). */
-  vistaPreviaTablas: (
-    estado: EstadoHogar,
-  ) => Promise<
-    | { ok: true; seLlevaria: ResumenTablas & ResumenMenu; yaHay: ResumenTablas & ResumenMenu }
+  vistaPreviaTablas: (estado: EstadoHogar) => Promise<
+    | {
+        ok: true;
+        seLlevaria: ResumenTablas & ResumenMenu & ResumenCole;
+        yaHay: ResumenTablas & ResumenMenu & ResumenCole;
+      }
     | { ok: false; mensaje: string }
   >;
   /** Lleva los datos del documento a las tablas, tras guardar una copia en este móvil. */
@@ -227,8 +240,9 @@ export function useNube(
   const [syncDoc, setSync] = useState<EstadoSync>("inactivo");
   const [syncHogar, setSyncHogar] = useState<EstadoSync>("inactivo");
   const [syncMenu, setSyncMenu] = useState<EstadoSync>("inactivo");
-  const [modoTablas, setModoTablas] = useState({ hogar: false, menu: false });
-  const sync = peorEstado(syncDoc, syncHogar, syncMenu);
+  const [syncCole, setSyncCole] = useState<EstadoSync>("inactivo");
+  const [modoTablas, setModoTablas] = useState({ hogar: false, menu: false, cole: false });
+  const sync = peorEstado(syncDoc, syncHogar, syncMenu, syncCole);
   const [enLinea, setEnLinea] = useState(true);
   useEffect(() => {
     const poner = () => setEnLinea(navigator.onLine);
@@ -244,6 +258,8 @@ export function useNube(
   const sincronizador = useRef<Sincronizador | null>(null);
   const tablas = useRef<SincronizadorTablas | null>(null);
   const menu = useRef<SincronizadorTablas<LecturaMenu, CambiosMenu> | null>(null);
+  const cole = useRef<SincronizadorTablas<LecturaCole, CambiosCole> | null>(null);
+  const temporizadorCole = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cerrarMenu = useRef<(() => void) | null>(null);
   const temporizadorMenu = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resolucionMenu = useRef<() => Record<string, string>>(() => ({}));
@@ -271,7 +287,10 @@ export function useNube(
     if (temporizadorMenu.current) clearTimeout(temporizadorMenu.current);
     setSyncHogar("inactivo");
     setSyncMenu("inactivo");
-    setModoTablas({ hogar: false, menu: false });
+    setSyncCole("inactivo");
+    cole.current = null;
+    if (temporizadorCole.current) clearTimeout(temporizadorCole.current);
+    setModoTablas({ hogar: false, menu: false, cole: false });
     sincronizador.current = null;
     if (temporizador.current) clearTimeout(temporizador.current);
     setSync("inactivo");
@@ -373,6 +392,38 @@ export function useNube(
     [],
   );
 
+  /** Enciende el motor del menú del cole si el colegio del hogar ya lo tiene en tablas (D-104). */
+  const activarCole = useCallback(
+    async (c: SupabaseClient<Database>, h: HogarDeUsuario): Promise<boolean> => {
+      cole.current = null;
+      const motor = new SincronizadorTablas<LecturaCole, CambiosCole>(
+        crearNubeCole(c, h.id),
+        {
+          hogarId: h.id,
+          leer: () => leer.current(),
+          escribir: (e) => escribir.current(e),
+          avisar: setSyncCole,
+          antesDeAdoptar: (local, nuevo) => {
+            const r = guardarRespaldoAntesDeLaNube(almacenamientoLocal(), local, nuevo, new Date());
+            if (r === "guardada") window.dispatchEvent(new Event(EVENTO_RESPALDOS));
+          },
+        },
+        adaptadorCole,
+        persistenciaDe(h.id, "cole", leerCole),
+      );
+      try {
+        if ((await motor.iniciar()) !== "activo") return false;
+      } catch (e) {
+        console.error(e);
+        return false;
+      }
+      cole.current = motor;
+      setModoTablas((m) => ({ ...m, cole: true }));
+      return true;
+    },
+    [],
+  );
+
   /**
    * Lleva los datos del estado a las tablas (D-094, D-101) y enciende los motores por tablas. Se usa
    * a mano desde «Cuenta» y, solo, la primera vez que un hogar se conecta con las tablas vacías
@@ -383,6 +434,13 @@ export function useNube(
       c: SupabaseClient<Database>,
       h: HogarDeUsuario,
       estado: EstadoHogar,
+      // Qué agregados faltan por llevar a tablas. Solo se importan esos: lo que ya manda desde
+      // tablas nunca se pisa con el documento (D-103/D-104).
+      quedan: { hogar: boolean; menu: boolean; cole: boolean } = {
+        hogar: true,
+        menu: true,
+        cole: true,
+      },
     ): Promise<Resultado> => {
       // 1. Copia en este móvil. Si no se puede guardar, no se sigue: sin red de seguridad no se importa.
       const copia = guardarRespaldoAntesDeImportar(almacenamientoLocal(), estado, new Date());
@@ -393,53 +451,69 @@ export function useNube(
         };
       }
       if (copia === "guardada") window.dispatchEvent(new Event(EVENTO_RESPALDOS));
-      // 2. Las personas primero (para saber cuál soy yo y no tocar mi propio regalo).
-      const subida = await llevarPersonas(c, h.id, estado.personas);
-      if (!subida.ok) return subida;
-      const mia = await miPersonaEnElHogar(c, h.id);
-      if (mia.error) return { ok: false, mensaje: mensajeDeError(mia.error) };
-      const deUuid = new Map(estado.personas.map((p) => [aUuid(h.id, p.id), p.id]));
-      const miId = mia.data ? (deUuid.get(mia.data) ?? null) : null;
-      // 3. Todo lo demás, de una vez (todo o nada).
-      const { error } = await aplicarCambiosATablas(
-        c,
-        h.id,
-        cambiosParaImportar(estado, h.id, miId) as unknown as Json,
-      );
-      if (error) return { ok: false, mensaje: mensajeDeError(error) };
+      const fallos: string[] = [];
+
+      // 2-3. Personas, cumpleaños, agenda, casa y tareas. Las personas primero (para saber cuál
+      // soy yo y no tocar mi propio regalo); lo demás, de una vez (todo o nada).
+      if (quedan.hogar) {
+        const subida = await llevarPersonas(c, h.id, estado.personas);
+        if (!subida.ok) return subida;
+        const mia = await miPersonaEnElHogar(c, h.id);
+        if (mia.error) return { ok: false, mensaje: mensajeDeError(mia.error) };
+        const deUuid = new Map(estado.personas.map((p) => [aUuid(h.id, p.id), p.id]));
+        const miId = mia.data ? (deUuid.get(mia.data) ?? null) : null;
+        const { error } = await aplicarCambiosATablas(
+          c,
+          h.id,
+          cambiosParaImportar(estado, h.id, miId) as unknown as Json,
+        );
+        if (error) return { ok: false, mensaje: mensajeDeError(error) };
+      }
+
       // 4. El menú: platos, cenas, notas, comidas del mediodía, valoraciones. Los ingredientes se
       // emparejan por nombre con el catálogo compartido (creando los que falten).
-      const nubeMenu = crearNubeMenu(c, h.id);
-      let menuListo = true;
-      try {
-        await nubeMenu.leer();
-      } catch {
-        menuListo = false; // falta aplicar la migración del menú en Supabase
-      }
-      if (menuListo) {
+      let menuListo = quedan.menu;
+      if (quedan.menu) {
+        const nubeMenu = crearNubeMenu(c, h.id);
         try {
+          await nubeMenu.leer();
           const resolucion = await nubeMenu.resolver(ingredientesPorResolver(estado));
           const migrado = migrarIdsDePersonas(migrarIdsDeMenu(estado, h.id, resolucion), h.id);
           await nubeMenu.aplicar(cambiosCompletosMenu(migrado, h.id));
         } catch (e) {
-          return {
-            ok: false,
-            mensaje: `Lo del hogar se llevó bien, pero el menú no: ${mensajeDeError({ message: e instanceof Error ? e.message : "" })}`,
-          };
+          menuListo = false;
+          fallos.push(
+            `el menú (${mensajeDeError({ message: e instanceof Error ? e.message : "" })} ¿Está aplicada la migración del menú?)`,
+          );
         }
       }
-      // Desde ahora mandan las tablas: se enciende el motor sin tocar la sincronización del documento.
-      await activarTablas(c, h);
+
+      // 5. El menú del cole, en el colegio del hogar (se crea la primera vez).
+      let coleListo = quedan.cole;
+      if (quedan.cole) {
+        const nubeCole = crearNubeCole(c, h.id);
+        try {
+          await nubeCole.leer();
+          const cambios = cambiosCompletosCole(estado);
+          if (cambios.dias) await nubeCole.aplicar(cambios);
+          else coleListo = false; // no hay menú del cole que llevar
+        } catch (e) {
+          coleListo = false;
+          fallos.push(
+            `el menú del cole (${mensajeDeError({ message: e instanceof Error ? e.message : "" })} ¿Está aplicada la migración del cole?)`,
+          );
+        }
+      }
+
+      // Desde ahora mandan las tablas: se enciende cada motor sin tocar el del documento.
+      if (quedan.hogar) await activarTablas(c, h);
       if (menuListo) await activarMenu(c, h);
-      return menuListo
+      if (coleListo) await activarCole(c, h);
+      return fallos.length === 0
         ? { ok: true }
-        : {
-            ok: false,
-            mensaje:
-              "Lo del hogar se llevó bien. El menú no: falta aplicar en Supabase la migración del menú.",
-          };
+        : { ok: false, mensaje: `Se llevó lo demás, pero falló: ${fallos.join("; ")}.` };
     },
-    [activarTablas, activarMenu],
+    [activarTablas, activarMenu, activarCole],
   );
 
   const reconectar = useRef<
@@ -458,6 +532,7 @@ export function useNube(
           if (menu.current) {
             x = conservarCamposDeMenu(x, leer.current(), h.id, resolucionMenu.current());
           }
+          if (cole.current) x = conservarCamposDeCole(x, leer.current());
           escribir.current(x);
         },
         avisar: setSync,
@@ -492,13 +567,22 @@ export function useNube(
       guardarJson(CLAVE_HOGAR, h);
       const hogarListo = await activarTablas(c, h);
       const menuListo = await activarMenu(c, h);
+      const coleListo = await activarCole(c, h);
       // Si el hogar aún tiene sus datos solo en el documento, se pasan a tablas ahora, solos
       // (D-103): con copia previa en el móvil, sin borrar nada y solo la primera vez.
       const inicial = s.estadoInicial;
-      if ((!hogarListo || !menuListo) && inicial && inicial.personas.length > 0) {
-        void importarDesde(c, h, inicial).then((r) => {
-          if (!r.ok) console.error("Importación automática a tablas:", r.mensaje);
-        });
+      if (inicial && inicial.personas.length > 0) {
+        const quedan = {
+          hogar: !hogarListo,
+          menu: !menuListo,
+          // Sin menú del cole en el documento no hay nada que llevar.
+          cole: !coleListo && Object.keys(inicial.colegio).length > 0,
+        };
+        if (quedan.hogar || quedan.menu || quedan.cole) {
+          void importarDesde(c, h, inicial, quedan).then((r) => {
+            if (!r.ok) console.error("Importación automática a tablas:", r.mensaje);
+          });
+        }
       }
       // Lo que quedó sin enviar la última vez (p. ej. se cerró la app sin conexión) se envía ya.
       if (s.hayPendientes) void s.sincronizar();
@@ -509,6 +593,8 @@ export function useNube(
         void tablas.current?.sincronizar();
         void menu.current?.recibir();
         void menu.current?.sincronizar();
+        void cole.current?.recibir();
+        void cole.current?.sincronizar();
         void nube
           .leer()
           .then((r) => r && s.recibir(r))
@@ -526,7 +612,7 @@ export function useNube(
       setFase("conectado");
       return { ok: true };
     },
-    [desconectar, activarTablas, activarMenu, importarDesde],
+    [desconectar, activarTablas, activarMenu, activarCole, importarDesde],
   );
 
   useEffect(() => {
@@ -592,6 +678,11 @@ export function useNube(
       const motor = menu.current;
       if (temporizadorMenu.current) clearTimeout(temporizadorMenu.current);
       temporizadorMenu.current = setTimeout(() => void motor.sincronizar(), ESPERA_GUARDADO_MS);
+    }
+    if (cole.current) {
+      const motor = cole.current;
+      if (temporizadorCole.current) clearTimeout(temporizadorCole.current);
+      temporizadorCole.current = setTimeout(() => void motor.sincronizar(), ESPERA_GUARDADO_MS);
     }
     s.registrar(accion);
     if (temporizador.current) clearTimeout(temporizador.current);
@@ -734,6 +825,13 @@ export function useNube(
         } catch {
           /* sin migración del menú */
         }
+        let coleYaHay: ResumenCole = { diasCole: 0 };
+        try {
+          coleYaHay = resumenColeDeLectura(await crearNubeCole(c, hogar.id).leer());
+        } catch {
+          /* sin migración del cole */
+        }
+        const coleSeLlevaria = resumenColeDeCambios(cambiosCompletosCole(estado));
         const menuSeLlevaria = resumenMenuDeCambios(
           cambiosCompletosMenu(
             migrarIdsDePersonas(migrarIdsDeMenu(estado, hogar.id, {}), hogar.id),
@@ -742,8 +840,8 @@ export function useNube(
         );
         return {
           ok: true,
-          seLlevaria: { ...hogarHoy.seLlevaria, ...menuSeLlevaria },
-          yaHay: { ...hogarHoy.yaHay, ...menuYaHay },
+          seLlevaria: { ...hogarHoy.seLlevaria, ...menuSeLlevaria, ...coleSeLlevaria },
+          yaHay: { ...hogarHoy.yaHay, ...menuYaHay, ...coleYaHay },
         };
       } catch {
         return { ok: false, mensaje: "Las tablas devolvieron algo que no entiendo." };

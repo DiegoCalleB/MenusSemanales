@@ -45,7 +45,7 @@ export function BannerPrueba() {
         {conectado ? (
           <>
             <strong>{cuenta.hogar?.nombre}</strong> · sincronizado
-            {!(cuenta.tablas.hogar && cuenta.tablas.menu) && (
+            {!(cuenta.tablas.hogar && cuenta.tablas.menu && cuenta.tablas.cole) && (
               <>
                 {" "}
                 · <Link href="/cuenta">guardado en un documento, falta pasarlo a tablas</Link>

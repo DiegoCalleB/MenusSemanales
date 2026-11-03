@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import type { ResumenTablas } from "@/aplicacion/tablas";
+import type { ResumenCole } from "@/aplicacion/tablas-cole";
 import type { ResumenMenu } from "@/aplicacion/tablas-menu";
 import { useCuenta, useHogar } from "./proveedor-hogar";
 
-type Resumen = ResumenTablas & ResumenMenu;
+type Resumen = ResumenTablas & ResumenMenu & ResumenCole;
 const FILAS: Array<[keyof Resumen, string]> = [
   ["personas", "Personas"],
   ["cumples", "Cumpleaños"],
@@ -19,6 +20,7 @@ const FILAS: Array<[keyof Resumen, string]> = [
   ["notas", "Notas de las cenas"],
   ["almuerzos", "Comidas del mediodía"],
   ["valoraciones", "Valoraciones de platos"],
+  ["diasCole", "Días del menú del cole"],
 ];
 
 interface Vista {

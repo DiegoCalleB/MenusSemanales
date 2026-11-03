@@ -1099,6 +1099,14 @@ export type Database = {
         Args: { p_nombre: string; p_seccion?: string; p_unidad: string }
         Returns: string
       }
+      leer_cole_tablas: {
+        Args: { p_hogar_id: string }
+        Returns: Json
+      }
+      aplicar_cambios_cole: {
+        Args: { p_hogar_id: string; p_cambios: Json }
+        Returns: undefined
+      }
       resolver_ingredientes: {
         Args: { p_ingredientes: Json }
         Returns: Json

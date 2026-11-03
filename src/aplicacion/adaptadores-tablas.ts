@@ -10,6 +10,14 @@ import {
   migrarIdsDePersonas,
 } from "./tablas";
 import {
+  type CambiosCole,
+  type LecturaCole,
+  aplicarCambiosALecturaCole,
+  aplicarLecturaDeCole,
+  diferenciasCole,
+  hayColeEnTablas,
+} from "./tablas-cole";
+import {
   type CambiosMenu,
   type LecturaMenu,
   type ResolucionIngredientes,
@@ -107,3 +115,13 @@ export function adaptadorMenu(hogarId: string, resolver: ResolverIngredientes) {
   };
   return { adaptador, resolucion: (): ResolucionIngredientes => resolucion };
 }
+
+/** El menú del cole del colegio del hogar (D-104). Sus ids son fechas: no hay nada que migrar. */
+export const adaptadorCole: Adaptador<LecturaCole, CambiosCole> = {
+  hayDatos: hayColeEnTablas,
+  aEstado: aplicarLecturaDeCole,
+  diferencias: diferenciasCole,
+  aplicarALectura: aplicarCambiosALecturaCole,
+  huella: (e) => JSON.stringify(e.colegio),
+  preparar: (local) => local,
+};
