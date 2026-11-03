@@ -100,9 +100,11 @@ export function AvisosCalendario() {
               marcado «Eliminar alertas».
             </li>
             <li>
-              <strong>Android o Google Calendar:</strong> copia el enlace y en calendar.google.com
-              pon «Otros calendarios» → «Desde URL». Google usa sus propios avisos: ajústalos en ese
-              calendario.
+              <strong>Google Calendar (Android o iPhone):</strong> copia el enlace. La app de Google
+              Calendar no deja añadirlo: abre calendar.google.com en el navegador del móvil con
+              «Versión para ordenador», y en «Otros calendarios» → «Desde URL» pégalo. Después sale
+              también en la app. Google lo refresca solo, pero tarda entre medio día y un día en
+              enseñar los cambios, y usa sus propios avisos: ajústalos en ese calendario.
             </li>
           </ol>
           <p className="bg-ok-fondo text-ok-texto rounded-2xl p-3 text-base">

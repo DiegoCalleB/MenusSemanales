@@ -894,3 +894,11 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 ## Casa en filas compactas
 
 Las tareas de Casa ocupaban una tarjeta cada una. Ahora son filas de una línea (✓ para marcar hecha, título, cuándo toca, la inicial de a quién le toca); al tocar la fila se despliega lo demás (a quién le toca, mañana, a la lista, quitar).
+
+## D-109 — El calendario suscrito lee de las tablas
+
+**Contexto.** Pidieron «un enlace .ics para poner en Google Calendar y que todo se sincronice». El enlace ya existía (D-083, Más → Enviar → «Avisos en el calendario del móvil»), pero `estado_para_calendario` seguía leyendo el documento `hogar_estado`, que ya no recibe personas, cenas, comidas, agenda, fechas, casa ni cumpleaños (viven en tablas). Comprobado con datos reales: el documento tenía «Filetes de ternera» el 3 de noviembre y las tablas «Pollo empanado + Sopa».
+
+**Decisión.** Migración `20261103220000_calendario_desde_tablas`: si el hogar tiene sus personas en tablas, el resumen sale de ellas (una entrada por plato de cada cena, en orden); si no, sigue saliendo del documento. Mismo resumen mínimo: nunca ideas, gustos ni regalo, compra, despensa, ingredientes ni cole. Test SQL nuevo (`calendario_tablas`) que comprueba que manda la tabla, que no sale nada del documento viejo ni del regalo, y que solo hay las siete claves de siempre.
+
+**Límites.** Google Calendar refresca los calendarios por URL cuando quiere (entre medio día y un día) y no se puede forzar; ignora las alarmas del archivo. La app de Google Calendar no deja añadir por URL: hay que hacerlo desde calendar.google.com en el navegador. El calendario es de lectura: lo que se cambia en Google no vuelve a la app.
