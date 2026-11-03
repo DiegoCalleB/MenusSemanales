@@ -876,3 +876,5 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 **Decisión.** Un módulo común (`infraestructura/ia/gemini.ts`) llama a Gemini con reintentos: ante 429/500/502/503/504 repite una vez tras 1,2 s con el modelo principal y después prueba con `gemini-2.5-flash` , todo dentro de un plazo total (25 s la lista, 55 s el PDF). Los errores que no son pasajeros (clave, formato) no se reintentan. Lo usan la lista y el menú del cole.
 
 **Añadido (`ia-tiempo`).** La transcripción del PDF superó el plazo de 55 s: los modelos Flash recientes «piensan» por defecto antes de responder. Se pide `thinkingLevel: low` en la transcripción; si el modelo rechaza el ajuste (400) se repite sin él. Sin verificar contra Google real.
+
+**Plazo por intento.** Cada intento al modelo tiene 30 s en la transcripción del PDF; si no contesta, se pasa al modelo de respaldo (más rápido) en vez de gastar los 55 s en uno solo.

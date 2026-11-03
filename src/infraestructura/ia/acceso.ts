@@ -46,7 +46,7 @@ export async function comprobarAccesoIa(): Promise<
  */
 export function motivoDeError(e: unknown): string {
   const mensaje = e instanceof Error ? e.message : "";
-  if (/^ia-http-\d{3}$/.test(mensaje)) return mensaje;
+  if (/^ia-(http-\d{3}|tiempo)$/.test(mensaje)) return mensaje;
   if (e instanceof Error && (e.name === "TimeoutError" || e.name === "AbortError"))
     return "ia-tiempo";
   return "ia-red";

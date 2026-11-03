@@ -53,6 +53,7 @@ export async function transcribirMenuCole(
   const r = await llamarGemini(clave, cuerpoDeTranscripcion(archivo), {
     sinAjustes: cuerpoDeTranscripcion(archivo, false),
     plazoMs: 55_000,
+    porIntentoMs: 30_000,
     llamar,
   });
   const cuerpo = (await r.json()) as {

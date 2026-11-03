@@ -30,6 +30,8 @@ export async function llamarGemini(
   cuerpo: unknown,
   opciones: {
     plazoMs: number;
+    /** Tiempo máximo de cada intento: si un modelo no contesta, se pasa al siguiente. */
+    porIntentoMs?: number;
     sinAjustes?: unknown;
     llamar?: typeof fetch;
     espera?: (ms: number) => Promise<unknown>;
@@ -42,37 +44,43 @@ export async function llamarGemini(
     MODELO_RESPALDO === "ninguno" || MODELO_IA === MODELO_RESPALDO
       ? [MODELO_IA]
       : [MODELO_IA, MODELO_RESPALDO];
-  const intentos = modelos.flatMap((m) => [m, m]);
-  let primero = 0;
+  let primero = ""; // el fallo del modelo principal es el que explica qué pasa
   // Si el modelo rechaza algún ajuste opcional (400), se repite ese intento con el cuerpo simple.
   let cuerpoActual = cuerpo;
-  for (let i = 0; i < intentos.length; i++) {
-    const restante = limite - Date.now();
-    if (restante <= 0) break;
-    const r = await llamar(
-      `${URL_BASE}/${encodeURIComponent(intentos[i] as string)}:generateContent`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": clave },
-        body: JSON.stringify(cuerpoActual),
-        signal: AbortSignal.timeout(restante),
-        cache: "no-store",
-      },
-    );
-    if (r.ok) return r;
-    primero ||= r.status; // el error del modelo principal es el que explica qué pasa
-    if (
-      r.status === 400 &&
-      opciones.sinAjustes !== undefined &&
-      cuerpoActual !== opciones.sinAjustes
-    ) {
-      cuerpoActual = opciones.sinAjustes;
-      i--; // mismo modelo, cuerpo simple
-      continue;
+  for (const modelo of modelos) {
+    for (let intento = 0; intento < 2; intento++) {
+      const restante = limite - Date.now();
+      if (restante <= 0) throw new Error(primero || "ia-tiempo");
+      let r: Response;
+      try {
+        r = await llamar(`${URL_BASE}/${encodeURIComponent(modelo)}:generateContent`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-goog-api-key": clave },
+          body: JSON.stringify(cuerpoActual),
+          signal: AbortSignal.timeout(Math.min(restante, opciones.porIntentoMs ?? restante)),
+          cache: "no-store",
+        });
+      } catch (e) {
+        if (e instanceof Error && (e.name === "TimeoutError" || e.name === "AbortError")) {
+          primero ||= "ia-tiempo";
+          break; // no contesta: no se insiste con este modelo
+        }
+        throw e;
+      }
+      if (r.ok) return r;
+      primero ||= `ia-http-${r.status}`;
+      if (
+        r.status === 400 &&
+        opciones.sinAjustes !== undefined &&
+        cuerpoActual !== opciones.sinAjustes
+      ) {
+        cuerpoActual = opciones.sinAjustes;
+        intento--; // mismo modelo, cuerpo simple
+        continue;
+      }
+      if (!REINTENTABLES.has(r.status)) throw new Error(primero);
+      if (intento === 0) await espera(ESPERA_MS);
     }
-    if (!REINTENTABLES.has(r.status)) break;
-    // Antes de repetir con el mismo modelo se espera un poco; al cambiar de modelo, no.
-    if (intentos[i] === intentos[i + 1]) await espera(ESPERA_MS);
   }
-  throw new Error(`ia-http-${primero || 504}`);
+  throw new Error(primero || "ia-red");
 }

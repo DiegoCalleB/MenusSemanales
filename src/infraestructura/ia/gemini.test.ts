@@ -61,6 +61,22 @@ describe("llamarGemini", () => {
     expect((f.mock.calls[1]?.[1] as RequestInit).body).toBe('{"con":false}');
   });
 
+  it("si el modelo principal no contesta a tiempo, pasa al de respaldo", async () => {
+    const tiempo = Object.assign(new Error("t"), { name: "TimeoutError" });
+    const f = vi.fn().mockRejectedValueOnce(tiempo).mockResolvedValueOnce(respuesta(200));
+    const r = await llamarGemini("k", {}, { plazoMs: 5000, llamar: f, espera: sinEspera });
+    expect(r.status).toBe(200);
+    expect(urlDe(f, 1)).toContain(MODELO_RESPALDO);
+  });
+
+  it("si ninguno contesta, lanza ia-tiempo", async () => {
+    const tiempo = Object.assign(new Error("t"), { name: "TimeoutError" });
+    const f = vi.fn().mockRejectedValue(tiempo);
+    await expect(
+      llamarGemini("k", {}, { plazoMs: 5000, llamar: f, espera: sinEspera }),
+    ).rejects.toThrow("ia-tiempo");
+  });
+
   it("la clave va en la cabecera, nunca en la URL", async () => {
     const f = vi.fn().mockResolvedValue(respuesta(200));
     await llamarGemini("secreta", {}, { plazoMs: 5000, llamar: f, espera: sinEspera });
