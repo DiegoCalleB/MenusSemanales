@@ -868,3 +868,9 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 **Contexto.** Al subir el PDF del cole apareció «No se ha podido leer el archivo» sin más pistas: tanto un error de Google (clave, modelo, formato) como del contador de uso salían igual, y desde el móvil no hay forma de ver los registros.
 
 **Decisión.** Las rutas `/api/ia/*` devuelven además un `motivo` corto y seguro (`ia-http-404`, `ia-tiempo`, `ia-red`, `uso-<código>`) que la pantalla muestra entre paréntesis y que se registra en el servidor. Nunca viaja el contenido del archivo ni el cuerpo de la respuesta del proveedor. La transcripción ignora ahora las traducciones al inglés que trae el menú real del cole.
+
+## D-107 — La IA reintenta cuando Google está saturado
+
+**Contexto.** La primera subida real devolvió `ia-http-503`: Google respondió «modelo saturado», un fallo pasajero habitual en los modelos Flash más nuevos.
+
+**Decisión.** Un módulo común (`infraestructura/ia/gemini.ts`) llama a Gemini con reintentos: ante 429/500/502/503/504 repite una vez tras 1,2 s con el modelo principal y después prueba con `gemini-2.5-flash` (también dos intentos), todo dentro de un plazo total (25 s la lista, 55 s el PDF). Los errores que no son pasajeros (clave, formato) no se reintentan. Lo usan la lista y el menú del cole.

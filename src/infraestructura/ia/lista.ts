@@ -1,4 +1,7 @@
 import "server-only";
+import { llamarGemini } from "./gemini";
+
+export { MODELO_IA } from "./gemini";
 import { CATEGORIAS } from "@/dominio/habituales";
 import {
   INSTRUCCIONES_LISTA,
@@ -8,14 +11,6 @@ import {
   mensajeParaIa,
   respuestaListaSchema,
 } from "@/dominio/ia-lista";
-
-/**
- * El modelo se cambia por variable de entorno sin tocar el código. `gemini-flash-latest` es el
- * alias de Google para «el Flash más reciente» (D-100); si se prefiere fijar una versión, se pone
- * aquí (p. ej. `gemini-2.5-flash`).
- */
-export const MODELO_IA = process.env.IA_MODELO?.trim() || "gemini-flash-latest";
-const URL_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 
 /** ¿Hay clave de la IA en este servidor? */
 export const iaConfigurada = (): boolean => Boolean(process.env.GEMINI_API_KEY);
@@ -85,14 +80,10 @@ export async function ordenarLista(
 ): Promise<RespuestaLista> {
   const clave = process.env.GEMINI_API_KEY;
   if (!clave) throw new IaNoConfigurada();
-  const r = await llamar(`${URL_BASE}/${encodeURIComponent(MODELO_IA)}:generateContent`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-goog-api-key": clave },
-    body: JSON.stringify(cuerpoDePeticion(peticion)),
-    signal: AbortSignal.timeout(20_000),
-    cache: "no-store",
+  const r = await llamarGemini(clave, cuerpoDePeticion(peticion), {
+    plazoMs: 25_000,
+    llamar,
   });
-  if (!r.ok) throw new Error(`ia-http-${r.status}`);
   const texto = textoDeRespuesta(await r.json());
   if (texto === null) return { articulos: [] };
   let json: unknown;

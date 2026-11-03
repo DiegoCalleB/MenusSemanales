@@ -4,9 +4,8 @@ import {
   type TipoArchivoCole,
   limpiarTranscripcion,
 } from "@/dominio/ia-cole";
-import { IaNoConfigurada, MODELO_IA } from "./lista";
-
-const URL_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
+import { llamarGemini } from "./gemini";
+import { IaNoConfigurada } from "./lista";
 
 export function cuerpoDeTranscripcion(archivo: { mime: TipoArchivoCole; base64: string }) {
   return {
@@ -43,14 +42,10 @@ export async function transcribirMenuCole(
 ): Promise<string> {
   const clave = process.env.GEMINI_API_KEY;
   if (!clave) throw new IaNoConfigurada();
-  const r = await llamar(`${URL_BASE}/${encodeURIComponent(MODELO_IA)}:generateContent`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-goog-api-key": clave },
-    body: JSON.stringify(cuerpoDeTranscripcion(archivo)),
-    signal: AbortSignal.timeout(55_000),
-    cache: "no-store",
+  const r = await llamarGemini(clave, cuerpoDeTranscripcion(archivo), {
+    plazoMs: 55_000,
+    llamar,
   });
-  if (!r.ok) throw new Error(`ia-http-${r.status}`);
   const cuerpo = (await r.json()) as {
     candidates?: Array<{ finishReason?: string; content?: { parts?: Array<{ text?: unknown }> } }>;
   } | null;
