@@ -9,18 +9,29 @@ import {
   planParaCompartir,
   seccionesDeCompra,
 } from "@/aplicacion/compartir";
-import { generarIcs, textoCasa, textoCompra, textoFechas, textoMenu } from "@/dominio/compartir";
+import {
+  FORMATOS_MENU,
+  generarIcs,
+  textoCasa,
+  textoCompra,
+  textoFechas,
+  textoMenu,
+} from "@/dominio/compartir";
 import { AvisosCalendario } from "../avisos-calendario";
 import { BotonesCompartir } from "../compartir-botones";
 import { useHogar } from "../proveedor-hogar";
+import { useFormatoMenu } from "../usar-formato-menu";
 import { useYo } from "../yo";
 
 function Tarjeta({
   titulo,
   emoji,
   texto,
+  antes,
   children,
 }: {
+  /** Lo que va entre el título y los botones (p. ej. el selector de formato). */
+  antes?: React.ReactNode;
   titulo: string;
   emoji: string;
   texto: string;
@@ -32,6 +43,7 @@ function Tarjeta({
         <span aria-hidden="true">{emoji} </span>
         {titulo}
       </h2>
+      {antes}
       <BotonesCompartir titulo={titulo} texto={texto}>
         {children}
       </BotonesCompartir>
@@ -54,7 +66,8 @@ export function CompartirVista() {
   const [aviso, setAviso] = useState("");
   const plan = useMemo(() => planParaCompartir(estado), [estado]);
   const compra = useMemo(() => seccionesDeCompra(estado), [estado]);
-  const textoDelMenu = useMemo(() => textoMenu(plan.titulo, plan.dias), [plan]);
+  const [formato, setFormato] = useFormatoMenu();
+  const textoDelMenu = useMemo(() => textoMenu(plan.titulo, plan.dias, formato), [plan, formato]);
   const textoDeFechas = useMemo(() => textoFechas(fechasParaCompartir(estado)), [estado]);
   const textoDeCasa = useMemo(() => textoCasa(casaParaCompartir(estado)), [estado]);
   const textoDeCompra = useMemo(() => textoCompra(compra.secciones, compra.manuales), [compra]);
@@ -84,7 +97,27 @@ export function CompartirVista() {
         </Link>
       </header>
 
-      <Tarjeta titulo={plan.titulo} emoji="🍽️" texto={textoDelMenu}>
+      <Tarjeta
+        titulo={plan.titulo}
+        emoji="🍽️"
+        texto={textoDelMenu}
+        antes={
+          <div role="group" aria-label="Formato del mensaje" className="flex flex-wrap gap-2">
+            {FORMATOS_MENU.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                aria-pressed={formato === f.id}
+                title={f.ayuda}
+                onClick={() => setFormato(f.id)}
+                className={formato === f.id ? "boton" : "boton-suave"}
+              >
+                {f.nombre}
+              </button>
+            ))}
+          </div>
+        }
+      >
         <button type="button" className="boton-suave" disabled={!hayEventos} onClick={descargarIcs}>
           📅 Calendario (.ics)
         </button>

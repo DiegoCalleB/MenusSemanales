@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { cantidadEnTexto } from "./texto";
 import {
+  acortarPlatoCole,
   enlaceWhatsApp,
   generarIcs,
   textoCasa,
@@ -252,5 +253,77 @@ describe("compartir: comidas, fechas y lo que toca en casa", () => {
     expect(t).toContain("☐ 🛏️ Cambiar sábanas _(hoy)_");
     expect(t).toContain("*Los dos*\n☐ 🐱 Limpiar areneros _(desde hace 2 días)_");
     expect(textoCasa([])).toContain("Nada pendiente");
+  });
+});
+
+describe("formatos del menú: agenda y tabla", () => {
+  const real = [
+    {
+      fecha: "2026-11-03",
+      etiqueta: "Martes 3",
+      cole: "🫘 🍳",
+      coleTexto:
+        "Guiso de lentejas ecológicas con zanahoria, pimiento y cebolla + Tortilla de patata y cebolla horno",
+      porque: "Como en el cole comen legumbres y huevo, propongo de cena Pollo empanado + Sopa",
+      platos: ["Pollo empanado", "Sopa"],
+      evento: null,
+    },
+    {
+      fecha: "2026-11-05",
+      etiqueta: "Jueves 5",
+      cole: "🍝 🫘",
+      coleTexto:
+        "Sopa de cocido con fideos integrales + Cocido completo estofado (garbanzo, ternera, pollo, tocino, chorizo)",
+      platos: ["Ensalada César"],
+      nota: "o lo que sobre",
+      evento: null,
+    },
+    {
+      fecha: "2026-11-07",
+      etiqueta: "Sábado 7",
+      cole: "",
+      platos: [],
+      evento: { emoji: "🎂", titulo: "Cumpleaños de Ana" },
+    },
+  ];
+
+  it("acorta el menú del cole sin paréntesis, sin «ecológicas» y sin el detalle tras «con»", () => {
+    expect(acortarPlatoCole("Guiso de lentejas ecológicas con zanahoria, pimiento y cebolla")).toBe(
+      "Guiso de lentejas",
+    );
+    expect(acortarPlatoCole("Cocido completo estofado (garbanzo, ternera, pollo)")).toBe(
+      "Cocido completo estofado",
+    );
+    expect(acortarPlatoCole("Arroz caldoso con verduras")).toBe("Arroz caldoso con verduras");
+    expect(acortarPlatoCole("Crema suave de calabacín, zanahoria y calabaza")).toBe(
+      "Crema suave de calabacín",
+    );
+    expect(acortarPlatoCole("A + B")).toBe("A + B");
+  });
+
+  it("agenda: dos líneas por día, cole resumido, sin el porqué", () => {
+    const t = textoMenu("Menú del 3 al 7 de noviembre", real, "agenda");
+    expect(t).toContain(
+      "*Martes 3*\n🎒 Guiso de lentejas + Tortilla de patata y cebolla horno\n🍴 Pollo empanado + Sopa",
+    );
+    expect(t).toContain("🎒 Sopa de cocido + Cocido completo estofado");
+    expect(t).toContain("📝 o lo que sobre");
+    expect(t).toContain("*Sábado 7*\n🎂 Cumpleaños de Ana\n🍴 _sin decidir_");
+    expect(t).not.toContain("💡");
+    expect(t).not.toContain("garbanzo");
+    expect(t.length).toBeLessThan(textoMenu("x", real, "completo").length);
+  });
+
+  it("tabla: una línea por día con día | cole | cena", () => {
+    const t = textoMenu("Menú", real, "tabla");
+    expect(t).toContain("*Martes 3* | 🫘 🍳 | Pollo empanado + Sopa");
+    expect(t).toContain("*Jueves 5* | 🍝 🫘 | Ensalada César | 📝 o lo que sobre");
+    expect(t).toContain("*Sábado 7* | — | _sin decidir_ | 🎂 Cumpleaños de Ana");
+    expect(t.split("\n").filter((l) => l.startsWith("*")).length).toBe(3);
+  });
+
+  it("sin formato sigue siendo el completo de siempre", () => {
+    expect(textoMenu("Menú", real)).toBe(textoMenu("Menú", real, "completo"));
+    expect(textoMenu("Menú", real)).toContain("💡 Como en el cole comen legumbres y huevo");
   });
 });

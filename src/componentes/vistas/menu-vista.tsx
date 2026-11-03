@@ -16,6 +16,7 @@ import { BotonesCompartir } from "../compartir-botones";
 import { TarjetaCole } from "../cole";
 import { EMOJI_GRUPO, formatearNumero } from "../formato";
 import { useHogar } from "../proveedor-hogar";
+import { useFormatoMenu } from "../usar-formato-menu";
 import { Razones } from "../razones";
 import { NotaDelDia } from "../nota-del-dia";
 import { PlatoRapido } from "../plato-rapido";
@@ -85,6 +86,7 @@ export function MenuVista() {
   const dias = useMemo(() => diasDelMenu(estado), [estado]);
   const propuesta = useMemo(() => menuDeLaSemana(estado), [estado]);
   const plan = useMemo(() => planParaCompartir(estado), [estado]);
+  const [formatoMenu] = useFormatoMenu();
   const eleccion = (fecha: string) => comidasDe(estado, fecha)[0];
   const [anadiendo, setAnadiendo] = useState<string | null>(null);
   const [verTodos, setVerTodos] = useState<string | null>(null);
@@ -129,7 +131,10 @@ export function MenuVista() {
         </div>
       </div>
 
-      <BotonesCompartir titulo={plan.titulo} texto={textoMenu(plan.titulo, plan.dias)} />
+      <BotonesCompartir
+        titulo={plan.titulo}
+        texto={textoMenu(plan.titulo, plan.dias, formatoMenu)}
+      />
 
       <ul className="flex flex-col gap-2">
         {dias.map((dia) => {

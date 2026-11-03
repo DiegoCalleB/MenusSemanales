@@ -863,7 +863,7 @@ test.describe("flujos en móvil", () => {
     await comida.getByRole("button", { name: "Apuntar", exact: true }).click();
     await comida.getByRole("button", { name: "Solo apuntarlo esta vez" }).click();
     await pagina.goto("/menu", { waitUntil: "networkidle" });
-    expect(await mensaje()).toContain("☀️ Comida: Paella de los domingos");
+    expect(await mensaje()).toContain("☀️ Paella de los domingos");
     // La compra, desde la propia lista.
     await pagina.goto("/compra", { waitUntil: "networkidle" });
     expect(await mensaje()).toContain("🛒 *Lista de la compra*");
@@ -941,6 +941,36 @@ test.describe("flujos en móvil", () => {
     await expect(
       pagina.getByRole("list", { name: "Apuntes" }).getByText(/Excursión Emma/),
     ).toBeVisible();
+    await contexto.close();
+  });
+
+  test("enviar: el menú se puede mandar como agenda, tabla o completo", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/compartir");
+    const tarjeta = pagina.getByRole("region", { name: /^Menú/ });
+    const mensaje = async () =>
+      decodeURIComponent(
+        (
+          (await tarjeta.getByRole("link", { name: "Enviar por WhatsApp" }).getAttribute("href")) ??
+          ""
+        ).replace("https://wa.me/?text=", ""),
+      );
+    // Por defecto, la agenda: sin el «porqué» de cada cena.
+    await expect(tarjeta.getByRole("button", { name: "Agenda" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(await mensaje()).not.toContain("💡");
+    await tarjeta.getByRole("button", { name: "Tabla" }).click();
+    expect(await mensaje()).toMatch(/\*[^*]+\* \| .* \| /);
+    await tarjeta.getByRole("button", { name: "Completo" }).click();
+    expect(await mensaje()).toContain("🍴");
+    // Se recuerda al volver.
+    await pagina.reload({ waitUntil: "networkidle" });
+    await expect(tarjeta.getByRole("button", { name: "Completo" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     await contexto.close();
   });
 

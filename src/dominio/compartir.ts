@@ -28,8 +28,52 @@ export interface DiaParaCompartir {
 
 const MAX_WHATSAPP = 3800; // WhatsApp admite más, pero los enlaces largos fallan en algunos móviles
 
-/** Mensaje del menú para WhatsApp. */
-export function textoMenu(titulo: string, dias: readonly DiaParaCompartir[]): string {
+export type FormatoMenu = "agenda" | "tabla" | "completo";
+
+/** Cómo se enseña cada formato en la pantalla de enviar. */
+export const FORMATOS_MENU: ReadonlyArray<{ id: FormatoMenu; nombre: string; ayuda: string }> = [
+  { id: "agenda", nombre: "Agenda", ayuda: "Dos líneas por día: cole y cena" },
+  { id: "tabla", nombre: "Tabla", ayuda: "Una línea por día, lo mínimo" },
+  { id: "completo", nombre: "Completo", ayuda: "Con el porqué de cada cena" },
+];
+
+const MAX_PLATO_CORTO = 44;
+
+/**
+ * Acorta lo que dice el menú del cole para un mensaje: sin lo que va entre paréntesis, sin
+ * «ecológicas» y, si es largo, hasta el primer «con». «Guiso de lentejas ecológicas con zanahoria,
+ * pimiento y cebolla» → «Guiso de lentejas».
+ */
+export function acortarPlatoCole(texto: string): string {
+  return texto
+    .split(" + ")
+    .map((parte) => {
+      let t = parte
+        .replace(/\s*\([^)]*\)/g, "")
+        .replace(/\s+ecol[oó]gic[oa]s?\b/gi, "")
+        .replace(/\s+/g, " ")
+        .trim();
+      const con = t.indexOf(" con ");
+      if (t.length > 32 && con > 8) t = t.slice(0, con);
+      const coma = t.indexOf(",");
+      if (t.length > MAX_PLATO_CORTO && coma > 8) t = t.slice(0, coma);
+      return t.length > MAX_PLATO_CORTO ? `${t.slice(0, MAX_PLATO_CORTO - 1).trimEnd()}…` : t;
+    })
+    .join(" + ");
+}
+
+/** Mensaje del menú para WhatsApp, en uno de los tres formatos (por defecto el completo de siempre). */
+export function textoMenu(
+  titulo: string,
+  dias: readonly DiaParaCompartir[],
+  formato: FormatoMenu = "completo",
+): string {
+  if (formato === "agenda") return textoMenuAgenda(titulo, dias);
+  if (formato === "tabla") return textoMenuTabla(titulo, dias);
+  return textoMenuCompleto(titulo, dias);
+}
+
+function textoMenuCompleto(titulo: string, dias: readonly DiaParaCompartir[]): string {
   const lineas: string[] = [`🍽️ *${titulo}*`, ""];
   for (const d of dias) {
     // Con el texto del menú del cole va en su propia línea; si no, los emojis junto al día.
@@ -48,6 +92,42 @@ export function textoMenu(titulo: string, dias: readonly DiaParaCompartir[]): st
     lineas.push("");
   }
   lineas.push("_Hecho con Menús Semanales_");
+  return recortar(lineas.join("\n"));
+}
+
+/** Agenda: cada día en pocas líneas, con el cole resumido y sin explicaciones. */
+function textoMenuAgenda(titulo: string, dias: readonly DiaParaCompartir[]): string {
+  const lineas: string[] = [`🍽️ *${titulo}*`, ""];
+  for (const d of dias) {
+    lineas.push(`*${d.etiqueta}*`);
+    if (d.evento) lineas.push(`${d.evento.emoji} ${d.evento.titulo}`);
+    if (d.coleTexto) lineas.push(`🎒 ${acortarPlatoCole(d.coleTexto)}`);
+    else if (d.cole) lineas.push(`🎒 ${d.cole}`);
+    if (d.comida && d.comida.length > 0) lineas.push(`☀️ ${d.comida.join(" + ")}`);
+    lineas.push(d.platos.length > 0 ? `🍴 ${d.platos.join(" + ")}` : "🍴 _sin decidir_");
+    if (d.nota) lineas.push(`📝 ${d.nota}`);
+    lineas.push("");
+  }
+  lineas.push("_Hecho con Menús Semanales_");
+  return recortar(lineas.join("\n"));
+}
+
+/** Tabla: una línea por día, «Día | cole | cena». Lo más corto para un mensaje. */
+function textoMenuTabla(titulo: string, dias: readonly DiaParaCompartir[]): string {
+  const lineas: string[] = [`🍽️ *${titulo}*`, "", "_Día | 🎒 Cole | 🍴 Cena_", ""];
+  for (const d of dias) {
+    const cole = d.cole || (d.coleTexto ? "🎒" : "—");
+    const cena = d.platos.length > 0 ? d.platos.join(" + ") : "_sin decidir_";
+    const extra = [
+      d.evento ? `${d.evento.emoji} ${d.evento.titulo}` : "",
+      d.comida && d.comida.length > 0 ? `☀️ ${d.comida.join(" + ")}` : "",
+      d.nota ? `📝 ${d.nota}` : "",
+    ].filter(Boolean);
+    lineas.push(
+      `*${d.etiqueta}* | ${cole} | ${cena}${extra.length > 0 ? ` | ${extra.join(" · ")}` : ""}`,
+    );
+  }
+  lineas.push("", "_Hecho con Menús Semanales_");
   return recortar(lineas.join("\n"));
 }
 
