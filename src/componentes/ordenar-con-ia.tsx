@@ -129,8 +129,8 @@ export function OrdenarConIa({ yaEnLista }: { yaEnLista: readonly string[] }) {
             </button>
           </div>
           <p className="text-tinta-suave text-xs">
-            El texto se envía a una IA (Claude) para ordenarlo. No se guarda. Nunca escribas aquí
-            nada privado.
+            El texto se envía a una IA (Gemini, de Google) para ordenarlo. No se guarda. Nunca
+            escribas aquí nada privado.
           </p>
         </>
       )}
