@@ -878,3 +878,5 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 **Añadido (`ia-tiempo`).** La transcripción del PDF superó el plazo de 55 s: los modelos Flash recientes «piensan» por defecto antes de responder. Se pide `thinkingLevel: low` en la transcripción; si el modelo rechaza el ajuste (400) se repite sin él. Sin verificar contra Google real.
 
 **Plazo por intento.** Cada intento al modelo tiene 30 s en la transcripción del PDF; si no contesta, se pasa al modelo de respaldo (más rápido) en vez de gastar los 55 s en uno solo.
+
+**El botón de subir el PDF se ve siempre.** Solo aparecía con la cuenta ya conectada: en el móvil, mientras la cuenta cargaba (o sin sesión) desaparecía sin explicación. Ahora está siempre y, si no hay cuenta lista, dice por qué.

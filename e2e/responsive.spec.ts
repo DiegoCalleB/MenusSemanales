@@ -259,13 +259,21 @@ test.describe("flujos en móvil", () => {
 
     await pagina.getByRole("link", { name: "Cole", exact: true }).click();
     await expect(pagina.getByRole("heading", { level: 1, name: "Menú del cole" })).toBeVisible();
+    // El botón de subir el PDF se ve siempre; sin cuenta explica por qué no puede leerlo.
+    await expect(pagina.getByText("📄 Subir PDF o foto del menú")).toBeVisible();
+    await pagina
+      .locator('input[type="file"]')
+      .setInputFiles({ name: "menu.pdf", mimeType: "application/pdf", buffer: Buffer.from("x") });
+    await expect(pagina.getByRole("status").filter({ hasText: "nube" })).toBeVisible();
     await pagina.getByRole("button", { name: "Usar el ejemplo de noviembre" }).click();
     await pagina.getByRole("button", { name: "Leer menú" }).click();
     await expect(
       pagina.getByRole("heading", { level: 2, name: /Revisa lo leído \(19 días\)/ }),
     ).toBeVisible();
     await pagina.getByRole("button", { name: "Guardar menú del cole" }).click();
-    await expect(pagina.getByRole("status")).toContainText("Menú del cole guardado: 19 días");
+    await expect(
+      pagina.getByRole("status").filter({ hasText: "Menú del cole guardado" }),
+    ).toContainText("Menú del cole guardado: 19 días");
     await contexto.close();
   });
 

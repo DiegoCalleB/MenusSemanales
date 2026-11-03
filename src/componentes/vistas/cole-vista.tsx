@@ -83,12 +83,23 @@ export function ColeVista() {
     "tipo-no-valido": "Solo se admiten PDF o fotos (PNG, JPG o WEBP).",
   };
 
+  const MENSAJES_SIN_CUENTA: Record<string, string> = {
+    cargando: "Todavía se está conectando tu cuenta. Espera un momento y vuelve a intentarlo.",
+    "sin-sesion": "Entra en tu cuenta (Más → Cuenta) para que la IA pueda leer el archivo.",
+    "sin-hogar": "Primero crea o únete a un hogar (Más → Cuenta).",
+    "sin-configurar": "Esta instalación no tiene la nube configurada, así que no puede usar la IA.",
+  };
+
   async function subir(archivo: File | undefined) {
     if (!archivo) return;
     setProblemaArchivo("");
     setAvisoArchivo("");
     if (archivo.size > MAX_BYTES_ARCHIVO_COLE) {
       setProblemaArchivo(MENSAJES["demasiado-grande"] ?? "");
+      return;
+    }
+    if (cuenta.fase !== "conectado") {
+      setProblemaArchivo(MENSAJES_SIN_CUENTA[cuenta.fase] ?? "No se puede leer el archivo ahora.");
       return;
     }
     setSubiendo(true);
@@ -156,7 +167,7 @@ export function ColeVista() {
           Sube el PDF o una foto del menú, o abre el PDF, selecciona todo el texto, cópialo y pégalo
           aquí. Debe incluir el título con el mes (por ejemplo «Menú Noviembre 2026»).
         </p>
-        {cuenta.fase === "conectado" && (
+        {
           <div className="flex flex-col gap-2">
             <label
               htmlFor={idArchivo}
@@ -192,7 +203,7 @@ export function ColeVista() {
               El archivo se envía a una IA (Gemini, de Google) para leerlo. No se guarda.
             </p>
           </div>
-        )}
+        }
         <label htmlFor={idTexto} className="sr-only">
           Texto del menú del cole
         </label>
