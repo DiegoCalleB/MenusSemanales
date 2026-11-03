@@ -5,15 +5,18 @@ import {
   MAX_PLATOS_POR_CENA,
   comidasDe,
   diasDelMenu,
+  fechaPlanificable,
   menuDeLaSemana,
   nombreDia,
   opcionesParaFecha,
 } from "@/aplicacion/estado";
 import type { Opcion } from "@/dominio/menu";
 import { planParaCompartir } from "@/aplicacion/compartir";
+import { almuerzosDe } from "@/dominio/almuerzos";
 import { textoMenu } from "@/dominio/compartir";
 import { BotonesCompartir } from "../compartir-botones";
 import { TarjetaCole } from "../cole";
+import { ComidaDelDia } from "../comida-del-dia";
 import { EMOJI_GRUPO, formatearNumero } from "../formato";
 import { useHogar } from "../proveedor-hogar";
 import { useFormatoMenu } from "../usar-formato-menu";
@@ -209,6 +212,16 @@ export function MenuVista() {
                     <span className="text-tinta-suave block truncate text-sm">
                       {evento && <span aria-hidden="true">{evento.emoji} </span>}
                       {evento ? `${evento.titulo} · ` : ""}
+                      {almuerzosDe(estado.almuerzos, dia.fecha).length > 0 && (
+                        <>
+                          <span aria-hidden="true">☀️ </span>
+                          <span className="sr-only">comida: </span>
+                          {almuerzosDe(estado.almuerzos, dia.fecha)
+                            .map((a) => a.texto)
+                            .join(" + ")}
+                          {" · "}
+                        </>
+                      )}
                       {emojisCole ? (
                         <>
                           <span aria-hidden="true">🎒 {emojisCole}</span>
@@ -228,6 +241,15 @@ export function MenuVista() {
               {abiertoDia && (
                 <div className="flex flex-col gap-3 px-4 pb-4">
                   <TarjetaCole cole={dia.cole} fecha={dia.fecha} />
+
+                  <ComidaDelDia
+                    fecha={dia.fecha}
+                    puedeApuntar={fechaPlanificable(estado, dia.fecha)}
+                  />
+
+                  <h3 className="text-base font-extrabold">
+                    <span aria-hidden="true">🍴 </span>Cena
+                  </h3>
 
                   {elegidas.map((c) => (
                     <div

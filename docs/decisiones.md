@@ -930,3 +930,7 @@ Las tareas de Casa ocupaban una tarjeta cada una. Ahora son filas de una línea 
 **Contexto.** El mensaje del menú para WhatsApp era largo: el texto íntegro del cole (con ingredientes entre paréntesis) y una frase de «por qué» por día. Pidieron algo más esquemático: agenda o tabla.
 
 **Decisión.** Tres formatos (`FormatoMenu`), elegibles en Enviar y recordados en el móvil; **agenda** es el de por defecto, también en el botón de enviar del menú. *Agenda*: dos líneas por día (cole resumido y cena), sin el porqué. *Tabla*: una línea por día, «Día | cole en emojis | cena». *Completo*: el de siempre. El menú del cole se acorta (`acortarPlatoCole`): sin paréntesis, sin «ecológicas», hasta el primer «con» si es largo y, si sigue siendo largo, hasta la primera coma; lo que se pierde está en el menú del cole de la app.
+
+## Comidas en la pantalla de Comer
+
+La comida del mediodía (D-079) solo se podía apuntar desde el detalle del día en el calendario. Ahora también desde **Comer**: cada día plegado enseña «☀️ lo que se come» junto al cole, y al abrirlo salen dos bloques, **Comida** (plato de la casa o texto libre, varios, «por decidir») y **Cena** (como antes). Mismo componente que en el calendario, así que entra igual en la compra, en el mensaje de enviar y en el calendario suscrito.

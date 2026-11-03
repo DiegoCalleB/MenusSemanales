@@ -944,6 +944,23 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 
+  test("menú: apuntar la comida del mediodía además de la cena, desde Comer", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/menu");
+    await pagina.getByRole("button", { name: /Jueves 5 de noviembre/ }).click();
+    const comida = pagina.getByRole("region", { name: "Comida del mediodía" });
+    await comida.getByLabel("Qué se come").fill("Paella de los abuelos");
+    await comida.getByRole("button", { name: "Apuntar", exact: true }).click();
+    await comida.getByRole("button", { name: "Solo apuntarlo esta vez" }).click();
+    await expect(comida.getByText("Paella de los abuelos")).toBeVisible();
+    // Se ve también en la fila del día, plegada.
+    await pagina.getByRole("button", { name: /Jueves 5 de noviembre/ }).click();
+    await expect(pagina.getByText("Paella de los abuelos").first()).toBeVisible();
+    await contexto.close();
+  });
+
   test("enviar: el menú se puede mandar como agenda, tabla o completo", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/compartir");
