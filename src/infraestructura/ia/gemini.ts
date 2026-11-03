@@ -7,10 +7,11 @@ import "server-only";
  */
 export const MODELO_IA = process.env.IA_MODELO?.trim() || "gemini-flash-latest";
 /**
- * Opcional: si el principal está saturado se prueba con este. Sin valor por defecto a propósito:
- * Google retira modelos con frecuencia y uno fijo en el código acabaría dando 404.
+ * Si el principal está saturado (503) se prueba con este. Es el alias «Flash-Lite más reciente»
+ * de Google: al ser un alias, no se queda obsoleto cuando retiran una versión. Se puede cambiar
+ * con `IA_MODELO_RESPALDO` (o poner `ninguno` para desactivarlo).
  */
-export const MODELO_RESPALDO = process.env.IA_MODELO_RESPALDO?.trim() || "";
+export const MODELO_RESPALDO = process.env.IA_MODELO_RESPALDO?.trim() || "gemini-flash-lite-latest";
 
 const URL_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 /** Errores pasajeros del proveedor: merece la pena reintentar. */
@@ -33,7 +34,7 @@ export async function llamarGemini(
   const espera = opciones.espera ?? dormir;
   const limite = Date.now() + opciones.plazoMs;
   const modelos =
-    MODELO_RESPALDO === "" || MODELO_IA === MODELO_RESPALDO
+    MODELO_RESPALDO === "ninguno" || MODELO_IA === MODELO_RESPALDO
       ? [MODELO_IA]
       : [MODELO_IA, MODELO_RESPALDO];
   const intentos = modelos.flatMap((m) => [m, m]);
