@@ -9,6 +9,8 @@ const estado = vi.hoisted(() => ({
 vi.mock("server-only", () => ({}));
 vi.mock("@/infraestructura/ia/acceso", () => ({
   comprobarAccesoIa: async () => estado.acceso,
+  motivoDeError: (e: unknown) =>
+    e instanceof Error && /^ia-http-\d{3}$/.test(e.message) ? e.message : "ia-red",
   responderIa: (cuerpo: unknown, status: number) =>
     new Response(JSON.stringify(cuerpo), {
       status,
@@ -70,6 +72,14 @@ describe("POST /api/ia/cole", () => {
     estado.transcribir.mockRejectedValue(new Error("secreto del proveedor"));
     const r = await pedir(pdf());
     expect(r.status).toBe(502);
-    expect(JSON.stringify(await r.json())).not.toContain("secreto");
+    const cuerpo = await r.json();
+    expect(JSON.stringify(cuerpo)).not.toContain("secreto");
+    expect(cuerpo).toEqual({ error: "no-disponible", motivo: "ia-red" });
+  });
+
+  it("dice el código HTTP del proveedor para poder diagnosticar", async () => {
+    estado.transcribir.mockRejectedValue(new Error("ia-http-404"));
+    const r = await pedir(pdf());
+    expect(await r.json()).toEqual({ error: "no-disponible", motivo: "ia-http-404" });
   });
 });
