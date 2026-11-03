@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useId, useState } from "react";
 import { TEXTO_MENU_COLE_NOVIEMBRE_2026 } from "@/dominio/menu-cole-ejemplo";
+import { MAX_BYTES_ARCHIVO_COLE, TIPOS_ARCHIVO_COLE } from "@/dominio/ia-cole";
 import { GRUPOS_PLATO, type GrupoPlato } from "@/dominio/menu";
 import { type DiaCole, type MenuColeLeido, aMenuCole, leerMenuCole } from "@/dominio/menu-cole";
-import { useHogar } from "../proveedor-hogar";
+import { useCuenta, useHogar } from "../proveedor-hogar";
 
 const MAX_CARACTERES = 30000;
 const NOMBRE_GRUPO: Record<GrupoPlato, string> = {
@@ -59,7 +60,12 @@ function SelectorGrupo({
  */
 export function ColeVista() {
   const { estado, despachar } = useHogar();
+  const cuenta = useCuenta();
   const idTexto = useId();
+  const idArchivo = useId();
+  const [subiendo, setSubiendo] = useState(false);
+  const [problemaArchivo, setProblemaArchivo] = useState("");
+  const [avisoArchivo, setAvisoArchivo] = useState("");
   const [texto, setTexto] = useState("");
   const [leido, setLeido] = useState<MenuColeLeido | null>(null);
 
@@ -68,6 +74,51 @@ export function ColeVista() {
   function leer() {
     setLeido(leerMenuCole(texto));
   }
+  const MENSAJES: Record<string, string> = {
+    "ia-no-configurada": "La IA todavía no está activada en esta instalación.",
+    "tope-diario": "Hoy ya habéis usado todas las consultas de IA. Mañana se renuevan.",
+    "sin-sesion": "Entra en tu cuenta (Más → Cuenta) para subir el archivo.",
+    "sin-hogar": "Primero crea o únete a un hogar (Más → Cuenta).",
+    "demasiado-grande": "El archivo es demasiado grande (máximo 8 MB).",
+    "tipo-no-valido": "Solo se admiten PDF o fotos (PNG, JPG o WEBP).",
+  };
+
+  async function subir(archivo: File | undefined) {
+    if (!archivo) return;
+    setProblemaArchivo("");
+    setAvisoArchivo("");
+    if (archivo.size > MAX_BYTES_ARCHIVO_COLE) {
+      setProblemaArchivo(MENSAJES["demasiado-grande"] ?? "");
+      return;
+    }
+    setSubiendo(true);
+    try {
+      const datos = new FormData();
+      datos.append("archivo", archivo);
+      const r = await fetch("/api/ia/cole", { method: "POST", body: datos });
+      const cuerpo = (await r.json().catch(() => ({}))) as { texto?: string; error?: string };
+      if (!r.ok) {
+        setProblemaArchivo(
+          MENSAJES[cuerpo.error ?? ""] ?? "No se ha podido leer el archivo. Inténtalo luego.",
+        );
+      } else if (!cuerpo.texto) {
+        setProblemaArchivo(
+          "No he encontrado un menú en ese archivo. Prueba con otro o pega el texto.",
+        );
+      } else {
+        setTexto(cuerpo.texto);
+        setLeido(null);
+        setAvisoArchivo(
+          "He copiado el texto del archivo aquí abajo. Revísalo (la IA puede equivocarse) y pulsa «Leer menú».",
+        );
+      }
+    } catch {
+      setProblemaArchivo("Sin conexión. Inténtalo de nuevo.");
+    } finally {
+      setSubiendo(false);
+    }
+  }
+
   function cambiar(fecha: string, campo: "grupoPrimero" | "grupoSegundo", g: GrupoPlato | null) {
     setLeido((l) =>
       l ? { ...l, dias: l.dias.map((d) => (d.fecha === fecha ? { ...d, [campo]: g } : d)) } : l,
@@ -97,9 +148,46 @@ export function ColeVista() {
           1. Pega el menú del mes
         </h2>
         <p className="text-tinta-suave text-base">
-          Abre el PDF del cole, selecciona todo el texto, cópialo y pégalo aquí. Debe incluir el
-          título con el mes (por ejemplo «Menú Noviembre 2026»).
+          Sube el PDF o una foto del menú, o abre el PDF, selecciona todo el texto, cópialo y pégalo
+          aquí. Debe incluir el título con el mes (por ejemplo «Menú Noviembre 2026»).
         </p>
+        {cuenta.fase === "conectado" && (
+          <div className="flex flex-col gap-2">
+            <label
+              htmlFor={idArchivo}
+              className={`boton w-fit cursor-pointer ${subiendo ? "pointer-events-none opacity-60" : ""}`}
+            >
+              {subiendo ? "Leyendo el archivo…" : "📄 Subir PDF o foto del menú"}
+            </label>
+            <input
+              id={idArchivo}
+              type="file"
+              accept={TIPOS_ARCHIVO_COLE.join(",")}
+              className="sr-only"
+              disabled={subiendo}
+              onChange={(e) => {
+                void subir(e.target.files?.[0]);
+                e.target.value = "";
+              }}
+            />
+            {problemaArchivo && (
+              <p
+                role="status"
+                className="bg-aviso-fondo text-aviso-texto rounded-2xl p-3 text-base"
+              >
+                {problemaArchivo}
+              </p>
+            )}
+            {avisoArchivo && (
+              <p role="status" className="bg-ok-fondo text-ok-texto rounded-2xl p-3 text-base">
+                {avisoArchivo}
+              </p>
+            )}
+            <p className="text-tinta-suave text-xs">
+              El archivo se envía a una IA (Gemini, de Google) para leerlo. No se guarda.
+            </p>
+          </div>
+        )}
         <label htmlFor={idTexto} className="sr-only">
           Texto del menú del cole
         </label>

@@ -1,7 +1,6 @@
 import { peticionListaSchema } from "@/dominio/ia-lista";
-import { IaNoConfigurada, iaConfigurada, ordenarLista } from "@/infraestructura/ia/lista";
-import { crearClienteServidor } from "@/infraestructura/supabase/cliente-servidor";
-import { hogarDelUsuario } from "@/infraestructura/supabase/cuenta";
+import { comprobarAccesoIa } from "@/infraestructura/ia/acceso";
+import { IaNoConfigurada, ordenarLista } from "@/infraestructura/ia/lista";
 
 const CABECERAS = { "Cache-Control": "no-store", "Content-Type": "application/json" } as const;
 const MAX_CUERPO = 20_000;
@@ -27,21 +26,9 @@ export async function POST(request: Request) {
   const peticion = peticionListaSchema.safeParse(cuerpo);
   if (!peticion.success) return responder({ error: "peticion-invalida" }, 400);
 
-  if (!iaConfigurada()) return responder({ error: "ia-no-configurada" }, 503);
-
-  const cliente = await crearClienteServidor();
-  const { data: sesion } = await cliente.auth.getUser();
-  if (!sesion.user) return responder({ error: "sin-sesion" }, 401);
-  const hogar = await hogarDelUsuario(cliente);
-  if (!hogar) return responder({ error: "sin-hogar" }, 403);
-
-  const uso = await cliente.rpc("usar_ia", { p_hogar_id: hogar.id });
-  if (uso.error) {
-    return uso.error.code === "53400"
-      ? responder({ error: "tope-diario" }, 429)
-      : responder({ error: "no-disponible" }, 502);
-  }
-  const { usadas, limite } = (uso.data ?? {}) as { usadas?: number; limite?: number };
+  const acceso = await comprobarAccesoIa();
+  if (!acceso.ok) return acceso.respuesta;
+  const { usadas, limite } = acceso;
 
   try {
     const r = await ordenarLista(peticion.data);

@@ -16,6 +16,7 @@ const estado = vi.hoisted(() => ({
   rpc: vi.fn(),
 }));
 
+vi.mock("server-only", () => ({}));
 vi.mock("@/infraestructura/ia/lista", () => ({
   iaConfigurada: () => estado.configurada,
   ordenarLista: estado.ia,
