@@ -19,7 +19,7 @@ import { type Accion, type EstadoHogar, conIdBase, reducir } from "@/aplicacion/
 import { AVISO_CAMBIO, riesgoDeGuardado } from "@/aplicacion/guardado";
 import { esAccionSincronizable } from "@/aplicacion/sincronizacion";
 import { crearAlmacenLocal } from "@/infraestructura/almacen-local";
-import { type CuentaContexto, NUBE_DISPONIBLE, useNube } from "./usar-nube";
+import { type CuentaContexto, NUBE_DISPONIBLE, olvidarPendientes, useNube } from "./usar-nube";
 
 /**
  * Qué datos de prueba se usan. Por defecto, el «modo Diego» (la familia real de Diego, D-053). Los
@@ -75,9 +75,15 @@ export function ProveedorHogar({
     nubeConfigurada: NUBE_DISPONIBLE,
     fase: cuenta.fase,
     sync: cuenta.sync,
+    enLinea: cuenta.enLinea,
   });
   useEffect(() => {
-    situacion.current = { nubeConfigurada: NUBE_DISPONIBLE, fase: cuenta.fase, sync: cuenta.sync };
+    situacion.current = {
+      nubeConfigurada: NUBE_DISPONIBLE,
+      fase: cuenta.fase,
+      sync: cuenta.sync,
+      enLinea: cuenta.enLinea,
+    };
   });
   const despachar = useCallback(
     (original: Accion) => {
@@ -124,6 +130,7 @@ export function ProveedorHogar({
       despachar,
       restablecer: () => {
         almacenActual.current?.borrar();
+        olvidarPendientes();
         despacharLocal({ tipo: "hogar/sustituir", estado: estadoInicial() });
         if (MODO_DATOS === "diego") despacharLocal({ tipo: "hogar/hoy", fecha: hoyLocal() });
       },

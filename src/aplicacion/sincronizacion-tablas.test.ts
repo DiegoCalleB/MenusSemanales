@@ -229,3 +229,76 @@ describe("motor por tablas", () => {
     expect(fila).not.toHaveProperty("ideas");
   });
 });
+
+describe("motor por tablas: sin conexión sobrevive a cerrar la app (D-102)", () => {
+  it("un cambio hecho sin conexión se envía tras reabrir la app, sin perder lo del otro móvil", async () => {
+    const origen = demoConDatos();
+    const { bd, nube } = crearBd();
+    bd.datos = aplicarCambiosALectura(bd.datos, cambiosParaImportar(origen, HOGAR, null));
+    // «El almacenamiento del móvil»: sobrevive al cierre de la app.
+    let disco: LecturaTablas | null = null;
+    const persistencia = {
+      cargar: () => (disco ? structuredClone(disco) : null),
+      guardar: (l: LecturaTablas) => void (disco = structuredClone(l)),
+    };
+    const abrir = (estado: EstadoHogar) => {
+      const d = { estado, avisos: [] as EstadoSync[] };
+      const motor = new SincronizadorTablas(
+        nube,
+        {
+          hogarId: HOGAR,
+          leer: () => d.estado,
+          escribir: (e) => (d.estado = e),
+          avisar: (s) => d.avisos.push(s),
+        },
+        undefined,
+        persistencia,
+      );
+      return { d, motor };
+    };
+
+    const sesion1 = abrir(origen);
+    await sesion1.motor.iniciar();
+    expect(disco).not.toBeNull();
+    bd.fallar = true;
+    sesion1.d.estado = reducir(sesion1.d.estado, {
+      tipo: "casa/anadir",
+      titulo: "Hecho sin conexión",
+      cadaDias: 3,
+      responsableId: null,
+      idBase: "1c2c1d2f-9a5f-4b5f-8d1f-3a1a8c7a1b22",
+    });
+    await sesion1.motor.sincronizar();
+    expect(sesion1.d.avisos.at(-1)).toBe("sin-conexion");
+    expect(bd.datos.casa.some((t) => t.titulo === "Hecho sin conexión")).toBe(false);
+
+    // Otro móvil añade algo mientras tanto.
+    bd.fallar = false;
+    bd.datos = aplicarCambiosALectura(bd.datos, {
+      casa: {
+        upsert: [
+          {
+            id: "b0000000-0000-0000-0000-0000000000aa",
+            titulo: "Del otro móvil",
+            emoji: "🏠",
+            cadaDias: 7,
+            responsableId: null,
+            ultimaVez: null,
+            desde: "2026-11-04",
+            aplazadaHasta: null,
+            compra: null,
+          },
+        ],
+      },
+    });
+
+    // «Se cierra la app» y se vuelve a abrir: lo que el móvil tenía guardado es su estado local.
+    const sesion2 = abrir(structuredClone(sesion1.d.estado));
+    await sesion2.motor.iniciar();
+    await sesion2.motor.sincronizar();
+    const titulos = bd.datos.casa.map((t) => t.titulo);
+    expect(titulos).toContain("Hecho sin conexión"); // llegó
+    expect(titulos).toContain("Del otro móvil"); // y no se perdió lo del otro
+    expect(sesion2.d.estado.casa.map((t) => t.titulo)).toContain("Del otro móvil");
+  });
+});

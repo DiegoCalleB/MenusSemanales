@@ -23,6 +23,7 @@ export function BannerPrueba() {
     nubeConfigurada: NUBE_DISPONIBLE,
     fase: cuenta.fase,
     sync: cuenta.sync,
+    enLinea: cuenta.enLinea,
   });
   if (riesgo) {
     // Nada se guarda en la nube: franja de alerta permanente (D-102).

@@ -36,6 +36,12 @@ export interface EntornoLocal {
   avisar: (estado: EstadoSync) => void;
   /** Se llama justo antes de que el estado de la nube sustituya al de este dispositivo. */
   antesDeAdoptar?: (local: EstadoHogar, nube: EstadoHogar) => void;
+  /**
+   * Cambios que quedaron sin enviar la última vez (p. ej. se cerró la app sin conexión). Se
+   * guardan en el móvil para no perderlos y se reenvían al volver (D-102).
+   */
+  cargarPendientes?: () => Accion[];
+  guardarPendientes?: (acciones: readonly Accion[]) => void;
 }
 
 /** Acciones que no son cambios del hogar: no se sincronizan. */
@@ -79,6 +85,19 @@ export class Sincronizador {
   }
 
   /**
+   * La app se abrió SIN conexión: no se puede leer la nube, pero lo que se cambie se apunta (y se
+   * guarda en el móvil) para enviarlo al volver. Recupera también lo que ya estuviera pendiente.
+   */
+  prepararSinConexion(): void {
+    this.pendientes = [...(this.entorno.cargarPendientes?.() ?? [])];
+    this.entorno.avisar("sin-conexion");
+  }
+
+  private persistir(): void {
+    this.entorno.guardarPendientes?.(this.pendientes);
+  }
+
+  /**
    * Primer contacto con la nube. Si ya hay estado, se adopta (es el de la familia). Si no, se sube
    * el de este dispositivo para que los demás lo reciban.
    */
@@ -88,16 +107,20 @@ export class Sincronizador {
       const remoto = await this.nube.leer();
       if (remoto) {
         this.version = remoto.version;
-        this.pendientes = [];
+        // Lo que quedó sin enviar la última vez no se pierde: se reaplica sobre lo de la familia y
+        // se reenvía.
+        this.pendientes = [...(this.entorno.cargarPendientes?.() ?? [])];
+        const local = this.entorno.leer();
+        const nuevo = rebasar(remoto.estado, this.pendientes, local);
         // Lo de este dispositivo se va a sustituir por lo de la familia: que quede una copia.
-        this.entorno.antesDeAdoptar?.(
-          this.entorno.leer(),
-          desdeNube(remoto.estado, this.entorno.leer()),
-        );
-        this.entorno.escribir(desdeNube(remoto.estado, this.entorno.leer()));
-        this.entorno.avisar("al-dia");
+        this.entorno.antesDeAdoptar?.(local, nuevo);
+        this.entorno.escribir(nuevo);
+        this.persistir();
+        this.entorno.avisar(this.pendientes.length > 0 ? "guardando" : "al-dia");
         return "adoptado";
       }
+      this.pendientes = [];
+      this.persistir();
       this.version = await this.nube.guardar(paraNube(this.entorno.leer()), 0);
       this.entorno.avisar("al-dia");
       return "subido";
@@ -109,7 +132,10 @@ export class Sincronizador {
 
   /** Apunta un cambio hecho en este dispositivo para subirlo. */
   registrar(accion: Accion): void {
-    if (esAccionSincronizable(accion)) this.pendientes.push(accion);
+    if (esAccionSincronizable(accion)) {
+      this.pendientes.push(accion);
+      this.persistir();
+    }
   }
 
   /** Sube los cambios pendientes; si hay conflicto, reaplica los propios sobre lo nuevo. */
@@ -137,6 +163,7 @@ export class Sincronizador {
       try {
         this.version = await this.nube.guardar(paraNube(this.entorno.leer()), this.version);
         this.pendientes = this.pendientes.slice(incluidas);
+        this.persistir();
         this.entorno.avisar("al-dia");
         return;
       } catch (e) {
@@ -165,7 +192,7 @@ export class Sincronizador {
   }
 }
 
-function esErrorDeRed(e: unknown): boolean {
+export function esErrorDeRed(e: unknown): boolean {
   const m = e instanceof Error ? e.message : "";
   return /fetch|network|failed to|conexi|timeout/i.test(m);
 }

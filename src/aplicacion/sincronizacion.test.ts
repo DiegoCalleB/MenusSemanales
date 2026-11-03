@@ -236,3 +236,144 @@ describe("antes de adoptar el estado de la nube", () => {
     expect(sin).not.toHaveBeenCalled();
   });
 });
+
+describe("sin conexión: lo pendiente sobrevive a cerrar la app y se envía al volver (D-102)", () => {
+  /** El «almacenamiento del móvil»: lo que se guarda aquí sobrevive a «cerrar la app». */
+  const movil = () => {
+    const disco: { pendientes: Accion[] } = { pendientes: [] };
+    return {
+      disco,
+      entorno: {
+        cargarPendientes: () => structuredClone(disco.pendientes),
+        guardarPendientes: (a: readonly Accion[]) =>
+          void (disco.pendientes = structuredClone([...a])),
+      },
+    };
+  };
+
+  it("un cambio hecho sin conexión se guarda en el móvil y llega a la nube tras reabrir la app", async () => {
+    const nube = new NubeFalsa();
+    const { disco, entorno } = movil();
+    const estado0 = estadoInicialDemo();
+    // La nube ya tiene el estado de la familia.
+    nube.guardado = { estado: structuredClone(paraNube(estado0)), version: 1 };
+
+    // Sesión 1: abre con conexión, luego se queda sin internet y hace un cambio.
+    let local = structuredClone(estado0);
+    const s1 = new Sincronizador(nube, {
+      leer: () => local,
+      escribir: (e) => (local = e),
+      avisar: () => undefined,
+      ...entorno,
+    });
+    await s1.iniciar();
+    nube.fallaRed = true;
+    const accion: Accion = { tipo: "manual/anadir", nombre: "Pañales" };
+    local = reducir(local, accion);
+    s1.registrar(accion);
+    await s1.sincronizar();
+    expect(nombres(nube.guardado!.estado)).not.toContain("Pañales"); // aún no está en la nube
+    expect(disco.pendientes).toHaveLength(1); // pero está guardado en el móvil
+
+    // «Se cierra la app»: se pierde todo lo que estaba en memoria. Vuelve la conexión.
+    nube.fallaRed = false;
+    let local2 = structuredClone(local); // lo que el móvil tenía guardado
+    const avisos: EstadoSync[] = [];
+    const s2 = new Sincronizador(nube, {
+      leer: () => local2,
+      escribir: (e) => (local2 = e),
+      avisar: (x) => avisos.push(x),
+      ...entorno,
+    });
+    await s2.iniciar();
+    expect(s2.hayPendientes).toBe(true);
+    expect(nombres(local2)).toContain("Pañales"); // no se pierde al adoptar la nube
+    await s2.sincronizar();
+    expect(nombres(nube.guardado!.estado)).toContain("Pañales"); // llegó a la nube
+    expect(disco.pendientes).toHaveLength(0); // y ya no queda nada pendiente
+    expect(avisos.at(-1)).toBe("al-dia");
+  });
+
+  it("si otro móvil cambió mientras tanto, se conservan los dos cambios", async () => {
+    const nube = new NubeFalsa();
+    const { entorno } = movil();
+    const estado0 = estadoInicialDemo();
+    nube.guardado = { estado: structuredClone(paraNube(estado0)), version: 1 };
+    let local = structuredClone(estado0);
+    const s1 = new Sincronizador(nube, {
+      leer: () => local,
+      escribir: (e) => (local = e),
+      avisar: () => undefined,
+      ...entorno,
+    });
+    await s1.iniciar();
+    nube.fallaRed = true;
+    const mio: Accion = { tipo: "manual/anadir", nombre: "Mío sin conexión" };
+    local = reducir(local, mio);
+    s1.registrar(mio);
+    await s1.sincronizar();
+    // Otro móvil sube su cambio.
+    nube.fallaRed = false;
+    const otro = dispositivo(nube, structuredClone(estado0));
+    await otro.d.s.iniciar();
+    otro.hacer({ tipo: "manual/anadir", nombre: "Del otro móvil" });
+    await otro.d.s.sincronizar();
+    // Reabro la app: se mezclan.
+    let local2 = structuredClone(local);
+    const s2 = new Sincronizador(nube, {
+      leer: () => local2,
+      escribir: (e) => (local2 = e),
+      avisar: () => undefined,
+      ...entorno,
+    });
+    await s2.iniciar();
+    await s2.sincronizar();
+    expect(nombres(nube.guardado!.estado)).toEqual(
+      expect.arrayContaining(["Mío sin conexión", "Del otro móvil"]),
+    );
+  });
+});
+
+describe("abrir la app sin conexión (D-102)", () => {
+  it("lo que se cambia se apunta en el móvil y, al volver la conexión, llega a la nube", async () => {
+    const nube = new NubeFalsa();
+    const estado0 = estadoInicialDemo();
+    nube.guardado = { estado: structuredClone(paraNube(estado0)), version: 1 };
+    let disco: Accion[] = [{ tipo: "manual/anadir", nombre: "De antes de cerrar" }];
+    const entorno = {
+      cargarPendientes: () => structuredClone(disco),
+      guardarPendientes: (a: readonly Accion[]) => void (disco = structuredClone([...a])),
+    };
+
+    // Se abre sin internet: no se llama a iniciar(); solo se prepara.
+    let local = reducir(structuredClone(estado0), disco[0]!);
+    const avisos: EstadoSync[] = [];
+    const s = new Sincronizador(nube, {
+      leer: () => local,
+      escribir: (e) => (local = e),
+      avisar: (x) => avisos.push(x),
+      ...entorno,
+    });
+    s.prepararSinConexion();
+    expect(avisos.at(-1)).toBe("sin-conexion");
+    expect(s.hayPendientes).toBe(true); // recoge lo que ya estaba pendiente
+    const nueva: Accion = { tipo: "manual/anadir", nombre: "Ya sin internet" };
+    local = reducir(local, nueva);
+    s.registrar(nueva);
+    expect(disco).toHaveLength(2); // apuntado en el móvil
+
+    // Vuelve internet: se reabre la conexión como una sesión nueva.
+    const s2 = new Sincronizador(nube, {
+      leer: () => local,
+      escribir: (e) => (local = e),
+      avisar: () => undefined,
+      ...entorno,
+    });
+    await s2.iniciar();
+    await s2.sincronizar();
+    expect(nombres(nube.guardado!.estado)).toEqual(
+      expect.arrayContaining(["De antes de cerrar", "Ya sin internet"]),
+    );
+    expect(disco).toHaveLength(0);
+  });
+});

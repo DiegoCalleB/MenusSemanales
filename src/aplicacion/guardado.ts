@@ -14,6 +14,8 @@ export interface SituacionDeGuardado {
   /** Fase de la cuenta: «conectado» es la única en la que se guarda. */
   fase: string;
   sync: EstadoSync;
+  /** ¿Tiene internet el móvil ahora mismo? (por defecto, sí) */
+  enLinea?: boolean;
 }
 
 /** Por qué NO se está guardando (o null si todo va bien o la nube no se usa en esta instalación). */
@@ -23,6 +25,7 @@ export function riesgoDeGuardado(s: SituacionDeGuardado): RiesgoDeGuardado | nul
   if (s.fase === "sin-sesion") return "sin-sesion";
   if (s.fase === "sin-hogar") return "sin-hogar";
   if (s.fase !== "conectado") return "sin-sesion";
+  if (s.enLinea === false) return "sin-conexion";
   if (s.sync === "error") return "error";
   if (s.sync === "sin-conexion") return "sin-conexion";
   return null;

@@ -33,6 +33,11 @@ describe("riesgoDeGuardado", () => {
     expect(riesgoDeGuardado(s("conectado", "guardando"))).toBeNull();
   });
 
+  it("sin internet en el móvil avisa al instante, antes de intentar guardar", () => {
+    expect(riesgoDeGuardado({ ...s("conectado", "al-dia"), enLinea: false })).toBe("sin-conexion");
+    expect(riesgoDeGuardado({ ...s("conectado", "al-dia"), enLinea: true })).toBeNull();
+  });
+
   it("todos los riesgos tienen su texto de franja y su aviso por cambio", () => {
     for (const r of ["sin-sesion", "sin-hogar", "sin-conexion", "error"] as const) {
       expect(TEXTO_RIESGO[r].length).toBeGreaterThan(10);

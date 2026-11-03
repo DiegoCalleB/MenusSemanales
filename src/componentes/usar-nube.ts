@@ -4,12 +4,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Accion, EstadoHogar } from "@/aplicacion/estado";
 import { peorEstado } from "@/aplicacion/guardado";
-import { type EstadoSync, Sincronizador } from "@/aplicacion/sincronizacion";
+import { type EstadoSync, Sincronizador, esErrorDeRed } from "@/aplicacion/sincronizacion";
 import { adaptadorMenu } from "@/aplicacion/adaptadores-tablas";
 import { SincronizadorTablas } from "@/aplicacion/sincronizacion-tablas";
 import {
   type CambiosMenu,
   type LecturaMenu,
+  leerMenu,
   type ResumenMenu,
   cambiosCompletosMenu,
   conservarCamposDeMenu,
@@ -77,6 +78,70 @@ async function llevarPersonas(
   }
 }
 
+/** Claves de lo que se guarda en el móvil para no perder cambios sin conexión (D-102). */
+export const PREFIJO_PENDIENTES = "menus-semanales:pendientes:";
+export const PREFIJO_BASE = "menus-semanales:base:";
+const CLAVE_HOGAR = "menus-semanales:hogar";
+
+/** Borra lo pendiente y las bases guardadas (p. ej. al restablecer el ejemplo): nada debe reenviarse. */
+export function olvidarPendientes(): void {
+  const a = almacenamientoLocal();
+  if (!a) return;
+  try {
+    const claves: string[] = [];
+    for (let i = 0; i < a.length; i++) {
+      const k = a.key(i);
+      if (k && (k.startsWith(PREFIJO_PENDIENTES) || k.startsWith(PREFIJO_BASE))) claves.push(k);
+    }
+    for (const k of claves) a.removeItem(k);
+  } catch {
+    /* sin almacenamiento */
+  }
+}
+
+function leerJson(clave: string): unknown {
+  try {
+    const t = almacenamientoLocal()?.getItem(clave);
+    return t ? JSON.parse(t) : null;
+  } catch {
+    return null;
+  }
+}
+function guardarJson(clave: string, valor: unknown): void {
+  try {
+    almacenamientoLocal()?.setItem(clave, JSON.stringify(valor));
+  } catch {
+    /* sin espacio: la app sigue; el aviso de «sin guardar» sigue visible */
+  }
+}
+
+/** Cambios sin enviar: solo se aceptan acciones con forma válida. */
+function pendientesGuardados(hogarId: string): Accion[] {
+  const v = leerJson(`${PREFIJO_PENDIENTES}${hogarId}`);
+  return Array.isArray(v)
+    ? (v.filter(
+        (a) => typeof a === "object" && a !== null && typeof a.tipo === "string",
+      ) as Accion[])
+    : [];
+}
+
+/** Lo último que se sabe que hay en tablas, validado: si no vale, se ignora y se adopta lo de la nube. */
+function persistenciaDe<L>(hogarId: string, nombre: string, validar: (j: unknown) => L) {
+  const clave = `${PREFIJO_BASE}${nombre}:${hogarId}`;
+  return {
+    cargar: (): L | null => {
+      const v = leerJson(clave);
+      if (v === null) return null;
+      try {
+        return validar(v);
+      } catch {
+        return null;
+      }
+    },
+    guardar: (l: L) => guardarJson(clave, l),
+  };
+}
+
 export type FaseCuenta = "sin-configurar" | "cargando" | "sin-sesion" | "sin-hogar" | "conectado";
 export type Resultado = { ok: true } | { ok: false; mensaje: string };
 
@@ -96,6 +161,8 @@ export interface CuentaContexto {
   sync: EstadoSync;
   /** Qué parte de los datos ya manda desde tablas (el resto sigue en el documento). */
   tablas: { hogar: boolean; menu: boolean };
+  /** ¿Tiene internet el móvil ahora mismo? */
+  enLinea: boolean;
   pedirCodigo: (correo: string) => Promise<Resultado>;
   verificar: (correo: string, codigo: string) => Promise<Resultado>;
   entrarSinCorreo: () => Promise<Resultado>;
@@ -162,6 +229,17 @@ export function useNube(
   const [syncMenu, setSyncMenu] = useState<EstadoSync>("inactivo");
   const [modoTablas, setModoTablas] = useState({ hogar: false, menu: false });
   const sync = peorEstado(syncDoc, syncHogar, syncMenu);
+  const [enLinea, setEnLinea] = useState(true);
+  useEffect(() => {
+    const poner = () => setEnLinea(navigator.onLine);
+    poner();
+    window.addEventListener("online", poner);
+    window.addEventListener("offline", poner);
+    return () => {
+      window.removeEventListener("online", poner);
+      window.removeEventListener("offline", poner);
+    };
+  }, []);
   const cliente = useRef<SupabaseClient<Database> | null>(null);
   const sincronizador = useRef<Sincronizador | null>(null);
   const tablas = useRef<SincronizadorTablas | null>(null);
@@ -209,16 +287,21 @@ export function useNube(
       cerrarTablas.current = null;
       tablas.current = null;
       const nube = crearNubeTablas(c, h.id);
-      const motor = new SincronizadorTablas(nube, {
-        hogarId: h.id,
-        leer: () => leer.current(),
-        escribir: (e) => escribir.current(e),
-        avisar: setSyncHogar,
-        antesDeAdoptar: (local, nuevo) => {
-          const r = guardarRespaldoAntesDeLaNube(almacenamientoLocal(), local, nuevo, new Date());
-          if (r === "guardada") window.dispatchEvent(new Event(EVENTO_RESPALDOS));
+      const motor = new SincronizadorTablas(
+        nube,
+        {
+          hogarId: h.id,
+          leer: () => leer.current(),
+          escribir: (e) => escribir.current(e),
+          avisar: setSyncHogar,
+          antesDeAdoptar: (local, nuevo) => {
+            const r = guardarRespaldoAntesDeLaNube(almacenamientoLocal(), local, nuevo, new Date());
+            if (r === "guardada") window.dispatchEvent(new Event(EVENTO_RESPALDOS));
+          },
         },
-      });
+        undefined,
+        persistenciaDe(h.id, "hogar", leerTablas),
+      );
       try {
         if ((await motor.iniciar()) !== "activo") return false;
       } catch (e) {
@@ -265,6 +348,7 @@ export function useNube(
           },
         },
         adaptador,
+        persistenciaDe(h.id, "menu", leerMenu),
       );
       try {
         if ((await motor.iniciar()) !== "activo") return false;
@@ -289,6 +373,10 @@ export function useNube(
     [],
   );
 
+  const reconectar = useRef<
+    ((c: SupabaseClient<Database>, h: HogarDeUsuario) => Promise<Resultado>) | null
+  >(null);
+
   const conectar = useCallback(
     async (c: SupabaseClient<Database>, h: HogarDeUsuario): Promise<Resultado> => {
       desconectar();
@@ -304,6 +392,8 @@ export function useNube(
           escribir.current(x);
         },
         avisar: setSync,
+        cargarPendientes: () => pendientesGuardados(h.id),
+        guardarPendientes: (a) => guardarJson(`${PREFIJO_PENDIENTES}${h.id}`, a),
         antesDeAdoptar: (local, remoto) => {
           const r = guardarRespaldoAntesDeLaNube(almacenamientoLocal(), local, remoto, new Date());
           if (r === "guardada") window.dispatchEvent(new Event(EVENTO_RESPALDOS));
@@ -312,11 +402,29 @@ export function useNube(
       try {
         await s.iniciar();
       } catch (e) {
+        if (esErrorDeRed(e) || (typeof navigator !== "undefined" && !navigator.onLine)) {
+          // Sin internet al abrir: se sigue trabajando, todo se apunta en el móvil y se envía en
+          // cuanto vuelva la conexión (D-102). La franja avisa de que aún no está en la nube.
+          s.prepararSinConexion();
+          sincronizador.current = s;
+          setHogar(h);
+          setFase("conectado");
+          const reintentar = () => {
+            window.removeEventListener("online", reintentar);
+            void reconectar.current?.(c, h);
+          };
+          window.addEventListener("online", reintentar);
+          cerrar.current = () => window.removeEventListener("online", reintentar);
+          return { ok: true };
+        }
         return { ok: false, mensaje: e instanceof Error ? e.message : "No se pudo sincronizar." };
       }
       sincronizador.current = s;
+      guardarJson(CLAVE_HOGAR, h);
       await activarTablas(c, h);
       await activarMenu(c, h);
+      // Lo que quedó sin enviar la última vez (p. ej. se cerró la app sin conexión) se envía ya.
+      if (s.hayPendientes) void s.sincronizar();
       const baja = nube.suscribir((r) => s.recibir(r));
       const alVolver = () => {
         if (document.visibilityState !== "visible") return;
@@ -344,6 +452,10 @@ export function useNube(
     [desconectar, activarTablas, activarMenu],
   );
 
+  useEffect(() => {
+    reconectar.current = conectar;
+  }, [conectar]);
+
   const resolverSesion = useCallback(
     async (c: SupabaseClient<Database>) => {
       const usuario = await usuarioActual(c);
@@ -357,7 +469,12 @@ export function useNube(
       }
       setCorreo(usuario.email ?? null);
       setAnonimo(Boolean(usuario.is_anonymous));
-      const h = await hogarDelUsuario(c);
+      let h = await hogarDelUsuario(c);
+      if (!h && typeof navigator !== "undefined" && !navigator.onLine) {
+        // Sin internet no se puede preguntar por el hogar: se usa el último conocido.
+        const guardado = leerJson(CLAVE_HOGAR) as HogarDeUsuario | null;
+        if (guardado && typeof guardado.id === "string") h = guardado;
+      }
       if (!h) {
         setHogar(null);
         setFase("sin-hogar");
@@ -430,6 +547,7 @@ export function useNube(
     hogar,
     sync,
     tablas: modoTablas,
+    enLinea,
     pedirCodigo: (mail) => usar((c) => aResultado(pedirCodigoPorCorreo(c, mail))),
     verificar: async (mail, codigo) => {
       const r = await usar((c) => aResultado(verificarCodigo(c, mail, codigo)));

@@ -29,6 +29,15 @@ export interface EntornoTablas {
   antesDeAdoptar?: (local: EstadoHogar, nuevo: EstadoHogar) => void;
 }
 
+/**
+ * Dónde se guarda en el móvil lo último que se sabe que hay en las tablas. Con eso, si se cierra la
+ * app sin conexión, al volver se calcula qué cambió este móvil y se envía, en vez de perderlo (D-102).
+ */
+export interface Persistencia<L> {
+  cargar(): L | null;
+  guardar(lectura: L): void;
+}
+
 export class SincronizadorTablas<L = LecturaTablas, C = CambiosTablas> {
   private base: L | null = null;
   private ocupado = false;
@@ -39,6 +48,7 @@ export class SincronizadorTablas<L = LecturaTablas, C = CambiosTablas> {
     private readonly nube: NubeTablas<L, C>,
     private readonly entorno: EntornoTablas,
     adaptador?: Adaptador<L, C>,
+    private readonly persistencia?: Persistencia<L>,
   ) {
     // Sin adaptador, el de siempre: personas, agenda y demás del hogar (D-095).
     this.adaptador = adaptador ?? (adaptadorHogar(entorno.hogarId) as unknown as Adaptador<L, C>);
@@ -54,16 +64,30 @@ export class SincronizadorTablas<L = LecturaTablas, C = CambiosTablas> {
     return this.base ? this.adaptador.aEstado(sobre, this.base) : sobre;
   }
 
+  private fijarBase(lectura: L): void {
+    this.base = lectura;
+    this.persistencia?.guardar(lectura);
+  }
+
   async iniciar(): Promise<"activo" | "sin-migrar"> {
     const lectura = await this.nube.leer();
     if (!this.adaptador.hayDatos(lectura)) return "sin-migrar";
     const local = this.entorno.leer();
-    const nuevo = this.adaptador.aEstado(await this.adaptador.preparar(local), lectura);
-    if (this.adaptador.huella(nuevo) !== this.adaptador.huella(local))
+    const preparado = await this.adaptador.preparar(local);
+    // Si ya hubo una sincronización en este móvil, lo que cambió desde entonces (por ejemplo sin
+    // conexión) no se pierde: se mezcla con lo que hay ahora en las tablas y se envía.
+    const guardada = this.persistencia?.cargar() ?? null;
+    const propios = guardada
+      ? this.adaptador.diferencias(this.adaptador.aEstado(preparado, guardada), preparado)
+      : null;
+    const mezcla = propios ? this.adaptador.aplicarALectura(lectura, propios) : lectura;
+    const nuevo = this.adaptador.aEstado(preparado, mezcla);
+    if (!guardada && this.adaptador.huella(nuevo) !== this.adaptador.huella(local))
       this.entorno.antesDeAdoptar?.(local, nuevo);
-    this.base = lectura;
+    this.fijarBase(lectura);
     this.entorno.escribir(nuevo);
-    this.entorno.avisar("al-dia");
+    this.entorno.avisar(propios ? "guardando" : "al-dia");
+    if (propios) void this.sincronizar();
     return "activo";
   }
 
@@ -107,7 +131,7 @@ export class SincronizadorTablas<L = LecturaTablas, C = CambiosTablas> {
         }
       }
       await this.nube.aplicar(cambios);
-      this.base = this.adaptador.aplicarALectura(this.base, cambios);
+      this.fijarBase(this.adaptador.aplicarALectura(this.base, cambios));
       this.entorno.avisar("al-dia");
     } catch (e) {
       this.entorno.avisar(esErrorDeRed(e) ? "sin-conexion" : "error");
@@ -128,7 +152,7 @@ export class SincronizadorTablas<L = LecturaTablas, C = CambiosTablas> {
     const propios = this.adaptador.diferencias(this.baseComoEstado(actual), actual);
     const mezcla = propios ? this.adaptador.aplicarALectura(lectura, propios) : lectura;
     const nuevo = this.adaptador.aEstado(actual, mezcla);
-    this.base = lectura;
+    this.fijarBase(lectura);
     if (this.adaptador.huella(nuevo) !== this.adaptador.huella(actual))
       this.entorno.escribir(nuevo);
     if (propios) void this.sincronizar();
