@@ -916,3 +916,11 @@ Las tareas de Casa ocupaban una tarjeta cada una. Ahora son filas de una línea 
 **Decisión.** (1) Entrar con **correo y contraseña**, sin correo de por medio, y poner o cambiar la contraseña en Cuenta → Contraseña (mínimo 10 caracteres; la fuerza la valida Supabase). (2) Pedir al navegador **almacenamiento persistente** (`navigator.storage.persist()`) al entrar, para que no borre la sesión ni los cambios sin enviar por falta de espacio. (3) Mensajes claros para contraseña incorrecta, débil o tope de correos.
 
 **Límite.** Si el navegador borra los datos del sitio al cerrarlo (ajuste del propio navegador), la sesión se perderá igual; con la contraseña volver a entrar es solo escribirla. Instalar la app en la pantalla de inicio también ayuda.
+
+## D-112 — La app entra siempre sola
+
+**Contexto.** «Tiene que conectarse siempre automáticamente»: la sesión se perdía de un día para otro, y volver a entrar costaba un correo con tope de envíos.
+
+**Decisión.** Tres redes de seguridad, por orden, en `infraestructura/supabase/respaldo-sesion.ts`: (1) la sesión normal (cookies); (2) una **copia de los tokens en el almacenamiento local**, que se actualiza en cada inicio y renovación de sesión y con la que se restaura la sesión si faltan las cookies (si el servidor rechaza la copia, se borra; si solo falla la red, se conserva); (3) la **contraseña guardada en el gestor del navegador** (Credential Management), que se pide en silencio y vuelve a iniciar sesión. «Salir» borra la copia y le dice al navegador que no entre solo, para que salir de verdad sea salir. Todo se prueba con tests de unidad (618).
+
+**Límites, dichos con claridad.** No he podido probarlo en un Brave real. Si el navegador borra a la vez cookies y almacenamiento local al cerrar el sitio («Olvidarme cuando cierre este sitio»), solo queda la contraseña guardada, y no todos los navegadores admiten Credential Management; en ese caso hay que quitar ese ajuste de Brave para este sitio. La copia de los tokens en el almacenamiento local es legible por scripts de la propia página, igual que las cookies de sesión actuales (no son `httpOnly`); la CSP estricta es la defensa.

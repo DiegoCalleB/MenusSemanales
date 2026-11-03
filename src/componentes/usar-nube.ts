@@ -75,6 +75,7 @@ import {
 } from "@/infraestructura/respaldo";
 import type { Database, Json } from "@/infraestructura/supabase/database.types";
 import { crearNube } from "@/infraestructura/supabase/nube";
+import { guardarCopiaDeSesion } from "@/infraestructura/supabase/respaldo-sesion";
 import { crearNubeCole } from "@/infraestructura/supabase/nube-cole";
 import { crearNubeRegistro } from "@/infraestructura/supabase/nube-registro";
 import { crearNubeMenu } from "@/infraestructura/supabase/nube-menu";
@@ -728,9 +729,17 @@ export function useNube(
       return;
     }
     cliente.current = c;
+    // Cada vez que la sesión se crea o se renueva, se guarda una copia por si el navegador borra
+    // las cookies (D-112).
+    const { data: suscripcion } = c.auth.onAuthStateChange((_evento, sesion) =>
+      guardarCopiaDeSesion(sesion),
+    );
     // Tras el primer pintado: lee la sesión del navegador sin tocar el estado dentro del efecto.
     void Promise.resolve().then(() => resolverSesion(c));
-    return () => desconectar();
+    return () => {
+      suscripcion.subscription.unsubscribe();
+      desconectar();
+    };
   }, [resolverSesion, desconectar]);
 
   const registrar = useCallback((accion: Accion) => {

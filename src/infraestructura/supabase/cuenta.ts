@@ -1,5 +1,10 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import type { Database, Json } from "./database.types";
+import {
+  guardarContrasenaEnElNavegador,
+  olvidarEntradaAutomatica,
+  recuperarSesion,
+} from "./respaldo-sesion";
 
 type Cliente = SupabaseClient<Database>;
 
@@ -33,8 +38,7 @@ export function mensajeDeError(error: { message?: string; code?: string } | null
 }
 
 export async function usuarioActual(cliente: Cliente): Promise<User | null> {
-  const { data } = await cliente.auth.getSession();
-  return data.session?.user ?? null;
+  return (await recuperarSesion(cliente))?.user ?? null;
 }
 
 export async function hogarDelUsuario(cliente: Cliente): Promise<HogarDeUsuario | null> {
@@ -56,14 +60,25 @@ export const verificarCodigo = (cliente: Cliente, correo: string, codigo: string
   cliente.auth.verifyOtp({ email: correo, token: codigo, type: "email" });
 
 /** Entrar con contraseña: no depende de que llegue un correo (que tiene tope de envíos por hora). */
-export const entrarConContrasena = (cliente: Cliente, correo: string, contrasena: string) =>
-  cliente.auth.signInWithPassword({ email: correo, password: contrasena });
+export async function entrarConContrasena(cliente: Cliente, correo: string, contrasena: string) {
+  const r = await cliente.auth.signInWithPassword({ email: correo, password: contrasena });
+  // Con la contraseña guardada en el navegador, la próxima vez entra sola.
+  if (r.data.session) void guardarContrasenaEnElNavegador(correo, contrasena);
+  return r;
+}
 /** Pone o cambia la contraseña de quien ya ha entrado. */
-export const ponerContrasenaNueva = (cliente: Cliente, contrasena: string) =>
-  cliente.auth.updateUser({ password: contrasena });
+export async function ponerContrasenaNueva(cliente: Cliente, contrasena: string) {
+  const r = await cliente.auth.updateUser({ password: contrasena });
+  const correo = r.data.user?.email;
+  if (!r.error && correo) void guardarContrasenaEnElNavegador(correo, contrasena);
+  return r;
+}
 
 export const entrarSinCorreo = (cliente: Cliente) => cliente.auth.signInAnonymously();
-export const salir = (cliente: Cliente) => cliente.auth.signOut();
+export async function salir(cliente: Cliente) {
+  await olvidarEntradaAutomatica();
+  return cliente.auth.signOut();
+}
 
 export const crearHogarNuevo = (cliente: Cliente, nombre: string) =>
   cliente.rpc("crear_hogar", { p_nombre: nombre });
