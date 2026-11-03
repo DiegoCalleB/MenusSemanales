@@ -28,19 +28,22 @@ select pg_temp.fin();
 select pg_temp.como('aaaaaaaa-0000-0000-0000-00000000000a');
 select pg_temp.falla('Grupo antiguo rechazado', $q$update public.plato set grupo = 'carne_roja'$q$, '23514');
 
--- Comida planificada: un miembro planifica; una por día y momento.
-insert into public.comida_planificada (hogar_id, fecha, plato_id, raciones)
-  select h.id, date '2026-11-05', p.id, 3 from _ids h, _ids p where h.clave = 'HA' and p.clave = 'plato';
+-- Comida planificada: un miembro planifica la cena del día (una por día y momento) y le pone platos.
+insert into public.comida_planificada (hogar_id, fecha, raciones)
+  select id, date '2026-11-05', 3 from _ids where clave = 'HA';
 select pg_temp.igual('Planifica una cena', pg_temp.cuenta('select 1 from public.comida_planificada'), 1);
 select pg_temp.falla('Una sola cena por día',
-  $q$insert into public.comida_planificada (hogar_id, fecha, plato_id, raciones)
-     select h.id, date '2026-11-05', p.id, 3 from _ids h, _ids p where h.clave = 'HA' and p.clave = 'plato'$q$, '23505');
-select pg_temp.falla('No se puede planificar el plato de otro hogar (FK compuesta)',
-  $q$insert into public.comida_planificada (hogar_id, fecha, plato_id, raciones)
-     select h.id, date '2026-11-06', p.id, 3 from _ids h, _ids p where h.clave = 'HA' and p.clave = 'platoB'$q$, '23503');
+  $q$insert into public.comida_planificada (hogar_id, fecha, raciones)
+     select id, date '2026-11-05', 3 from _ids where clave = 'HA'$q$, '23505');
 select pg_temp.falla('Raciones positivas',
-  $q$insert into public.comida_planificada (hogar_id, fecha, plato_id, raciones)
-     select h.id, date '2026-11-06', p.id, 0 from _ids h, _ids p where h.clave = 'HA' and p.clave = 'plato'$q$, '23514');
+  $q$insert into public.comida_planificada (hogar_id, fecha, raciones)
+     select id, date '2026-11-06', 0 from _ids where clave = 'HA'$q$, '23514');
+insert into public.comida_plato (comida_id, hogar_id, plato_id, orden)
+  select c.id, c.hogar_id, p.id, 0 from public.comida_planificada c, _ids p where p.clave = 'plato';
+select pg_temp.igual('La cena lleva un plato', pg_temp.cuenta('select 1 from public.comida_plato'), 1);
+select pg_temp.falla('No se puede poner el plato de otro hogar en la cena (FK compuesta)',
+  $q$insert into public.comida_plato (comida_id, hogar_id, plato_id, orden)
+     select c.id, c.hogar_id, p.id, 1 from public.comida_planificada c, _ids p where p.clave = 'platoB'$q$, '23503');
 
 -- Día y valoraciones.
 insert into public.dia_hogar (hogar_id, fecha, llega_tarde) select id, date '2026-11-05', true from _ids where clave = 'HA';
@@ -56,8 +59,8 @@ select pg_temp.igual('B no ve cenas de A', pg_temp.cuenta('select 1 from public.
 select pg_temp.igual('B no ve días de A', pg_temp.cuenta('select 1 from public.dia_hogar'), 0);
 select pg_temp.igual('B no ve valoraciones de A', pg_temp.cuenta('select 1 from public.valoracion_plato'), 0);
 select pg_temp.falla('B no puede planificar en el hogar de A',
-  $q$insert into public.comida_planificada (hogar_id, fecha, plato_id, raciones)
-     select h.id, date '2026-11-07', p.id, 3 from _ids h, _ids p where h.clave = 'HA' and p.clave = 'plato'$q$, '42501');
+  $q$insert into public.comida_planificada (hogar_id, fecha, raciones)
+     select id, date '2026-11-07', 3 from _ids where clave = 'HA'$q$, '42501');
 select pg_temp.fin();
 
 -- anon no puede nada.
