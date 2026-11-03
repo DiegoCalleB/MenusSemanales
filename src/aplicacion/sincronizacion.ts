@@ -40,7 +40,10 @@ export interface EntornoLocal {
 
 /** Acciones que no son cambios del hogar: no se sincronizan. */
 export const esAccionSincronizable = (a: Accion): boolean =>
-  a.tipo !== "cerrarAviso" && a.tipo !== "hogar/sustituir" && a.tipo !== "hogar/hoy";
+  a.tipo !== "cerrarAviso" &&
+  a.tipo !== "aviso/error" &&
+  a.tipo !== "hogar/sustituir" &&
+  a.tipo !== "hogar/hoy";
 
 /** Lo que se guarda en la nube: sin avisos pasajeros. «Hoy» lo pone cada dispositivo. */
 export const paraNube = (e: EstadoHogar): EstadoHogar => ({ ...e, aviso: null });

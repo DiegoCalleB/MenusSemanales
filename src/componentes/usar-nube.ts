@@ -3,6 +3,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Accion, EstadoHogar } from "@/aplicacion/estado";
+import { peorEstado } from "@/aplicacion/guardado";
 import { type EstadoSync, Sincronizador } from "@/aplicacion/sincronizacion";
 import { adaptadorMenu } from "@/aplicacion/adaptadores-tablas";
 import { SincronizadorTablas } from "@/aplicacion/sincronizacion-tablas";
@@ -91,7 +92,10 @@ export interface CuentaContexto {
   correo: string | null;
   anonimo: boolean;
   hogar: HogarDeUsuario | null;
+  /** El peor estado de guardado entre el documento y los motores por tablas. */
   sync: EstadoSync;
+  /** Qué parte de los datos ya manda desde tablas (el resto sigue en el documento). */
+  tablas: { hogar: boolean; menu: boolean };
   pedirCodigo: (correo: string) => Promise<Resultado>;
   verificar: (correo: string, codigo: string) => Promise<Resultado>;
   entrarSinCorreo: () => Promise<Resultado>;
@@ -153,7 +157,11 @@ export function useNube(
   const [correo, setCorreo] = useState<string | null>(null);
   const [anonimo, setAnonimo] = useState(false);
   const [hogar, setHogar] = useState<HogarDeUsuario | null>(null);
-  const [sync, setSync] = useState<EstadoSync>("inactivo");
+  const [syncDoc, setSync] = useState<EstadoSync>("inactivo");
+  const [syncHogar, setSyncHogar] = useState<EstadoSync>("inactivo");
+  const [syncMenu, setSyncMenu] = useState<EstadoSync>("inactivo");
+  const [modoTablas, setModoTablas] = useState({ hogar: false, menu: false });
+  const sync = peorEstado(syncDoc, syncHogar, syncMenu);
   const cliente = useRef<SupabaseClient<Database> | null>(null);
   const sincronizador = useRef<Sincronizador | null>(null);
   const tablas = useRef<SincronizadorTablas | null>(null);
@@ -183,6 +191,9 @@ export function useNube(
     menu.current = null;
     if (temporizadorTablas.current) clearTimeout(temporizadorTablas.current);
     if (temporizadorMenu.current) clearTimeout(temporizadorMenu.current);
+    setSyncHogar("inactivo");
+    setSyncMenu("inactivo");
+    setModoTablas({ hogar: false, menu: false });
     sincronizador.current = null;
     if (temporizador.current) clearTimeout(temporizador.current);
     setSync("inactivo");
@@ -202,7 +213,7 @@ export function useNube(
         hogarId: h.id,
         leer: () => leer.current(),
         escribir: (e) => escribir.current(e),
-        avisar: () => undefined,
+        avisar: setSyncHogar,
         antesDeAdoptar: (local, nuevo) => {
           const r = guardarRespaldoAntesDeLaNube(almacenamientoLocal(), local, nuevo, new Date());
           if (r === "guardada") window.dispatchEvent(new Event(EVENTO_RESPALDOS));
@@ -215,6 +226,7 @@ export function useNube(
         return false;
       }
       tablas.current = motor;
+      setModoTablas((m) => ({ ...m, hogar: true }));
       let espera: ReturnType<typeof setTimeout> | null = null;
       const baja = nube.suscribir(() => {
         if (espera) clearTimeout(espera);
@@ -246,7 +258,7 @@ export function useNube(
           hogarId: h.id,
           leer: () => leer.current(),
           escribir: (e) => escribir.current(e),
-          avisar: () => undefined,
+          avisar: setSyncMenu,
           antesDeAdoptar: (local, nuevo) => {
             const r = guardarRespaldoAntesDeLaNube(almacenamientoLocal(), local, nuevo, new Date());
             if (r === "guardada") window.dispatchEvent(new Event(EVENTO_RESPALDOS));
@@ -261,6 +273,7 @@ export function useNube(
         return false;
       }
       menu.current = motor;
+      setModoTablas((m) => ({ ...m, menu: true }));
       resolucionMenu.current = resolucion;
       let espera: ReturnType<typeof setTimeout> | null = null;
       const baja = nube.suscribir(() => {
@@ -416,6 +429,7 @@ export function useNube(
     anonimo,
     hogar,
     sync,
+    tablas: modoTablas,
     pedirCodigo: (mail) => usar((c) => aResultado(pedirCodigoPorCorreo(c, mail))),
     verificar: async (mail, codigo) => {
       const r = await usar((c) => aResultado(verificarCodigo(c, mail, codigo)));

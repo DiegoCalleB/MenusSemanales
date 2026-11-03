@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { articulosPendientes } from "@/aplicacion/estado";
-import { useHogar } from "./proveedor-hogar";
+import { useCuenta, useHogar } from "./proveedor-hogar";
+import { NUBE_DISPONIBLE } from "./usar-nube";
 import { BotonPerfil } from "./perfiles";
 import { BotonTema } from "./tema";
 import { PILARES, pestanaActiva, pilarDe } from "./pilares";
@@ -114,9 +115,7 @@ export function NavegacionLateral() {
         <BotonPerfil />
         <BotonTema />
       </div>
-      <p className="text-tinta-suave px-2 text-sm">
-        Modo prueba: datos de ejemplo guardados solo en este dispositivo.
-      </p>
+      <EstadoDeGuardado />
     </aside>
   );
 }
@@ -155,5 +154,20 @@ export function Pestanas() {
         })}
       </ul>
     </nav>
+  );
+}
+
+/** Dónde se guardan los datos, dicho con la verdad (D-102): antes era un texto fijo. */
+function EstadoDeGuardado() {
+  const cuenta = useCuenta();
+  const conectado = cuenta.fase === "conectado";
+  return (
+    <p className="text-tinta-suave px-2 text-sm">
+      {conectado
+        ? `☁️ Guardado en la nube (${cuenta.hogar?.nombre ?? "tu hogar"}).`
+        : NUBE_DISPONIBLE
+          ? "⚠️ Sin guardar en la nube."
+          : "Solo en este dispositivo."}
+    </p>
   );
 }

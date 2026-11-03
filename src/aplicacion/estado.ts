@@ -264,6 +264,7 @@ export type Accion =
   | { tipo: "cole/importar"; dias: Record<FechaIso, MenuCole> }
   | { tipo: "hogar/sustituir"; estado: EstadoHogar }
   | { tipo: "cerrarAviso" }
+  | { tipo: "aviso/error"; texto: string }
   | { tipo: "reparto/asignarResponsable"; cargaId: string; personaId: string | null }
   | { tipo: "reparto/proponerRotacion" }
   | { tipo: "reparto/estadoTurno"; cargaId: string; fecha: FechaIso; estado: Turno["estado"] };
@@ -1667,6 +1668,9 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
     case "hogar/sustituir":
       // Lo guardado antes de existir la agenda no la trae: se parte de una lista vacía.
       return normalizar(accion.estado);
+
+    case "aviso/error":
+      return { ...e, siguienteId: e.siguienteId + 1, aviso: error(e, accion.texto) };
 
     case "cerrarAviso":
       return e.aviso === null ? e : { ...e, aviso: null };

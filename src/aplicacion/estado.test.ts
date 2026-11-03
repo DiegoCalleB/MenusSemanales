@@ -1585,3 +1585,12 @@ describe("importar artículos propuestos (manual/importar, D-098)", () => {
     expect(r.aviso?.tipo).toBe("ok");
   });
 });
+
+describe("aviso de error (D-102)", () => {
+  it("muestra un aviso de error y no cambia nada más", () => {
+    const e = estadoInicialDemo();
+    const r = reducir(e, { tipo: "aviso/error", texto: "⚠️ Cambio NO guardado" });
+    expect(r.aviso).toMatchObject({ tipo: "error", texto: "⚠️ Cambio NO guardado" });
+    expect({ ...r, aviso: null, siguienteId: 0 }).toEqual({ ...e, aviso: null, siguienteId: 0 });
+  });
+});

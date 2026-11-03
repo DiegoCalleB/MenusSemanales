@@ -16,8 +16,10 @@ import type { AlmacenHogar } from "@/aplicacion/almacen";
 import { estadoInicialDemo } from "@/aplicacion/datos-demo";
 import { estadoModoDiego } from "@/aplicacion/datos-diego";
 import { type Accion, type EstadoHogar, conIdBase, reducir } from "@/aplicacion/estado";
+import { AVISO_CAMBIO, riesgoDeGuardado } from "@/aplicacion/guardado";
+import { esAccionSincronizable } from "@/aplicacion/sincronizacion";
 import { crearAlmacenLocal } from "@/infraestructura/almacen-local";
-import { type CuentaContexto, useNube } from "./usar-nube";
+import { type CuentaContexto, NUBE_DISPONIBLE, useNube } from "./usar-nube";
 
 /**
  * Qué datos de prueba se usan. Por defecto, el «modo Diego» (la familia real de Diego, D-053). Los
@@ -67,6 +69,16 @@ export function ProveedorHogar({
     (e) => despacharLocal({ tipo: "hogar/sustituir", estado: e }),
   );
   // Cada cambio se aplica al instante en este dispositivo y se apunta para subirlo a la nube.
+  // Si la nube está configurada y algo impide guardar, SE AVISA en cada cambio (D-102): la app
+  // nunca guarda solo en el móvil a escondidas.
+  const situacion = useRef({
+    nubeConfigurada: NUBE_DISPONIBLE,
+    fase: cuenta.fase,
+    sync: cuenta.sync,
+  });
+  useEffect(() => {
+    situacion.current = { nubeConfigurada: NUBE_DISPONIBLE, fase: cuenta.fase, sync: cuenta.sync };
+  });
   const despachar = useCallback(
     (original: Accion) => {
       // El id de lo que se cree se decide aquí, una sola vez, para que sea el mismo en este
@@ -74,6 +86,10 @@ export function ProveedorHogar({
       const accion = conIdBase(original, () => crypto.randomUUID());
       despacharLocal(accion);
       registrar(accion);
+      if (esAccionSincronizable(accion)) {
+        const riesgo = riesgoDeGuardado(situacion.current);
+        if (riesgo) despacharLocal({ tipo: "aviso/error", texto: AVISO_CAMBIO[riesgo] });
+      }
     },
     [registrar],
   );
