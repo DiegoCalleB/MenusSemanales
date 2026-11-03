@@ -15,6 +15,7 @@ import { useCalendarioFamilia } from "../usar-calendario-familia";
 import { almuerzosDe } from "@/dominio/almuerzos";
 import { quePideHoy } from "@/dominio/casa";
 import { resumenDeTareas } from "@/dominio/tareas";
+import { LoDeHoy } from "../lo-de-hoy";
 
 /** Portada: una sola pantalla, sin desplazarse: la cena de hoy, el cole de hoy y los accesos. */
 export function InicioVista() {
@@ -137,6 +138,8 @@ export function InicioVista() {
           <span className="text-base font-semibold tabular-nums">{porComprar}</span>
         </Link>
       )}
+
+      {estado.personas.some((p) => p.activa) && <LoDeHoy />}
 
       {casaHoy.length > 0 && (
         <section aria-labelledby="casa-hoy" className="tarjeta flex flex-col gap-2">

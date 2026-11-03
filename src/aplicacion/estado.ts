@@ -66,6 +66,12 @@ import {
   type Ocurrencia,
   type Reparto,
 } from "@/dominio/reparto";
+import {
+  type EntradaRegistro,
+  MAX_ENTRADAS_REGISTRO,
+  idDeEntrada,
+  limpiarQue,
+} from "@/dominio/registro";
 import type {
   Carga,
   ComidaPlanificada,
@@ -159,6 +165,8 @@ export interface EstadoHogar {
   ajustesCompra: Record<string, number>;
   /** Nota corta de la cena de un día: «o igual lomo, depende» (D-096). */
   notasMenu: Record<FechaIso, string>;
+  /** Quién ha hecho qué cada día (D-108). En tablas (`registro_hogar`); aquí, los últimos días. */
+  registro: EntradaRegistro[];
   /** Tareas de cada persona (rutinas diarias y cosas puntuales). */
   tareas: Tarea[];
   /** Días en que no se planifica cena en casa (salir, comer fuera, no hace falta). */
@@ -250,6 +258,7 @@ export type Accion =
   | { tipo: "menu/quitar"; fecha: FechaIso; platoId?: string }
   | { tipo: "menu/llegoTarde"; fecha: FechaIso }
   | { tipo: "menu/nota"; fecha: FechaIso; texto: string }
+  | { tipo: "registro/alternar"; fecha: FechaIso; que: string; personaId: string }
   | { tipo: "plato/guardar"; id?: string; plato: PlatoEditable }
   | { tipo: "plato/rapido"; nombre: string; grupo: GrupoPlato; idBase?: string }
   | { tipo: "plato/proponer"; id: string; proponer: boolean }
@@ -581,6 +590,7 @@ export const normalizar = (e: EstadoHogar): EstadoHogar =>
   Array.isArray(e.almuerzos) &&
   typeof e.notasMenu === "object" &&
   e.notasMenu !== null &&
+  Array.isArray(e.registro) &&
   typeof e.ajustesCompra === "object" &&
   e.ajustesCompra !== null
     ? e
@@ -589,6 +599,7 @@ export const normalizar = (e: EstadoHogar): EstadoHogar =>
         ajustesCompra:
           typeof e.ajustesCompra === "object" && e.ajustesCompra !== null ? e.ajustesCompra : {},
         notasMenu: typeof e.notasMenu === "object" && e.notasMenu !== null ? e.notasMenu : {},
+        registro: Array.isArray(e.registro) ? e.registro : [],
         agenda: Array.isArray(e.agenda) ? e.agenda : [],
         casa: Array.isArray(e.casa) ? e.casa : [],
         almuerzos: Array.isArray(e.almuerzos) ? e.almuerzos : [],
@@ -1426,6 +1437,23 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
       const { [accion.fecha]: _antes, ...resto } = e.notasMenu;
       void _antes;
       return { ...e, notasMenu: texto === "" ? resto : { ...resto, [accion.fecha]: texto } };
+    }
+
+    case "registro/alternar": {
+      const que = limpiarQue(accion.que);
+      const persona = e.personas.find((p) => p.id === accion.personaId && p.activa);
+      if (que.length < 2 || !persona) {
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: error(e, "Escribe qué se hizo (mínimo 2 letras) y elige quién."),
+        };
+      }
+      const id = idDeEntrada(accion.fecha, que, persona.id);
+      const ya = e.registro.some((r) => r.id === id);
+      if (ya) return { ...e, registro: e.registro.filter((r) => r.id !== id) };
+      const nuevo: EntradaRegistro = { id, fecha: accion.fecha, que, personaId: persona.id };
+      return { ...e, registro: [...e.registro, nuevo].slice(-MAX_ENTRADAS_REGISTRO) };
     }
 
     case "plato/rapido": {

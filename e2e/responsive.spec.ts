@@ -277,6 +277,40 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 
+  test("hoy: apuntar quién ha hecho cada cosa (Lo de hoy)", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/");
+    const tarjeta = pagina.getByRole("region", { name: "Lo de hoy" });
+    await expect(tarjeta).toBeVisible();
+    await expect(tarjeta.getByText("Toca a quien lo ha hecho")).toBeVisible();
+
+    // Un toque apunta; el mismo toque lo quita.
+    const diegoCena = tarjeta.getByRole("button", { name: "Cena: Diego" });
+    await diegoCena.click();
+    await expect(diegoCena).toHaveAttribute("aria-pressed", "true");
+    await tarjeta.getByRole("button", { name: "Compra: Diego" }).click();
+    await expect(tarjeta.getByText("2 cosas hechas")).toBeVisible();
+    await diegoCena.click();
+    await expect(diegoCena).toHaveAttribute("aria-pressed", "false");
+
+    // Una cosa nueva (lavavajillas) se añade una vez y se apunta a Ana.
+    await tarjeta.getByRole("button", { name: /Otra cosa/ }).click();
+    await tarjeta.getByLabel("Otra cosa que se ha hecho hoy").fill("Lavavajillas");
+    await tarjeta.getByRole("button", { name: "Añadir", exact: true }).click();
+    await tarjeta.getByRole("button", { name: "Lavavajillas: Ana" }).click();
+    await expect(tarjeta.getByRole("button", { name: "Lavavajillas: Ana" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await expect(tarjeta.getByText("2 cosas hechas")).toBeVisible();
+
+    const axe = await new AxeBuilder({ page: pagina })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+      .analyze();
+    expect(axe.violations).toEqual([]);
+    await contexto.close();
+  });
+
   test("menú: valorar la cena de hoy por persona", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/menu");

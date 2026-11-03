@@ -880,3 +880,17 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 **Plazo por intento.** Cada intento al modelo tiene 30 s en la transcripción del PDF; si no contesta, se pasa al modelo de respaldo (más rápido) en vez de gastar los 55 s en uno solo.
 
 **El botón de subir el PDF se ve siempre.** Solo aparecía con la cuenta ya conectada: en el móvil, mientras la cuenta cargaba (o sin sesión) desaparecía sin explicación. Ahora está siempre y, si no hay cuenta lista, dice por qué.
+
+## D-108 — «Lo de hoy»: quién ha hecho qué cada día
+
+**Contexto.** Querían poder apuntar quién se ha encargado de cada comida, cena y compra, y también de los gatos, el lavavajillas… («hoy Diego ha hecho la compra, la cena y la comida, y se ha encargado de los gatos y del lavavajillas»). El reparto ya planifica cargas y turnos, pero no apunta lo que se ha hecho de verdad.
+
+**Decisión.** Un diario en tablas, no en el documento: `registro_hogar` (hogar, fecha, qué, persona; FK compuesta a `persona`, RLS por hogar, restricción única por día + cosa + persona sin mayúsculas ni espacios). Una fila por cosa hecha; se añade y se quita, no se edita. El id es un UUID v5 de fecha + cosa + persona, así que tocar dos veces no duplica y dos móviles que apuntan lo mismo no chocan. Motor propio (`SincronizadorTablas` + `adaptadorRegistro`), RPC `leer_registro_tablas` (últimos 60 días) y `aplicar_cambios_registro`, en directo por Realtime. Nace en tablas: no hay nada que importar. Si no se puede guardar, sale el error de siempre; sin conexión se encola y se envía al volver.
+
+**Pantalla.** En Hoy, la tarjeta «Lo de hoy»: comida, cena y compra siempre; un toque en la persona la apunta y otro la quita; «＋ Otra cosa» añade lo que sea (gatos, lavavajillas) y desde entonces sale como sugerencia, las más frecuentes primero.
+
+**Pendiente.** Que «Marcar hecha» de Casa apunte quién la hizo; que el panel de reparto cuente también lo apuntado; el resumen semanal. Hasta aplicar la migración `20261103210000_registro_hogar`, el motor no arranca y el registro no se guarda en tablas.
+
+## Casa en filas compactas
+
+Las tareas de Casa ocupaban una tarjeta cada una. Ahora son filas de una línea (✓ para marcar hecha, título, cuándo toca, la inicial de a quién le toca); al tocar la fila se despliega lo demás (a quién le toca, mañana, a la lista, quitar).

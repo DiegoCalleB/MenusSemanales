@@ -1107,6 +1107,14 @@ export type Database = {
         Args: { p_hogar_id: string; p_cambios: Json }
         Returns: undefined
       }
+      aplicar_cambios_registro: {
+        Args: { p_hogar_id: string; p_cambios: Json }
+        Returns: undefined
+      }
+      leer_registro_tablas: {
+        Args: { p_hogar_id: string }
+        Returns: Json
+      }
       resolver_ingredientes: {
         Args: { p_ingredientes: Json }
         Returns: Json

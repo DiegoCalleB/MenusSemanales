@@ -10,6 +10,14 @@ import {
   migrarIdsDePersonas,
 } from "./tablas";
 import {
+  type CambiosRegistro,
+  type LecturaRegistro,
+  aplicarCambiosALecturaRegistro,
+  aplicarLecturaDeRegistro,
+  diferenciasRegistro,
+  hayRegistroEnTablas,
+} from "./tablas-registro";
+import {
   type CambiosCole,
   type LecturaCole,
   aplicarCambiosALecturaCole,
@@ -123,5 +131,15 @@ export const adaptadorCole: Adaptador<LecturaCole, CambiosCole> = {
   diferencias: diferenciasCole,
   aplicarALectura: aplicarCambiosALecturaCole,
   huella: (e) => JSON.stringify(e.colegio),
+  preparar: (local) => local,
+};
+
+/** «Lo de hoy»: quién ha hecho qué cada día (D-108). Nace en tablas: ids ya son UUID. */
+export const adaptadorRegistro: Adaptador<LecturaRegistro, CambiosRegistro> = {
+  hayDatos: hayRegistroEnTablas,
+  aEstado: aplicarLecturaDeRegistro,
+  diferencias: diferenciasRegistro,
+  aplicarALectura: aplicarCambiosALecturaRegistro,
+  huella: (e) => JSON.stringify(e.registro),
   preparar: (local) => local,
 };

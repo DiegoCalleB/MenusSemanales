@@ -1594,3 +1594,65 @@ describe("aviso de error (D-102)", () => {
     expect({ ...r, aviso: null, siguienteId: 0 }).toEqual({ ...e, aviso: null, siguienteId: 0 });
   });
 });
+
+describe("lo de hoy: quién ha hecho qué (D-108)", () => {
+  const e = () => estadoInicialDemo();
+  const persona = (x: EstadoHogar) => x.personas.find((p) => p.activa)!;
+
+  it("un toque apunta a la persona y otro toque la quita", () => {
+    const base = e();
+    const p = persona(base);
+    const a = reducir(base, {
+      tipo: "registro/alternar",
+      fecha: base.hoy,
+      que: "cena",
+      personaId: p.id,
+    });
+    expect(a.registro).toHaveLength(1);
+    expect(a.registro[0]).toMatchObject({ fecha: base.hoy, que: "cena", personaId: p.id });
+    expect(esUuid(a.registro[0]!.id)).toBe(true);
+    const b = reducir(a, {
+      tipo: "registro/alternar",
+      fecha: base.hoy,
+      que: " Cena ",
+      personaId: p.id,
+    });
+    expect(b.registro).toHaveLength(0);
+  });
+
+  it("dos personas pueden apuntarse en la misma cosa", () => {
+    const base = e();
+    const [p, q] = base.personas.filter((x) => x.activa);
+    const r = aplicar(
+      base,
+      { tipo: "registro/alternar", fecha: base.hoy, que: "Compra", personaId: p!.id },
+      { tipo: "registro/alternar", fecha: base.hoy, que: "Compra", personaId: q!.id },
+    );
+    expect(r.registro).toHaveLength(2);
+  });
+
+  it("sin texto o con una persona que no existe, avisa del error y no apunta nada", () => {
+    const base = e();
+    const sinTexto = reducir(base, {
+      tipo: "registro/alternar",
+      fecha: base.hoy,
+      que: " ",
+      personaId: persona(base).id,
+    });
+    expect(sinTexto.registro).toHaveLength(0);
+    expect(sinTexto.aviso?.tipo).toBe("error");
+    const sinPersona = reducir(base, {
+      tipo: "registro/alternar",
+      fecha: base.hoy,
+      que: "Cena",
+      personaId: "nadie",
+    });
+    expect(sinPersona.registro).toHaveLength(0);
+    expect(sinPersona.aviso?.tipo).toBe("error");
+  });
+
+  it("lo guardado antes de que existiera se completa al normalizar", () => {
+    const viejo = { ...estadoInicialDemo(), registro: undefined } as unknown as EstadoHogar;
+    expect(normalizar(viejo).registro).toEqual([]);
+  });
+});

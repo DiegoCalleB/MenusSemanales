@@ -5,8 +5,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Accion, EstadoHogar } from "@/aplicacion/estado";
 import { peorEstado } from "@/aplicacion/guardado";
 import { type EstadoSync, Sincronizador, esErrorDeRed } from "@/aplicacion/sincronizacion";
-import { adaptadorCole, adaptadorMenu } from "@/aplicacion/adaptadores-tablas";
+import { adaptadorCole, adaptadorMenu, adaptadorRegistro } from "@/aplicacion/adaptadores-tablas";
 import { SincronizadorTablas } from "@/aplicacion/sincronizacion-tablas";
+import {
+  type CambiosRegistro,
+  type LecturaRegistro,
+  conservarCamposDeRegistro,
+  leerRegistro,
+} from "@/aplicacion/tablas-registro";
 import {
   type CambiosCole,
   type LecturaCole,
@@ -68,6 +74,7 @@ import {
 import type { Database, Json } from "@/infraestructura/supabase/database.types";
 import { crearNube } from "@/infraestructura/supabase/nube";
 import { crearNubeCole } from "@/infraestructura/supabase/nube-cole";
+import { crearNubeRegistro } from "@/infraestructura/supabase/nube-registro";
 import { crearNubeMenu } from "@/infraestructura/supabase/nube-menu";
 import { crearNubeTablas } from "@/infraestructura/supabase/nube-tablas";
 
@@ -241,8 +248,9 @@ export function useNube(
   const [syncHogar, setSyncHogar] = useState<EstadoSync>("inactivo");
   const [syncMenu, setSyncMenu] = useState<EstadoSync>("inactivo");
   const [syncCole, setSyncCole] = useState<EstadoSync>("inactivo");
+  const [syncRegistro, setSyncRegistro] = useState<EstadoSync>("inactivo");
   const [modoTablas, setModoTablas] = useState({ hogar: false, menu: false, cole: false });
-  const sync = peorEstado(syncDoc, syncHogar, syncMenu, syncCole);
+  const sync = peorEstado(syncDoc, syncHogar, syncMenu, syncCole, syncRegistro);
   const [enLinea, setEnLinea] = useState(true);
   useEffect(() => {
     const poner = () => setEnLinea(navigator.onLine);
@@ -260,6 +268,9 @@ export function useNube(
   const menu = useRef<SincronizadorTablas<LecturaMenu, CambiosMenu> | null>(null);
   const cole = useRef<SincronizadorTablas<LecturaCole, CambiosCole> | null>(null);
   const temporizadorCole = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const registro = useRef<SincronizadorTablas<LecturaRegistro, CambiosRegistro> | null>(null);
+  const cerrarRegistro = useRef<(() => void) | null>(null);
+  const temporizadorRegistro = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cerrarMenu = useRef<(() => void) | null>(null);
   const temporizadorMenu = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resolucionMenu = useRef<() => Record<string, string>>(() => ({}));
@@ -289,6 +300,11 @@ export function useNube(
     setSyncMenu("inactivo");
     setSyncCole("inactivo");
     cole.current = null;
+    cerrarRegistro.current?.();
+    cerrarRegistro.current = null;
+    registro.current = null;
+    if (temporizadorRegistro.current) clearTimeout(temporizadorRegistro.current);
+    setSyncRegistro("inactivo");
     if (temporizadorCole.current) clearTimeout(temporizadorCole.current);
     setModoTablas({ hogar: false, menu: false, cole: false });
     sincronizador.current = null;
@@ -424,6 +440,47 @@ export function useNube(
     [],
   );
 
+  /** Enciende el motor de «Lo de hoy» (quién ha hecho qué, D-108). Nace en tablas: no hay import. */
+  const activarRegistro = useCallback(
+    async (c: SupabaseClient<Database>, h: HogarDeUsuario): Promise<boolean> => {
+      cerrarRegistro.current?.();
+      cerrarRegistro.current = null;
+      registro.current = null;
+      const nube = crearNubeRegistro(c, h.id);
+      const motor = new SincronizadorTablas<LecturaRegistro, CambiosRegistro>(
+        nube,
+        {
+          hogarId: h.id,
+          leer: () => leer.current(),
+          escribir: (e) => escribir.current(e),
+          avisar: setSyncRegistro,
+        },
+        adaptadorRegistro,
+        persistenciaDe(h.id, "registro", leerRegistro),
+      );
+      try {
+        if ((await motor.iniciar()) !== "activo") return false;
+      } catch (e) {
+        // Sin la migración de «Lo de hoy» el registro no se puede guardar en tablas: se avisa.
+        console.error("Lo de hoy:", e);
+        setSyncRegistro("error");
+        return false;
+      }
+      registro.current = motor;
+      let espera: ReturnType<typeof setTimeout> | null = null;
+      const baja = nube.suscribir(() => {
+        if (espera) clearTimeout(espera);
+        espera = setTimeout(() => void motor.recibir(), 300);
+      });
+      cerrarRegistro.current = () => {
+        baja();
+        if (espera) clearTimeout(espera);
+      };
+      return true;
+    },
+    [],
+  );
+
   /**
    * Lleva los datos del estado a las tablas (D-094, D-101) y enciende los motores por tablas. Se usa
    * a mano desde «Cuenta» y, solo, la primera vez que un hogar se conecta con las tablas vacías
@@ -533,6 +590,7 @@ export function useNube(
             x = conservarCamposDeMenu(x, leer.current(), h.id, resolucionMenu.current());
           }
           if (cole.current) x = conservarCamposDeCole(x, leer.current());
+          if (registro.current) x = conservarCamposDeRegistro(x, leer.current());
           escribir.current(x);
         },
         avisar: setSync,
@@ -568,6 +626,7 @@ export function useNube(
       const hogarListo = await activarTablas(c, h);
       const menuListo = await activarMenu(c, h);
       const coleListo = await activarCole(c, h);
+      await activarRegistro(c, h);
       // Si el hogar aún tiene sus datos solo en el documento, se pasan a tablas ahora, solos
       // (D-103): con copia previa en el móvil, sin borrar nada y solo la primera vez.
       const inicial = s.estadoInicial;
@@ -595,6 +654,8 @@ export function useNube(
         void menu.current?.sincronizar();
         void cole.current?.recibir();
         void cole.current?.sincronizar();
+        void registro.current?.recibir();
+        void registro.current?.sincronizar();
         void nube
           .leer()
           .then((r) => r && s.recibir(r))
@@ -612,7 +673,7 @@ export function useNube(
       setFase("conectado");
       return { ok: true };
     },
-    [desconectar, activarTablas, activarMenu, activarCole, importarDesde],
+    [desconectar, activarTablas, activarMenu, activarCole, activarRegistro, importarDesde],
   );
 
   useEffect(() => {
@@ -683,6 +744,11 @@ export function useNube(
       const motor = cole.current;
       if (temporizadorCole.current) clearTimeout(temporizadorCole.current);
       temporizadorCole.current = setTimeout(() => void motor.sincronizar(), ESPERA_GUARDADO_MS);
+    }
+    if (registro.current) {
+      const motor = registro.current;
+      if (temporizadorRegistro.current) clearTimeout(temporizadorRegistro.current);
+      temporizadorRegistro.current = setTimeout(() => void motor.sincronizar(), ESPERA_GUARDADO_MS);
     }
     s.registrar(accion);
     if (temporizador.current) clearTimeout(temporizador.current);
