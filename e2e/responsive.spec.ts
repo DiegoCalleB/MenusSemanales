@@ -679,6 +679,9 @@ test.describe("flujos en móvil", () => {
     await expect(hoy.getByRole("listitem").filter({ hasText: /Limpiar los areneros/ })).toHaveCount(
       1,
     );
+    await pagina
+      .getByRole("button", { name: /Comprar arena para los gatos/, expanded: false })
+      .click(); // abre la fila
     await pagina.getByRole("button", { name: "A la lista de la compra: Arena para gatos" }).click();
     await pagina.goto("/compra", { waitUntil: "networkidle" });
     await expect(pagina.getByText("Arena para gatos").first()).toBeVisible();

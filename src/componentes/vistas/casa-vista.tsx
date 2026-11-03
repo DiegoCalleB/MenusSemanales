@@ -34,6 +34,7 @@ export function CasaVista() {
   const [titulo, setTitulo] = useState("");
   const [cada, setCada] = useState(14);
   const [quien, setQuien] = useState("");
+  const [abierto, setAbierto] = useState<string | null>(null);
   const ordenadas = ordenadasPorFecha(estado.casa, estado.hoy);
   const grupos: Array<{ id: string; titulo: string; lista: TareaCasa[] }> = [
     {
@@ -126,41 +127,86 @@ export function CasaVista() {
             <h2 id={`g-${g.id}`} className="text-lg font-extrabold">
               {g.titulo}
             </h2>
-            <ul aria-label={g.titulo} className="flex flex-col gap-2">
+            <ul aria-label={g.titulo} className="tarjeta flex flex-col p-2 sm:p-3">
               {g.lista.map((t) => {
                 const dias = diasParaCasa(t, estado.hoy);
+                const abierta = abierto === t.id;
+                const duenia = personas.find((p) => p.id === t.responsableId);
                 return (
                   <li
                     key={t.id}
-                    className="tarjeta flex flex-col gap-3"
+                    className="border-borde border-b py-0.5 last:border-b-0"
                     data-estado={estadoDeCasa(t, estado.hoy)}
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <p className="min-w-0 text-base">
-                        <span aria-hidden="true">{t.emoji} </span>
-                        <strong>{t.titulo}</strong>
-                        <span className="text-tinta-suave block text-sm">
+                    <div className="flex min-h-11 items-center gap-1">
+                      <button
+                        type="button"
+                        className="flex size-11 shrink-0 items-center justify-center"
+                        aria-label={`Marcar hecha: ${t.titulo}`}
+                        onClick={() => despachar({ tipo: "casa/hecha", id: t.id })}
+                      >
+                        <span
+                          aria-hidden="true"
+                          className="border-marca text-marca flex size-6 items-center justify-center rounded-full border-2 text-sm font-bold"
+                        >
+                          ✓
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        aria-expanded={abierta}
+                        onClick={() => setAbierto(abierta ? null : t.id)}
+                        className="min-h-11 min-w-0 flex-1 rounded-lg px-1 text-left"
+                      >
+                        <span className="block truncate text-base font-semibold">
+                          <span aria-hidden="true">{t.emoji} </span>
+                          {t.titulo}
+                        </span>
+                        <span className="text-tinta-suave block truncate text-xs">
                           {textoFrecuencia(t.cadaDias)} · {cuandoToca(dias)}
                           {t.ultimaVez ? ` · última vez ${fechaCorta(t.ultimaVez)}` : ""}
                         </span>
-                      </p>
-                      {t.responsableId && t.responsableId === yo && (
-                        <span className="bg-suave-1 shrink-0 rounded-full px-3 py-0.5 text-sm font-bold">
-                          Tuya
+                      </button>
+                      {duenia && (
+                        <span
+                          title={duenia.nombre}
+                          className={`flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
+                            duenia.id === yo ? "bg-marca text-sobre-marca" : "bg-suave-1"
+                          }`}
+                        >
+                          <span className="sr-only">
+                            {duenia.id === yo ? "Tuya, " : "De "}
+                            {duenia.nombre}
+                          </span>
+                          <span aria-hidden="true">{duenia.nombre.slice(0, 1).toUpperCase()}</span>
                         </span>
                       )}
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {dias <= 0 && (
-                        <>
-                          <button
-                            type="button"
-                            className="boton"
-                            aria-label={`Marcar hecha: ${t.titulo}`}
-                            onClick={() => despachar({ tipo: "casa/hecha", id: t.id })}
+                    {abierta && (
+                      <div className="bg-fondo mb-1 flex flex-wrap items-center gap-2 rounded-xl p-2">
+                        <label className="flex items-center gap-2 text-base">
+                          <span className="text-tinta-suave text-sm">Le toca a</span>
+                          <select
+                            className="campo w-auto"
+                            aria-label={`Responsable de ${t.titulo}`}
+                            value={t.responsableId ?? ""}
+                            onChange={(e) =>
+                              despachar({
+                                tipo: "casa/asignar",
+                                id: t.id,
+                                responsableId: e.target.value || null,
+                              })
+                            }
                           >
-                            ✓ Hecha
-                          </button>
+                            <option value="">Los dos</option>
+                            {personas.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.nombre}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        {dias <= 0 && (
                           <button
                             type="button"
                             className="boton-suave"
@@ -169,58 +215,27 @@ export function CasaVista() {
                           >
                             Mañana
                           </button>
-                        </>
-                      )}
-                      {dias > 0 && (
+                        )}
+                        {t.compra && (
+                          <button
+                            type="button"
+                            className="boton-suave"
+                            aria-label={`A la lista de la compra: ${t.compra}`}
+                            onClick={() => despachar({ tipo: "casa/aListaCompra", id: t.id })}
+                          >
+                            🛒 A la lista
+                          </button>
+                        )}
                         <button
                           type="button"
                           className="boton-suave"
-                          aria-label={`Ya la hice: ${t.titulo}`}
-                          onClick={() => despachar({ tipo: "casa/hecha", id: t.id })}
+                          aria-label={`Quitar ${t.titulo}`}
+                          onClick={() => despachar({ tipo: "casa/borrar", id: t.id })}
                         >
-                          Ya la hice
+                          Quitar
                         </button>
-                      )}
-                      <label className="flex items-center gap-2 text-base">
-                        <span className="sr-only">Responsable de {t.titulo}</span>
-                        <select
-                          className="campo w-auto"
-                          value={t.responsableId ?? ""}
-                          onChange={(e) =>
-                            despachar({
-                              tipo: "casa/asignar",
-                              id: t.id,
-                              responsableId: e.target.value || null,
-                            })
-                          }
-                        >
-                          <option value="">Los dos</option>
-                          {personas.map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.nombre}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      {t.compra && (
-                        <button
-                          type="button"
-                          className="boton-suave"
-                          aria-label={`A la lista de la compra: ${t.compra}`}
-                          onClick={() => despachar({ tipo: "casa/aListaCompra", id: t.id })}
-                        >
-                          🛒 A la lista
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        className="boton-suave"
-                        aria-label={`Quitar ${t.titulo}`}
-                        onClick={() => despachar({ tipo: "casa/borrar", id: t.id })}
-                      >
-                        Quitar
-                      </button>
-                    </div>
+                      </div>
+                    )}
                   </li>
                 );
               })}
