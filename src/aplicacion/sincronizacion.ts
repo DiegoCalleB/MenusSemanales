@@ -71,6 +71,8 @@ const MAX_REINTENTOS = 5;
 
 export class Sincronizador {
   version = 0;
+  /** El estado con el que quedó este móvil tras el primer contacto (lo adoptado de la nube o lo subido). */
+  estadoInicial: EstadoHogar | null = null;
   private pendientes: Accion[] = [];
   private ocupado = false;
   private otraVez = false;
@@ -115,12 +117,14 @@ export class Sincronizador {
         // Lo de este dispositivo se va a sustituir por lo de la familia: que quede una copia.
         this.entorno.antesDeAdoptar?.(local, nuevo);
         this.entorno.escribir(nuevo);
+        this.estadoInicial = nuevo;
         this.persistir();
         this.entorno.avisar(this.pendientes.length > 0 ? "guardando" : "al-dia");
         return "adoptado";
       }
       this.pendientes = [];
       this.persistir();
+      this.estadoInicial = this.entorno.leer();
       this.version = await this.nube.guardar(paraNube(this.entorno.leer()), 0);
       this.entorno.avisar("al-dia");
       return "subido";

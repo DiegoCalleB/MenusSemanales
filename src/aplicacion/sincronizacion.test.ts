@@ -377,3 +377,16 @@ describe("abrir la app sin conexión (D-102)", () => {
     expect(disco).toHaveLength(0);
   });
 });
+
+describe("estado inicial tras el primer contacto (D-103)", () => {
+  it("expone lo adoptado de la nube (no lo que había en el móvil), y lo subido si es el primero", async () => {
+    const nube = new NubeFalsa();
+    const a = dispositivo(nube);
+    expect(a.d.s.estadoInicial).toBeNull();
+    await a.d.s.iniciar();
+    expect(a.d.s.estadoInicial).not.toBeNull(); // el primero sube su estado
+    const b = dispositivo(nube, { ...estadoInicialDemo(), manuales: [] });
+    await b.d.s.iniciar();
+    expect(nombres(b.d.s.estadoInicial!)).toEqual(nombres(a.d.estado)); // adoptó el de la familia
+  });
+});

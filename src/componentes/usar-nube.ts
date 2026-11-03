@@ -373,6 +373,75 @@ export function useNube(
     [],
   );
 
+  /**
+   * Lleva los datos del estado a las tablas (D-094, D-101) y enciende los motores por tablas. Se usa
+   * a mano desde «Cuenta» y, solo, la primera vez que un hogar se conecta con las tablas vacías
+   * (D-103). No borra nada y se puede repetir.
+   */
+  const importarDesde = useCallback(
+    async (
+      c: SupabaseClient<Database>,
+      h: HogarDeUsuario,
+      estado: EstadoHogar,
+    ): Promise<Resultado> => {
+      // 1. Copia en este móvil. Si no se puede guardar, no se sigue: sin red de seguridad no se importa.
+      const copia = guardarRespaldoAntesDeImportar(almacenamientoLocal(), estado, new Date());
+      if (copia === "no-se-pudo") {
+        return {
+          ok: false,
+          mensaje: "No se ha podido guardar la copia de seguridad en este móvil: no importo nada.",
+        };
+      }
+      if (copia === "guardada") window.dispatchEvent(new Event(EVENTO_RESPALDOS));
+      // 2. Las personas primero (para saber cuál soy yo y no tocar mi propio regalo).
+      const subida = await llevarPersonas(c, h.id, estado.personas);
+      if (!subida.ok) return subida;
+      const mia = await miPersonaEnElHogar(c, h.id);
+      if (mia.error) return { ok: false, mensaje: mensajeDeError(mia.error) };
+      const deUuid = new Map(estado.personas.map((p) => [aUuid(h.id, p.id), p.id]));
+      const miId = mia.data ? (deUuid.get(mia.data) ?? null) : null;
+      // 3. Todo lo demás, de una vez (todo o nada).
+      const { error } = await aplicarCambiosATablas(
+        c,
+        h.id,
+        cambiosParaImportar(estado, h.id, miId) as unknown as Json,
+      );
+      if (error) return { ok: false, mensaje: mensajeDeError(error) };
+      // 4. El menú: platos, cenas, notas, comidas del mediodía, valoraciones. Los ingredientes se
+      // emparejan por nombre con el catálogo compartido (creando los que falten).
+      const nubeMenu = crearNubeMenu(c, h.id);
+      let menuListo = true;
+      try {
+        await nubeMenu.leer();
+      } catch {
+        menuListo = false; // falta aplicar la migración del menú en Supabase
+      }
+      if (menuListo) {
+        try {
+          const resolucion = await nubeMenu.resolver(ingredientesPorResolver(estado));
+          const migrado = migrarIdsDePersonas(migrarIdsDeMenu(estado, h.id, resolucion), h.id);
+          await nubeMenu.aplicar(cambiosCompletosMenu(migrado, h.id));
+        } catch (e) {
+          return {
+            ok: false,
+            mensaje: `Lo del hogar se llevó bien, pero el menú no: ${mensajeDeError({ message: e instanceof Error ? e.message : "" })}`,
+          };
+        }
+      }
+      // Desde ahora mandan las tablas: se enciende el motor sin tocar la sincronización del documento.
+      await activarTablas(c, h);
+      if (menuListo) await activarMenu(c, h);
+      return menuListo
+        ? { ok: true }
+        : {
+            ok: false,
+            mensaje:
+              "Lo del hogar se llevó bien. El menú no: falta aplicar en Supabase la migración del menú.",
+          };
+    },
+    [activarTablas, activarMenu],
+  );
+
   const reconectar = useRef<
     ((c: SupabaseClient<Database>, h: HogarDeUsuario) => Promise<Resultado>) | null
   >(null);
@@ -421,8 +490,16 @@ export function useNube(
       }
       sincronizador.current = s;
       guardarJson(CLAVE_HOGAR, h);
-      await activarTablas(c, h);
-      await activarMenu(c, h);
+      const hogarListo = await activarTablas(c, h);
+      const menuListo = await activarMenu(c, h);
+      // Si el hogar aún tiene sus datos solo en el documento, se pasan a tablas ahora, solos
+      // (D-103): con copia previa en el móvil, sin borrar nada y solo la primera vez.
+      const inicial = s.estadoInicial;
+      if ((!hogarListo || !menuListo) && inicial && inicial.personas.length > 0) {
+        void importarDesde(c, h, inicial).then((r) => {
+          if (!r.ok) console.error("Importación automática a tablas:", r.mensaje);
+        });
+      }
       // Lo que quedó sin enviar la última vez (p. ej. se cerró la app sin conexión) se envía ya.
       if (s.hayPendientes) void s.sincronizar();
       const baja = nube.suscribir((r) => s.recibir(r));
@@ -449,7 +526,7 @@ export function useNube(
       setFase("conectado");
       return { ok: true };
     },
-    [desconectar, activarTablas, activarMenu],
+    [desconectar, activarTablas, activarMenu, importarDesde],
   );
 
   useEffect(() => {
@@ -675,63 +752,7 @@ export function useNube(
     importarATablas: async (estado) => {
       const c = cliente.current;
       if (!c || !hogar) return { ok: false, mensaje: "Primero crea el hogar." };
-      // 1. Copia en este móvil. Si no se puede guardar, no se sigue: sin red de seguridad no se importa.
-      const copia = guardarRespaldoAntesDeImportar(almacenamientoLocal(), estado, new Date());
-      if (copia === "no-se-pudo") {
-        return {
-          ok: false,
-          mensaje: "No se ha podido guardar la copia de seguridad en este móvil: no importo nada.",
-        };
-      }
-      if (copia === "guardada") window.dispatchEvent(new Event(EVENTO_RESPALDOS));
-      // 2. Las personas primero (para saber cuál soy yo y no tocar mi propio regalo).
-      const subida = await llevarPersonas(c, hogar.id, estado.personas);
-      if (!subida.ok) return subida;
-      const mia = await miPersonaEnElHogar(c, hogar.id);
-      if (mia.error) return { ok: false, mensaje: mensajeDeError(mia.error) };
-      const deUuid = new Map(estado.personas.map((p) => [aUuid(hogar.id, p.id), p.id]));
-      const miId = mia.data ? (deUuid.get(mia.data) ?? null) : null;
-      // 3. Todo lo demás, de una vez (todo o nada).
-      const { error } = await aplicarCambiosATablas(
-        c,
-        hogar.id,
-        cambiosParaImportar(estado, hogar.id, miId) as unknown as Json,
-      );
-      if (error) return { ok: false, mensaje: mensajeDeError(error) };
-      // 4. El menú: platos, cenas, notas, comidas del mediodía, valoraciones. Los ingredientes se
-      // emparejan por nombre con el catálogo compartido (creando los que falten).
-      const nubeMenu = crearNubeMenu(c, hogar.id);
-      let menuListo = true;
-      try {
-        await nubeMenu.leer();
-      } catch {
-        menuListo = false; // falta aplicar la migración del menú en Supabase
-      }
-      if (menuListo) {
-        try {
-          const resolucion = await nubeMenu.resolver(ingredientesPorResolver(estado));
-          const migrado = migrarIdsDePersonas(
-            migrarIdsDeMenu(estado, hogar.id, resolucion),
-            hogar.id,
-          );
-          await nubeMenu.aplicar(cambiosCompletosMenu(migrado, hogar.id));
-        } catch (e) {
-          return {
-            ok: false,
-            mensaje: `Lo del hogar se llevó bien, pero el menú no: ${mensajeDeError({ message: e instanceof Error ? e.message : "" })}`,
-          };
-        }
-      }
-      // Desde ahora mandan las tablas: se enciende el motor sin tocar la sincronización del documento.
-      await activarTablas(c, hogar);
-      if (menuListo) await activarMenu(c, hogar);
-      return menuListo
-        ? { ok: true }
-        : {
-            ok: false,
-            mensaje:
-              "Lo del hogar se llevó bien. El menú no: falta aplicar en Supabase la migración del menú.",
-          };
+      return importarDesde(c, hogar, estado);
     },
     salir: async () => {
       const c = cliente.current;
