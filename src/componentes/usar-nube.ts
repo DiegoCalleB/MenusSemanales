@@ -4,7 +4,19 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Accion, EstadoHogar } from "@/aplicacion/estado";
 import { type EstadoSync, Sincronizador } from "@/aplicacion/sincronizacion";
+import { adaptadorMenu } from "@/aplicacion/adaptadores-tablas";
 import { SincronizadorTablas } from "@/aplicacion/sincronizacion-tablas";
+import {
+  type CambiosMenu,
+  type LecturaMenu,
+  type ResumenMenu,
+  cambiosCompletosMenu,
+  conservarCamposDeMenu,
+  ingredientesPorResolver,
+  migrarIdsDeMenu,
+  resumenMenuDeCambios,
+  resumenMenuDeLectura,
+} from "@/aplicacion/tablas-menu";
 import {
   type ResumenTablas,
   aUuid,
@@ -12,6 +24,7 @@ import {
   cambiosParaImportar,
   conservarCamposDeTablas,
   leerTablas,
+  migrarIdsDePersonas,
   resumenDeCambios,
   resumenDeLectura,
 } from "@/aplicacion/tablas";
@@ -42,6 +55,7 @@ import {
 } from "@/infraestructura/respaldo";
 import type { Database, Json } from "@/infraestructura/supabase/database.types";
 import { crearNube } from "@/infraestructura/supabase/nube";
+import { crearNubeMenu } from "@/infraestructura/supabase/nube-menu";
 import { crearNubeTablas } from "@/infraestructura/supabase/nube-tablas";
 
 /** Asegura que las personas del estado están en la tabla `persona` (con ids UUID estables). */
@@ -97,7 +111,8 @@ export interface CuentaContexto {
   vistaPreviaTablas: (
     estado: EstadoHogar,
   ) => Promise<
-    { ok: true; seLlevaria: ResumenTablas; yaHay: ResumenTablas } | { ok: false; mensaje: string }
+    | { ok: true; seLlevaria: ResumenTablas & ResumenMenu; yaHay: ResumenTablas & ResumenMenu }
+    | { ok: false; mensaje: string }
   >;
   /** Lleva los datos del documento a las tablas, tras guardar una copia en este móvil. */
   importarATablas: (estado: EstadoHogar) => Promise<Resultado>;
@@ -142,6 +157,10 @@ export function useNube(
   const cliente = useRef<SupabaseClient<Database> | null>(null);
   const sincronizador = useRef<Sincronizador | null>(null);
   const tablas = useRef<SincronizadorTablas | null>(null);
+  const menu = useRef<SincronizadorTablas<LecturaMenu, CambiosMenu> | null>(null);
+  const cerrarMenu = useRef<(() => void) | null>(null);
+  const temporizadorMenu = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const resolucionMenu = useRef<() => Record<string, string>>(() => ({}));
   const cerrarTablas = useRef<(() => void) | null>(null);
   const temporizadorTablas = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cerrar = useRef<(() => void) | null>(null);
@@ -159,7 +178,11 @@ export function useNube(
     cerrarTablas.current?.();
     cerrarTablas.current = null;
     tablas.current = null;
+    cerrarMenu.current?.();
+    cerrarMenu.current = null;
+    menu.current = null;
     if (temporizadorTablas.current) clearTimeout(temporizadorTablas.current);
+    if (temporizadorMenu.current) clearTimeout(temporizadorMenu.current);
     sincronizador.current = null;
     if (temporizador.current) clearTimeout(temporizador.current);
     setSync("inactivo");
@@ -206,6 +229,53 @@ export function useNube(
     [],
   );
 
+  /**
+   * Enciende el motor del menú (platos, cenas, notas, comidas del mediodía, valoraciones) si el
+   * hogar ya lo tiene en tablas (D-101). Va después del de personas: las valoraciones las nombran.
+   */
+  const activarMenu = useCallback(
+    async (c: SupabaseClient<Database>, h: HogarDeUsuario): Promise<boolean> => {
+      cerrarMenu.current?.();
+      cerrarMenu.current = null;
+      menu.current = null;
+      const nube = crearNubeMenu(c, h.id);
+      const { adaptador, resolucion } = adaptadorMenu(h.id, nube.resolver);
+      const motor = new SincronizadorTablas<LecturaMenu, CambiosMenu>(
+        nube,
+        {
+          hogarId: h.id,
+          leer: () => leer.current(),
+          escribir: (e) => escribir.current(e),
+          avisar: () => undefined,
+          antesDeAdoptar: (local, nuevo) => {
+            const r = guardarRespaldoAntesDeLaNube(almacenamientoLocal(), local, nuevo, new Date());
+            if (r === "guardada") window.dispatchEvent(new Event(EVENTO_RESPALDOS));
+          },
+        },
+        adaptador,
+      );
+      try {
+        if ((await motor.iniciar()) !== "activo") return false;
+      } catch (e) {
+        console.error(e);
+        return false;
+      }
+      menu.current = motor;
+      resolucionMenu.current = resolucion;
+      let espera: ReturnType<typeof setTimeout> | null = null;
+      const baja = nube.suscribir(() => {
+        if (espera) clearTimeout(espera);
+        espera = setTimeout(() => void motor.recibir(), 300);
+      });
+      cerrarMenu.current = () => {
+        baja();
+        if (espera) clearTimeout(espera);
+      };
+      return true;
+    },
+    [],
+  );
+
   const conectar = useCallback(
     async (c: SupabaseClient<Database>, h: HogarDeUsuario): Promise<Resultado> => {
       desconectar();
@@ -213,8 +283,13 @@ export function useNube(
       const s = new Sincronizador(nube, {
         leer: () => leer.current(),
         // Si mandan las tablas, lo que llega del documento no pisa lo que viene de ellas.
-        escribir: (e) =>
-          escribir.current(tablas.current ? conservarCamposDeTablas(e, leer.current(), h.id) : e),
+        escribir: (e) => {
+          let x = tablas.current ? conservarCamposDeTablas(e, leer.current(), h.id) : e;
+          if (menu.current) {
+            x = conservarCamposDeMenu(x, leer.current(), h.id, resolucionMenu.current());
+          }
+          escribir.current(x);
+        },
         avisar: setSync,
         antesDeAdoptar: (local, remoto) => {
           const r = guardarRespaldoAntesDeLaNube(almacenamientoLocal(), local, remoto, new Date());
@@ -228,11 +303,14 @@ export function useNube(
       }
       sincronizador.current = s;
       await activarTablas(c, h);
+      await activarMenu(c, h);
       const baja = nube.suscribir((r) => s.recibir(r));
       const alVolver = () => {
         if (document.visibilityState !== "visible") return;
         void tablas.current?.recibir();
         void tablas.current?.sincronizar();
+        void menu.current?.recibir();
+        void menu.current?.sincronizar();
         void nube
           .leer()
           .then((r) => r && s.recibir(r))
@@ -250,7 +328,7 @@ export function useNube(
       setFase("conectado");
       return { ok: true };
     },
-    [desconectar, activarTablas],
+    [desconectar, activarTablas, activarMenu],
   );
 
   const resolverSesion = useCallback(
@@ -302,6 +380,11 @@ export function useNube(
       const motor = tablas.current;
       if (temporizadorTablas.current) clearTimeout(temporizadorTablas.current);
       temporizadorTablas.current = setTimeout(() => void motor.sincronizar(), ESPERA_GUARDADO_MS);
+    }
+    if (menu.current) {
+      const motor = menu.current;
+      if (temporizadorMenu.current) clearTimeout(temporizadorMenu.current);
+      temporizadorMenu.current = setTimeout(() => void motor.sincronizar(), ESPERA_GUARDADO_MS);
     }
     s.registrar(accion);
     if (temporizador.current) clearTimeout(temporizador.current);
@@ -422,10 +505,36 @@ export function useNube(
       const { data, error } = await leerHogarDeTablas(c, hogar.id);
       if (error) return { ok: false, mensaje: mensajeDeError(error) };
       try {
-        return {
-          ok: true,
+        const hogarHoy = {
           seLlevaria: resumenDeCambios(cambiosParaImportar(estado, hogar.id, null)),
           yaHay: resumenDeLectura(leerTablas(data)),
+        };
+        // El menú: si la base de datos aún no tiene sus funciones (falta aplicar la migración),
+        // se enseña a cero y la importación lo salta.
+        let menuYaHay = resumenMenuDeLectura({
+          ingredientes: [],
+          platos: [],
+          excluidos: [],
+          comidas: [],
+          notas: [],
+          almuerzos: [],
+          valoraciones: [],
+        });
+        try {
+          menuYaHay = resumenMenuDeLectura(await crearNubeMenu(c, hogar.id).leer());
+        } catch {
+          /* sin migración del menú */
+        }
+        const menuSeLlevaria = resumenMenuDeCambios(
+          cambiosCompletosMenu(
+            migrarIdsDePersonas(migrarIdsDeMenu(estado, hogar.id, {}), hogar.id),
+            hogar.id,
+          ),
+        );
+        return {
+          ok: true,
+          seLlevaria: { ...hogarHoy.seLlevaria, ...menuSeLlevaria },
+          yaHay: { ...hogarHoy.yaHay, ...menuYaHay },
         };
       } catch {
         return { ok: false, mensaje: "Las tablas devolvieron algo que no entiendo." };
@@ -457,9 +566,40 @@ export function useNube(
         cambiosParaImportar(estado, hogar.id, miId) as unknown as Json,
       );
       if (error) return { ok: false, mensaje: mensajeDeError(error) };
+      // 4. El menú: platos, cenas, notas, comidas del mediodía, valoraciones. Los ingredientes se
+      // emparejan por nombre con el catálogo compartido (creando los que falten).
+      const nubeMenu = crearNubeMenu(c, hogar.id);
+      let menuListo = true;
+      try {
+        await nubeMenu.leer();
+      } catch {
+        menuListo = false; // falta aplicar la migración del menú en Supabase
+      }
+      if (menuListo) {
+        try {
+          const resolucion = await nubeMenu.resolver(ingredientesPorResolver(estado));
+          const migrado = migrarIdsDePersonas(
+            migrarIdsDeMenu(estado, hogar.id, resolucion),
+            hogar.id,
+          );
+          await nubeMenu.aplicar(cambiosCompletosMenu(migrado, hogar.id));
+        } catch (e) {
+          return {
+            ok: false,
+            mensaje: `Lo del hogar se llevó bien, pero el menú no: ${mensajeDeError({ message: e instanceof Error ? e.message : "" })}`,
+          };
+        }
+      }
       // Desde ahora mandan las tablas: se enciende el motor sin tocar la sincronización del documento.
       await activarTablas(c, hogar);
-      return { ok: true };
+      if (menuListo) await activarMenu(c, hogar);
+      return menuListo
+        ? { ok: true }
+        : {
+            ok: false,
+            mensaje:
+              "Lo del hogar se llevó bien. El menú no: falta aplicar en Supabase la migración del menú.",
+          };
     },
     salir: async () => {
       const c = cliente.current;

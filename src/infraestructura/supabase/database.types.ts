@@ -1099,6 +1099,18 @@ export type Database = {
         Args: { p_nombre: string; p_seccion?: string; p_unidad: string }
         Returns: string
       }
+      resolver_ingredientes: {
+        Args: { p_ingredientes: Json }
+        Returns: Json
+      }
+      leer_menu_tablas: {
+        Args: { p_hogar_id: string }
+        Returns: Json
+      }
+      aplicar_cambios_menu: {
+        Args: { p_hogar_id: string; p_cambios: Json }
+        Returns: undefined
+      }
       usar_ia: {
         Args: { p_hogar_id: string }
         Returns: Json

@@ -557,3 +557,31 @@ export function conservarCamposDeMenu(
     ],
   };
 }
+
+// --------------------------------------------------------------------------------------------
+// Resúmenes (para la vista previa de la importación)
+// --------------------------------------------------------------------------------------------
+
+export interface ResumenMenu {
+  platos: number;
+  cenas: number;
+  notas: number;
+  almuerzos: number;
+  valoraciones: number;
+}
+
+export const resumenMenuDeCambios = (c: CambiosMenu): ResumenMenu => ({
+  platos: c.platos?.upsert?.length ?? 0,
+  cenas: c.comidas?.upsert?.length ?? 0,
+  notas: c.notas?.upsert?.length ?? 0,
+  almuerzos: c.almuerzos?.upsert?.length ?? 0,
+  valoraciones: c.valoraciones?.upsert?.length ?? 0,
+});
+
+export const resumenMenuDeLectura = (l: LecturaMenu): ResumenMenu => ({
+  platos: l.platos.length,
+  cenas: l.comidas.length,
+  notas: l.notas.length,
+  almuerzos: l.almuerzos.length,
+  valoraciones: l.valoraciones.length,
+});
