@@ -1,5 +1,5 @@
 import { MAX_BYTES_ARCHIVO_COLE, esTipoValido } from "@/dominio/ia-cole";
-import { comprobarAccesoIa, responderIa } from "@/infraestructura/ia/acceso";
+import { comprobarAccesoIa, motivoDeError, responderIa } from "@/infraestructura/ia/acceso";
 import { transcribirMenuCole } from "@/infraestructura/ia/cole";
 import { IaNoConfigurada } from "@/infraestructura/ia/lista";
 
@@ -30,9 +30,13 @@ export async function POST(request: Request) {
     const texto = await transcribirMenuCole({ mime: archivo.type, base64 });
     return responderIa({ texto, usadas: acceso.usadas, limite: acceso.limite }, 200);
   } catch (e) {
-    // Sin detalles: ni el contenido del archivo ni el error del proveedor salen del servidor.
+    // El proveedor no devuelve nada al cliente: solo un código corto (archivo y respuesta quedan aquí).
+    const motivo = motivoDeError(e);
+    console.error("[ia] fallo", motivo);
     return responderIa(
-      { error: e instanceof IaNoConfigurada ? "ia-no-configurada" : "no-disponible" },
+      e instanceof IaNoConfigurada
+        ? { error: "ia-no-configurada" }
+        : { error: "no-disponible", motivo },
       502,
     );
   }

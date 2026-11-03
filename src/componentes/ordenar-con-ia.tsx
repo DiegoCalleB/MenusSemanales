@@ -46,12 +46,14 @@ export function OrdenarConIa({ yaEnLista }: { yaEnLista: readonly string[] }) {
       const cuerpo = (await r.json().catch(() => ({}))) as {
         articulos?: ArticuloIa[];
         error?: string;
+        motivo?: string;
         usadas?: number | null;
         limite?: number | null;
       };
       if (!r.ok) {
         setProblema(
-          MENSAJES[cuerpo.error ?? ""] ?? "La IA no está disponible ahora. Inténtalo luego.",
+          MENSAJES[cuerpo.error ?? ""] ??
+            `La IA no está disponible ahora. Inténtalo luego.${cuerpo.motivo ? ` (${cuerpo.motivo})` : ""}`,
         );
         setFase("escribiendo");
         return;

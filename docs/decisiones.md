@@ -862,3 +862,9 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **Seguridad y privacidad:** mismas reglas que D-098 (sesión, hogar y tope diario en la base de datos, contado antes de llamar; clave solo en el servidor); comprobación de tipo y tamaño antes de gastar nada; el archivo no se guarda y los errores del proveedor no llegan al navegador. El contenido del documento se trata como datos, no como instrucciones. La pantalla avisa de que se envía a una IA.
 - **Refactor:** la comprobación de acceso a la IA (clave, sesión, hogar, tope) pasa a `infraestructura/ia/acceso.ts`, compartida por la lista de la compra y el cole.
 - **Límites:** (1) la transcripción puede equivocarse: por eso se revisa antes de leer. (2) Un PDF muy grande o de muchas páginas puede tardar y cortarse a los 55 s. (3) No incluye el calendario escolar (festivos y vacaciones): es la siguiente pieza. (4) Necesita `GEMINI_API_KEY` en Railway.
+
+## D-106 — Los fallos de la IA dicen qué ha fallado
+
+**Contexto.** Al subir el PDF del cole apareció «No se ha podido leer el archivo» sin más pistas: tanto un error de Google (clave, modelo, formato) como del contador de uso salían igual, y desde el móvil no hay forma de ver los registros.
+
+**Decisión.** Las rutas `/api/ia/*` devuelven además un `motivo` corto y seguro (`ia-http-404`, `ia-tiempo`, `ia-red`, `uso-<código>`) que la pantalla muestra entre paréntesis y que se registra en el servidor. Nunca viaja el contenido del archivo ni el cuerpo de la respuesta del proveedor. La transcripción ignora ahora las traducciones al inglés que trae el menú real del cole.

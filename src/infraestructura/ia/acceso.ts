@@ -29,9 +29,25 @@ export async function comprobarAccesoIa(): Promise<
       respuesta:
         uso.error.code === "53400"
           ? responderIa({ error: "tope-diario" }, 429)
-          : responderIa({ error: "no-disponible" }, 502),
+          : responderIa(
+              { error: "no-disponible", motivo: `uso-${uso.error.code ?? "sin-codigo"}` },
+              502,
+            ),
     };
   }
   const { usadas, limite } = (uso.data ?? {}) as { usadas?: number; limite?: number };
   return { ok: true, usadas: usadas ?? null, limite: limite ?? null };
+}
+
+/**
+ * Un código corto y seguro para saber QUÉ falló (p. ej. `ia-http-404`) sin enseñar ni el contenido
+ * del archivo ni el cuerpo de la respuesta del proveedor. Se registra en el servidor y viaja al
+ * cliente para poder diagnosticar desde el móvil.
+ */
+export function motivoDeError(e: unknown): string {
+  const mensaje = e instanceof Error ? e.message : "";
+  if (/^ia-http-\d{3}$/.test(mensaje)) return mensaje;
+  if (e instanceof Error && (e.name === "TimeoutError" || e.name === "AbortError"))
+    return "ia-tiempo";
+  return "ia-red";
 }

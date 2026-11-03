@@ -1,5 +1,5 @@
 import { peticionListaSchema } from "@/dominio/ia-lista";
-import { comprobarAccesoIa } from "@/infraestructura/ia/acceso";
+import { comprobarAccesoIa, motivoDeError } from "@/infraestructura/ia/acceso";
 import { IaNoConfigurada, ordenarLista } from "@/infraestructura/ia/lista";
 
 const CABECERAS = { "Cache-Control": "no-store", "Content-Type": "application/json" } as const;
@@ -37,9 +37,13 @@ export async function POST(request: Request) {
       200,
     );
   } catch (e) {
-    // Sin detalles: ni el texto de la persona ni el error del proveedor salen del servidor.
+    // El proveedor no devuelve nada al cliente: solo un código corto (texto de la persona y respuesta quedan aquí).
+    const motivo = motivoDeError(e);
+    console.error("[ia] fallo", motivo);
     return responder(
-      { error: e instanceof IaNoConfigurada ? "ia-no-configurada" : "no-disponible" },
+      e instanceof IaNoConfigurada
+        ? { error: "ia-no-configurada" }
+        : { error: "no-disponible", motivo },
       502,
     );
   }

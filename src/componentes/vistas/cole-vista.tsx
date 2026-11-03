@@ -96,10 +96,15 @@ export function ColeVista() {
       const datos = new FormData();
       datos.append("archivo", archivo);
       const r = await fetch("/api/ia/cole", { method: "POST", body: datos });
-      const cuerpo = (await r.json().catch(() => ({}))) as { texto?: string; error?: string };
+      const cuerpo = (await r.json().catch(() => ({}))) as {
+        texto?: string;
+        error?: string;
+        motivo?: string;
+      };
       if (!r.ok) {
         setProblemaArchivo(
-          MENSAJES[cuerpo.error ?? ""] ?? "No se ha podido leer el archivo. Inténtalo luego.",
+          MENSAJES[cuerpo.error ?? ""] ??
+            `No se ha podido leer el archivo. Inténtalo luego.${cuerpo.motivo ? ` (${cuerpo.motivo})` : ""}`,
         );
       } else if (!cuerpo.texto) {
         setProblemaArchivo(
