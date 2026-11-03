@@ -6,8 +6,11 @@ import "server-only";
  * aquí (p. ej. `gemini-2.5-flash`).
  */
 export const MODELO_IA = process.env.IA_MODELO?.trim() || "gemini-flash-latest";
-/** Si el principal está saturado se prueba con este (una versión fija, más estable). */
-export const MODELO_RESPALDO = "gemini-2.5-flash";
+/**
+ * Opcional: si el principal está saturado se prueba con este. Sin valor por defecto a propósito:
+ * Google retira modelos con frecuencia y uno fijo en el código acabaría dando 404.
+ */
+export const MODELO_RESPALDO = process.env.IA_MODELO_RESPALDO?.trim() || "";
 
 const URL_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 /** Errores pasajeros del proveedor: merece la pena reintentar. */
@@ -18,7 +21,7 @@ const dormir = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
  * Llama a `generateContent` con reintentos: un 503 de Google («modelo saturado») suele durar
- * segundos, así que se reintenta una vez y, si sigue, se prueba con el modelo de respaldo. Todo
+ * segundos, así que se reintenta una vez y, si sigue, se prueba con el de respaldo si hay uno configurado. Todo
  * dentro de un plazo total. Lanza `ia-http-<código>` con el último fallo.
  */
 export async function llamarGemini(
@@ -29,9 +32,12 @@ export async function llamarGemini(
   const llamar = opciones.llamar ?? fetch;
   const espera = opciones.espera ?? dormir;
   const limite = Date.now() + opciones.plazoMs;
-  const modelos = MODELO_IA === MODELO_RESPALDO ? [MODELO_IA] : [MODELO_IA, MODELO_RESPALDO];
+  const modelos =
+    MODELO_RESPALDO === "" || MODELO_IA === MODELO_RESPALDO
+      ? [MODELO_IA]
+      : [MODELO_IA, MODELO_RESPALDO];
   const intentos = modelos.flatMap((m) => [m, m]);
-  let ultimo = 0;
+  let primero = 0;
   for (let i = 0; i < intentos.length; i++) {
     const restante = limite - Date.now();
     if (restante <= 0) break;
@@ -46,10 +52,10 @@ export async function llamarGemini(
       },
     );
     if (r.ok) return r;
-    ultimo = r.status;
+    primero ||= r.status; // el error del modelo principal es el que explica qué pasa
     if (!REINTENTABLES.has(r.status)) break;
     // Antes de repetir con el mismo modelo se espera un poco; al cambiar de modelo, no.
     if (intentos[i] === intentos[i + 1]) await espera(ESPERA_MS);
   }
-  throw new Error(`ia-http-${ultimo || 504}`);
+  throw new Error(`ia-http-${primero || 504}`);
 }

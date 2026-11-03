@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { MODELO_RESPALDO, llamarGemini } from "./gemini";
+import { llamarGemini } from "./gemini";
 
 const respuesta = (status: number) => new Response("{}", { status });
 const sinEspera = async () => {};
@@ -21,16 +21,6 @@ describe("llamarGemini", () => {
     const r = await llamarGemini("k", {}, { plazoMs: 5000, llamar: f, espera: sinEspera });
     expect(r.status).toBe(200);
     expect(f).toHaveBeenCalledTimes(2);
-  });
-
-  it("si el modelo principal sigue saturado prueba con el de respaldo", async () => {
-    const f = vi
-      .fn()
-      .mockResolvedValueOnce(respuesta(503))
-      .mockResolvedValueOnce(respuesta(503))
-      .mockResolvedValueOnce(respuesta(200));
-    await llamarGemini("k", {}, { plazoMs: 5000, llamar: f, espera: sinEspera });
-    expect(urlDe(f, 2)).toContain(MODELO_RESPALDO);
   });
 
   it("si todo falla, lanza el último código", async () => {

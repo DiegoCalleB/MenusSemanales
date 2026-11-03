@@ -873,4 +873,4 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 
 **Contexto.** La primera subida real devolvió `ia-http-503`: Google respondió «modelo saturado», un fallo pasajero habitual en los modelos Flash más nuevos.
 
-**Decisión.** Un módulo común (`infraestructura/ia/gemini.ts`) llama a Gemini con reintentos: ante 429/500/502/503/504 repite una vez tras 1,2 s con el modelo principal y después prueba con `gemini-2.5-flash` (también dos intentos), todo dentro de un plazo total (25 s la lista, 55 s el PDF). Los errores que no son pasajeros (clave, formato) no se reintentan. Lo usan la lista y el menú del cole.
+**Decisión.** Un módulo común (`infraestructura/ia/gemini.ts`) llama a Gemini con reintentos: ante 429/500/502/503/504 repite una vez tras 1,2 s con el modelo principal y después prueba con `gemini-2.5-flash` , todo dentro de un plazo total (25 s la lista, 55 s el PDF). Los errores que no son pasajeros (clave, formato) no se reintentan. Lo usan la lista y el menú del cole.
