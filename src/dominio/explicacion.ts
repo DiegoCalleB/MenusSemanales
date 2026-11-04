@@ -1,4 +1,5 @@
 import { type Componente, SUGERENCIA_COMPONENTE } from "./componentes";
+import { KCAL_CONTUNDENTE, KCAL_LIGERO, LIGEROS } from "./compatibilidad";
 import { estadoDelGrupo } from "./equilibrio";
 import { type FechaIso, diasEntre } from "./fechas";
 import {
@@ -27,9 +28,6 @@ const GRUPO: Record<GrupoPlato, string> = {
   huevo: "huevo",
   otro: "otro tipo de plato",
 };
-const LIGEROS: readonly GrupoPlato[] = ["verdura", "pescado", "huevo"];
-const KCAL_CONTUNDENTE = 700;
-const KCAL_LIGERO = 540;
 
 export interface ExplicacionOpcion {
   /** Una frase con la razón principal. */

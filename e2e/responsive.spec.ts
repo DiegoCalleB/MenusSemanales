@@ -471,7 +471,10 @@ test.describe("flujos en móvil", () => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/menu");
     await pagina.getByRole("button", { name: /Miércoles 4 de noviembre/ }).click();
+    // La nota de 1 a 5 con el cole se ve sin abrir nada; el detalle, al desplegar «Por qué».
+    await expect(pagina.getByText(/\d\/5 · /).first()).toBeVisible();
     await pagina.getByText("Por qué").first().click();
+    await expect(pagina.getByText(/Compatibilidad con el cole: \d de 5$/).first()).toBeVisible();
     await expect(
       pagina.getByText(/han comido verdura y carne en el cole; para compensar/).first(),
     ).toBeVisible();
