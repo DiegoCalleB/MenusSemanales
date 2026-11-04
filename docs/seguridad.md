@@ -42,7 +42,7 @@ La seguridad no se añade al final: cada decisión de arquitectura parte de la p
 ### Navegador
 
 - **CSP estricta con nonce por petición** (`src/proxy.ts`, `src/infraestructura/seguridad/csp.ts`): sin `unsafe-inline` ni `unsafe-eval` en producción; `connect-src` limitado a la app y a Supabase; `frame-ancestors 'none'`, `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`.
-- **Cabeceras** (`src/infraestructura/seguridad/cabeceras.ts`): HSTS (2 años), `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy` (sin cámara, micrófono ni ubicación), `Cross-Origin-Opener-Policy`.
+- **Cabeceras** (`src/infraestructura/seguridad/cabeceras.ts`): HSTS (2 años), `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy` (sin cámara ni ubicación; micrófono solo para la propia página, que lo usa el dictado de la compra), `Cross-Origin-Opener-Policy`.
 - **Límite conocido:** `'strict-dynamic'` confía en los scripts que crea un script de confianza. La CSP frena el HTML inyectado (el XSS habitual), pero no a una dependencia comprometida que ya se ejecuta; eso lo cubren los controles de cadena de suministro.
 
 ### Servidor (Next.js)

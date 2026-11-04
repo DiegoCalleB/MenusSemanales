@@ -55,7 +55,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ token: stri
   if (!resumen) return noEncontrado();
 
   const ics = generarIcs(
-    "Menús Semanales",
+    "¡Hecho!",
     eventosSuscritos(resumen, { hoy: hoyEnMadrid(), para }),
     new Date(),
     1,

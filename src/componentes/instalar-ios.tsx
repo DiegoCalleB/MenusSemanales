@@ -38,10 +38,10 @@ export function AyudaInstalarIos() {
   );
   if (!mostrar || cerrado) return null;
   return (
-    <section aria-labelledby="instalar" className="tarjeta bg-suave-1 flex flex-col gap-2">
-      <h2 id="instalar" className="text-lg font-extrabold">
+    <details className="tarjeta bg-suave-1 flex flex-col gap-2 p-3 sm:p-4">
+      <summary className="flex min-h-11 cursor-pointer items-center text-base font-extrabold">
         📲 Ponla como app en tu iPhone
-      </h2>
+      </summary>
       <ol className="list-decimal space-y-1 pl-5 text-base">
         <li>
           Toca el botón <strong>Compartir</strong> de Safari (el cuadrado con la flecha hacia
@@ -54,7 +54,7 @@ export function AyudaInstalarIos() {
       </ol>
       <button
         type="button"
-        className="boton-suave w-fit"
+        className="boton-suave mt-2 w-fit"
         onClick={() => {
           try {
             window.localStorage.setItem(CLAVE, "1");
@@ -64,8 +64,8 @@ export function AyudaInstalarIos() {
           setCerrado(true);
         }}
       >
-        Entendido
+        Entendido, no me lo vuelvas a enseñar
       </button>
-    </section>
+    </details>
   );
 }

@@ -1,4 +1,4 @@
-/* Notificaciones de Menús Semanales (D-115). Solo enseña el aviso y abre la app al tocarlo. */
+/* Notificaciones de ¡Hecho! (D-115). Solo enseña el aviso y abre la app al tocarlo. */
 self.addEventListener("push", (evento) => {
   let datos = {};
   try {
@@ -7,9 +7,7 @@ self.addEventListener("push", (evento) => {
     datos = { cuerpo: evento.data ? evento.data.text() : "" };
   }
   const titulo =
-    typeof datos.titulo === "string" && datos.titulo
-      ? datos.titulo.slice(0, 100)
-      : "Menús Semanales";
+    typeof datos.titulo === "string" && datos.titulo ? datos.titulo.slice(0, 100) : "¡Hecho!";
   const cuerpo = typeof datos.cuerpo === "string" ? datos.cuerpo.slice(0, 300) : "";
   evento.waitUntil(
     self.registration.showNotification(titulo, {

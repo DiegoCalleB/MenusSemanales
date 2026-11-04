@@ -988,3 +988,24 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Contexto:** al revisar la app en un móvil de 390 px, «Comer» tenía seis pestañas con dos escondidas por el borde, cuatro bloques de botones antes del primer día y, al abrir un día, la comida del mediodía iba antes que la cena. «Hoy» ponía al mismo nivel todas las tarjetas.
 - **Decisión:** las pestañas se reparten en dos filas (se ven todas, sin deslizar). En el menú, «Semana/15 días» va junto al título, «Proponer días sin cena» queda como acción principal y compartir se pliega en «Compartir el menú». Dentro de un día, la cena va primero y la comida del mediodía, la nota y «Llego tarde / No cenamos en casa» se pliegan en «Comida, nota y más opciones». En «Hoy» el orden pasa a: cena, lo de hoy, lo que toca en casa, tareas y compra, cumples, citas; el cole y el regalo van al final, el cole plegado.
 - **Consecuencia:** una fila menos de compra a la vista en móvil (el test pasa de 5 a 4 filas visibles). Nada cambia en los datos.
+
+## D-120 · Primera impresión: portada más corta y bienvenida de cumpleaños
+
+- **Franja de estado:** con la cuenta conectada y guardando bien ya no sale nada («Modo Diego», «sincronizado»…); solo aparece sin conexión, con error o probando sin cuenta.
+- **Cumple duplicado:** una fecha señalada «Cumpleaños de Ana» ya no repite el cumple que la app conoce (`cuentaAtras`).
+- **Bienvenida de cumpleaños (`BienvenidaCumple`):** el día del cumple, a quien cumple le sale **una vez al año** una pantalla de fiesta con el mensaje de quien le preparó el regalo. El mensaje se guarda en **su móvil** al abrir el enlace de `/regalo` (nunca pasa por el servidor); sin él, sale el texto de siempre.
+- **Portada:** el cole va justo bajo la cena; la ayuda de instalar en iPhone es un desplegable de una línea.
+- **Comer:** «Llego tarde» deja de ser pestaña (sigue en la portada y en Cena); la ruta sigue siendo de Comer.
+- **Compra vacía:** pantalla amable en vez de «0 de 0» y barra vacía; «¡Todo comprado!» cuando se ha terminado.
+
+## D-121 · Nuevo nombre: «¡Hecho!»
+
+- **Decisión (Diego):** la app deja de llamarse «Menús Semanales», que describía solo un cuarto de lo que hace, y pasa a **«¡Hecho!»**: es el alivio de quitarse algo de la cabeza. Lema: «Tú descansa, yo me encargo». Icono: una cajita marcada con un tick.
+- **Qué cambia:** manifiesto (nombre «¡Hecho!», nombre corto «Hecho» bajo el icono del iPhone), título, cabecera y navegación, bienvenida y regalo, textos de invitación, correo del resumen, avisos, calendario y archivos compartidos. «Hecho con Menús Semanales» pasa a «Enviado desde ¡Hecho!» para no repetir la palabra.
+- **Qué NO cambia (a propósito):** los identificadores internos (`menus-semanales` en el paquete, en el respaldo `app`, en los `UID` del calendario y en las claves de `localStorage`), para no romper respaldos, suscripciones de calendario ni preferencias ya guardadas.
+- **Pendiente:** comprobar dominio y nombre en tiendas de apps. En un iPhone que ya tenga la app instalada, el nombre y el icono no se actualizan solos: hay que quitarla de la pantalla de inicio y volver a añadirla.
+
+## D-122 · El micrófono estaba bloqueado por nuestras propias cabeceras
+
+- **Fallo:** `Permissions-Policy: microphone=()` prohibía el micrófono a todos, también a nuestra página, así que el 🎤 de la compra fallaba siempre con «no permitido» (visto en Android) sin llegar a pedir permiso.
+- **Arreglo:** `microphone=(self)`. Cámara y ubicación siguen denegadas, y los iframes de terceros no pueden usar el micrófono. El navegador vuelve a pedir el permiso al usuario la primera vez que pulsa 🎤.

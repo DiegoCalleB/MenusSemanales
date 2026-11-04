@@ -6,6 +6,7 @@ import { BotonAvisos } from "@/componentes/avisos-campana";
 import { NavegacionInferior, NavegacionLateral, Pestanas } from "@/componentes/navegacion";
 import { BotonTema, ProveedorTema } from "@/componentes/tema";
 import { BotonPerfil, PuertaDePerfil } from "@/componentes/perfiles";
+import { BienvenidaCumple } from "@/componentes/bienvenida-cumple";
 import { ProveedorHogar } from "@/componentes/proveedor-hogar";
 
 /**
@@ -33,10 +34,10 @@ export default function LayoutApp({ children }: { children: ReactNode }) {
                   aria-hidden="true"
                   className="bg-suave-1 flex size-9 items-center justify-center rounded-xl text-xl"
                 >
-                  🍽️
+                  ✅
                 </span>
                 <span className="text-marca hidden flex-1 text-lg font-extrabold tracking-tight min-[430px]:block">
-                  Menús Semanales
+                  ¡Hecho!
                 </span>
                 <span className="flex-1 min-[430px]:hidden" />
                 <BotonAvisos />
@@ -56,6 +57,7 @@ export default function LayoutApp({ children }: { children: ReactNode }) {
           <NavegacionInferior />
           <AnadirRapido />
           <AvisoGlobal />
+          <BienvenidaCumple />
         </PuertaDePerfil>
       </ProveedorHogar>
     </ProveedorTema>

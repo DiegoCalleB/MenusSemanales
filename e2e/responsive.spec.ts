@@ -244,7 +244,11 @@ test.describe("flujos en móvil", () => {
     await pagina.reload({ waitUntil: "networkidle" });
     await expect(pagina.getByRole("checkbox", { name: /Velas/ })).toBeVisible();
 
-    await pagina.getByRole("button", { name: "Restablecer ejemplo" }).click();
+    // El botón vive en «Cuenta → Datos de este dispositivo»: la franja de arriba lo cambia por un aviso
+    // cuando la nube está a medio configurar (como en la CI, con URL pero sin clave).
+    await cargar(pagina, "/cuenta");
+    await pagina.getByRole("button", { name: "Restablecer ejemplo" }).first().click();
+    await cargar(pagina, "/compra");
     await expect(pagina.getByRole("checkbox", { name: /Velas/ })).toHaveCount(0);
     await pagina.reload({ waitUntil: "networkidle" });
     await expect(pagina.getByRole("checkbox", { name: /Velas/ })).toHaveCount(0);
@@ -836,7 +840,6 @@ test.describe("flujos en móvil", () => {
       ["Comer", "Compra", "/compra"],
       ["Comer", "Despensa", "/despensa"],
       ["Comer", "Platos", "/menu/platos"],
-      ["Comer", "Llego tarde", "/menu/emergencia"],
       ["Casa", "Recurrente", "/casa"],
       ["Casa", "Por persona", "/tareas"],
       ["Casa", "Reparto", "/reparto"],
@@ -1175,7 +1178,7 @@ test.describe("flujos en móvil", () => {
     await expect(avisos.getByRole("button", { name: /Activar los avisos/ })).toHaveCount(0);
     expect(await whatsapp.first().getAttribute("href")).toMatch(/^https:\/\/wa\.me\/\?text=/);
     await pagina.getByText("Ver mensaje").first().click();
-    await expect(pagina.locator("pre").first()).toContainText("Hecho con Menús Semanales");
+    await expect(pagina.locator("pre").first()).toContainText("Enviado desde ¡Hecho!");
     // El archivo de calendario se descarga con eventos de cena.
     const descarga = pagina.waitForEvent("download");
     await pagina.getByRole("button", { name: /Calendario \(\.ics\)/ }).click();

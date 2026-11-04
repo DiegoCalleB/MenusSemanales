@@ -162,16 +162,20 @@ export function CompraVista() {
           <h1 className="text-2xl font-extrabold tracking-tight">
             Lista de la compra <span aria-hidden="true">🛒</span>
           </h1>
-          <span className="shrink-0 text-base font-medium tabular-nums">
-            {hechos.length} de {total}
-          </span>
+          {total > 0 && (
+            <span className="shrink-0 text-base font-medium tabular-nums">
+              {hechos.length} de {total}
+            </span>
+          )}
         </div>
-        <progress
-          max={Math.max(total, 1)}
-          value={hechos.length}
-          aria-label="Progreso de la compra"
-          className="h-1.5 w-full overflow-hidden rounded-full accent-[var(--marca)]"
-        />
+        {total > 0 && (
+          <progress
+            max={total}
+            value={hechos.length}
+            aria-label="Progreso de la compra"
+            className="h-1.5 w-full overflow-hidden rounded-full accent-[var(--marca)]"
+          />
+        )}
         <div role="group" aria-label="Vista de la lista" className="grid grid-cols-4 gap-1">
           {VISTAS.map((v) => (
             <button
@@ -196,10 +200,22 @@ export function CompraVista() {
       {!modoTienda && <OrdenarConIa yaEnLista={pendientes.map((i) => i.nombre)} />}
 
       {pendientes.length === 0 ? (
-        <p className="tarjeta text-tinta-suave text-base">
-          No falta nada por comprar. Cuando elijáis la próxima cena, lo que haga falta aparecerá
-          aquí.
-        </p>
+        <section
+          aria-label="Lista vacía"
+          className="from-suave-1 to-suave-3 border-borde flex flex-col items-center gap-1 rounded-3xl border bg-linear-to-br px-4 py-8 text-center"
+        >
+          <p aria-hidden="true" className="text-5xl">
+            {total > 0 ? "🎉" : "🧺"}
+          </p>
+          <h2 className="text-xl font-extrabold">
+            {total > 0 ? "¡Todo comprado!" : "Nada que comprar por ahora"}
+          </h2>
+          <p className="text-tinta-suave max-w-xs text-base">
+            {total > 0
+              ? "Ya está todo en la cesta. Buen trabajo."
+              : "Cuando elijáis una cena, lo que haga falta aparecerá aquí solo. También puedes apuntar algo arriba, o tocar «Lo de siempre»."}
+          </p>
+        </section>
       ) : (
         <div className="tarjeta flex flex-col gap-1 p-2 sm:p-3">
           {grupos.map(({ clave, titulo, items }) => (

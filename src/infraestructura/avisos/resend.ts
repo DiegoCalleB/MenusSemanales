@@ -18,7 +18,7 @@ export class CorreoNoConfigurado extends Error {
 }
 
 /** Remitente por defecto: el de pruebas de Resend, que solo escribe al dueño de la cuenta de Resend. */
-const REMITENTE_DE_PRUEBA = "Menús Semanales <onboarding@resend.dev>";
+const REMITENTE_DE_PRUEBA = "¡Hecho! <onboarding@resend.dev>";
 
 /**
  * Envía un correo con Resend (D-114). La clave (`RESEND_API_KEY`) solo existe en el servidor y va

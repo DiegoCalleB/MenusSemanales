@@ -29,6 +29,12 @@ describe("pilares de la app", () => {
     expect(pilarDe("/no-existe")).toBeNull();
   });
 
+  it("«Llego tarde» ya no es pestaña, pero sigue siendo de Comer", () => {
+    const comer = PILARES.find((p) => p.id === "comer");
+    expect(comer?.pestanas.some((t) => t.href === "/menu/emergencia")).toBe(false);
+    expect(pilarDe("/menu/emergencia")?.id).toBe("comer");
+  });
+
   it("el botón de cada pilar lleva a una de sus propias pestañas", () => {
     for (const p of PILARES.filter((x) => x.pestanas.length > 0)) {
       expect(

@@ -19,7 +19,7 @@ import { resumenDeTareas } from "@/dominio/tareas";
 import { LoDeHoy } from "../lo-de-hoy";
 import { NuevaCita } from "../nueva-cita";
 
-/** Portada: primero lo de hoy (cena, lo que toca hacer), después lo pendiente y, plegado, lo demás. */
+/** Portada: arriba, la cena y el cole de hoy; después lo pendiente y, plegado, lo demás. */
 export function InicioVista() {
   const { estado, despachar } = useHogar();
   const [yoId] = useYo();
@@ -131,6 +131,17 @@ export function InicioVista() {
         </div>
       </section>
 
+      {diaCole && (
+        <section aria-labelledby="cole-hoy" className="flex flex-col gap-2">
+          <h2 id="cole-hoy" className="text-lg font-extrabold">
+            {diaCole === estado.hoy
+              ? "Hoy en el cole"
+              : `Próximo menú del cole · ${fechaCorta(diaCole)}`}
+          </h2>
+          <TarjetaCole cole={estado.colegio[diaCole] ?? null} fecha={diaCole} />
+        </section>
+      )}
+
       <AyudaInstalarIos />
 
       {estado.personas.some((p) => p.activa) && <LoDeHoy />}
@@ -223,22 +234,6 @@ export function InicioVista() {
         </div>
         {apuntandoCita && <NuevaCita alGuardar={() => setApuntandoCita(false)} />}
       </section>
-
-      {diaCole && (
-        <details className="tarjeta p-0">
-          <summary className="flex min-h-14 cursor-pointer items-center px-4 py-2">
-            <h2 id="cole-hoy" className="text-lg font-extrabold">
-              <span aria-hidden="true">🎒 </span>
-              {diaCole === estado.hoy
-                ? "Hoy en el cole"
-                : `Próximo menú del cole · ${fechaCorta(diaCole)}`}
-            </h2>
-          </summary>
-          <div className="px-4 pb-4">
-            <TarjetaCole cole={estado.colegio[diaCole] ?? null} fecha={diaCole} />
-          </div>
-        </details>
-      )}
 
       {yo?.id === "diego" && (
         <Link href="/regalo" className="boton-suave w-fit">

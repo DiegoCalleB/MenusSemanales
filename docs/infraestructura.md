@@ -4,7 +4,7 @@
 
 | Dato           | Valor                                                                                                      |
 | -------------- | ---------------------------------------------------------------------------------------------------------- |
-| Nombre         | Menus Semanales                                                                                            |
+| Nombre         | ¡Hecho!                                                                                                    |
 | Ref            | `inzyvqffesgjhvdrgdgg`                                                                                     |
 | URL de la API  | https://inzyvqffesgjhvdrgdgg.supabase.co                                                                   |
 | Región         | eu-west-1 (Irlanda)                                                                                        |

@@ -47,7 +47,7 @@ describe("copia de seguridad", () => {
     expect(motivo("5")).toMatch(/No es un archivo/);
     expect(motivo("null")).toMatch(/No es un archivo/);
     expect(motivo(JSON.stringify({ app: "otra", version: 1, estado: {} }))).toMatch(
-      /no es de Menús/,
+      /no es una copia de ¡Hecho!/,
     );
     expect(
       motivo(JSON.stringify({ app: "menus-semanales", version: VERSION_RESPALDO + 1, estado: {} })),
