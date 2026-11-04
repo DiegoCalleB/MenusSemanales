@@ -84,3 +84,16 @@ export async function llamarGemini(
   }
   throw new Error(primero || "ia-red");
 }
+
+/** El texto de la primera respuesta, o null si no hay (bloqueada, vacía o sin candidatos). */
+export function textoDeRespuestaGemini(cuerpo: unknown): string | null {
+  const c = cuerpo as {
+    candidates?: Array<{ finishReason?: string; content?: { parts?: Array<{ text?: unknown }> } }>;
+  } | null;
+  const candidato = c?.candidates?.[0];
+  if (!candidato || candidato.finishReason === "SAFETY") return null;
+  const texto = (candidato.content?.parts ?? [])
+    .map((p) => (typeof p.text === "string" ? p.text : ""))
+    .join("");
+  return texto.trim() === "" ? null : texto;
+}

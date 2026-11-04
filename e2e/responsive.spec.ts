@@ -1002,6 +1002,110 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 
+  test("platos: completar un plato con IA (respuesta simulada) y guardarlo con sus ingredientes", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await pagina.route("**/api/ia/plato", (ruta) =>
+      ruta.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          propuesta: {
+            grupo: "carne",
+            minutosActivos: 25,
+            ligero: false,
+            pasos: "Empana el pollo y fríelo.",
+            ingredientes: [
+              {
+                nombre: "Pechuga de pollo",
+                cantidad: 150,
+                unidad: "g",
+                seccion: "carne",
+                opcional: false,
+              },
+              {
+                nombre: "Ingrediente raro de prueba",
+                cantidad: 30,
+                unidad: "g",
+                seccion: "otros",
+                opcional: false,
+              },
+            ],
+          },
+          usadas: 1,
+          limite: 40,
+        }),
+      }),
+    );
+    await cargar(pagina, "/menu/platos");
+    await pagina.getByRole("button", { name: "Nuevo plato" }).click();
+    await pagina.getByLabel("Nombre", { exact: true }).fill("Pollo empanado de prueba");
+    await pagina.getByRole("button", { name: "✨ Completar con IA" }).click();
+    const propuesta = pagina.getByRole("group", { name: "Propuesta de la IA" });
+    await expect(propuesta).toBeVisible();
+    await expect(propuesta.getByText(/Ingrediente raro de prueba/)).toBeVisible();
+    await expect(propuesta.getByText("nuevo")).toBeVisible();
+    await propuesta.getByRole("button", { name: "Usar esta propuesta" }).click();
+    await expect(pagina.getByLabel(/Minutos de trabajo/)).toHaveValue("25");
+    await pagina.getByRole("button", { name: "Guardar plato" }).click();
+    await expect(pagina.getByText("Pollo empanado de prueba").first()).toBeVisible();
+    await expect(pagina.getByText(/2 ingredientes/).first()).toBeVisible();
+    await contexto.close();
+  });
+
+  test("fechas: leer una circular del cole con IA (respuesta simulada) y apuntar lo elegido", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await pagina.route("**/api/ia/circular", (ruta) =>
+      ruta.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          items: [
+            {
+              tipo: "cita",
+              titulo: "Excursión al zoo de prueba",
+              fecha: "2026-11-20",
+              hasta: null,
+              hora: "09:00",
+            },
+            {
+              tipo: "tarea",
+              titulo: "Firmar la autorización de prueba",
+              fecha: null,
+              hasta: null,
+              hora: null,
+            },
+            {
+              tipo: "cita",
+              titulo: "No quiero esta de prueba",
+              fecha: "2026-11-25",
+              hasta: null,
+              hora: null,
+            },
+          ],
+          pasados: 1,
+          usadas: 1,
+          limite: 40,
+        }),
+      }),
+    );
+    await cargar(pagina, "/fechas");
+    await pagina.getByRole("button", { name: "✨ Leer una circular del cole" }).click();
+    const circular = pagina.getByRole("region", { name: "Leer una circular del cole" });
+    await circular.getByLabel("…o pega el texto").fill("Excursión al zoo el 20 de noviembre");
+    await circular.getByRole("button", { name: "Leer el texto" }).click();
+    await expect(circular.getByText(/Revísalo/)).toBeVisible();
+    await expect(circular.getByText(/1 cosa ya pasada/)).toBeVisible();
+    await circular.getByLabel(/Apuntar:.*Cita.*25 nov/).uncheck();
+    await circular.getByRole("button", { name: "Apuntar 2 cosas" }).click();
+    await expect(pagina.getByText("Excursión al zoo de prueba").first()).toBeVisible();
+    await expect(pagina.getByText("No quiero esta de prueba")).toHaveCount(0);
+    await contexto.close();
+  });
+
   test("enviar: el menú se puede mandar como agenda, tabla o completo", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/compartir");

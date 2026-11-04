@@ -1,11 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { avisosDePlato, normalizarNombre, validarPlato } from "@/dominio/catalogo";
+import {
+  type FilaPropuesta,
+  MAX_CATALOGO_IA,
+  enlazarConCatalogo,
+  propuestaPlatoSchema,
+} from "@/dominio/ia-plato";
 import { GRUPOS_PLATO, type GrupoPlato, type PlatoMenu } from "@/dominio/menu";
 import { SECCIONES, type Seccion, type Unidad } from "@/dominio/tipos";
 import { EMOJI_GRUPO, NOMBRE_SECCION, formatearNumero } from "../formato";
+import { mensajeDeIa } from "../ia-mensajes";
 import { useHogar } from "../proveedor-hogar";
 
 const NOMBRE_GRUPO: Record<GrupoPlato, string> = {
@@ -24,6 +31,15 @@ interface FilaIngrediente {
   ingredienteId: string;
   cantidad: string;
   opcional: boolean;
+  /** Ingrediente nuevo propuesto por la IA que aún se está creando: su nombre. */
+  pendiente?: string;
+}
+interface PropuestaVista {
+  grupo: GrupoPlato;
+  minutos: number;
+  ligero: boolean;
+  pasos: string;
+  filas: FilaPropuesta[];
 }
 interface Borrador {
   id?: string;
@@ -73,7 +89,111 @@ export function PlatosVista() {
     unidad: Unidad;
     seccion: Seccion;
   } | null>(null);
+  const [ia, setIa] = useState<{
+    cargando: boolean;
+    problema: string;
+    propuesta: PropuestaVista | null;
+  }>({ cargando: false, problema: "", propuesta: null });
   const id = useId();
+
+  // Los ingredientes nuevos que propuso la IA se crean al usar la propuesta; cuando ya existen,
+  // se enlazan a su fila del formulario.
+  useEffect(() => {
+    void Promise.resolve().then(() =>
+      setBorrador((b) => {
+        if (!b || !b.filas.some((f) => f.pendiente)) return b;
+        let cambio = false;
+        const filas = b.filas.map((f) => {
+          if (!f.pendiente) return f;
+          const ing = estado.ingredientes.find(
+            (i) => normalizarNombre(i.nombre) === normalizarNombre(f.pendiente ?? ""),
+          );
+          if (!ing) return f;
+          cambio = true;
+          return { ...f, ingredienteId: ing.id, pendiente: undefined };
+        });
+        return cambio ? { ...b, filas } : b;
+      }),
+    );
+  }, [estado.ingredientes]);
+
+  async function completarConIa(de: Borrador) {
+    if (de.nombre.trim().length < 2) return;
+    setIa({ cargando: true, problema: "", propuesta: null });
+    try {
+      const r = await fetch("/api/ia/plato", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nombre: de.nombre.trim(),
+          ...(de.grupo !== "otro" ? { grupo: de.grupo } : {}),
+          catalogo: estado.ingredientes
+            .slice(0, MAX_CATALOGO_IA)
+            .map((i) => ({ nombre: i.nombre, unidad: i.unidad })),
+        }),
+      });
+      const datos = (await r.json().catch(() => ({}))) as {
+        propuesta?: unknown;
+        error?: string;
+        motivo?: string;
+      };
+      if (!r.ok) {
+        setIa({ cargando: false, problema: mensajeDeIa(datos), propuesta: null });
+        return;
+      }
+      const v = propuestaPlatoSchema.safeParse(datos.propuesta);
+      if (!v.success) {
+        setIa({
+          cargando: false,
+          problema:
+            "La IA no ha sabido proponer ese plato. Prueba con otro nombre o escríbelo a mano.",
+          propuesta: null,
+        });
+        return;
+      }
+      setIa({
+        cargando: false,
+        problema: "",
+        propuesta: {
+          grupo: v.data.grupo,
+          minutos: v.data.minutosActivos,
+          ligero: v.data.ligero,
+          pasos: v.data.pasos,
+          filas: enlazarConCatalogo(v.data.ingredientes, estado.ingredientes),
+        },
+      });
+    } catch {
+      setIa({ cargando: false, problema: "Sin conexión. Inténtalo de nuevo.", propuesta: null });
+    }
+  }
+
+  function usarPropuesta() {
+    const p = ia.propuesta;
+    if (!p || !borrador) return;
+    for (const f of p.filas) {
+      if (!f.ingredienteId) {
+        despachar({
+          tipo: "ingrediente/crear",
+          ingrediente: { nombre: f.nombre, unidad: f.unidad, seccion: f.seccion },
+        });
+      }
+    }
+    setBorrador({
+      ...borrador,
+      grupo: borrador.grupo === "otro" ? p.grupo : borrador.grupo,
+      minutos: String(p.minutos),
+      pasos: borrador.pasos.trim() === "" ? p.pasos : borrador.pasos,
+      ligero: borrador.ligero || p.ligero,
+      filas: p.filas.map((f, n) => ({
+        clave: n,
+        ingredienteId: f.ingredienteId ?? "",
+        ...(f.ingredienteId ? {} : { pendiente: f.nombre }),
+        cantidad: String(f.cantidad),
+        opcional: f.opcional,
+      })),
+    });
+    setIa({ cargando: false, problema: "", propuesta: null });
+  }
 
   const ingredientes = useMemo(
     () => [...estado.ingredientes].sort((a, b) => a.nombre.localeCompare(b.nombre, "es")),
@@ -159,6 +279,7 @@ export function PlatosVista() {
           onClick={() => {
             setBorrador(vacio());
             setErrores([]);
+            setIa({ cargando: false, problema: "", propuesta: null });
           }}
         >
           Nuevo plato
@@ -182,6 +303,68 @@ export function PlatosVista() {
               onChange={(e) => setBorrador({ ...borrador, nombre: e.target.value })}
             />
           </label>
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              className="boton-suave w-fit"
+              disabled={ia.cargando || borrador.nombre.trim().length < 2}
+              onClick={() => void completarConIa(borrador)}
+            >
+              {ia.cargando ? "Pensando…" : "✨ Completar con IA"}
+            </button>
+            <p className="text-tinta-suave text-sm">
+              La IA propone ingredientes, tiempo y pasos a partir del nombre. Tú lo revisas antes de
+              guardar. Solo se envía el nombre del plato.
+            </p>
+            {ia.problema && (
+              <p
+                role="status"
+                className="bg-aviso-fondo text-aviso-texto rounded-2xl p-3 text-base"
+              >
+                {ia.problema}
+              </p>
+            )}
+            {ia.propuesta && (
+              <div
+                role="group"
+                aria-label="Propuesta de la IA"
+                className="bg-suave-2 flex flex-col gap-2 rounded-2xl p-3"
+              >
+                <p className="text-base font-bold">
+                  Propuesta de la IA ({ia.propuesta.minutos} min). Revísala: puede equivocarse.
+                </p>
+                <ul className="flex flex-col gap-1 text-base">
+                  {ia.propuesta.filas.map((f) => (
+                    <li key={f.nombre}>
+                      {f.nombre} · {formatearNumero(f.cantidad)} {f.unidad}
+                      {f.opcional && " (opcional)"}
+                      {!f.ingredienteId && (
+                        <span className="etiqueta bg-superficie ml-1">nuevo</span>
+                      )}
+                      {f.revisarUnidad && (
+                        <span className="text-aviso-texto text-sm"> · revisa la cantidad</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                {ia.propuesta.pasos && (
+                  <p className="text-tinta-suave text-sm">{ia.propuesta.pasos}</p>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" className="boton" onClick={usarPropuesta}>
+                    Usar esta propuesta
+                  </button>
+                  <button
+                    type="button"
+                    className="boton-suave"
+                    onClick={() => setIa({ cargando: false, problema: "", propuesta: null })}
+                  >
+                    Descartar
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
           <label className="flex min-h-11 items-center gap-3 text-base font-semibold">
             <input
               type="checkbox"
@@ -476,6 +659,22 @@ export function PlatosVista() {
               )}
             </div>
             <div className="flex flex-wrap gap-2">
+              {p.ingredientes.length === 0 && (
+                <button
+                  type="button"
+                  className="boton"
+                  aria-label={`Completar con IA: ${p.nombre}`}
+                  onClick={() => {
+                    const b = desdePlato(p);
+                    setBorrador(b);
+                    setErrores([]);
+                    window.scrollTo({ top: 0 });
+                    void completarConIa(b);
+                  }}
+                >
+                  ✨ Completar con IA
+                </button>
+              )}
               <button
                 type="button"
                 className="boton-suave"

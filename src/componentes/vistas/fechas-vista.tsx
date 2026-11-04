@@ -8,6 +8,7 @@ import { type CuentaAtras, cuentaAtras } from "@/dominio/cuenta-atras";
 import { fechasParaCompartir } from "@/aplicacion/compartir";
 import { textoFechas } from "@/dominio/compartir";
 import { Apuntar } from "../apuntar";
+import { LeerCircular } from "../leer-circular";
 import { BotonesCompartir } from "../compartir-botones";
 import { useHogar, useCuenta } from "../proveedor-hogar";
 import { useCalendarioFamilia } from "../usar-calendario-familia";
@@ -100,6 +101,7 @@ export function FechasVista() {
 
       <EstadoGuardado />
       <Apuntar />
+      <LeerCircular />
 
       <section aria-labelledby="que-viene" className="tarjeta flex flex-col gap-3">
         <h2 id="que-viene" className="text-xl font-extrabold">
