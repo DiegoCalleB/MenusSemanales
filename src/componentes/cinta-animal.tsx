@@ -18,3 +18,9 @@ export function CintaAnimal({
   const tipo = estampado === "los-dos" ? (otra ? "cebra" : "leopardo") : estampado;
   return <div aria-hidden="true" className={`cinta cinta-${tipo} ${className}`} />;
 }
+
+/** ¿Se pinta la cebra grande de fondo? Sí con «cebra» y con «leopardo y cebra». */
+export function useFondoCebra(): boolean {
+  const [estampado] = useEstampado();
+  return estampado === "cebra" || estampado === "los-dos";
+}

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { type Regalo, decodificarRegalo, enlaceDeRegalo } from "@/aplicacion/regalo";
-import { CintaAnimal } from "@/componentes/cinta-animal";
+import { CintaAnimal, useFondoCebra } from "@/componentes/cinta-animal";
 import { guardarRegaloRecibido } from "@/componentes/regalo-recibido";
 
 const BORRADOR: Regalo = {
@@ -43,8 +43,13 @@ export function RegaloVista() {
 function Abrir({ regalo }: { regalo: Regalo }) {
   // Se recuerda en este móvil para volver a enseñar el mensaje cuando llegue el día.
   useEffect(() => guardarRegaloRecibido(regalo), [regalo]);
+  const fondoCebra = useFondoCebra();
   return (
-    <main className="from-suave-1 to-suave-2 flex min-h-dvh items-center justify-center bg-linear-to-br p-4">
+    <main
+      className={`flex min-h-dvh items-center justify-center p-6 ${
+        fondoCebra ? "fondo-cebra" : "from-suave-1 to-suave-2 bg-linear-to-br"
+      }`}
+    >
       <article className="tarjeta flex w-full max-w-lg flex-col gap-5 overflow-hidden text-center sm:p-8">
         <CintaAnimal className="-mx-4 -mt-4 sm:-mx-8 sm:-mt-8" />
         <p aria-hidden="true" className="text-5xl motion-safe:animate-bounce">
