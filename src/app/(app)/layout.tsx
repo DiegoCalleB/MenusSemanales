@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { BannerPrueba } from "@/componentes/banner-prueba";
 import { AnadirRapido } from "@/componentes/anadir-rapido";
 import { AvisoGlobal } from "@/componentes/aviso";
+import { BotonAvisos } from "@/componentes/avisos-campana";
 import { NavegacionInferior, NavegacionLateral, Pestanas } from "@/componentes/navegacion";
 import { BotonTema, ProveedorTema } from "@/componentes/tema";
 import { BotonPerfil, PuertaDePerfil } from "@/componentes/perfiles";
@@ -34,9 +35,11 @@ export default function LayoutApp({ children }: { children: ReactNode }) {
                 >
                   🍽️
                 </span>
-                <span className="text-marca flex-1 text-lg font-extrabold tracking-tight">
+                <span className="text-marca hidden flex-1 text-lg font-extrabold tracking-tight min-[430px]:block">
                   Menús Semanales
                 </span>
+                <span className="flex-1 min-[430px]:hidden" />
+                <BotonAvisos />
                 <BotonPerfil />
                 <BotonTema />
               </header>

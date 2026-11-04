@@ -961,6 +961,28 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 
+  test("avisos: la campanita enseña lo de hoy y el número se borra al abrirla", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/");
+    // Una cita de hoy es algo que pide atención.
+    const rapida = pagina.getByRole("region", { name: "Citas y eventos" });
+    await rapida.getByRole("button", { name: "＋ Cita" }).click();
+    await rapida.getByLabel("Qué hay que apuntar").fill("Reunión de hoy");
+    await rapida.getByRole("button", { name: "＋ Apuntar" }).click();
+    const campana = pagina.getByRole("button", { name: /^Avisos/ });
+    await expect(campana).toContainText(/nuevo/);
+    await campana.click();
+    const panel = pagina.getByRole("dialog", { name: "Avisos de hoy" });
+    await expect(panel).toBeVisible();
+    await expect(panel.getByText("Hoy: Reunión de hoy")).toBeVisible();
+    await pagina.keyboard.press("Escape");
+    await expect(panel).toBeHidden();
+    await expect(pagina.getByRole("button", { name: /^Avisos$/ })).toBeVisible(); // sin «nuevos»
+    await contexto.close();
+  });
+
   test("enviar: el menú se puede mandar como agenda, tabla o completo", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/compartir");

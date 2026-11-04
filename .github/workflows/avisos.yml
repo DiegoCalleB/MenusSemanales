@@ -1,0 +1,37 @@
+name: Avisos diarios
+
+# Pide a la app que mande el resumen de la mañana por correo. Madrid tiene dos horarios (UTC+1 en
+# invierno, UTC+2 en verano), así que se llama a las dos horas posibles y la app solo envía cuando
+# en Madrid son las 10 (o la hora elegida en AVISOS_HORA). Resend no repite el mismo correo.
+on:
+  schedule:
+    - cron: "7 8,9 * * *"
+  workflow_dispatch:
+    inputs:
+      forzar:
+        description: "Enviar ahora aunque no sea la hora (para probar)"
+        type: boolean
+        default: false
+
+# Sin permisos sobre el repositorio: solo hace una petición a la app.
+permissions: {}
+
+jobs:
+  enviar:
+    name: Pedir el resumen de hoy
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Llamar a la app
+        env:
+          URL_APP: ${{ secrets.AVISOS_URL }}
+          SECRETO: ${{ secrets.AVISOS_CRON_SECRET }}
+          FORZAR: ${{ inputs.forzar && '?forzar=1' || '' }}
+        run: |
+          set -euo pipefail
+          : "${URL_APP:?Falta el secreto AVISOS_URL}"
+          : "${SECRETO:?Falta el secreto AVISOS_CRON_SECRET}"
+          curl --fail-with-body --silent --show-error --max-time 60 \
+            --request POST \
+            --header "Authorization: Bearer ${SECRETO}" \
+            "${URL_APP%/}/api/avisos/diario${FORZAR}"

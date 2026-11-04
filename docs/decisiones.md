@@ -934,3 +934,15 @@ Las tareas de Casa ocupaban una tarjeta cada una. Ahora son filas de una línea 
 ## Comidas en la pantalla de Comer
 
 La comida del mediodía (D-079) solo se podía apuntar desde el detalle del día en el calendario. Ahora también desde **Comer**: cada día plegado enseña «☀️ lo que se come» junto al cole, y al abrirlo salen dos bloques, **Comida** (plato de la casa o texto libre, varios, «por decidir») y **Cena** (como antes). Mismo componente que en el calendario, así que entra igual en la compra, en el mensaje de enviar y en el calendario suscrito.
+
+## D-114 — Avisos: campanita en la app y resumen diario por correo
+
+**Contexto.** Querían recordatorios dentro de la app, por correo y como notificación del móvil, de momento solo para Diego y a las 10:00.
+
+**Núcleo común.** `dominio/avisos.ts` calcula los avisos del día —cumpleaños a 30, 14, 7, 3, 1 y 0 días (con «empezad a pensar el regalo» y «hay que comprar»), citas de hoy y mañana, lo que toca en casa (atrasado o de hoy), cena de hoy y de mañana sin elegir— y los ordena (lo que pide algo hoy, lo que se acerca, lo informativo). Es el mismo cálculo para todos los canales: recibe el estado de la app o el resumen mínimo del calendario suscrito (`entradaDeProyeccion`), así que el servidor no necesita ninguna clave maestra de Supabase.
+
+**Campanita.** Botón 🔔 en la cabecera con el número de avisos nuevos (se pone a cero al abrirlo; lo visto se recuerda ese día en el móvil). En pantallas estrechas la cabecera deja solo el logo para que quepa.
+
+**Correo.** `POST /api/avisos/diario`, protegido por `AVISOS_CRON_SECRET` (comparación en tiempo constante; sin él, 401), lee el resumen del calendario con `AVISOS_CALENDARIO_TOKEN` y envía con Resend a `AVISOS_CORREO`. Solo envía a la hora elegida de Madrid (`AVISOS_HORA`, por defecto 10), así que el programador puede llamar dos veces al día (invierno y verano) y solo cuenta una; `?forzar=1` sirve para probar. Resend recibe una `Idempotency-Key` por día: aunque se pida dos veces, no duplica el correo. El programador es un workflow de GitHub Actions (`.github/workflows/avisos.yml`, cron `7 8,9 * * *` UTC, sin permisos sobre el repositorio, también se puede lanzar a mano). Los errores no cuentan nada del proveedor.
+
+**Límites.** Con el remitente de pruebas de Resend (`onboarding@resend.dev`), el correo solo llega al dueño de la cuenta de Resend; para escribir a otras personas hace falta un dominio verificado. GitHub puede retrasar unos minutos un workflow programado. No he podido probar el envío real ni el programador.

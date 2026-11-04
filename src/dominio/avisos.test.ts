@@ -1,0 +1,157 @@
+import { describe, expect, it } from "vitest";
+import {
+  type EntradaAvisos,
+  avisosDeHoy,
+  avisosQueImportan,
+  entradaDeProyeccion,
+  fechaLarga,
+  notificacionDelDia,
+  resumenDelDia,
+} from "./avisos";
+import type { ProyeccionCalendario } from "./calendario-suscrito";
+
+const base: EntradaAvisos = {
+  hoy: "2026-11-03",
+  cenaHoy: ["Pollo empanado", "Sopa"],
+  cenaManana: ["Huevos"],
+  comidaHoy: [],
+  citas: [],
+  tareas: [],
+  cumples: [],
+};
+const ids = (e: EntradaAvisos) => avisosDeHoy(e).map((a) => a.id);
+
+describe("avisos del día", () => {
+  it("la fecha larga sale en español", () => {
+    expect(fechaLarga("2026-11-03")).toBe("martes 3 de noviembre");
+  });
+
+  it("con la cena elegida, solo informa; sin cena, pide elegirla", () => {
+    expect(avisosDeHoy(base).map((a) => [a.id, a.nivel])).toEqual([["cena-hoy", "info"]]);
+    const sin = avisosDeHoy({ ...base, cenaHoy: [] });
+    expect(sin[0]).toMatchObject({ id: "cena-hoy-falta", nivel: "ya" });
+  });
+
+  it("avisa de la cena de mañana si falta, salvo que mañana no se cene en casa", () => {
+    expect(ids({ ...base, cenaManana: [] })).toContain("cena-manana-falta");
+    expect(ids({ ...base, cenaManana: [], mananaSinCena: true })).not.toContain(
+      "cena-manana-falta",
+    );
+  });
+
+  it("cumpleaños: a 30, 14, 7, 3, 1 y 0 días, no entre medias", () => {
+    const c = (mes: number, dia: number) => ({ ...base, cumples: [{ nombre: "Ana", mes, dia }] });
+    expect(ids(c(11, 3))[0]).toBe("cumple-Ana-0"); // hoy
+    expect(ids(c(11, 10))[0]).toBe("cumple-Ana-7");
+    expect(ids(c(12, 3))[0]).toBe("cumple-Ana-30");
+    expect(ids(c(11, 8)).some((i) => i.startsWith("cumple"))).toBe(false); // a 5 días
+    const a30 = avisosDeHoy(c(12, 3)).find((a) => a.id === "cumple-Ana-30");
+    expect(a30?.detalle).toBe("Empezad a pensar el regalo");
+    expect(avisosDeHoy(c(11, 3)).find((a) => a.id === "cumple-Ana-0")?.nivel).toBe("ya");
+  });
+
+  it("citas de hoy y de mañana, no de otros días, ordenadas", () => {
+    const e = {
+      ...base,
+      citas: [
+        { fecha: "2026-11-04", titulo: "Dentista", hora: "17:00" },
+        { fecha: "2026-11-03", titulo: "Reunión", hora: "09:00" },
+        { fecha: "2026-11-20", titulo: "Lejos", hora: null },
+      ],
+    };
+    const citas = avisosDeHoy(e).filter((a) => a.id.startsWith("cita"));
+    expect(citas.map((a) => a.titulo)).toEqual(["Hoy 09:00: Reunión", "Mañana 17:00: Dentista"]);
+  });
+
+  it("lo que toca en casa, atrasado o de hoy, en un solo aviso con tope", () => {
+    const t = (n: number, desde: string) => ({
+      id: `t${n}`,
+      titulo: `Tarea ${n}`,
+      emoji: "🧺",
+      cadaDias: 7,
+      responsableId: null,
+      ultimaVez: null,
+      desde,
+    });
+    const tareas = [1, 2, 3, 4, 5, 6, 7]
+      .map((n) => t(n, "2026-11-01"))
+      .concat([t(8, "2026-12-01")]);
+    const casa = avisosDeHoy({ ...base, tareas }).find((a) => a.id === "casa-hoy");
+    expect(casa?.titulo).toContain("tocan");
+    expect(casa?.titulo).toContain("y 2 más");
+    expect(casa?.titulo).not.toContain("Tarea 8");
+  });
+
+  it("primero lo que pide algo hoy, luego lo que se acerca y al final lo informativo", () => {
+    const e = {
+      ...base,
+      cenaManana: [],
+      comidaHoy: ["Paella"],
+      citas: [{ fecha: "2026-11-03", titulo: "Reunión", hora: null }],
+    };
+    expect(avisosDeHoy(e).map((a) => a.nivel)).toEqual(["ya", "pronto", "info", "info"]);
+    expect(avisosQueImportan(avisosDeHoy(e))).toHaveLength(2);
+  });
+});
+
+describe("resumen y notificación", () => {
+  const avisos = avisosDeHoy({ ...base, comidaHoy: ["Paella"], cenaManana: [] });
+
+  it("el resumen lleva asunto, texto y HTML escapado", () => {
+    const peligroso = avisosDeHoy({
+      ...base,
+      citas: [{ fecha: "2026-11-03", titulo: "<b>x</b> & y", hora: null }],
+    });
+    const r = resumenDelDia("2026-11-03", peligroso);
+    expect(r.asunto).toContain("martes 3 de noviembre");
+    expect(r.asunto).toContain("cena Pollo empanado + Sopa");
+    expect(r.html).not.toContain("<b>x</b>");
+    expect(r.html).toContain("&lt;b&gt;x&lt;/b&gt; &amp; y");
+    expect(r.texto).toContain("🍝 Cena: Pollo empanado + Sopa");
+  });
+
+  it("la notificación es corta: título con la cena y hasta tres avisos", () => {
+    const n = notificacionDelDia("2026-11-03", avisos);
+    expect(n.titulo).toBe("Hoy cena: Pollo empanado + Sopa");
+    expect(n.cuerpo.split("\n").length).toBeLessThanOrEqual(3);
+    expect(n.cuerpo.length).toBeLessThanOrEqual(240);
+  });
+});
+
+describe("a partir del resumen de la base de datos", () => {
+  const p: ProyeccionCalendario = {
+    personas: [],
+    cenas: [
+      { fecha: "2026-11-03", nombre: "Pollo empanado" },
+      { fecha: "2026-11-03", nombre: "Sopa" },
+    ],
+    almuerzos: [{ fecha: "2026-11-03", texto: "Paella" }],
+    eventos: {},
+    agenda: [{ fecha: "2026-11-03", hasta: null, hora: "18:15", titulo: "Psicotécnico" }],
+    casa: [
+      {
+        titulo: "Sábanas",
+        emoji: "🛏️",
+        cadaDias: 14,
+        responsableId: null,
+        ultimaVez: null,
+        desde: "2026-11-02",
+      },
+    ],
+    cumples: [{ nombre: "Diego", dia: 7, mes: 11 }],
+  };
+  it("saca cena, comida, cita, casa y cumple del día", () => {
+    const e = entradaDeProyeccion(p, "2026-11-03");
+    expect(e.cenaHoy).toEqual(["Pollo empanado", "Sopa"]);
+    expect(e.comidaHoy).toEqual(["Paella"]);
+    const idsDe = avisosDeHoy(e).map((a) => a.id);
+    expect(idsDe).toEqual(
+      expect.arrayContaining(
+        ["cena-hoy", "comida-hoy", "casa-hoy", "cumple-Diego-4"].filter(
+          (i) => i !== "cumple-Diego-4",
+        ),
+      ),
+    );
+    expect(idsDe.some((i) => i.startsWith("cita-2026-11-03"))).toBe(true);
+  });
+});
