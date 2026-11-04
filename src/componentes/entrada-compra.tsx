@@ -10,7 +10,7 @@ interface Reconocimiento {
   interimResults: boolean;
   maxAlternatives: number;
   onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
-  onerror: (() => void) | null;
+  onerror: ((e: { error?: string }) => void) | null;
   onend: (() => void) | null;
   start: () => void;
   stop: () => void;
@@ -68,10 +68,21 @@ export function EntradaCompra({ yaEnLista }: { yaEnLista: ReadonlySet<string> })
       const dicho = e.results[0]?.[0]?.transcript ?? "";
       if (dicho.trim() !== "") apuntar(dicho);
     };
-    r.onerror = () =>
+    r.onerror = (e) => {
+      const motivo = e.error ?? "";
+      if (motivo === "no-speech" || motivo === "aborted") {
+        setProblema("No te he oído. Pulsa 🎤 y habla otra vez, o escribe lo que falta.");
+        return;
+      }
+      // Sin permiso o sin servicio (en el iPhone pasa a menudo con la app puesta en la pantalla de
+      // inicio): el dictado del teclado sí funciona, así que dejamos el cursor listo para usarlo.
       setProblema(
-        "No se ha podido usar el micrófono del navegador. Usa el micrófono de tu teclado (🎤) para dictar.",
+        motivo === "not-allowed" || motivo === "service-not-allowed"
+          ? "Este móvil no deja usar el micrófono desde la app. Toca el campo y usa el micrófono de tu teclado (🎤) para dictar."
+          : "No se ha podido usar el micrófono del navegador. Usa el micrófono de tu teclado (🎤) para dictar.",
       );
+      campo.current?.focus();
+    };
     r.onend = () => setEscuchando(false);
     setEscuchando(true);
     try {
