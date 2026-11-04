@@ -212,3 +212,11 @@ export function entradaDeProyeccion(p: ProyeccionCalendario, hoy: FechaIso): Ent
     cumples: p.cumples.map((c) => ({ nombre: c.nombre, dia: c.dia, mes: c.mes })),
   };
 }
+
+/** `AVISOS_CORREO` admite varias direcciones separadas por comas o espacios. */
+export function direccionesDeAvisos(valor: string | undefined): string[] {
+  return (valor ?? "")
+    .split(/[\s,;]+/)
+    .filter((d) => /^[^\s@]+@[^\s@]+$/.test(d))
+    .slice(0, 10);
+}

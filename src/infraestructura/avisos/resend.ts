@@ -1,7 +1,8 @@
 import "server-only";
 
 export interface CorreoParaEnviar {
-  para: string;
+  /** Una o varias direcciones. */
+  para: string[];
   asunto: string;
   texto: string;
   html: string;
@@ -38,7 +39,7 @@ export async function enviarCorreo(
     },
     body: JSON.stringify({
       from: process.env.AVISOS_DE?.trim() || REMITENTE_DE_PRUEBA,
-      to: [c.para],
+      to: c.para,
       subject: c.asunto,
       text: c.texto,
       html: c.html,

@@ -86,7 +86,7 @@ describe("POST /api/avisos/diario", () => {
     expect(r.status).toBe(200);
     expect((await r.json()).enviado).toBe(true);
     const c = m.enviar.mock.calls[0]?.[0];
-    expect(c.para).toBe("diego@ejemplo.test");
+    expect(c.para).toEqual(["diego@ejemplo.test"]);
     expect(c.asunto).toContain("martes 3 de noviembre");
     expect(c.asunto).toContain("Pollo empanado");
   });

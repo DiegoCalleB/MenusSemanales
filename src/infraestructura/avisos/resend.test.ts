@@ -4,7 +4,7 @@ vi.mock("server-only", () => ({}));
 import { CorreoNoConfigurado, enviarCorreo } from "./resend";
 
 const correo = {
-  para: "a@b.test",
+  para: ["a@b.test"],
   asunto: "Hola",
   texto: "t",
   html: "<p>t</p>",

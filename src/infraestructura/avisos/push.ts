@@ -1,4 +1,5 @@
 import "server-only";
+import { direccionesDeAvisos } from "@/dominio/avisos";
 import webpush from "web-push";
 
 export interface SuscripcionPush {
@@ -30,8 +31,8 @@ export async function enviarPush(
   if (!publica || !privada) return "fallo";
   const sujeto =
     process.env.VAPID_SUBJECT?.trim() ||
-    (process.env.AVISOS_CORREO
-      ? `mailto:${process.env.AVISOS_CORREO.trim()}`
+    (direccionesDeAvisos(process.env.AVISOS_CORREO)[0]
+      ? `mailto:${direccionesDeAvisos(process.env.AVISOS_CORREO)[0]}`
       : "mailto:avisos@example.com");
   try {
     await enviar(sub, JSON.stringify(mensaje), {

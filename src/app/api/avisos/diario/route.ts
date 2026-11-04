@@ -7,6 +7,7 @@ import {
 } from "@/dominio/avisos";
 import { hoyEnMadrid, leerResumenDelCalendario } from "@/infraestructura/calendario-suscrito";
 import { enviarPush, pushConfigurado } from "@/infraestructura/avisos/push";
+import { direccionesDeAvisos } from "@/dominio/avisos";
 import { CorreoNoConfigurado, enviarCorreo } from "@/infraestructura/avisos/resend";
 import { leerSuscripciones, olvidarSuscripcion } from "@/infraestructura/avisos/suscripciones";
 
@@ -43,8 +44,8 @@ export async function POST(request: Request) {
   if (!iguales(dado, secreto)) return responder({ error: "no-autorizado" }, 401);
 
   const token = process.env.AVISOS_CALENDARIO_TOKEN ?? "";
-  const para = process.env.AVISOS_CORREO?.trim() ?? "";
-  const quiereCorreo = para.includes("@");
+  const para = direccionesDeAvisos(process.env.AVISOS_CORREO);
+  const quiereCorreo = para.length > 0;
   const quierePush = pushConfigurado();
   if (!/^[0-9a-f]{64}$/.test(token) || (!quiereCorreo && !quierePush)) {
     return responder({ error: "no-configurado" }, 503);

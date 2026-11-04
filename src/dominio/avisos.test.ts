@@ -3,6 +3,7 @@ import {
   type EntradaAvisos,
   avisosDeHoy,
   avisosQueImportan,
+  direccionesDeAvisos,
   entradaDeProyeccion,
   fechaLarga,
   notificacionDelDia,
@@ -153,5 +154,16 @@ describe("a partir del resumen de la base de datos", () => {
       ),
     );
     expect(idsDe.some((i) => i.startsWith("cita-2026-11-03"))).toBe(true);
+  });
+});
+
+describe("direccionesDeAvisos", () => {
+  it("separa por comas o espacios y descarta lo que no es un correo", () => {
+    expect(direccionesDeAvisos("a@b.test, c@d.test  x ;e@f.test")).toEqual([
+      "a@b.test",
+      "c@d.test",
+      "e@f.test",
+    ]);
+    expect(direccionesDeAvisos(undefined)).toEqual([]);
   });
 });
