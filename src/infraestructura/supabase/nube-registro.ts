@@ -29,16 +29,14 @@ export function crearNubeRegistro(
     },
     /** Lo que apunta una persona aparece en el móvil de la otra. */
     suscribir(alCambiar) {
-      const canal: RealtimeChannel = cliente.channel(`hogar-registro-${hogarId}`).on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "registro_hogar",
-          filter: `hogar_id=eq.${hogarId}`,
-        },
-        () => alCambiar(),
-      );
+      let canal: RealtimeChannel = cliente.channel(`hogar-registro-${hogarId}`);
+      for (const table of ["registro_hogar", "premio_hogar", "canje_hogar"]) {
+        canal = canal.on(
+          "postgres_changes",
+          { event: "*", schema: "public", table, filter: `hogar_id=eq.${hogarId}` },
+          () => alCambiar(),
+        );
+      }
       canal.subscribe();
       return () => {
         void cliente.removeChannel(canal);

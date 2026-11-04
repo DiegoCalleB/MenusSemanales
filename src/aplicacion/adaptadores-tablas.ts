@@ -140,6 +140,6 @@ export const adaptadorRegistro: Adaptador<LecturaRegistro, CambiosRegistro> = {
   aEstado: aplicarLecturaDeRegistro,
   diferencias: diferenciasRegistro,
   aplicarALectura: aplicarCambiosALecturaRegistro,
-  huella: (e) => JSON.stringify(e.registro),
+  huella: (e) => JSON.stringify([e.registro, e.premios, e.canjes]),
   preparar: (local) => local,
 };

@@ -1238,6 +1238,36 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 
+  test("tareas: las tareas hechas dan estrellas y se canjean por premios", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/tareas");
+    await pagina.getByRole("button", { name: /^Alba/ }).click();
+    await pagina.getByLabel("Añadir una tarea a Alba").fill("recoger la mesa");
+    await pagina.getByRole("button", { name: "Añadir", exact: true }).click();
+    await pagina.getByRole("checkbox", { name: /Recoger la mesa/ }).check();
+    await expect(pagina.getByLabel(/estrellas para gastar/)).toHaveAttribute(
+      "aria-label",
+      /^[1-9]\d* estrellas para gastar/,
+    );
+    // Sin premios se ofrecen los de ejemplo; con coste alto no se puede canjear aún.
+    await pagina.getByRole("button", { name: "Poner premios de ejemplo" }).click();
+    await expect(pagina.getByRole("button", { name: /^Canjear Plan especial/ })).toBeDisabled();
+    // Un premio barato propio sí.
+    await pagina.getByRole("button", { name: "Editar" }).click();
+    await pagina.getByLabel("Nombre del premio").fill("Un abrazo");
+    await pagina.getByLabel("Estrellas que cuesta").fill("1");
+    await pagina.getByRole("button", { name: "Añadir premio" }).click();
+    await pagina.getByRole("button", { name: "Listo" }).click();
+    await pagina.getByRole("button", { name: /^Canjear Un abrazo/ }).click();
+    await expect(pagina.getByRole("status")).toContainText("ha conseguido: Un abrazo");
+    await pagina.reload({ waitUntil: "networkidle" });
+    await pagina.getByRole("button", { name: /^Alba/ }).click();
+    await expect(pagina.getByRole("button", { name: "Devolver Un abrazo" })).toBeVisible();
+    await pagina.getByRole("button", { name: "Devolver Un abrazo" }).click();
+    await expect(pagina.getByRole("button", { name: "Devolver Un abrazo" })).toHaveCount(0);
+    await contexto.close();
+  });
+
   test("tareas: apuntar para una persona, marcar, recargar y quitar", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/tareas");

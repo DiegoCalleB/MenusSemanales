@@ -972,3 +972,12 @@ La comida del mediodía (D-079) solo se podía apuntar desde el detalle del día
 ## D-117 · Platos: vista de tarjetas o de lista
 
 Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** compacta (una línea por plato, que se abre para ver avisos y acciones). Se recuerda por persona en el móvil (`menus-semanales:vista-platos`); es solo una preferencia de pantalla, no un dato del hogar, así que no va a Supabase.
+
+## D-118 · Estrellas y premios en el zafarrancho (cambia D-062)
+
+- **Decisión (Diego):** gamificar el zafarrancho con recompensas reales. Antes (D-062) decidimos «sin puntos ni premios»; esto la sustituye en lo de premios, y se mantiene lo de **no comparar** a las personas: cada una ve solo sus estrellas.
+- **Estrellas:** una por cada tarea hecha en un día. **No se guardan**: se cuentan a partir de las tareas hechas, así que desmarcar una tarea quita su estrella. Consecuencia conocida: **borrar una tarea quita las estrellas que dio**; el saldo nunca baja de cero.
+- **Premios:** los fija la familia (nombre, dibujo, coste de 1 a 99). Hay cinco de ejemplo que se ponen con un botón y no se duplican (ids por nombre). Cada persona canjea los suyos; un canje guarda nombre y coste de entonces y se puede devolver.
+- **Sin aprobación (decisión de Diego):** cualquiera marca y canjea sin que nadie lo confirme. Se puede corregir desmarcando o devolviendo; si hace falta, se añade una aprobación más adelante.
+- **Datos:** tablas `premio_hogar` y `canje_hogar` (migración `20261104110000_premios_hogar`), por el mismo motor que «Lo de hoy» (las funciones `leer_registro_tablas` y `aplicar_cambios_registro` se amplían; una lectura antigua sin premios se lee como vacía). En directo entre móviles.
+

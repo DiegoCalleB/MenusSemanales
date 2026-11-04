@@ -3,6 +3,8 @@
 import { type FormEvent, useState } from "react";
 import type { FrecuenciaTarea } from "@/dominio/tareas";
 import { estaHecha, resumenDeTareas, tareasDeHoy } from "@/dominio/tareas";
+import { saldoDeEstrellas } from "@/dominio/premios";
+import { PremiosPersona } from "@/componentes/premios-persona";
 import { useHogar } from "../proveedor-hogar";
 import { useYo } from "../yo";
 
@@ -84,6 +86,10 @@ export function TareasVista() {
               {p.nombre}
               <span className="text-sm font-normal">
                 {r.hechas}/{r.total}
+                <span aria-hidden="true">
+                  {" "}
+                  · ⭐{saldoDeEstrellas(estado.tareas, estado.canjes, p.id)}
+                </span>
               </span>
             </button>
           );
@@ -173,6 +179,8 @@ export function TareasVista() {
           </label>
         </form>
       </section>
+
+      <PremiosPersona personaId={persona.id} nombre={persona.nombre} editando={editando} />
     </div>
   );
 }

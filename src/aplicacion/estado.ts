@@ -72,6 +72,18 @@ import {
   idDeEntrada,
   limpiarQue,
 } from "@/dominio/registro";
+import {
+  COSTE_MAXIMO,
+  COSTE_MINIMO,
+  type Canje,
+  MAX_PREMIOS,
+  type Premio,
+  clavePremio,
+  costeValido,
+  limpiarNombrePremio,
+  premiosDeEjemplo,
+  saldoDeEstrellas,
+} from "@/dominio/premios";
 import type {
   Carga,
   ComidaPlanificada,
@@ -167,6 +179,10 @@ export interface EstadoHogar {
   notasMenu: Record<FechaIso, string>;
   /** Quién ha hecho qué cada día (D-108). En tablas (`registro_hogar`); aquí, los últimos días. */
   registro: EntradaRegistro[];
+  /** Premios del zafarrancho que fija la familia (D-117). En tablas (`premio_hogar`). */
+  premios: Premio[];
+  /** Estrellas gastadas: cuándo y quién canjeó qué (D-117). En tablas (`canje_hogar`). */
+  canjes: Canje[];
   /** Tareas de cada persona (rutinas diarias y cosas puntuales). */
   tareas: Tarea[];
   /** Días en que no se planifica cena en casa (salir, comer fuera, no hace falta). */
@@ -267,6 +283,18 @@ export type Accion =
   | { tipo: "menu/llegoTarde"; fecha: FechaIso }
   | { tipo: "menu/nota"; fecha: FechaIso; texto: string }
   | { tipo: "registro/alternar"; fecha: FechaIso; que: string; personaId: string }
+  | {
+      tipo: "premio/guardar";
+      id?: string;
+      nombre: string;
+      coste: number;
+      emoji: string;
+      idBase?: string;
+    }
+  | { tipo: "premio/borrar"; id: string }
+  | { tipo: "premio/ejemplos" }
+  | { tipo: "premio/canjear"; premioId: string; personaId: string; idBase?: string }
+  | { tipo: "premio/devolver"; canjeId: string }
   | { tipo: "plato/guardar"; id?: string; plato: PlatoEditable }
   | { tipo: "plato/rapido"; nombre: string; grupo: GrupoPlato; idBase?: string }
   | { tipo: "plato/proponer"; id: string; proponer: boolean }
@@ -303,6 +331,8 @@ export const ACCIONES_QUE_CREAN = [
   "casa/anadir",
   "casa/plantilla",
   "tarea/anadir",
+  "premio/guardar",
+  "premio/canjear",
 ] as const;
 
 /** Id del plato que crea `plato/rapido` con ese `idBase`: así se puede usar en la misma jugada. */
@@ -600,6 +630,8 @@ export const normalizar = (e: EstadoHogar): EstadoHogar =>
   typeof e.notasMenu === "object" &&
   e.notasMenu !== null &&
   Array.isArray(e.registro) &&
+  Array.isArray(e.premios) &&
+  Array.isArray(e.canjes) &&
   typeof e.ajustesCompra === "object" &&
   e.ajustesCompra !== null
     ? e
@@ -609,6 +641,8 @@ export const normalizar = (e: EstadoHogar): EstadoHogar =>
           typeof e.ajustesCompra === "object" && e.ajustesCompra !== null ? e.ajustesCompra : {},
         notasMenu: typeof e.notasMenu === "object" && e.notasMenu !== null ? e.notasMenu : {},
         registro: Array.isArray(e.registro) ? e.registro : [],
+        premios: Array.isArray(e.premios) ? e.premios : [],
+        canjes: Array.isArray(e.canjes) ? e.canjes : [],
         agenda: Array.isArray(e.agenda) ? e.agenda : [],
         casa: Array.isArray(e.casa) ? e.casa : [],
         almuerzos: Array.isArray(e.almuerzos) ? e.almuerzos : [],
@@ -1510,6 +1544,84 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
       const nuevo: EntradaRegistro = { id, fecha: accion.fecha, que, personaId: persona.id };
       return { ...e, registro: [...e.registro, nuevo].slice(-MAX_ENTRADAS_REGISTRO) };
     }
+
+    case "premio/guardar": {
+      const nombre = limpiarNombrePremio(accion.nombre);
+      const coste = Math.round(accion.coste);
+      if (nombre.length < 2 || !costeValido(coste)) {
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: error(
+            e,
+            `Pon un nombre y un coste de ${COSTE_MINIMO} a ${COSTE_MAXIMO} estrellas.`,
+          ),
+        };
+      }
+      const clave = clavePremio(nombre);
+      if (e.premios.some((p) => p.id !== accion.id && clavePremio(p.nombre) === clave)) {
+        return { ...e, siguienteId: e.siguienteId + 1, aviso: error(e, "Ya hay un premio así.") };
+      }
+      if (!accion.id && e.premios.length >= MAX_PREMIOS) {
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: error(e, `Como mucho ${MAX_PREMIOS} premios.`),
+        };
+      }
+      const emoji = accion.emoji.trim().slice(0, 8) || "🎁";
+      const id = accion.id ?? idNuevo(accion.idBase, "premio", "0", `pr-${e.siguienteId}`);
+      const premio: Premio = { id, nombre, coste, emoji };
+      const existe = e.premios.some((p) => p.id === id);
+      return {
+        ...e,
+        siguienteId: e.siguienteId + 1,
+        premios: existe ? e.premios.map((p) => (p.id === id ? premio : p)) : [...e.premios, premio],
+      };
+    }
+
+    case "premio/borrar":
+      return { ...e, premios: e.premios.filter((p) => p.id !== accion.id) };
+
+    case "premio/ejemplos": {
+      const tengo = new Set(e.premios.map((p) => clavePremio(p.nombre)));
+      const nuevos = premiosDeEjemplo().filter((p) => !tengo.has(clavePremio(p.nombre)));
+      return { ...e, premios: [...e.premios, ...nuevos].slice(0, MAX_PREMIOS) };
+    }
+
+    case "premio/canjear": {
+      const premio = e.premios.find((p) => p.id === accion.premioId);
+      const persona = e.personas.find((p) => p.id === accion.personaId && p.activa);
+      if (!premio || !persona) return e;
+      const saldo = saldoDeEstrellas(e.tareas, e.canjes, persona.id);
+      if (saldo < premio.coste) {
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: error(
+            e,
+            `A ${persona.nombre} le faltan ${premio.coste - saldo} ⭐ para ${premio.nombre}.`,
+          ),
+        };
+      }
+      const canje: Canje = {
+        id: idNuevo(accion.idBase, "canje", "0", `cj-${e.siguienteId}`),
+        premioId: premio.id,
+        nombre: premio.nombre,
+        coste: premio.coste,
+        personaId: persona.id,
+        fecha: e.hoy,
+      };
+      return {
+        ...e,
+        siguienteId: e.siguienteId + 1,
+        canjes: [...e.canjes, canje],
+        aviso: ok(e, `🎉 ${persona.nombre} ha conseguido: ${premio.nombre}.`),
+      };
+    }
+
+    case "premio/devolver":
+      return { ...e, canjes: e.canjes.filter((c) => c.id !== accion.canjeId) };
 
     case "plato/rapido": {
       const nombre = accion.nombre.replace(/\s+/g, " ").trim();

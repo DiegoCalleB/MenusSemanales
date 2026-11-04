@@ -742,6 +742,65 @@ describe("tareas por persona", () => {
     expect(aplicar(e, { tipo: "tarea/borrar", id }).tareas).toEqual([]);
   });
 });
+describe("estrellas y premios (D-117)", () => {
+  const base = () => {
+    let e = aplicar(estadoInicialDemo(), {
+      tipo: "tarea/anadir",
+      personaId: "ana",
+      texto: "Cocina, Mesa, Cama",
+      frecuencia: "diaria",
+    });
+    for (const t of e.tareas) e = aplicar(e, { tipo: "tarea/alternar", id: t.id });
+    return aplicar(e, { tipo: "premio/guardar", nombre: "Peli", coste: 2, emoji: "🎬" });
+  };
+
+  it("canjear resta estrellas y no se puede sin saldo", () => {
+    let e = base();
+    const premio = e.premios[0]?.id ?? "";
+    e = aplicar(e, { tipo: "premio/canjear", premioId: premio, personaId: "ana" });
+    expect(e.canjes).toHaveLength(1);
+    expect(e.aviso?.tipo).toBe("ok");
+    e = aplicar(e, { tipo: "premio/canjear", premioId: premio, personaId: "ana" });
+    expect(e.canjes).toHaveLength(1); // le quedaba 1 y cuesta 2
+    expect(e.aviso?.tipo).toBe("error");
+  });
+
+  it("devolver un canje devuelve las estrellas", () => {
+    let e = base();
+    const premio = e.premios[0]?.id ?? "";
+    e = aplicar(e, { tipo: "premio/canjear", premioId: premio, personaId: "ana" });
+    e = aplicar(e, { tipo: "premio/devolver", canjeId: e.canjes[0]?.id ?? "" });
+    expect(e.canjes).toEqual([]);
+  });
+
+  it("un premio con coste fuera de rango o repetido no se guarda", () => {
+    const e = base();
+    expect(
+      aplicar(e, { tipo: "premio/guardar", nombre: "Gratis", coste: 0, emoji: "x" }).premios,
+    ).toHaveLength(1);
+    expect(
+      aplicar(e, { tipo: "premio/guardar", nombre: " peli ", coste: 3, emoji: "x" }).premios,
+    ).toHaveLength(1);
+  });
+
+  it("los premios de ejemplo se ponen una sola vez", () => {
+    let e = aplicar(estadoInicialDemo(), { tipo: "premio/ejemplos" });
+    const n = e.premios.length;
+    expect(n).toBeGreaterThan(0);
+    e = aplicar(e, { tipo: "premio/ejemplos" });
+    expect(e.premios).toHaveLength(n);
+  });
+
+  it("editar un premio no cambia lo que costó un canje ya hecho", () => {
+    let e = base();
+    const premio = e.premios[0]?.id ?? "";
+    e = aplicar(e, { tipo: "premio/canjear", premioId: premio, personaId: "ana" });
+    e = aplicar(e, { tipo: "premio/guardar", id: premio, nombre: "Peli", coste: 9, emoji: "🎬" });
+    expect(e.premios[0]?.coste).toBe(9);
+    expect(e.canjes[0]?.coste).toBe(2);
+  });
+});
+
 const estaHechaHoy = (e: EstadoHogar, id: string) => {
   const t = e.tareas.find((x) => x.id === id);
   return !!t && t.hechas.includes(e.hoy);
