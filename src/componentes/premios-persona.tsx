@@ -1,7 +1,14 @@
 "use client";
 
 import { type FormEvent, useState } from "react";
-import { COSTE_MAXIMO, COSTE_MINIMO, estrellasGanadas, saldoDeEstrellas } from "@/dominio/premios";
+import {
+  COSTE_MAXIMO,
+  COSTE_MINIMO,
+  estrellasGanadas,
+  insigniasDe,
+  rachaActual,
+  saldoDeEstrellas,
+} from "@/dominio/premios";
 import { useHogar } from "./proveedor-hogar";
 
 /**
@@ -29,6 +36,8 @@ export function PremiosPersona({
     .slice(-5)
     .reverse();
   const siguiente = estado.premios.find((p) => p.coste > saldo);
+  const racha = rachaActual(estado.tareas, personaId, estado.hoy);
+  const insignias = insigniasDe(estado.tareas, personaId);
 
   function anadir(evento: FormEvent) {
     evento.preventDefault();
@@ -59,6 +68,21 @@ export function PremiosPersona({
         Cada tarea hecha vale una estrella. Ha ganado {ganadas} en total.
         {siguiente && ` Le faltan ${siguiente.coste - saldo} para «${siguiente.nombre}».`}
       </p>
+
+      {siguiente && (
+        <progress
+          max={siguiente.coste}
+          value={saldo}
+          aria-label={`Camino hacia ${siguiente.nombre}`}
+          className="h-3 w-full overflow-hidden rounded-full accent-[var(--marca)]"
+        />
+      )}
+      {racha > 0 && (
+        <p className="text-base font-semibold">
+          <span aria-hidden="true">🔥 </span>
+          {racha} {racha === 1 ? "día seguido" : "días seguidos"} haciendo tareas
+        </p>
+      )}
 
       {estado.premios.length === 0 ? (
         <div className="flex flex-col gap-2">
@@ -156,6 +180,28 @@ export function PremiosPersona({
           </button>
         </form>
       )}
+
+      <div>
+        <h3 className="text-tinta-suave text-sm font-bold">Insignias</h3>
+        <ul className="flex flex-wrap gap-2">
+          {insignias.map((i) => (
+            <li
+              key={i.id}
+              className={`flex items-center gap-1 rounded-full px-3 py-1 text-sm ${
+                i.conseguida ? "bg-suave-2 font-semibold" : "text-tinta-suave border border-dashed"
+              }`}
+            >
+              <span aria-hidden="true">{i.conseguida ? i.emoji : "🔒"}</span>
+              <span>
+                {i.nombre}
+                <span className="sr-only">
+                  {i.conseguida ? " (conseguida)" : ` (por conseguir: ${i.como})`}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
 
       {suyos.length > 0 && (
         <div>

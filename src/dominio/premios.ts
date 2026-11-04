@@ -1,3 +1,4 @@
+import { type FechaIso, sumarDias } from "./fechas";
 import { uuidV5 } from "./identificadores";
 import type { Tarea } from "./tareas";
 
@@ -70,3 +71,68 @@ export const saldoDeEstrellas = (
   personaId: string,
 ): number =>
   Math.max(0, estrellasGanadas(tareas, personaId) - estrellasGastadas(canjes, personaId));
+
+// --------------------------------------------------------------------------------------------
+// Rachas e insignias (derivadas de las tareas hechas: no se guardan)
+// --------------------------------------------------------------------------------------------
+
+const diasConEstrella = (tareas: readonly Tarea[], personaId: string): Set<string> =>
+  new Set(tareas.filter((t) => t.personaId === personaId).flatMap((t) => t.hechas));
+
+/**
+ * Días seguidos con al menos una tarea hecha, hasta hoy. Si hoy todavía no ha hecho ninguna, la
+ * racha no se rompe hasta que acabe el día: se cuenta desde ayer.
+ */
+export function rachaActual(tareas: readonly Tarea[], personaId: string, hoy: FechaIso): number {
+  const dias = diasConEstrella(tareas, personaId);
+  let dia = dias.has(hoy) ? hoy : sumarDias(hoy, -1);
+  let racha = 0;
+  while (dias.has(dia)) {
+    racha += 1;
+    dia = sumarDias(dia, -1);
+  }
+  return racha;
+}
+
+/** La racha más larga que ha tenido nunca. */
+export function mejorRacha(tareas: readonly Tarea[], personaId: string): number {
+  const dias = [...diasConEstrella(tareas, personaId)].sort();
+  let mejor = 0;
+  let actual = 0;
+  let anterior: string | null = null;
+  for (const d of dias) {
+    actual = anterior !== null && sumarDias(anterior as FechaIso, 1) === d ? actual + 1 : 1;
+    mejor = Math.max(mejor, actual);
+    anterior = d;
+  }
+  return mejor;
+}
+
+export interface Insignia {
+  id: string;
+  nombre: string;
+  emoji: string;
+  /** Lo que hay que hacer para conseguirla. */
+  como: string;
+  conseguida: boolean;
+}
+
+export function insigniasDe(tareas: readonly Tarea[], personaId: string): Insignia[] {
+  const ganadas = estrellasGanadas(tareas, personaId);
+  const racha = mejorRacha(tareas, personaId);
+  const hay = (
+    id: string,
+    nombre: string,
+    emoji: string,
+    como: string,
+    conseguida: boolean,
+  ): Insignia => ({ id, nombre, emoji, como, conseguida });
+  return [
+    hay("primera", "Primera estrella", "⭐", "Hacer una tarea", ganadas >= 1),
+    hay("diez", "10 estrellas", "🌟", "Ganar 10 estrellas", ganadas >= 10),
+    hay("cincuenta", "50 estrellas", "✨", "Ganar 50 estrellas", ganadas >= 50),
+    hay("cien", "100 estrellas", "🏆", "Ganar 100 estrellas", ganadas >= 100),
+    hay("racha3", "Tres días seguidos", "🔥", "3 días seguidos con tareas", racha >= 3),
+    hay("racha7", "Una semana entera", "🚀", "7 días seguidos con tareas", racha >= 7),
+  ];
+}

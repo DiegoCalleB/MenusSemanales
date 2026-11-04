@@ -5,9 +5,13 @@ import {
   costeValido,
   estrellasGanadas,
   idDePremioDeEjemplo,
+  insigniasDe,
+  mejorRacha,
+  rachaActual,
   premiosDeEjemplo,
   saldoDeEstrellas,
 } from "./premios";
+import type { FechaIso } from "./fechas";
 import type { Tarea } from "./tareas";
 
 const tarea = (personaId: string, hechas: string[]): Tarea => ({
@@ -54,5 +58,34 @@ describe("premios", () => {
     expect(clavePremio("  Elegir  la peli ")).toBe("elegir la peli");
     const ids = premiosDeEjemplo().map((p) => p.id);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+});
+
+describe("rachas e insignias", () => {
+  const hechas = (...d: string[]) => [tarea("alba", d)];
+
+  it("la racha cuenta días seguidos y no se rompe hasta que acabe hoy", () => {
+    const t = hechas("2026-11-02", "2026-11-03");
+    expect(rachaActual(t, "alba", "2026-11-04" as FechaIso)).toBe(2); // hoy aún sin hacer
+    expect(rachaActual(t, "alba", "2026-11-03" as FechaIso)).toBe(2);
+    expect(rachaActual(t, "alba", "2026-11-06" as FechaIso)).toBe(0); // se rompió
+    expect(rachaActual(t, "emma", "2026-11-04" as FechaIso)).toBe(0);
+  });
+
+  it("varias tareas el mismo día cuentan un día; la mejor racha es la más larga", () => {
+    const t = [
+      ...hechas("2026-10-01", "2026-10-02", "2026-10-03", "2026-10-10"),
+      tarea("alba", ["2026-10-02"]),
+    ];
+    expect(mejorRacha(t, "alba")).toBe(3);
+  });
+
+  it("las insignias salen de las estrellas y de la mejor racha", () => {
+    const dias = Array.from({ length: 7 }, (_, i) => `2026-10-0${i + 1}`);
+    const conseguidas = insigniasDe(hechas(...dias), "alba")
+      .filter((i) => i.conseguida)
+      .map((i) => i.id);
+    expect(conseguidas).toEqual(["primera", "racha3", "racha7"]);
+    expect(insigniasDe([], "alba").some((i) => i.conseguida)).toBe(false);
   });
 });

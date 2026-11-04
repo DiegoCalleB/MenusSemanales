@@ -1249,6 +1249,8 @@ test.describe("flujos en móvil", () => {
       "aria-label",
       /^[1-9]\d* estrellas para gastar/,
     );
+    await expect(pagina.getByText(/1 día seguido haciendo tareas/)).toBeVisible();
+    await expect(pagina.getByText("Primera estrella")).toBeVisible();
     // Sin premios se ofrecen los de ejemplo; con coste alto no se puede canjear aún.
     await pagina.getByRole("button", { name: "Poner premios de ejemplo" }).click();
     await expect(pagina.getByRole("button", { name: /^Canjear Plan especial/ })).toBeDisabled();

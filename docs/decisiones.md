@@ -981,3 +981,5 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Sin aprobación (decisión de Diego):** cualquiera marca y canjea sin que nadie lo confirme. Se puede corregir desmarcando o devolviendo; si hace falta, se añade una aprobación más adelante.
 - **Datos:** tablas `premio_hogar` y `canje_hogar` (migración `20261104110000_premios_hogar`), por el mismo motor que «Lo de hoy» (las funciones `leer_registro_tablas` y `aplicar_cambios_registro` se amplían; una lectura antigua sin premios se lee como vacía). En directo entre móviles.
 
+
+**Ampliación de D-118:** rachas (días seguidos con alguna tarea hecha; no se rompe hasta que acaba el día), barra hacia el siguiente premio e insignias (primera estrella, 10/50/100 estrellas, 3 y 7 días seguidos). Todo se **calcula** de las tareas hechas: no hay tablas nuevas.
