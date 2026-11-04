@@ -373,6 +373,27 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 
+  test("platos: se pueden ver como tarjetas o como lista y se recuerda", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/menu/platos");
+    await expect(pagina.getByRole("button", { name: "Tarjetas" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await pagina.getByRole("button", { name: "Lista", exact: true }).click();
+    const fila = pagina.getByRole("button", { name: /^Abrir / }).first();
+    await expect(fila).toBeVisible();
+    await expect(pagina.getByRole("button", { name: /^Editar / })).toHaveCount(0);
+    await fila.click();
+    await expect(pagina.getByRole("button", { name: /^Editar / })).toHaveCount(1);
+    await pagina.reload();
+    await expect(pagina.getByRole("button", { name: "Lista", exact: true })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await contexto.close();
+  });
+
   test("catálogo: crear un plato con un ingrediente nuevo y encontrarlo", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/menu/platos");

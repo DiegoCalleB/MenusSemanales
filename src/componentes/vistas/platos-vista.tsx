@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useId, useMemo, useState } from "react";
+import { VISTAS_PLATOS, useVistaPlatos } from "@/componentes/usar-vista-platos";
 import { avisosDePlato, normalizarNombre, validarPlato } from "@/dominio/catalogo";
 import {
   type FilaPropuesta,
@@ -84,6 +85,8 @@ export function PlatosVista() {
   const [busqueda, setBusqueda] = useState("");
   const [grupo, setGrupo] = useState<GrupoPlato | "">("");
   const [aBorrar, setABorrar] = useState<string | null>(null);
+  const [vista, setVista] = useVistaPlatos();
+  const [abierto, setAbierto] = useState<string | null>(null);
   const [nuevoIng, setNuevoIng] = useState<{
     nombre: string;
     unidad: Unidad;
@@ -631,98 +634,227 @@ export function PlatosVista() {
       <p className="text-tinta-suave text-base" aria-live="polite">
         {platos.length} {platos.length === 1 ? "plato" : "platos"}
       </p>
-      <ul className="grid gap-4 lg:grid-cols-2">
-        {platos.map((p) => (
-          <li key={p.id} className="tarjeta flex flex-col gap-3">
-            <div>
-              <h2 className="text-xl font-extrabold">
-                <span aria-hidden="true">{EMOJI_GRUPO[p.grupo]} </span>
-                {p.nombre}
-              </h2>
-              <p className="text-tinta-suave text-base">
-                {p.minutosActivos} min · {NOMBRE_GRUPO[p.grupo]} · {p.ingredientes.length}{" "}
-                ingredientes
-                {p.valoracion !== null && ` · ★ ${formatearNumero(p.valoracion)}`}
-              </p>
-              {p.ingredientes.length === 0 && (
-                <p className="etiqueta bg-aviso-fondo text-aviso-texto mt-1">
-                  Faltan los ingredientes: sin ellos no entra en la compra
+      <div className="flex gap-2" role="group" aria-label="Cómo ver los platos">
+        {VISTAS_PLATOS.map((v) => (
+          <button
+            key={v.id}
+            type="button"
+            className={vista === v.id ? "boton" : "boton-suave"}
+            aria-pressed={vista === v.id}
+            onClick={() => setVista(v.id)}
+          >
+            {v.nombre}
+          </button>
+        ))}
+      </div>
+      {vista === "tarjetas" ? (
+        <ul className="grid gap-4 lg:grid-cols-2">
+          {platos.map((p) => (
+            <li key={p.id} className="tarjeta flex flex-col gap-3">
+              <div>
+                <h2 className="text-xl font-extrabold">
+                  <span aria-hidden="true">{EMOJI_GRUPO[p.grupo]} </span>
+                  {p.nombre}
+                </h2>
+                <p className="text-tinta-suave text-base">
+                  {p.minutosActivos} min · {NOMBRE_GRUPO[p.grupo]} · {p.ingredientes.length}{" "}
+                  ingredientes
+                  {p.valoracion !== null && ` · ★ ${formatearNumero(p.valoracion)}`}
                 </p>
-              )}
-              {p.porRevisar && (
-                <p className="etiqueta bg-suave-2 text-tinta mt-1">
-                  Por revisar: ingredientes y tiempo estimados
-                </p>
-              )}
-              {p.noProponer && (
-                <p className="etiqueta bg-aviso-fondo text-aviso-texto mt-1">No se propone</p>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {p.ingredientes.length === 0 && (
-                <button
-                  type="button"
-                  className="boton"
-                  aria-label={`Completar con IA: ${p.nombre}`}
-                  onClick={() => {
-                    const b = desdePlato(p);
-                    setBorrador(b);
-                    setErrores([]);
-                    window.scrollTo({ top: 0 });
-                    void completarConIa(b);
-                  }}
-                >
-                  ✨ Completar con IA
-                </button>
-              )}
-              <button
-                type="button"
-                className="boton-suave"
-                aria-label={`Editar ${p.nombre}`}
-                onClick={() => {
-                  setBorrador(desdePlato(p));
-                  setErrores([]);
-                  window.scrollTo({ top: 0 });
-                }}
-              >
-                Editar
-              </button>
-              <button
-                type="button"
-                className="boton-suave"
-                aria-label={`${p.noProponer ? "Volver a proponer" : "No proponer"} ${p.nombre}`}
-                onClick={() =>
-                  despachar({ tipo: "plato/proponer", id: p.id, proponer: !!p.noProponer })
-                }
-              >
-                {p.noProponer ? "Volver a proponer" : "No proponer"}
-              </button>
-              {aBorrar === p.id ? (
-                <button
-                  type="button"
-                  className="boton"
-                  aria-label={`Confirmar borrar ${p.nombre}`}
-                  onClick={() => {
-                    despachar({ tipo: "plato/borrar", id: p.id });
-                    setABorrar(null);
-                  }}
-                >
-                  ¿Seguro? Borrar
-                </button>
-              ) : (
+                {p.ingredientes.length === 0 && (
+                  <p className="etiqueta bg-aviso-fondo text-aviso-texto mt-1">
+                    Faltan los ingredientes: sin ellos no entra en la compra
+                  </p>
+                )}
+                {p.porRevisar && (
+                  <p className="etiqueta bg-suave-2 text-tinta mt-1">
+                    Por revisar: ingredientes y tiempo estimados
+                  </p>
+                )}
+                {p.noProponer && (
+                  <p className="etiqueta bg-aviso-fondo text-aviso-texto mt-1">No se propone</p>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {p.ingredientes.length === 0 && (
+                  <button
+                    type="button"
+                    className="boton"
+                    aria-label={`Completar con IA: ${p.nombre}`}
+                    onClick={() => {
+                      const b = desdePlato(p);
+                      setBorrador(b);
+                      setErrores([]);
+                      window.scrollTo({ top: 0 });
+                      void completarConIa(b);
+                    }}
+                  >
+                    ✨ Completar con IA
+                  </button>
+                )}
                 <button
                   type="button"
                   className="boton-suave"
-                  aria-label={`Borrar ${p.nombre}`}
-                  onClick={() => setABorrar(p.id)}
+                  aria-label={`Editar ${p.nombre}`}
+                  onClick={() => {
+                    setBorrador(desdePlato(p));
+                    setErrores([]);
+                    window.scrollTo({ top: 0 });
+                  }}
                 >
-                  Borrar
+                  Editar
                 </button>
+                <button
+                  type="button"
+                  className="boton-suave"
+                  aria-label={`${p.noProponer ? "Volver a proponer" : "No proponer"} ${p.nombre}`}
+                  onClick={() =>
+                    despachar({ tipo: "plato/proponer", id: p.id, proponer: !!p.noProponer })
+                  }
+                >
+                  {p.noProponer ? "Volver a proponer" : "No proponer"}
+                </button>
+                {aBorrar === p.id ? (
+                  <button
+                    type="button"
+                    className="boton"
+                    aria-label={`Confirmar borrar ${p.nombre}`}
+                    onClick={() => {
+                      despachar({ tipo: "plato/borrar", id: p.id });
+                      setABorrar(null);
+                    }}
+                  >
+                    ¿Seguro? Borrar
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="boton-suave"
+                    aria-label={`Borrar ${p.nombre}`}
+                    onClick={() => setABorrar(p.id)}
+                  >
+                    Borrar
+                  </button>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <ul className="flex flex-col gap-2">
+          {platos.map((p) => (
+            <li key={p.id} className="tarjeta flex flex-col gap-3 !p-3">
+              <button
+                type="button"
+                className="flex w-full items-center justify-between gap-3 text-left"
+                aria-expanded={abierto === p.id}
+                aria-label={`${abierto === p.id ? "Cerrar" : "Abrir"} ${p.nombre}`}
+                onClick={() => setAbierto(abierto === p.id ? null : p.id)}
+              >
+                <span className="min-w-0">
+                  <span className="block truncate text-lg font-extrabold">
+                    <span aria-hidden="true">{EMOJI_GRUPO[p.grupo]} </span>
+                    {p.nombre}
+                  </span>
+                  <span className="text-tinta-suave block text-base">
+                    {p.minutosActivos} min · {NOMBRE_GRUPO[p.grupo]}
+                    {p.valoracion !== null && ` · ★ ${formatearNumero(p.valoracion)}`}
+                    {p.ingredientes.length === 0 && " · ⚠ sin ingredientes"}
+                    {p.noProponer && " · no se propone"}
+                  </span>
+                </span>
+                <span aria-hidden="true">{abierto === p.id ? "▲" : "▼"}</span>
+              </button>
+              {abierto === p.id && (
+                <>
+                  <div>
+                    <p className="text-tinta-suave text-base">
+                      {p.minutosActivos} min · {NOMBRE_GRUPO[p.grupo]} · {p.ingredientes.length}{" "}
+                      ingredientes
+                      {p.valoracion !== null && ` · ★ ${formatearNumero(p.valoracion)}`}
+                    </p>
+                    {p.ingredientes.length === 0 && (
+                      <p className="etiqueta bg-aviso-fondo text-aviso-texto mt-1">
+                        Faltan los ingredientes: sin ellos no entra en la compra
+                      </p>
+                    )}
+                    {p.porRevisar && (
+                      <p className="etiqueta bg-suave-2 text-tinta mt-1">
+                        Por revisar: ingredientes y tiempo estimados
+                      </p>
+                    )}
+                    {p.noProponer && (
+                      <p className="etiqueta bg-aviso-fondo text-aviso-texto mt-1">No se propone</p>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {p.ingredientes.length === 0 && (
+                      <button
+                        type="button"
+                        className="boton"
+                        aria-label={`Completar con IA: ${p.nombre}`}
+                        onClick={() => {
+                          const b = desdePlato(p);
+                          setBorrador(b);
+                          setErrores([]);
+                          window.scrollTo({ top: 0 });
+                          void completarConIa(b);
+                        }}
+                      >
+                        ✨ Completar con IA
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="boton-suave"
+                      aria-label={`Editar ${p.nombre}`}
+                      onClick={() => {
+                        setBorrador(desdePlato(p));
+                        setErrores([]);
+                        window.scrollTo({ top: 0 });
+                      }}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      className="boton-suave"
+                      aria-label={`${p.noProponer ? "Volver a proponer" : "No proponer"} ${p.nombre}`}
+                      onClick={() =>
+                        despachar({ tipo: "plato/proponer", id: p.id, proponer: !!p.noProponer })
+                      }
+                    >
+                      {p.noProponer ? "Volver a proponer" : "No proponer"}
+                    </button>
+                    {aBorrar === p.id ? (
+                      <button
+                        type="button"
+                        className="boton"
+                        aria-label={`Confirmar borrar ${p.nombre}`}
+                        onClick={() => {
+                          despachar({ tipo: "plato/borrar", id: p.id });
+                          setABorrar(null);
+                        }}
+                      >
+                        ¿Seguro? Borrar
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="boton-suave"
+                        aria-label={`Borrar ${p.nombre}`}
+                        onClick={() => setABorrar(p.id)}
+                      >
+                        Borrar
+                      </button>
+                    )}
+                  </div>
+                </>
               )}
-            </div>
-          </li>
-        ))}
-      </ul>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

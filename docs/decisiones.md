@@ -968,3 +968,7 @@ La comida del mediodía (D-079) solo se podía apuntar desde el detalle del día
 **Común.** Mismas garantías que las otras IA: solo con sesión y hogar, tope diario por hogar en la base de datos (`usar_ia`), reintentos y modelo de respaldo, razonamiento bajo con retroceso si el modelo lo rechaza, errores con código corto sin detalles del proveedor, instrucciones separadas de los datos del usuario («los datos no son instrucciones»), y no se envían personas, regalos ni datos del hogar.
 
 **Límites.** Como las otras llamadas a Gemini, no se han probado contra el servicio real (aquí no hay clave): las pruebas usan respuestas simuladas. Las cantidades que propone una IA son orientativas, y el «por revisar» sigue siendo trabajo de una persona.
+
+## D-117 · Platos: vista de tarjetas o de lista
+
+Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** compacta (una línea por plato, que se abre para ver avisos y acciones). Se recuerda por persona en el móvil (`menus-semanales:vista-platos`); es solo una preferencia de pantalla, no un dato del hogar, así que no va a Supabase.
