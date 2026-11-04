@@ -5,15 +5,15 @@ import { useCallback, useSyncExternalStore } from "react";
 export type Estampado = "los-dos" | "leopardo" | "cebra" | "ninguno";
 
 export const ESTAMPADOS: { id: Estampado; nombre: string }[] = [
+  { id: "cebra", nombre: "Cebra" },
   { id: "los-dos", nombre: "Leopardo y cebra" },
   { id: "leopardo", nombre: "Leopardo" },
-  { id: "cebra", nombre: "Cebra" },
   { id: "ninguno", nombre: "Sin estampado" },
 ];
 
 const CLAVE = "menus-semanales:estampado";
 const EVENTO = "menus-semanales:estampado-cambia";
-const POR_DEFECTO: Estampado = "los-dos";
+const POR_DEFECTO: Estampado = "cebra";
 
 function suscribir(aviso: () => void) {
   window.addEventListener("storage", aviso);

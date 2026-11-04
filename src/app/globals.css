@@ -146,7 +146,7 @@ body {
   }
   .cinta-cebra {
     background-color: #ffffff;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='54' height='22' viewBox='0 0 54 22'%3E%3Cg fill='%23222'%3E%3Cpath d='M0 22C7 16 4 7 12 0H19C11 7 14 16 7 22Z'/%3E%3Cpath d='M19 22C26 16 23 7 31 0H36C28 7 31 16 24 22Z'/%3E%3Cpath d='M37 22C44 16 41 7 49 0H54V5C48 10 50 17 45 22Z'/%3E%3C/g%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='22' viewBox='0 0 60 22'%3E%3Cg fill='%231d1d1d'%3E%3Cpath d='M2 22C3 15 8 6 14 0H21C16 6 12 14 11 22Z'/%3E%3Cpath d='M24 22C26 14 30 8 36 2L38 5C33 9 31 16 31 22Z'/%3E%3Cpath d='M46 22C46 14 50 6 57 0H60V4C55 9 53 15 54 22Z'/%3E%3Cpath d='M36 10C38 6 41 3 44 0H47C43 3 41 7 40 11Z'/%3E%3C/g%3E%3C/svg%3E");
   }
   .etiqueta {
     @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-medium;

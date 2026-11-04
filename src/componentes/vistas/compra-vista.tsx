@@ -14,6 +14,7 @@ import {
 } from "@/dominio/habituales";
 import type { Unidad } from "@/dominio/tipos";
 import { BotonesCompartir } from "../compartir-botones";
+import { CintaAnimal } from "../cinta-animal";
 import { EntradaCompra } from "../entrada-compra";
 import { OrdenarConIa } from "../ordenar-con-ia";
 import { formatearCantidad } from "../formato";
@@ -202,8 +203,9 @@ export function CompraVista() {
       {pendientes.length === 0 ? (
         <section
           aria-label="Lista vacía"
-          className="from-suave-1 to-suave-3 border-borde flex flex-col items-center gap-1 rounded-3xl border bg-linear-to-br px-4 py-8 text-center"
+          className="from-suave-1 to-suave-3 border-borde flex flex-col items-center gap-1 overflow-hidden rounded-3xl border bg-linear-to-br px-4 pb-8 text-center"
         >
+          <CintaAnimal className="-mx-4 mb-6 self-stretch" />
           <p aria-hidden="true" className="text-5xl">
             {total > 0 ? "🎉" : "🧺"}
           </p>
