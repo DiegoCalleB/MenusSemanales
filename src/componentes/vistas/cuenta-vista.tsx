@@ -1,7 +1,9 @@
 "use client";
 
+import { AjusteEstampado } from "../ajuste-estampado";
 import { ESTADO_NUBE } from "../usar-nube";
 import { type FormEvent, useState } from "react";
+import { mensajeDeInvitacion } from "@/aplicacion/enlaces";
 import { enlaceWhatsApp } from "@/dominio/compartir";
 import { DiagnosticoAcceso } from "../diagnostico-acceso";
 import { PanelRespaldo } from "../panel-respaldo";
@@ -161,6 +163,7 @@ export function CuentaVista() {
         </section>
       )}
 
+      <AjusteEstampado />
       <PanelRespaldo />
       <PanelTablas />
     </div>
@@ -409,7 +412,7 @@ function Invitar({ cuenta }: { cuenta: ReturnType<typeof useCuenta> }) {
   const [codigo, setCodigo] = useState("");
   const [problema, setProblema] = useState("");
   const [copiado, setCopiado] = useState(false);
-  const texto = `Únete a nuestro hogar en ¡Hecho! ✅\n1. Abre ${typeof window === "undefined" ? "" : window.location.origin}/cuenta\n2. Entra (con tu correo o sin correo)\n3. Elige «Unirme con un código» y escribe: ${codigo}`;
+  const texto = mensajeDeInvitacion(codigo);
 
   async function crear() {
     setProblema("");

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { felicitacionesDeHoy } from "@/dominio/cumples";
+import { CintaAnimal, useFondoCebra } from "./cinta-animal";
 import { useHogar } from "./proveedor-hogar";
 import { leerRegaloRecibido } from "./regalo-recibido";
 import { useYo } from "./yo";
@@ -27,6 +28,8 @@ const CONFETI: ReadonlyArray<readonly [string, string]> = [
   ["🎊", "left-[75%] top-[88%] [animation-delay:0.5s]"],
   ["⭐", "left-[45%] top-[3%] [animation-delay:0.8s]"],
   ["🎁", "left-[48%] top-[92%] [animation-delay:0.4s]"],
+  ["🐆", "left-[22%] top-[22%] [animation-delay:0.7s]"],
+  ["🦓", "left-[68%] top-[70%] [animation-delay:0.1s]"],
 ];
 
 /**
@@ -38,6 +41,7 @@ export function BienvenidaCumple() {
   const { estado, cargado } = useHogar();
   const [yoId] = useYo();
   const [cerrada, setCerrada] = useState(false);
+  const fondoCebra = useFondoCebra();
   const boton = useRef<HTMLButtonElement>(null);
 
   const f = yoId
@@ -72,16 +76,21 @@ export function BienvenidaCumple() {
       role="dialog"
       aria-modal="true"
       aria-labelledby="bienvenida-titulo"
-      className="from-suave-1 to-suave-2 fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-linear-to-br p-4"
+      className={`fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-6 ${
+        fondoCebra ? "fondo-cebra" : "from-suave-1 to-suave-2 bg-linear-to-br"
+      }`}
     >
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-        {CONFETI.map(([e, pos]) => (
-          <span key={e} className={`fiesta absolute text-3xl opacity-70 ${pos}`}>
-            {e}
-          </span>
-        ))}
-      </div>
-      <article className="tarjeta relative flex w-full max-w-lg flex-col gap-5 text-center sm:p-8">
+      {!fondoCebra && (
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+          {CONFETI.map(([e, pos]) => (
+            <span key={e} className={`fiesta absolute text-3xl opacity-70 ${pos}`}>
+              {e}
+            </span>
+          ))}
+        </div>
+      )}
+      <article className="tarjeta relative flex w-full max-w-lg flex-col gap-5 overflow-hidden text-center sm:p-8">
+        <CintaAnimal className="-mx-4 -mt-4 sm:-mx-8 sm:-mt-8" />
         <p aria-hidden="true" className="fiesta text-6xl">
           🎂
         </p>
@@ -113,6 +122,7 @@ export function BienvenidaCumple() {
         >
           Ver mi regalo 🎁
         </button>
+        <CintaAnimal otra className="-mx-4 -mb-4 sm:-mx-8 sm:-mb-8" />
       </article>
     </div>
   );

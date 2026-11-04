@@ -1044,6 +1044,32 @@ describe("agenda: apuntes escritos como en una nota", () => {
     expect(error.aviso).toMatchObject({ tipo: "error" });
   });
 
+  it("limpiar la agenda quita lo ya pasado y deja lo de hoy, lo futuro y lo que sigue en curso", () => {
+    const base = estadoInicialDemo();
+    const hoy = base.hoy;
+    const apunte = (id: string, fecha: string, hasta: string | null = null) => ({
+      id,
+      fecha,
+      hasta,
+      hora: null,
+      titulo: id,
+    });
+    const e = {
+      ...base,
+      agenda: [
+        apunte("pasado", sumarDias(hoy, -3)),
+        apunte("ayer", sumarDias(hoy, -1)),
+        apunte("hoy", hoy),
+        apunte("futuro", sumarDias(hoy, 5)),
+        apunte("en-curso", sumarDias(hoy, -2), sumarDias(hoy, 2)),
+      ],
+    };
+    const limpio = reducir(e, { tipo: "agenda/limpiar" });
+    expect(limpio.agenda.map((a) => a.id)).toEqual(["hoy", "futuro", "en-curso"]);
+    // Sin nada que quitar, es el mismo estado (no hay nada que guardar).
+    expect(reducir(limpio, { tipo: "agenda/limpiar" })).toBe(limpio);
+  });
+
   it("al recibir un estado de antes de la agenda, parte de una lista vacía", () => {
     const viejo: Partial<EstadoHogar> = { ...estadoInicialDemo() };
     delete viejo.agenda;

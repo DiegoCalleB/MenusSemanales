@@ -1016,3 +1016,33 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Decisión:** nuevo horizonte «Un mes» (hoy + 29 días; migración `20261104130000_horizonte_mes.sql`, que amplía el `check` de `hogar_ajuste.horizonte`). Además, un plato ya elegido en otra fecha cercana resta puntos aunque ya se pueda repetir (hasta 28 días, más cuanto más cerca). La regla dura de 7 días no cambia. El menú del cole se sigue usando solo en los días en que está cargado; sin él no hay restricción.
 - **Test:** proponer un mes no repite a menos de 7 días y al menos el 60 % de las cenas son platos distintos (falla con el motor anterior).
 - **Límite conocido:** con un catálogo pequeño, un mes obliga a repetir; y la compra de un mes entero sigue sin tener en cuenta lo perecedero (ver D-044).
+
+## D-123 · «Próximas fechas» se limpia sola
+
+- **Decisión (Diego):** la tarjeta «Lo que viene» pasa a llamarse **«Próximas fechas»**, como la nota de Keep, y se mantiene al día: lo que ya ha pasado desaparece. La pantalla se llama ahora «Fechas».
+- **Cómo:** la lista ya se calculaba solo con lo futuro (los cumples se repiten cada año). Lo nuevo es que los **apuntes de agenda** cuyo último día es anterior a hoy se **borran** (`agenda/limpiar`, lanzada por `LimpiarFechas` al abrir la app y al cambiar el día, y solo con los datos ya cargados). Una fecha de varios días (17-19 abril) se queda hasta que acaba. El borrado se sincroniza como cualquier otro.
+- **Consecuencia:** lo pasado ya no se ve en el calendario. Es lo que se pidió; si se echa de menos un histórico, habría que archivar en lugar de borrar.
+- **Keep:** no hay forma de escribir en Keep desde la app, así que la nota de Keep no se actualiza sola; «Copiar para Keep» siempre copia la lista al día. Para tenerlo siempre actualizado en el móvil sirve el calendario suscrito (Cuenta), que se refresca solo.
+
+## D-124 · Un detalle de animal print (leopardo y cebra)
+
+- **Decisión (Diego):** a Ana le encanta el animal print de cebra y de leopardo, así que la app lleva un detalle discreto de los dos, sin cambiar la paleta rosa de la marca.
+- **Qué:** una **cinta** (`CintaAnimal`) de leopardo o de cebra, de 22 px, en la tarjeta «Hoy cenáis…» de la portada y en la pantalla de regalo y de bienvenida de cumpleaños (leopardo arriba, cebra abajo, y un 🐆 y un 🦓 en el confeti). Por defecto sale de **cebra** (a Ana le pega más); con «los dos», la cinta de arriba es de leopardo y la de abajo de cebra. También sale en la pantalla de compra vacía. La cebra imita una de verdad (rayas largas, onduladas, afiladas y que se bifurcan, a partir de una foto que dio Diego de referencia) y, además de la cinta, hace de **fondo** de la pantalla de cumpleaños y de regalo, con la tarjeta blanca encima (`.fondo-cebra`).
+- **Cómo:** los estampados son SVG dentro de la hoja de estilos (`.cinta-leopardo`, `.cinta-cebra`), sin estilos en línea (la CSP los bloquea) y permitidos por `img-src data:`. Son solo adorno (`aria-hidden`).
+- **Se puede quitar:** en **Cuenta → «Un detalle de animal print»**: leopardo y cebra, solo leopardo, solo cebra o sin estampado. Se recuerda **en cada móvil** (`menus-semanales:estampado`), como «quién soy»: no se sincroniza.
+- **Ideas aparte (no hechas):** el icono de la app con estampado, y un tema de color con más animal print.
+
+## D-125 · Compatibilidad de 1 a 5 entre la cena y la comida del cole
+
+- **Decisión (Diego):** cada opción de cena lleva una nota de **1 a 5** de compatibilidad con lo que las niñas comieron en el cole ese día. Se ve junto a «Por qué», con cinco puntos y una palabra (Perfecta, Muy buena, Aceptable, Poco compatible, Repite lo del cole), y al desplegar sale el detalle de cada punto.
+- **Cómo se calcula (`compatibilidadConCole`, dominio puro y con tests):** parte de 3 y **suma 2** si el recomendador del cole aconseja ese grupo tras el primero y tras el segundo (o **1** si lo aconseja uno de los dos; si solo se conoce un plato, basta con que lo aconseje); **resta 1 por cada plato del cole cuyo grupo repite** la cena; **suma 1** si compensa las kcal (cole contundente ≥ 700 y cena ligera, o cole ligero ≤ 540 y cena más completa) y **resta 1** si las empeora (cole contundente y cena no ligera); **suma 1** si esa semana falta el grupo y **resta 1** si ya está completo. Se limita a 1–5.
+- **Por qué así:** son las mismas reglas que ya usaba el recomendador, el equilibrio semanal y las explicaciones («Por qué»), así que la nota y la explicación no se contradicen. Cada punto lleva su razón en palabras; no hay nada inventado ni IA.
+- **Sin nota** cuando no se sabe qué comieron (fin de semana, sin menú del cole o sin primero ni segundo reconocidos).
+- **Límites:** es una guía orientativa, no un criterio médico (mismas fuentes y límites que D-054). Un plato de grupo «otro» no se penaliza por repetir.
+- **Ideas aparte (no hechas):** enseñar la nota también en la tarjeta «Hoy cenáis…» de la portada y usarla para ordenar las opciones.
+
+## D-126 · Los enlaces que se mandan usan siempre la dirección definitiva
+
+- **Decisión (Diego):** la dirección de la app es **https://yaestahecho.up.railway.app**. Los enlaces que se envían a otras personas la usan siempre, en lugar de la que tenga abierta quien los manda (`window.location.origin`), que podía ser un dominio antiguo, un acceso directo viejo o `localhost`.
+- **Qué cambia:** el mensaje de invitación con el **código de acceso** (Cuenta y Familia), el **enlace del regalo** y el **enlace del calendario suscrito**. La dirección vive en un solo sitio (`src/aplicacion/enlaces.ts`, `URL_APP`) y el mensaje de invitación, antes duplicado en dos pantallas, es una sola función con test (`mensajeDeInvitacion`).
+- **Si cambia el dominio:** se cambia `URL_APP` y nada más. En desarrollo, estos enlaces también apuntan a producción, que es lo que se quiere al mandarlos.

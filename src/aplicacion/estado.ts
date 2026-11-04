@@ -42,6 +42,7 @@ import {
   marcarHecha,
   repartirEntre,
 } from "@/dominio/casa";
+import { type Compatibilidad, compatibilidadConCole } from "@/dominio/compatibilidad";
 import { contarSemana } from "@/dominio/equilibrio";
 import { idDerivado } from "@/dominio/identificadores";
 import { faltanComponentes } from "@/dominio/componentes";
@@ -249,6 +250,8 @@ export type Accion =
       idBase?: string;
     }
   | { tipo: "agenda/borrar"; id: string }
+  /** Quita de la agenda lo que ya pasó (D-123): lo que terminó antes de hoy. */
+  | { tipo: "agenda/limpiar" }
   | { tipo: "almuerzo/anadir"; fecha: FechaIso; texto?: string; platoId?: string; idBase?: string }
   | { tipo: "almuerzo/borrar"; id: string }
   | {
@@ -543,13 +546,32 @@ export function menuDeLaSemana(e: EstadoHogar, liberar?: FechaIso): MenuPropuest
   });
 }
 
-/** Por qué se recomienda esa opción para ese día: cole, equilibrio de la semana, tiempo, caducidad, gusto. */
-export function explicacionDe(e: EstadoHogar, fecha: FechaIso, opcion: Opcion): ExplicacionOpcion {
+/** Grupos de las cenas ya elegidas de cada día, sin contar la de `fecha` (para el equilibrio semanal). */
+function cenasPorGrupoSin(e: EstadoHogar, fecha: FechaIso): Record<FechaIso, GrupoPlato[]> {
   const cenas: Record<FechaIso, GrupoPlato[]> = {};
   for (const c of e.comidas) {
     const grupo = e.platos.find((p) => p.id === c.plato.id)?.grupo;
     if (c.fecha !== fecha && grupo) (cenas[c.fecha] ??= []).push(grupo);
   }
+  return cenas;
+}
+
+/** Compatibilidad de 1 a 5 de esa opción con el menú del cole de ese día (D-125), o `null` si no hay cole. */
+export function compatibilidadDe(
+  e: EstadoHogar,
+  fecha: FechaIso,
+  opcion: Opcion,
+): Compatibilidad | null {
+  return compatibilidadConCole({
+    grupo: opcion.plato.grupo,
+    cole: diaMenuDe(e, fecha).cole,
+    semana: contarSemana(fecha, e.colegio, cenasPorGrupoSin(e, fecha)),
+  });
+}
+
+/** Por qué se recomienda esa opción para ese día: cole, equilibrio de la semana, tiempo, caducidad, gusto. */
+export function explicacionDe(e: EstadoHogar, fecha: FechaIso, opcion: Opcion): ExplicacionOpcion {
+  const cenas = cenasPorGrupoSin(e, fecha);
   const nombres = new Map(e.ingredientes.map((i) => [i.id, i.nombre]));
   const usa = new Set(
     opcion.plato.ingredientes.filter((i) => !i.opcional).map((i) => i.ingredienteId),
@@ -1392,6 +1414,12 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
 
     case "agenda/borrar":
       return { ...e, agenda: e.agenda.filter((a) => a.id !== accion.id) };
+
+    case "agenda/limpiar": {
+      const vigentes = e.agenda.filter((a) => (a.hasta ?? a.fecha) >= e.hoy);
+      // Sin nada que quitar se devuelve el mismo estado: no hay cambio que guardar ni que enseñar.
+      return vigentes.length === e.agenda.length ? e : { ...e, agenda: vigentes };
+    }
 
     case "cumple/borrar":
       return { ...e, cumples: e.cumples.filter((c) => c.id !== accion.id) };
