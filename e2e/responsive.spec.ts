@@ -244,7 +244,11 @@ test.describe("flujos en móvil", () => {
     await pagina.reload({ waitUntil: "networkidle" });
     await expect(pagina.getByRole("checkbox", { name: /Velas/ })).toBeVisible();
 
-    await pagina.getByRole("button", { name: "Restablecer ejemplo" }).click();
+    // El botón vive en «Cuenta → Datos de este dispositivo»: la franja de arriba lo cambia por un aviso
+    // cuando la nube está a medio configurar (como en la CI, con URL pero sin clave).
+    await cargar(pagina, "/cuenta");
+    await pagina.getByRole("button", { name: "Restablecer ejemplo" }).first().click();
+    await cargar(pagina, "/compra");
     await expect(pagina.getByRole("checkbox", { name: /Velas/ })).toHaveCount(0);
     await pagina.reload({ waitUntil: "networkidle" });
     await expect(pagina.getByRole("checkbox", { name: /Velas/ })).toHaveCount(0);
