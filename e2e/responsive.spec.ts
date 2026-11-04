@@ -270,7 +270,7 @@ test.describe("flujos en móvil", () => {
     await expect(pagina.locator(".cinta")).toHaveCount(0);
 
     await cargar(pagina, "/cuenta");
-    await pagina.getByRole("radio", { name: "Cebra" }).check();
+    await pagina.getByRole("radio", { name: "Cebra", exact: true }).check();
     await cargar(pagina, "/");
     await expect(pagina.locator(".cinta-cebra").first()).toBeVisible();
     await contexto.close();
