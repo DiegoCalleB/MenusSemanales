@@ -49,12 +49,6 @@ export function NotificacionesMovil() {
       return;
     }
     if (esIos() && !estaInstalada()) return setEstado("ios-sin-instalar");
-    try {
-      const r = await fetch("/api/push/clave", { cache: "no-store" });
-      if (!r.ok) return setEstado("sin-configurar");
-    } catch {
-      return setEstado("sin-configurar");
-    }
     if (Notification.permission === "denied") return setEstado("denegado");
     const reg = await navigator.serviceWorker.getRegistration("/");
     const sub = await reg?.pushManager.getSubscription();
@@ -73,14 +67,19 @@ export function NotificacionesMovil() {
     setOcupado(true);
     setMensaje("");
     try {
+      // Primero se pregunta al servidor si ya tiene sus claves: si no, no tiene sentido pedir permiso.
+      const r = await fetch("/api/push/clave", { cache: "no-store" });
+      if (!r.ok) {
+        await r.text().catch(() => "");
+        setEstado("sin-configurar");
+        return;
+      }
+      const { clave } = (await r.json()) as { clave: string };
       const permiso = await Notification.requestPermission();
       if (permiso !== "granted") {
         setEstado(permiso === "denied" ? "denegado" : "inactivas");
         return;
       }
-      const { clave } = (await (await fetch("/api/push/clave", { cache: "no-store" })).json()) as {
-        clave: string;
-      };
       await navigator.serviceWorker.register("/sw.js", { scope: "/" });
       const reg = await navigator.serviceWorker.ready;
       const sub =
@@ -259,8 +258,13 @@ export function NotificacionesMovil() {
               ))}
             </div>
           )}
-          <button type="button" className="boton-suave w-fit" onClick={() => void comprobar()}>
-            Ya las he puesto: comprobar
+          <button
+            type="button"
+            className="boton-suave w-fit"
+            disabled={ocupado}
+            onClick={() => void activar()}
+          >
+            Ya las he puesto: activar ahora
           </button>
         </div>
       ) : estado === "denegado" ? (
