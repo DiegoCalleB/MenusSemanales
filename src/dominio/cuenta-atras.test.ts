@@ -57,3 +57,14 @@ describe("cuentaAtras", () => {
     ]);
   });
 });
+
+describe("cuentaAtras: cumpleaños repetidos", () => {
+  it("una fecha señalada «Cumpleaños de Ana» no repite el cumple que ya tenemos", () => {
+    const r = cuentaAtras(
+      [c({})],
+      { "2026-11-07": { titulo: "Cumpleaños de Ana", emoji: "🎂" } },
+      "2026-11-04",
+    );
+    expect(r.map((x) => x.titulo)).toEqual(["Ana (41)"]);
+  });
+});

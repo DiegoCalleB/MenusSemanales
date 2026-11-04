@@ -60,6 +60,7 @@ export function cuentaAtras(
   for (const [fecha, ev] of Object.entries(eventos)) {
     const dias = diasEntre(hoy, fecha);
     if (dias < 0 || dias > maxDias) continue;
+    if (esCumpleRepetido(ev.titulo, cumples)) continue;
     lista.push({
       clave: `evento-${fecha}`,
       fecha,

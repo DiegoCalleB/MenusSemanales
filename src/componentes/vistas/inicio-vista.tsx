@@ -19,7 +19,7 @@ import { resumenDeTareas } from "@/dominio/tareas";
 import { LoDeHoy } from "../lo-de-hoy";
 import { NuevaCita } from "../nueva-cita";
 
-/** Portada: una sola pantalla, sin desplazarse: la cena de hoy, el cole de hoy y los accesos. */
+/** Portada: arriba, lo que se cena y lo que se come en el cole; debajo, lo demás por orden de prisa. */
 export function InicioVista() {
   const { estado, despachar } = useHogar();
   const [yoId] = useYo();
@@ -131,6 +131,17 @@ export function InicioVista() {
         </div>
       </section>
 
+      {diaCole && (
+        <section aria-labelledby="cole-hoy" className="flex flex-col gap-2">
+          <h2 id="cole-hoy" className="text-lg font-extrabold">
+            {diaCole === estado.hoy
+              ? "Hoy en el cole"
+              : `Próximo menú del cole · ${fechaCorta(diaCole)}`}
+          </h2>
+          <TarjetaCole cole={estado.colegio[diaCole] ?? null} fecha={diaCole} />
+        </section>
+      )}
+
       <AyudaInstalarIos />
 
       {porComprar > 0 && (
@@ -222,17 +233,6 @@ export function InicioVista() {
             {misTareas.hechas} de {misTareas.total}
           </span>
         </Link>
-      )}
-
-      {diaCole && (
-        <section aria-labelledby="cole-hoy" className="flex flex-col gap-2">
-          <h2 id="cole-hoy" className="text-lg font-extrabold">
-            {diaCole === estado.hoy
-              ? "Hoy en el cole"
-              : `Próximo menú del cole · ${fechaCorta(diaCole)}`}
-          </h2>
-          <TarjetaCole cole={estado.colegio[diaCole] ?? null} fecha={diaCole} />
-        </section>
       )}
 
       {yo?.id === "diego" && (

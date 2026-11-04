@@ -791,13 +791,13 @@ Estado: `propuesta` (pendiente de validar), `aceptada` o `sustituida`.
 - **Filas de una línea** (casilla, nombre, cantidad; 44 px de alto, no tarjetas), una sola tarjeta con títulos de sección finos. Cabecera compactada (título con «n de N», barra fina, selector de vista en una fila; «Enviar/Copiar» pasan al final). Con el cuerpo cabe el doble de artículos en un móvil.
 - **Editar en el sitio:** tocar el nombre abre la edición. Lo apuntado a mano: nombre y cantidad (texto libre: «2», «1 kg») y borrar. Lo calculado por el menú: cantidad con − / + (por pasos de 50 g/ml o 1 ud), «Restablecer» (muestra lo que calculó la app) y «No hace falta» (baja a «No hace falta (n)», con «Volver a poner»). El nombre de lo calculado no se edita (viene del plato). Al comprar se compra la cantidad editada. Estado nuevo `ajustesCompra`.
 - **Apuntar con cantidad:** «huevos 12», «2 yogures», «500 g de pasta», «arroz 1 kg» separan nombre y cantidad (`separarCantidad`). Las cantidades salen también en el mensaje que se comparte.
-- **Vistas** (se recuerda la última en el móvil): *Secciones* (en el orden del súper, una sola lista para lo calculado y lo manual), *Lista* (plana), *Por comida* (agrupada por el motivo: «Cena del jueves», «Stock mínimo», «Apuntado a mano») y *Tienda* (letra grande, solo marcar, sin editar ni añadir).
+- **Vistas** (se recuerda la última en el móvil): _Secciones_ (en el orden del súper, una sola lista para lo calculado y lo manual), _Lista_ (plana), _Por comida_ (agrupada por el motivo: «Cena del jueves», «Stock mínimo», «Apuntado a mano») y _Tienda_ (letra grande, solo marcar, sin editar ni añadir).
 - **Límites:** (1) el orden de las secciones es el genérico del código, **no el recorrido real del Mercadona**: falta que Diego lo confirme. (2) Sin deslizar para borrar ni «deshacer» al borrar un apunte. (3) Las vistas «Por persona» y «Por tienda» y todo lo de IA (dictado inteligente, sugerencias, foto de ticket) quedan para la segunda tanda. (4) Las cantidades editadas y los apuntes siguen en el documento hasta migrar la compra a tablas.
 - **Pruebas:** 8 tests unitarios nuevos y un E2E (filas compactas, edición, vistas, «no hace falta», accesibilidad); 412 E2E en verde.
 
 ## D-098 — IA en la lista de la compra: «Ordenar con IA» (primera función de IA)
 
-- **Estado:** *(el proveedor pasó de Claude a Gemini en D-100; lo demás sigue igual)* código hecho y probado con simulaciones (3+6+4 tests nuevos, 520 unitarios y 412 E2E en verde, SQL con mutación comprobada). **No probada contra la API real de Claude ni contra el Supabase real**: aquí no hay clave de la IA y la función SQL aún no está aplicada. Hace falta `ANTHROPIC_API_KEY` en Railway y aplicar `20261102200000_uso_ia.sql`.
+- **Estado:** _(el proveedor pasó de Claude a Gemini en D-100; lo demás sigue igual)_ código hecho y probado con simulaciones (3+6+4 tests nuevos, 520 unitarios y 412 E2E en verde, SQL con mutación comprobada). **No probada contra la API real de Claude ni contra el Supabase real**: aquí no hay clave de la IA y la función SQL aún no está aplicada. Hace falta `ANTHROPIC_API_KEY` en Railway y aplicar `20261102200000_uso_ia.sql`.
 - **Decisiones que tomé yo por falta de respuesta (todas se cambian sin tocar código ni migraciones, salvo el tope):** (1) **proveedor:** Claude (Anthropic), con el SDK oficial. (2) **modelo:** `claude-opus-5-5` por defecto, cambiable con la variable `IA_MODELO` (p. ej. `claude-haiku-5-5`, muchísimo más barato, bastaría para esta tarea). Esfuerzo `low` y salida estructurada. (3) **tope de gasto:** 40 consultas al día por hogar, guardado en la base de datos (`ia_ajuste.limite_diario`, solo editable con SQL; ningún miembro puede subírselo). A unos 0,01 € por consulta con Opus 5.5 sería como máximo ~0,40 €/día; con Haiku, céntimos al mes.
 - **Qué hace:** en la lista, «✨ Ordenar con IA» (solo con la nube conectada): se escribe o dicta a la carrera («lo de la paella, pañales talla 4, 2 yogures…») y la IA lo convierte en artículos con cantidad y sección del súper. **La persona revisa y elige qué añade** (casillas, todo marcado); la IA nunca toca la lista sola. Acción `manual/importar`.
 - **Privacidad:** al servidor de IA solo van el texto escrito y los nombres de lo que ya está en la lista (para no repetirlos). **Nunca** personas, cumpleaños, regalos, ideas ni datos del hogar. El servidor no guarda ni registra el texto, y los errores del proveedor no se devuelven al navegador. La pantalla avisa de que el texto se envía a una IA. El texto del usuario se trata como datos (no como instrucciones) y la respuesta se valida con un esquema estricto antes de enseñarse.
@@ -929,7 +929,7 @@ Las tareas de Casa ocupaban una tarjeta cada una. Ahora son filas de una línea 
 
 **Contexto.** El mensaje del menú para WhatsApp era largo: el texto íntegro del cole (con ingredientes entre paréntesis) y una frase de «por qué» por día. Pidieron algo más esquemático: agenda o tabla.
 
-**Decisión.** Tres formatos (`FormatoMenu`), elegibles en Enviar y recordados en el móvil; **agenda** es el de por defecto, también en el botón de enviar del menú. *Agenda*: dos líneas por día (cole resumido y cena), sin el porqué. *Tabla*: una línea por día, «Día | cole en emojis | cena». *Completo*: el de siempre. El menú del cole se acorta (`acortarPlatoCole`): sin paréntesis, sin «ecológicas», hasta el primer «con» si es largo y, si sigue siendo largo, hasta la primera coma; lo que se pierde está en el menú del cole de la app.
+**Decisión.** Tres formatos (`FormatoMenu`), elegibles en Enviar y recordados en el móvil; **agenda** es el de por defecto, también en el botón de enviar del menú. _Agenda_: dos líneas por día (cole resumido y cena), sin el porqué. _Tabla_: una línea por día, «Día | cole en emojis | cena». _Completo_: el de siempre. El menú del cole se acorta (`acortarPlatoCole`): sin paréntesis, sin «ecológicas», hasta el primer «con» si es largo y, si sigue siendo largo, hasta la primera coma; lo que se pierde está en el menú del cole de la app.
 
 ## Comidas en la pantalla de Comer
 
@@ -981,5 +981,13 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Sin aprobación (decisión de Diego):** cualquiera marca y canjea sin que nadie lo confirme. Se puede corregir desmarcando o devolviendo; si hace falta, se añade una aprobación más adelante.
 - **Datos:** tablas `premio_hogar` y `canje_hogar` (migración `20261104110000_premios_hogar`), por el mismo motor que «Lo de hoy» (las funciones `leer_registro_tablas` y `aplicar_cambios_registro` se amplían; una lectura antigua sin premios se lee como vacía). En directo entre móviles.
 
-
 **Ampliación de D-118:** rachas (días seguidos con alguna tarea hecha; no se rompe hasta que acaba el día), barra hacia el siguiente premio e insignias (primera estrella, 10/50/100 estrellas, 3 y 7 días seguidos). Todo se **calcula** de las tareas hechas: no hay tablas nuevas.
+
+## D-119 · Primera impresión: portada más corta y bienvenida de cumpleaños
+
+- **Franja de estado:** con la cuenta conectada y guardando bien ya no sale nada («Modo Diego», «sincronizado»…); solo aparece sin conexión, con error o probando sin cuenta.
+- **Cumple duplicado:** una fecha señalada «Cumpleaños de Ana» ya no repite el cumple que la app conoce (`cuentaAtras`).
+- **Bienvenida de cumpleaños (`BienvenidaCumple`):** el día del cumple, a quien cumple le sale **una vez al año** una pantalla de fiesta con el mensaje de quien le preparó el regalo. El mensaje se guarda en **su móvil** al abrir el enlace de `/regalo` (nunca pasa por el servidor); sin él, sale el texto de siempre.
+- **Portada:** el cole va justo bajo la cena; la ayuda de instalar en iPhone es un desplegable de una línea.
+- **Comer:** «Llego tarde» deja de ser pestaña (sigue en la portada y en Cena); la ruta sigue siendo de Comer.
+- **Compra vacía:** pantalla amable en vez de «0 de 0» y barra vacía; «¡Todo comprado!» cuando se ha terminado.

@@ -39,18 +39,16 @@ export function BannerPrueba() {
       </div>
     );
   }
+  // Con la cuenta conectada y todo guardándose bien no hay nada que contar: la franja solo sale
+  // cuando hay algo que saber (sin conexión, error) o cuando se está probando sin cuenta.
+  if (conectado && cuenta.sync !== "sin-conexion" && cuenta.sync !== "error") return null;
   return (
     <div className="bg-aviso-fondo text-aviso-texto border-aviso-texto/20 flex items-center justify-between gap-3 border-b px-4 py-1 text-base md:px-8">
       <p className="truncate">
         {conectado ? (
           <>
-            <strong>{cuenta.hogar?.nombre}</strong> · sincronizado
-            {!(cuenta.tablas.hogar && cuenta.tablas.menu && cuenta.tablas.cole) && (
-              <>
-                {" "}
-                · <Link href="/cuenta">guardado en un documento, falta pasarlo a tablas</Link>
-              </>
-            )}
+            <strong>{cuenta.hogar?.nombre}</strong> ·{" "}
+            {cuenta.sync === "error" ? "no se está guardando" : "sin conexión"}
           </>
         ) : diego ? (
           <>

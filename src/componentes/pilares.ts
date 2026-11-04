@@ -32,7 +32,6 @@ export const PILARES: readonly Pilar[] = [
       { href: "/compra", texto: "Compra" },
       { href: "/despensa", texto: "Despensa" },
       { href: "/menu/platos", texto: "Platos" },
-      { href: "/menu/emergencia", texto: "Llego tarde" },
     ],
   },
   {
@@ -76,6 +75,8 @@ const coincide = (ruta: string, href: string) =>
 /** A qué pilar pertenece una ruta (la portada es «Hoy»). */
 export function pilarDe(ruta: string): Pilar | null {
   if (ruta === "/") return PILARES[0] ?? null;
+  // «Llego tarde» ya no es una pestaña (se llega desde la portada y desde Cena), pero sigue siendo de Comer.
+  if (ruta === "/menu/emergencia") return PILARES.find((p) => p.id === "comer") ?? null;
   return PILARES.find((p) => p.pestanas.some((t) => coincide(ruta, t.href))) ?? null;
 }
 

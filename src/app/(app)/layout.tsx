@@ -6,6 +6,7 @@ import { BotonAvisos } from "@/componentes/avisos-campana";
 import { NavegacionInferior, NavegacionLateral, Pestanas } from "@/componentes/navegacion";
 import { BotonTema, ProveedorTema } from "@/componentes/tema";
 import { BotonPerfil, PuertaDePerfil } from "@/componentes/perfiles";
+import { BienvenidaCumple } from "@/componentes/bienvenida-cumple";
 import { ProveedorHogar } from "@/componentes/proveedor-hogar";
 
 /**
@@ -56,6 +57,7 @@ export default function LayoutApp({ children }: { children: ReactNode }) {
           <NavegacionInferior />
           <AnadirRapido />
           <AvisoGlobal />
+          <BienvenidaCumple />
         </PuertaDePerfil>
       </ProveedorHogar>
     </ProveedorTema>

@@ -834,7 +834,6 @@ test.describe("flujos en móvil", () => {
       ["Comer", "Compra", "/compra"],
       ["Comer", "Despensa", "/despensa"],
       ["Comer", "Platos", "/menu/platos"],
-      ["Comer", "Llego tarde", "/menu/emergencia"],
       ["Casa", "Recurrente", "/casa"],
       ["Casa", "Por persona", "/tareas"],
       ["Casa", "Reparto", "/reparto"],

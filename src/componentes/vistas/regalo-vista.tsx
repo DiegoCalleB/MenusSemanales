@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { type Regalo, decodificarRegalo, enlaceDeRegalo } from "@/aplicacion/regalo";
+import { guardarRegaloRecibido } from "@/componentes/regalo-recibido";
 
 const BORRADOR: Regalo = {
   p: "Ana",
@@ -39,6 +40,8 @@ export function RegaloVista() {
 }
 
 function Abrir({ regalo }: { regalo: Regalo }) {
+  // Se recuerda en este móvil para volver a enseñar el mensaje cuando llegue el día.
+  useEffect(() => guardarRegaloRecibido(regalo), [regalo]);
   return (
     <main className="from-suave-1 to-suave-2 flex min-h-dvh items-center justify-center bg-linear-to-br p-4">
       <article className="tarjeta flex w-full max-w-lg flex-col gap-5 text-center sm:p-8">
