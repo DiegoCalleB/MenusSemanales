@@ -1040,3 +1040,9 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Sin nota** cuando no se sabe qué comieron (fin de semana, sin menú del cole o sin primero ni segundo reconocidos).
 - **Límites:** es una guía orientativa, no un criterio médico (mismas fuentes y límites que D-054). Un plato de grupo «otro» no se penaliza por repetir.
 - **Ideas aparte (no hechas):** enseñar la nota también en la tarjeta «Hoy cenáis…» de la portada y usarla para ordenar las opciones.
+
+## D-126 · Los enlaces que se mandan usan siempre la dirección definitiva
+
+- **Decisión (Diego):** la dirección de la app es **https://yaestahecho.up.railway.app**. Los enlaces que se envían a otras personas la usan siempre, en lugar de la que tenga abierta quien los manda (`window.location.origin`), que podía ser un dominio antiguo, un acceso directo viejo o `localhost`.
+- **Qué cambia:** el mensaje de invitación con el **código de acceso** (Cuenta y Familia), el **enlace del regalo** y el **enlace del calendario suscrito**. La dirección vive en un solo sitio (`src/aplicacion/enlaces.ts`, `URL_APP`) y el mensaje de invitación, antes duplicado en dos pantallas, es una sola función con test (`mensajeDeInvitacion`).
+- **Si cambia el dominio:** se cambia `URL_APP` y nada más. En desarrollo, estos enlaces también apuntan a producción, que es lo que se quiere al mandarlos.

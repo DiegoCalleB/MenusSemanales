@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { enlaceDeApp } from "@/aplicacion/enlaces";
 import { crearClienteNavegador } from "@/infraestructura/supabase/cliente-navegador";
 import { enlaceDelCalendario } from "@/infraestructura/supabase/cuenta";
 import { useCuenta, useHogar } from "./proveedor-hogar";
@@ -23,7 +24,7 @@ export function AvisosCalendario() {
 
   const enlace =
     token && persona
-      ? `${window.location.origin}/api/calendario/${token}.ics?para=${encodeURIComponent(persona.id)}`
+      ? enlaceDeApp(`/api/calendario/${token}.ics?para=${encodeURIComponent(persona.id)}`)
       : null;
   const webcal = enlace?.replace(/^https?:/, "webcal:") ?? null;
 

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { URL_APP } from "@/aplicacion/enlaces";
 import { type Regalo, decodificarRegalo, enlaceDeRegalo } from "@/aplicacion/regalo";
 import { CintaAnimal, useFondoCebra } from "@/componentes/cinta-animal";
 import { guardarRegaloRecibido } from "@/componentes/regalo-recibido";
@@ -86,7 +87,7 @@ function Abrir({ regalo }: { regalo: Regalo }) {
 function Preparar() {
   const [r, setR] = useState<Regalo>(BORRADOR);
   const [aviso, setAviso] = useState("");
-  const enlace = typeof window === "undefined" ? "" : enlaceDeRegalo(window.location.origin, r);
+  const enlace = enlaceDeRegalo(URL_APP, r);
   const valido = r.p.trim() !== "" && r.d.trim() !== "" && r.m.length <= 600;
 
   async function copiar() {

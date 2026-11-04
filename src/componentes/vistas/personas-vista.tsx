@@ -3,6 +3,7 @@
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { enlaceWhatsApp } from "@/dominio/compartir";
 import type { Persona } from "@/dominio/tipos";
+import { mensajeDeInvitacion } from "@/aplicacion/enlaces";
 import { MAX_LARGO_NOMBRE_PERSONA } from "@/aplicacion/estado";
 import type { VinculosPersonas } from "../usar-nube";
 import { useCuenta, useHogar } from "../proveedor-hogar";
@@ -166,9 +167,7 @@ function FilaPersona(props: {
   const opciones = RACIONES.some((r) => r.valor === p.factorRacion)
     ? RACIONES
     : [...RACIONES, { valor: p.factorRacion, texto: `Otra (${coma(p.factorRacion)})` }];
-  const texto = props.codigo
-    ? `Hola ${p.nombre} 👋 Únete a nuestro hogar en ¡Hecho! ✅\n1. Abre ${typeof window === "undefined" ? "" : window.location.origin}/cuenta\n2. Entra (con tu correo o sin correo)\n3. Elige «Unirme con un código» y escribe: ${props.codigo}`
-    : "";
+  const texto = props.codigo ? mensajeDeInvitacion(props.codigo, p.nombre) : "";
 
   return (
     <li className="tarjeta flex flex-col gap-3">
