@@ -460,7 +460,8 @@ test.describe("flujos en móvil", () => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/");
     // La portada enseña el menú del cole de hoy.
-    await expect(pagina.getByRole("heading", { level: 2, name: "Hoy en el cole" })).toBeVisible();
+    // Va plegado para no alargar la portada: se abre al tocarlo.
+    await pagina.getByRole("heading", { level: 2, name: "Hoy en el cole" }).click();
     await expect(pagina.getByText("Crema suave de calabacín, zanahoria y calabaza")).toBeVisible();
     await expect(pagina.getByText("Para cenar conviene:").first()).toBeVisible();
     // En el menú, cada día enseña su cena y, al abrirlo, lo que comieron en el cole.
@@ -647,7 +648,8 @@ test.describe("flujos en móvil", () => {
     const visibles = await filas.evaluateAll(
       (els) => els.filter((e) => e.getBoundingClientRect().bottom < window.innerHeight).length,
     );
-    expect(visibles).toBeGreaterThanOrEqual(5);
+    // (Las seis pestañas de Comer ocupan dos filas para verse enteras, y eso quita una fila.)
+    expect(visibles).toBeGreaterThanOrEqual(4);
 
     // Apuntar con cantidad, y editar nombre y cantidad en el sitio.
     await pagina.getByLabel("Añadir algo a la lista").fill("huevos 12");
@@ -868,6 +870,9 @@ test.describe("flujos en móvil", () => {
   }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     const mensaje = async () => {
+      // En el menú el compartir va plegado en «Compartir el menú».
+      const plegado = pagina.getByText("Compartir el menú", { exact: true });
+      if (await plegado.count()) await plegado.click();
       const href =
         (await pagina
           .getByRole("link", { name: "Enviar por WhatsApp" })
@@ -970,6 +975,7 @@ test.describe("flujos en móvil", () => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/menu");
     await pagina.getByRole("button", { name: /Jueves 5 de noviembre/ }).click();
+    await pagina.getByText("Comida, nota y más opciones").click();
     const comida = pagina.getByRole("region", { name: "Comida del mediodía" });
     await comida.getByLabel("Qué se come").fill("Paella de los abuelos");
     await comida.getByRole("button", { name: "Apuntar", exact: true }).click();

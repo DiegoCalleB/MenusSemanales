@@ -19,7 +19,7 @@ import { resumenDeTareas } from "@/dominio/tareas";
 import { LoDeHoy } from "../lo-de-hoy";
 import { NuevaCita } from "../nueva-cita";
 
-/** Portada: arriba, lo que se cena y lo que se come en el cole; debajo, lo demás por orden de prisa. */
+/** Portada: arriba, la cena y el cole de hoy; después lo pendiente y, plegado, lo demás. */
 export function InicioVista() {
   const { estado, despachar } = useHogar();
   const [yoId] = useYo();
@@ -144,35 +144,7 @@ export function InicioVista() {
 
       <AyudaInstalarIos />
 
-      {porComprar > 0 && (
-        <Link href="/compra" className="tarjeta flex items-center justify-between gap-3">
-          <span className="text-base font-bold">
-            <span aria-hidden="true">🛒 </span>Falta por comprar
-          </span>
-          <span className="text-base font-semibold tabular-nums">{porComprar}</span>
-        </Link>
-      )}
-
       {estado.personas.some((p) => p.activa) && <LoDeHoy />}
-
-      <section aria-labelledby="cita-rapida" className="tarjeta flex flex-col gap-2 p-3 sm:p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 id="cita-rapida" className="text-lg font-extrabold">
-            Citas y eventos
-          </h2>
-          <div className="flex gap-2">
-            {!apuntandoCita && (
-              <button type="button" className="boton" onClick={() => setApuntandoCita(true)}>
-                ＋ Cita
-              </button>
-            )}
-            <Link href="/calendario" className="boton-suave">
-              📅 Calendario
-            </Link>
-          </div>
-        </div>
-        {apuntandoCita && <NuevaCita alGuardar={() => setApuntandoCita(false)} />}
-      </section>
 
       {casaHoy.length > 0 && (
         <section aria-labelledby="casa-hoy" className="tarjeta flex flex-col gap-2">
@@ -203,6 +175,26 @@ export function InicioVista() {
         </section>
       )}
 
+      {yo && misTareas && misTareas.total > 0 && (
+        <Link href="/tareas" className="tarjeta flex items-center justify-between gap-3">
+          <span className="text-base font-bold">
+            <span aria-hidden="true">🧹 </span>Tus tareas de hoy
+          </span>
+          <span className="text-base font-semibold tabular-nums">
+            {misTareas.hechas} de {misTareas.total}
+          </span>
+        </Link>
+      )}
+
+      {porComprar > 0 && (
+        <Link href="/compra" className="tarjeta flex items-center justify-between gap-3">
+          <span className="text-base font-bold">
+            <span aria-hidden="true">🛒 </span>Falta por comprar
+          </span>
+          <span className="text-base font-semibold tabular-nums">{porComprar}</span>
+        </Link>
+      )}
+
       {avisosCumples.length > 0 && (
         <section aria-labelledby="cumples" className="tarjeta flex flex-col gap-2">
           <h2 id="cumples" className="text-lg font-extrabold">
@@ -224,16 +216,24 @@ export function InicioVista() {
         </section>
       )}
 
-      {yo && misTareas && misTareas.total > 0 && (
-        <Link href="/tareas" className="tarjeta flex items-center justify-between gap-3">
-          <span className="text-base font-bold">
-            <span aria-hidden="true">🧹 </span>Tus tareas de hoy
-          </span>
-          <span className="text-base font-semibold tabular-nums">
-            {misTareas.hechas} de {misTareas.total}
-          </span>
-        </Link>
-      )}
+      <section aria-labelledby="cita-rapida" className="tarjeta flex flex-col gap-2 p-3 sm:p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 id="cita-rapida" className="text-lg font-extrabold">
+            Citas y eventos
+          </h2>
+          <div className="flex gap-2">
+            {!apuntandoCita && (
+              <button type="button" className="boton" onClick={() => setApuntandoCita(true)}>
+                ＋ Cita
+              </button>
+            )}
+            <Link href="/calendario" className="boton-suave">
+              📅 Calendario
+            </Link>
+          </div>
+        </div>
+        {apuntandoCita && <NuevaCita alGuardar={() => setApuntandoCita(false)} />}
+      </section>
 
       {yo?.id === "diego" && (
         <Link href="/regalo" className="boton-suave w-fit">

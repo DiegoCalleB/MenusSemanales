@@ -5,3 +5,7 @@
 # entorno. No es una clave real. Está en el historial (commit 4b78145) y no se reescribe; el código
 # actual ya usa un valor obviamente falso de baja entropía.
 4b7814592038da7643d11ae9d07170a6651907ff:src/lib/env.test.ts:generic-api-key:6
+
+# Valor de prueba inventado ("secreto-de-prueba-largo-1234567890") en el test de la ruta de avisos
+# diarios. No es un secreto real. Está en el historial (commit 1898e92) y no se reescribe.
+1898e92474d4ef8f55d78401642babb6b0da0953:src/app/api/avisos/diario/route.test.ts:generic-api-key:17
