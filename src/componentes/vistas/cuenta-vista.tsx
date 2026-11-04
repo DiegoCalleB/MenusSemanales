@@ -1,5 +1,6 @@
 "use client";
 
+import { AjusteEstampado } from "../ajuste-estampado";
 import { ESTADO_NUBE } from "../usar-nube";
 import { type FormEvent, useState } from "react";
 import { enlaceWhatsApp } from "@/dominio/compartir";
@@ -161,6 +162,7 @@ export function CuentaVista() {
         </section>
       )}
 
+      <AjusteEstampado />
       <PanelRespaldo />
       <PanelTablas />
     </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { felicitacionesDeHoy } from "@/dominio/cumples";
+import { CintaAnimal } from "./cinta-animal";
 import { useHogar } from "./proveedor-hogar";
 import { leerRegaloRecibido } from "./regalo-recibido";
 import { useYo } from "./yo";
@@ -27,6 +28,8 @@ const CONFETI: ReadonlyArray<readonly [string, string]> = [
   ["🎊", "left-[75%] top-[88%] [animation-delay:0.5s]"],
   ["⭐", "left-[45%] top-[3%] [animation-delay:0.8s]"],
   ["🎁", "left-[48%] top-[92%] [animation-delay:0.4s]"],
+  ["🐆", "left-[22%] top-[22%] [animation-delay:0.7s]"],
+  ["🦓", "left-[68%] top-[70%] [animation-delay:0.1s]"],
 ];
 
 /**
@@ -81,7 +84,8 @@ export function BienvenidaCumple() {
           </span>
         ))}
       </div>
-      <article className="tarjeta relative flex w-full max-w-lg flex-col gap-5 text-center sm:p-8">
+      <article className="tarjeta relative flex w-full max-w-lg flex-col gap-5 overflow-hidden text-center sm:p-8">
+        <CintaAnimal className="-mx-4 -mt-4 sm:-mx-8 sm:-mt-8" />
         <p aria-hidden="true" className="fiesta text-6xl">
           🎂
         </p>
@@ -113,6 +117,7 @@ export function BienvenidaCumple() {
         >
           Ver mi regalo 🎁
         </button>
+        <CintaAnimal otra className="-mx-4 -mb-4 sm:-mx-8 sm:-mb-8" />
       </article>
     </div>
   );

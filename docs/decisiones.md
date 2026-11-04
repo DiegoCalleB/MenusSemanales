@@ -1023,3 +1023,11 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Cómo:** la lista ya se calculaba solo con lo futuro (los cumples se repiten cada año). Lo nuevo es que los **apuntes de agenda** cuyo último día es anterior a hoy se **borran** (`agenda/limpiar`, lanzada por `LimpiarFechas` al abrir la app y al cambiar el día, y solo con los datos ya cargados). Una fecha de varios días (17-19 abril) se queda hasta que acaba. El borrado se sincroniza como cualquier otro.
 - **Consecuencia:** lo pasado ya no se ve en el calendario. Es lo que se pidió; si se echa de menos un histórico, habría que archivar en lugar de borrar.
 - **Keep:** no hay forma de escribir en Keep desde la app, así que la nota de Keep no se actualiza sola; «Copiar para Keep» siempre copia la lista al día. Para tenerlo siempre actualizado en el móvil sirve el calendario suscrito (Cuenta), que se refresca solo.
+
+## D-124 · Un detalle de animal print (leopardo y cebra)
+
+- **Decisión (Diego):** a Ana le encanta el animal print de cebra y de leopardo, así que la app lleva un detalle discreto de los dos, sin cambiar la paleta rosa de la marca.
+- **Qué:** una **cinta** (`CintaAnimal`) de leopardo o de cebra, de 22 px, en la tarjeta «Hoy cenáis…» de la portada y en la pantalla de regalo y de bienvenida de cumpleaños (leopardo arriba, cebra abajo, y un 🐆 y un 🦓 en el confeti). Con «los dos» (por defecto), la cinta de arriba es de leopardo y la de abajo de cebra.
+- **Cómo:** los estampados son SVG dentro de la hoja de estilos (`.cinta-leopardo`, `.cinta-cebra`), sin estilos en línea (la CSP los bloquea) y permitidos por `img-src data:`. Son solo adorno (`aria-hidden`).
+- **Se puede quitar:** en **Cuenta → «Un detalle de animal print»**: leopardo y cebra, solo leopardo, solo cebra o sin estampado. Se recuerda **en cada móvil** (`menus-semanales:estampado`), como «quién soy»: no se sincroniza.
+- **Ideas aparte (no hechas):** el icono de la app con estampado, y un tema de color con más animal print.

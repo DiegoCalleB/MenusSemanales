@@ -255,6 +255,27 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 
+  test("animal print: sale en la portada, se puede quitar y se recuerda al recargar", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/");
+    await expect(pagina.locator(".cinta").first()).toBeVisible();
+
+    await cargar(pagina, "/cuenta");
+    await pagina.getByRole("radio", { name: "Sin estampado" }).check();
+    await cargar(pagina, "/");
+    await expect(pagina.locator(".cinta")).toHaveCount(0);
+    await pagina.reload({ waitUntil: "networkidle" });
+    await expect(pagina.locator(".cinta")).toHaveCount(0);
+
+    await cargar(pagina, "/cuenta");
+    await pagina.getByRole("radio", { name: "Cebra" }).check();
+    await cargar(pagina, "/");
+    await expect(pagina.locator(".cinta-cebra").first()).toBeVisible();
+    await contexto.close();
+  });
+
   test("menú: 15 días y menú del cole leído desde texto", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/menu");

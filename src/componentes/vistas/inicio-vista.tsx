@@ -16,6 +16,7 @@ import { useCalendarioFamilia } from "../usar-calendario-familia";
 import { almuerzosDe } from "@/dominio/almuerzos";
 import { quePideHoy } from "@/dominio/casa";
 import { resumenDeTareas } from "@/dominio/tareas";
+import { CintaAnimal } from "../cinta-animal";
 import { LoDeHoy } from "../lo-de-hoy";
 import { NuevaCita } from "../nueva-cita";
 
@@ -100,8 +101,9 @@ export function InicioVista() {
       )}
       <section
         aria-labelledby="hoy"
-        className="from-suave-1 to-suave-2 border-borde flex flex-col gap-3 rounded-3xl border bg-linear-to-br p-4 sm:p-6"
+        className="from-suave-1 to-suave-2 border-borde flex flex-col gap-3 overflow-hidden rounded-3xl border bg-linear-to-br p-4 sm:p-6"
       >
+        <CintaAnimal className="-mx-4 -mt-4 sm:-mx-6 sm:-mt-6" />
         <p className="text-tinta-suave text-base font-semibold">
           {yo ? `¡Hola, ${yo.nombre}! 👋` : "¡Hola! 👋"}
         </p>
