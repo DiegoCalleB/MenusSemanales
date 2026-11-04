@@ -249,6 +249,8 @@ export type Accion =
       idBase?: string;
     }
   | { tipo: "agenda/borrar"; id: string }
+  /** Quita de la agenda lo que ya pasó (D-123): lo que terminó antes de hoy. */
+  | { tipo: "agenda/limpiar" }
   | { tipo: "almuerzo/anadir"; fecha: FechaIso; texto?: string; platoId?: string; idBase?: string }
   | { tipo: "almuerzo/borrar"; id: string }
   | {
@@ -1392,6 +1394,12 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
 
     case "agenda/borrar":
       return { ...e, agenda: e.agenda.filter((a) => a.id !== accion.id) };
+
+    case "agenda/limpiar": {
+      const vigentes = e.agenda.filter((a) => (a.hasta ?? a.fecha) >= e.hoy);
+      // Sin nada que quitar se devuelve el mismo estado: no hay cambio que guardar ni que enseñar.
+      return vigentes.length === e.agenda.length ? e : { ...e, agenda: vigentes };
+    }
 
     case "cumple/borrar":
       return { ...e, cumples: e.cumples.filter((c) => c.id !== accion.id) };

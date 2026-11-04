@@ -578,7 +578,8 @@ test.describe("flujos en móvil", () => {
     expect(axe.violations).toEqual([]);
     await pagina.getByRole("button", { name: "Borrar lo guardado en este móvil" }).click();
     await pagina.getByRole("button", { name: "Sí, borrar y recargar" }).click();
-    await expect(pagina.getByRole("heading", { level: 1, name: /Próximas fechas/ })).toBeVisible();
+    await expect(pagina.getByRole("heading", { level: 1, name: /^Fechas/ })).toBeVisible();
+    await expect(pagina.getByRole("heading", { level: 2, name: "Próximas fechas" })).toBeVisible();
     await expect(pagina.getByRole("list", { name: "Apuntes" })).toHaveCount(0);
     await contexto.close();
   });

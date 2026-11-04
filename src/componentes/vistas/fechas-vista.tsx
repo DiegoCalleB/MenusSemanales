@@ -58,7 +58,10 @@ function EstadoGuardado() {
   );
 }
 
-/** Módulo de próximas fechas: apuntar, ver lo que viene, copiarlo a Keep y llevarlo al calendario. */
+/**
+ * Módulo de fechas: apuntar, ver «Próximas fechas» (solo lo que aún no ha pasado: lo ya pasado se
+ * quita solo, D-123), copiarlo a Keep y llevarlo al calendario.
+ */
 export function FechasVista() {
   const { estado } = useHogar();
   const deGoogle = useCalendarioFamilia(estado.hoy);
@@ -92,7 +95,7 @@ export function FechasVista() {
     <div className="flex flex-col gap-4">
       <header className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-extrabold tracking-tight">
-          Próximas fechas <span aria-hidden="true">📌</span>
+          Fechas <span aria-hidden="true">📌</span>
         </h1>
         <Link href="/calendario" className="boton-suave">
           Calendario
@@ -105,7 +108,7 @@ export function FechasVista() {
 
       <section aria-labelledby="que-viene" className="tarjeta flex flex-col gap-3">
         <h2 id="que-viene" className="text-xl font-extrabold">
-          Lo que viene
+          Próximas fechas
         </h2>
         {lista.length === 0 ? (
           <p className="text-tinta-suave text-base">

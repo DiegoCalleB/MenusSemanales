@@ -1016,3 +1016,10 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Decisión:** nuevo horizonte «Un mes» (hoy + 29 días; migración `20261104130000_horizonte_mes.sql`, que amplía el `check` de `hogar_ajuste.horizonte`). Además, un plato ya elegido en otra fecha cercana resta puntos aunque ya se pueda repetir (hasta 28 días, más cuanto más cerca). La regla dura de 7 días no cambia. El menú del cole se sigue usando solo en los días en que está cargado; sin él no hay restricción.
 - **Test:** proponer un mes no repite a menos de 7 días y al menos el 60 % de las cenas son platos distintos (falla con el motor anterior).
 - **Límite conocido:** con un catálogo pequeño, un mes obliga a repetir; y la compra de un mes entero sigue sin tener en cuenta lo perecedero (ver D-044).
+
+## D-123 · «Próximas fechas» se limpia sola
+
+- **Decisión (Diego):** la tarjeta «Lo que viene» pasa a llamarse **«Próximas fechas»**, como la nota de Keep, y se mantiene al día: lo que ya ha pasado desaparece. La pantalla se llama ahora «Fechas».
+- **Cómo:** la lista ya se calculaba solo con lo futuro (los cumples se repiten cada año). Lo nuevo es que los **apuntes de agenda** cuyo último día es anterior a hoy se **borran** (`agenda/limpiar`, lanzada por `LimpiarFechas` al abrir la app y al cambiar el día, y solo con los datos ya cargados). Una fecha de varios días (17-19 abril) se queda hasta que acaba. El borrado se sincroniza como cualquier otro.
+- **Consecuencia:** lo pasado ya no se ve en el calendario. Es lo que se pidió; si se echa de menos un histórico, habría que archivar en lugar de borrar.
+- **Keep:** no hay forma de escribir en Keep desde la app, así que la nota de Keep no se actualiza sola; «Copiar para Keep» siempre copia la lista al día. Para tenerlo siempre actualizado en el móvil sirve el calendario suscrito (Cuenta), que se refresca solo.
