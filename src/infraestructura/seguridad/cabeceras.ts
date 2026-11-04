@@ -14,7 +14,7 @@ export const cabecerasSeguridad: ReadonlyArray<{ key: string; value: string }> =
   // La app no necesita estos permisos del dispositivo.
   {
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()",
+    value: "camera=(), microphone=(self), geolocation=(), payment=(), usb=(), interest-cohort=()",
   },
   // Aísla la ventana de otras pestañas (protege frente a ataques entre orígenes).
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },

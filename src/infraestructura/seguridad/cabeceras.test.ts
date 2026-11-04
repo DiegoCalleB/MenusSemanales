@@ -22,8 +22,10 @@ describe("cabecerasSeguridad", () => {
     expect(maxAge).toBeGreaterThanOrEqual(31536000);
   });
 
-  it("bloquea iframes y deniega cámara, micrófono y ubicación", () => {
+  it("bloquea iframes y deniega cámara y ubicación, y deja el micrófono solo a la propia página (dictado)", () => {
     expect(valor("X-Frame-Options")).toBe("DENY");
-    expect(valor("Permissions-Policy")).toMatch(/camera=\(\).*microphone=\(\).*geolocation=\(\)/);
+    expect(valor("Permissions-Policy")).toMatch(
+      /camera=\(\).*microphone=\(self\).*geolocation=\(\)/,
+    );
   });
 });

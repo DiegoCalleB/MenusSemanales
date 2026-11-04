@@ -998,3 +998,8 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Qué cambia:** manifiesto (nombre «¡Hecho!», nombre corto «Hecho» bajo el icono del iPhone), título, cabecera y navegación, bienvenida y regalo, textos de invitación, correo del resumen, avisos, calendario y archivos compartidos. «Hecho con Menús Semanales» pasa a «Enviado desde ¡Hecho!» para no repetir la palabra.
 - **Qué NO cambia (a propósito):** los identificadores internos (`menus-semanales` en el paquete, en el respaldo `app`, en los `UID` del calendario y en las claves de `localStorage`), para no romper respaldos, suscripciones de calendario ni preferencias ya guardadas.
 - **Pendiente:** comprobar dominio y nombre en tiendas de apps. En un iPhone que ya tenga la app instalada, el nombre y el icono no se actualizan solos: hay que quitarla de la pantalla de inicio y volver a añadirla.
+
+## D-121 · El micrófono estaba bloqueado por nuestras propias cabeceras
+
+- **Fallo:** `Permissions-Policy: microphone=()` prohibía el micrófono a todos, también a nuestra página, así que el 🎤 de la compra fallaba siempre con «no permitido» (visto en Android) sin llegar a pedir permiso.
+- **Arreglo:** `microphone=(self)`. Cámara y ubicación siguen denegadas, y los iframes de terceros no pueden usar el micrófono. El navegador vuelve a pedir el permiso al usuario la primera vez que pulsa 🎤.
