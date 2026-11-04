@@ -123,8 +123,8 @@ export function NavegacionLateral() {
 }
 
 /**
- * Las pantallas del pilar abierto, en una fila de pestañas pegada arriba (con desplazamiento
- * lateral si no caben). La portada no lleva. Sirve igual en móvil y en escritorio.
+ * Las pantallas del pilar abierto, en una fila de pestañas pegada arriba (en dos filas si no caben, para
+ * que se vean todas sin deslizar). La portada no lleva. Sirve igual en móvil y en escritorio.
  */
 export function Pestanas() {
   const ruta = usePathname();
@@ -134,11 +134,11 @@ export function Pestanas() {
   const activa = pestanaActiva(pilar, ruta);
   return (
     <nav aria-label="Apartados" className="-mx-4 mb-4 md:mx-0">
-      <ul className="flex gap-2 overflow-x-auto px-4 pb-1 md:flex-wrap md:overflow-visible md:px-0">
+      <ul className="flex flex-wrap gap-2 px-4 md:px-0">
         {pilar.pestanas.map((t) => {
           const esActiva = activa?.href === t.href;
           return (
-            <li key={t.href} className="shrink-0">
+            <li key={t.href}>
               <Link
                 href={t.href}
                 aria-current={esActiva ? "page" : undefined}

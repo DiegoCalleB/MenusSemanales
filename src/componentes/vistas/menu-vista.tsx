@@ -104,16 +104,6 @@ export function MenuVista() {
     <div className="flex flex-col gap-4">
       <header className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-extrabold tracking-tight">Menú</h1>
-        <button
-          type="button"
-          className="boton"
-          onClick={() => despachar({ tipo: "menu/autocompletar" })}
-        >
-          ✨ Proponer días sin cena
-        </button>
-      </header>
-
-      <div className="flex flex-wrap items-center gap-2">
         <div role="group" aria-label="Cuánto planificar" className="flex gap-2">
           {(
             [
@@ -132,12 +122,28 @@ export function MenuVista() {
             </button>
           ))}
         </div>
-      </div>
+      </header>
 
-      <BotonesCompartir
-        titulo={plan.titulo}
-        texto={textoMenu(plan.titulo, plan.dias, formatoMenu)}
-      />
+      <div className="flex flex-col gap-2">
+        <button
+          type="button"
+          className="boton w-full sm:w-fit"
+          onClick={() => despachar({ tipo: "menu/autocompletar" })}
+        >
+          ✨ Proponer días sin cena
+        </button>
+        <details className="border-borde rounded-2xl border px-3">
+          <summary className="flex min-h-11 cursor-pointer items-center text-base font-bold">
+            Compartir el menú
+          </summary>
+          <div className="pb-3">
+            <BotonesCompartir
+              titulo={plan.titulo}
+              texto={textoMenu(plan.titulo, plan.dias, formatoMenu)}
+            />
+          </div>
+        </details>
+      </div>
 
       <ul className="flex flex-col gap-2">
         {dias.map((dia) => {
@@ -241,11 +247,6 @@ export function MenuVista() {
               {abiertoDia && (
                 <div className="flex flex-col gap-3 px-4 pb-4">
                   <TarjetaCole cole={dia.cole} fecha={dia.fecha} />
-
-                  <ComidaDelDia
-                    fecha={dia.fecha}
-                    puedeApuntar={fechaPlanificable(estado, dia.fecha)}
-                  />
 
                   <h3 className="text-base font-extrabold">
                     <span aria-hidden="true">🍴 </span>Cena
@@ -442,25 +443,35 @@ export function MenuVista() {
                     </>
                   )}
 
-                  <NotaDelDia fecha={dia.fecha} />
-
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      aria-pressed={tarde}
-                      onClick={() => despachar({ tipo: "menu/llegoTarde", fecha: dia.fecha })}
-                      className={tarde ? "boton" : "boton-suave"}
-                    >
-                      Llego tarde (15 min)
-                    </button>
-                    <button
-                      type="button"
-                      className="boton-suave"
-                      onClick={() => despachar({ tipo: "menu/saltar", fecha: dia.fecha })}
-                    >
-                      No cenamos en casa
-                    </button>
-                  </div>
+                  <details className="border-borde rounded-2xl border px-3">
+                    <summary className="flex min-h-11 cursor-pointer items-center text-base font-bold">
+                      <span aria-hidden="true">☀️ </span>&nbsp;Comida, nota y más opciones
+                    </summary>
+                    <div className="flex flex-col gap-3 pb-3">
+                      <ComidaDelDia
+                        fecha={dia.fecha}
+                        puedeApuntar={fechaPlanificable(estado, dia.fecha)}
+                      />
+                      <NotaDelDia fecha={dia.fecha} />
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          aria-pressed={tarde}
+                          onClick={() => despachar({ tipo: "menu/llegoTarde", fecha: dia.fecha })}
+                          className={tarde ? "boton" : "boton-suave"}
+                        >
+                          Llego tarde (15 min)
+                        </button>
+                        <button
+                          type="button"
+                          className="boton-suave"
+                          onClick={() => despachar({ tipo: "menu/saltar", fecha: dia.fecha })}
+                        >
+                          No cenamos en casa
+                        </button>
+                      </div>
+                    </div>
+                  </details>
                 </div>
               )}
             </li>

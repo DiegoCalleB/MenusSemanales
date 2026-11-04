@@ -19,7 +19,7 @@ import { resumenDeTareas } from "@/dominio/tareas";
 import { LoDeHoy } from "../lo-de-hoy";
 import { NuevaCita } from "../nueva-cita";
 
-/** Portada: una sola pantalla, sin desplazarse: la cena de hoy, el cole de hoy y los accesos. */
+/** Portada: primero lo de hoy (cena, lo que toca hacer), después lo pendiente y, plegado, lo demás. */
 export function InicioVista() {
   const { estado, despachar } = useHogar();
   const [yoId] = useYo();
@@ -133,35 +133,7 @@ export function InicioVista() {
 
       <AyudaInstalarIos />
 
-      {porComprar > 0 && (
-        <Link href="/compra" className="tarjeta flex items-center justify-between gap-3">
-          <span className="text-base font-bold">
-            <span aria-hidden="true">🛒 </span>Falta por comprar
-          </span>
-          <span className="text-base font-semibold tabular-nums">{porComprar}</span>
-        </Link>
-      )}
-
       {estado.personas.some((p) => p.activa) && <LoDeHoy />}
-
-      <section aria-labelledby="cita-rapida" className="tarjeta flex flex-col gap-2 p-3 sm:p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 id="cita-rapida" className="text-lg font-extrabold">
-            Citas y eventos
-          </h2>
-          <div className="flex gap-2">
-            {!apuntandoCita && (
-              <button type="button" className="boton" onClick={() => setApuntandoCita(true)}>
-                ＋ Cita
-              </button>
-            )}
-            <Link href="/calendario" className="boton-suave">
-              📅 Calendario
-            </Link>
-          </div>
-        </div>
-        {apuntandoCita && <NuevaCita alGuardar={() => setApuntandoCita(false)} />}
-      </section>
 
       {casaHoy.length > 0 && (
         <section aria-labelledby="casa-hoy" className="tarjeta flex flex-col gap-2">
@@ -192,6 +164,26 @@ export function InicioVista() {
         </section>
       )}
 
+      {yo && misTareas && misTareas.total > 0 && (
+        <Link href="/tareas" className="tarjeta flex items-center justify-between gap-3">
+          <span className="text-base font-bold">
+            <span aria-hidden="true">🧹 </span>Tus tareas de hoy
+          </span>
+          <span className="text-base font-semibold tabular-nums">
+            {misTareas.hechas} de {misTareas.total}
+          </span>
+        </Link>
+      )}
+
+      {porComprar > 0 && (
+        <Link href="/compra" className="tarjeta flex items-center justify-between gap-3">
+          <span className="text-base font-bold">
+            <span aria-hidden="true">🛒 </span>Falta por comprar
+          </span>
+          <span className="text-base font-semibold tabular-nums">{porComprar}</span>
+        </Link>
+      )}
+
       {avisosCumples.length > 0 && (
         <section aria-labelledby="cumples" className="tarjeta flex flex-col gap-2">
           <h2 id="cumples" className="text-lg font-extrabold">
@@ -213,26 +205,39 @@ export function InicioVista() {
         </section>
       )}
 
-      {yo && misTareas && misTareas.total > 0 && (
-        <Link href="/tareas" className="tarjeta flex items-center justify-between gap-3">
-          <span className="text-base font-bold">
-            <span aria-hidden="true">🧹 </span>Tus tareas de hoy
-          </span>
-          <span className="text-base font-semibold tabular-nums">
-            {misTareas.hechas} de {misTareas.total}
-          </span>
-        </Link>
-      )}
+      <section aria-labelledby="cita-rapida" className="tarjeta flex flex-col gap-2 p-3 sm:p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 id="cita-rapida" className="text-lg font-extrabold">
+            Citas y eventos
+          </h2>
+          <div className="flex gap-2">
+            {!apuntandoCita && (
+              <button type="button" className="boton" onClick={() => setApuntandoCita(true)}>
+                ＋ Cita
+              </button>
+            )}
+            <Link href="/calendario" className="boton-suave">
+              📅 Calendario
+            </Link>
+          </div>
+        </div>
+        {apuntandoCita && <NuevaCita alGuardar={() => setApuntandoCita(false)} />}
+      </section>
 
       {diaCole && (
-        <section aria-labelledby="cole-hoy" className="flex flex-col gap-2">
-          <h2 id="cole-hoy" className="text-lg font-extrabold">
-            {diaCole === estado.hoy
-              ? "Hoy en el cole"
-              : `Próximo menú del cole · ${fechaCorta(diaCole)}`}
-          </h2>
-          <TarjetaCole cole={estado.colegio[diaCole] ?? null} fecha={diaCole} />
-        </section>
+        <details className="tarjeta p-0">
+          <summary className="flex min-h-14 cursor-pointer items-center px-4 py-2">
+            <h2 id="cole-hoy" className="text-lg font-extrabold">
+              <span aria-hidden="true">🎒 </span>
+              {diaCole === estado.hoy
+                ? "Hoy en el cole"
+                : `Próximo menú del cole · ${fechaCorta(diaCole)}`}
+            </h2>
+          </summary>
+          <div className="px-4 pb-4">
+            <TarjetaCole cole={estado.colegio[diaCole] ?? null} fecha={diaCole} />
+          </div>
+        </details>
       )}
 
       {yo?.id === "diego" && (
