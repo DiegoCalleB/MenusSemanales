@@ -75,7 +75,7 @@ export function CompartirVista() {
   const hayEventos = estado.comidas.length > 0 || Object.keys(estado.eventos).length > 0;
 
   function descargarIcs() {
-    const ics = generarIcs("Menús Semanales", eventosDeCalendario(estado, yo), new Date());
+    const ics = generarIcs("¡Hecho!", eventosDeCalendario(estado, yo), new Date());
     const url = URL.createObjectURL(new Blob([ics], { type: "text/calendar;charset=utf-8" }));
     const a = document.createElement("a");
     a.href = url;

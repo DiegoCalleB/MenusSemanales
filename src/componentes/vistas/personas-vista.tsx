@@ -167,7 +167,7 @@ function FilaPersona(props: {
     ? RACIONES
     : [...RACIONES, { valor: p.factorRacion, texto: `Otra (${coma(p.factorRacion)})` }];
   const texto = props.codigo
-    ? `Hola ${p.nombre} 👋 Únete a nuestro hogar en Menús Semanales 🍽️\n1. Abre ${typeof window === "undefined" ? "" : window.location.origin}/cuenta\n2. Entra (con tu correo o sin correo)\n3. Elige «Unirme con un código» y escribe: ${props.codigo}`
+    ? `Hola ${p.nombre} 👋 Únete a nuestro hogar en ¡Hecho! ✅\n1. Abre ${typeof window === "undefined" ? "" : window.location.origin}/cuenta\n2. Entra (con tu correo o sin correo)\n3. Elige «Unirme con un código» y escribe: ${props.codigo}`
     : "";
 
   return (

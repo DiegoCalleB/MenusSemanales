@@ -162,7 +162,7 @@ export function resumenDelDia(hoy: FechaIso, avisos: readonly Aviso[]): ResumenD
     "",
     ...avisos.map((a) => `${a.emoji} ${a.titulo}${a.detalle ? ` (${a.detalle})` : ""}`),
     "",
-    "— Menús Semanales",
+    "— ¡Hecho!",
   ].join("\n");
   const filas = avisos
     .map(
@@ -170,7 +170,7 @@ export function resumenDelDia(hoy: FechaIso, avisos: readonly Aviso[]): ResumenD
         `<tr><td style="padding:6px 10px 6px 0;font-size:20px;vertical-align:top">${a.emoji}</td><td style="padding:6px 0;font-size:16px;${a.nivel === "ya" ? "font-weight:700;" : ""}">${escapar(a.titulo)}${a.detalle ? `<br><span style="color:#6b5b62;font-size:14px;font-weight:400">${escapar(a.detalle)}</span>` : ""}</td></tr>`,
     )
     .join("");
-  const html = `<!doctype html><html lang="es"><body style="margin:0;padding:16px;background:#fff7f4;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#2a1a20"><div style="max-width:480px;margin:0 auto;background:#fff;border-radius:16px;padding:20px"><h1 style="font-size:20px;margin:0 0 4px">Buenos días 🍽️</h1><p style="margin:0 0 12px;color:#6b5b62">Lo de hoy, ${escapar(fechaLarga(hoy))}</p><table role="presentation" style="border-collapse:collapse;width:100%">${filas}</table><p style="margin:16px 0 0;color:#6b5b62;font-size:13px">Menús Semanales</p></div></body></html>`;
+  const html = `<!doctype html><html lang="es"><body style="margin:0;padding:16px;background:#fff7f4;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#2a1a20"><div style="max-width:480px;margin:0 auto;background:#fff;border-radius:16px;padding:20px"><h1 style="font-size:20px;margin:0 0 4px">Buenos días 🍽️</h1><p style="margin:0 0 12px;color:#6b5b62">Lo de hoy, ${escapar(fechaLarga(hoy))}</p><table role="presentation" style="border-collapse:collapse;width:100%">${filas}</table><p style="margin:16px 0 0;color:#6b5b62;font-size:13px">¡Hecho!</p></div></body></html>`;
   return { asunto, texto, html };
 }
 

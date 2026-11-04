@@ -61,7 +61,7 @@ export function leerRespaldo(texto: string): LecturaRespaldo {
   }
   const r = dato as Record<string, unknown>;
   if (r.app !== APP_RESPALDO)
-    return { ok: false, motivo: "Este archivo no es de Menús Semanales." };
+    return { ok: false, motivo: "Este archivo no es una copia de ¡Hecho!" };
   if (typeof r.version !== "number" || r.version > VERSION_RESPALDO) {
     return { ok: false, motivo: "Es de una versión más nueva de la app: actualiza la página." };
   }

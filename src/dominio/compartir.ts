@@ -91,7 +91,7 @@ function textoMenuCompleto(titulo: string, dias: readonly DiaParaCompartir[]): s
     if (d.nota) lineas.push(`📝 ${d.nota}`);
     lineas.push("");
   }
-  lineas.push("_Hecho con Menús Semanales_");
+  lineas.push("_Enviado desde ¡Hecho!_");
   return recortar(lineas.join("\n"));
 }
 
@@ -108,7 +108,7 @@ function textoMenuAgenda(titulo: string, dias: readonly DiaParaCompartir[]): str
     if (d.nota) lineas.push(`📝 ${d.nota}`);
     lineas.push("");
   }
-  lineas.push("_Hecho con Menús Semanales_");
+  lineas.push("_Enviado desde ¡Hecho!_");
   return recortar(lineas.join("\n"));
 }
 
@@ -127,7 +127,7 @@ function textoMenuTabla(titulo: string, dias: readonly DiaParaCompartir[]): stri
       `*${d.etiqueta}* | ${cole} | ${cena}${extra.length > 0 ? ` | ${extra.join(" · ")}` : ""}`,
     );
   }
-  lineas.push("", "_Hecho con Menús Semanales_");
+  lineas.push("", "_Enviado desde ¡Hecho!_");
   return recortar(lineas.join("\n"));
 }
 
@@ -177,7 +177,7 @@ export function textoFechas(fechas: readonly FechaParaCompartir[]): string {
       `*${f.etiqueta}*${f.hora ? ` ${f.hora}` : ""} · ${f.emoji} ${f.titulo} _(${f.cuando})_`,
     );
   }
-  lineas.push("", "_Hecho con Menús Semanales_");
+  lineas.push("", "_Enviado desde ¡Hecho!_");
   return recortar(lineas.join("\n"));
 }
 
@@ -202,7 +202,7 @@ export function textoCasa(tareas: readonly TareaParaCompartir[]): string {
     }
     lineas.push("");
   }
-  lineas.push("_Hecho con Menús Semanales_");
+  lineas.push("_Enviado desde ¡Hecho!_");
   return recortar(lineas.join("\n"));
 }
 
@@ -282,7 +282,7 @@ export function generarIcs(
   const lineas: string[] = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Menus Semanales//ES",
+    "PRODID:-//Hecho//ES",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     `X-WR-CALNAME:${escaparIcs(nombre)}`,

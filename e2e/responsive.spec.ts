@@ -1168,7 +1168,7 @@ test.describe("flujos en móvil", () => {
     await expect(avisos.getByRole("button", { name: /Activar los avisos/ })).toHaveCount(0);
     expect(await whatsapp.first().getAttribute("href")).toMatch(/^https:\/\/wa\.me\/\?text=/);
     await pagina.getByText("Ver mensaje").first().click();
-    await expect(pagina.locator("pre").first()).toContainText("Hecho con Menús Semanales");
+    await expect(pagina.locator("pre").first()).toContainText("Enviado desde ¡Hecho!");
     // El archivo de calendario se descarga con eventos de cena.
     const descarga = pagina.waitForEvent("download");
     await pagina.getByRole("button", { name: /Calendario \(\.ics\)/ }).click();

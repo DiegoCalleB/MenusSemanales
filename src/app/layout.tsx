@@ -6,10 +6,10 @@ import "./globals.css";
 const nunito = Nunito({ variable: "--font-nunito", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: { default: "Menús Semanales", template: "%s · Menús Semanales" },
-  description: "Planificador de menús, despensa y lista de la compra para toda la familia.",
-  applicationName: "Menús Semanales",
-  appleWebApp: { capable: true, title: "Menús", statusBarStyle: "default" },
+  title: { default: "¡Hecho!", template: "%s · ¡Hecho!" },
+  description: "Menú, compra, casa y cole sin carga mental: tú descansa, yo me encargo.",
+  applicationName: "¡Hecho!",
+  appleWebApp: { capable: true, title: "Hecho", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

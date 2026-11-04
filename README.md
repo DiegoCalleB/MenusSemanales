@@ -1,6 +1,6 @@
-# Menús Semanales
+# ¡Hecho!
 
-Aplicación web privada para planificar los menús semanales de una familia: opciones equilibradas
+Tú descansa, yo me encargo. Aplicación web privada para llevar la casa sin carga mental: menús semanales con opciones equilibradas
 por comida (adaptadas al comedor del cole), despensa y nevera, y lista de la compra compartida en
 tiempo real. Diseñada desde el primer día para varios hogares.
 

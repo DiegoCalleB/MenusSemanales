@@ -80,7 +80,7 @@ describe("texto del menú para WhatsApp", () => {
     expect(t).toContain("🍴 _sin decidir_");
     expect(t).toContain("🍴 Pizza casera + Ensalada");
     expect(t).toContain("🎂 Cumpleaños de Ana");
-    expect(t.endsWith("_Hecho con Menús Semanales_")).toBe(true);
+    expect(t.endsWith("_Enviado desde ¡Hecho!_")).toBe(true);
   });
   it("no pasa del límite aunque haya muchísimos días", () => {
     const muchos = Array.from({ length: 400 }, (_, i) => ({ ...dias[0]!, etiqueta: `Día ${i}` }));

@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Menús Semanales",
-    short_name: "Menús",
-    description: "Planificador de menús, despensa y lista de la compra para toda la familia.",
+    name: "¡Hecho!",
+    short_name: "Hecho",
+    description: "Menú, compra, casa y cole sin carga mental: tú descansa, yo me encargo.",
     lang: "es",
     start_url: "/",
     display: "standalone",

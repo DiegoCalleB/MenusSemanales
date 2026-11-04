@@ -84,9 +84,9 @@ export function NavegacionLateral() {
           aria-hidden="true"
           className="bg-suave-1 flex size-10 items-center justify-center rounded-2xl text-2xl"
         >
-          🍽️
+          ✅
         </span>
-        <span className="text-marca">Menús Semanales</span>
+        <span className="text-marca">¡Hecho!</span>
       </Link>
       <nav aria-label="Principal">
         <ul className="flex flex-col gap-1">

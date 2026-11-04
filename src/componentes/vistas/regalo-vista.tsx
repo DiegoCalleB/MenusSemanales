@@ -59,7 +59,7 @@ function Abrir({ regalo }: { regalo: Regalo }) {
         <p className="text-tinta-suave text-lg font-semibold">Con cariño, {regalo.d} ❤️</p>
 
         <section className="border-borde rounded-2xl border p-4 text-left">
-          <h2 className="mb-2 text-lg font-extrabold">Tu regalo: Menús Semanales 🍽️</h2>
+          <h2 className="mb-2 text-lg font-extrabold">Tu regalo: ¡Hecho! ✅</h2>
           <ul className="flex flex-col gap-2 text-base">
             <li>✨ Cenas propuestas cada semana, pensadas para el menú del cole de las niñas</li>
             <li>🛒 La lista de la compra se hace sola</li>
