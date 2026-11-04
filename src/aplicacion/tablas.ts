@@ -396,7 +396,7 @@ export const lecturaTablasSchema = z.object({
       vinculada: z.boolean().optional(),
     }),
   ),
-  horizonte: z.enum(["semana", "quincena"]),
+  horizonte: z.enum(["semana", "quincena", "mes"]),
   llegoTarde: z.array(fechaIso),
   saltados: z.array(fechaIso),
   cumples: z.array(

@@ -31,7 +31,7 @@ export function esEstadoValido(dato: unknown): dato is EstadoHogar {
   return (
     typeof e.hoy === "string" &&
     typeof e.siguienteId === "number" &&
-    (e.horizonte === "semana" || e.horizonte === "quincena") &&
+    (e.horizonte === "semana" || e.horizonte === "quincena" || e.horizonte === "mes") &&
     typeof e.eventos === "object" &&
     e.eventos !== null &&
     typeof e.valoraciones === "object" &&

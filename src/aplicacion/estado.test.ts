@@ -1765,3 +1765,32 @@ describe("citas con día elegido (agenda/cita)", () => {
     expect(r.agenda.at(-1)!.id).toBe(r2.agenda.at(-1)!.id);
   });
 });
+
+describe("planificar un mes", () => {
+  it("el horizonte «mes» abarca 30 días", () => {
+    const e = aplicar(estadoInicialDemo(), { tipo: "menu/horizonte", horizonte: "mes" });
+    expect(diasDelMenu(e)).toHaveLength(30);
+  });
+
+  it("proponer cenas para un mes no repite el plato a menos de 7 días ni cae en ciclo semanal", () => {
+    const e = aplicar(
+      estadoInicialDemo(),
+      { tipo: "menu/horizonte", horizonte: "mes" },
+      { tipo: "menu/autocompletar" },
+    );
+    const elegidas = [...e.comidas].sort((a, b) => a.fecha.localeCompare(b.fecha));
+    expect(elegidas.length).toBeGreaterThan(10);
+    for (const c of elegidas) {
+      const otras = elegidas.filter(
+        (o) =>
+          o !== c &&
+          o.plato.id === c.plato.id &&
+          Math.abs(Date.parse(o.fecha) - Date.parse(c.fecha)) < 7 * 86_400_000,
+      );
+      expect(otras).toHaveLength(0);
+    }
+    // Más variedad que el ciclo de siempre: casi cada cena es un plato distinto.
+    const distintos = new Set(elegidas.map((c) => c.plato.id)).size;
+    expect(distintos / elegidas.length).toBeGreaterThan(0.6);
+  });
+});

@@ -160,7 +160,7 @@ export interface EstadoHogar {
   /** Días en que se llega tarde: el tiempo máximo baja a 15 minutos. */
   llegoTarde: FechaIso[];
   /** Cuánto se planifica: lo que queda de semana o los próximos 15 días (para adelantar la compra). */
-  horizonte: "semana" | "quincena";
+  horizonte: "semana" | "quincena" | "mes";
   /** Valoraciones de 1 a 5: plato → persona → puntos. La media alimenta al motor del menú. */
   valoraciones: Record<string, Record<string, number>>;
   /** Fechas señaladas (cumpleaños, fiestas): se ven en el calendario y no se autocompletan. */
@@ -511,7 +511,12 @@ export function diasDelMenu(e: EstadoHogar): DiaMenu[] {
   // Sábado o domingo: la «semana» que interesa es la siguiente, no los dos días que quedan.
   const iso = diaSemanaIso(e.hoy);
   const desde = e.horizonte === "semana" && iso >= 6 ? sumarDias(e.hoy, 8 - iso) : e.hoy;
-  const hasta = e.horizonte === "quincena" ? sumarDias(e.hoy, 14) : semanaDe(desde).hasta;
+  const hasta =
+    e.horizonte === "mes"
+      ? sumarDias(e.hoy, 29)
+      : e.horizonte === "quincena"
+        ? sumarDias(e.hoy, 14)
+        : semanaDe(desde).hasta;
   const dias: DiaMenu[] = [];
   for (let f = desde; f <= hasta; f = sumarDias(f, 1)) {
     dias.push(diaMenuDe(e, f));

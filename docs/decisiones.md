@@ -1009,3 +1009,10 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 
 - **Fallo:** `Permissions-Policy: microphone=()` prohibía el micrófono a todos, también a nuestra página, así que el 🎤 de la compra fallaba siempre con «no permitido» (visto en Android) sin llegar a pedir permiso.
 - **Arreglo:** `microphone=(self)`. Cámara y ubicación siguen denegadas, y los iframes de terceros no pueden usar el micrófono. El navegador vuelve a pedir el permiso al usuario la primera vez que pulsa 🎤.
+
+## D-123 · Planificar a un mes y menos repetición
+
+- **Problema:** «Proponer días sin cena» repetía los mismos platos cada 7-8 días (la regla dura solo prohíbe repetir antes de 7 días, y el mejor plato de cada día volvía justo al octavo), y el horizonte máximo era de 15 días.
+- **Decisión:** nuevo horizonte «Un mes» (hoy + 29 días; migración `20261104130000_horizonte_mes.sql`, que amplía el `check` de `hogar_ajuste.horizonte`). Además, un plato ya elegido en otra fecha cercana resta puntos aunque ya se pueda repetir (hasta 28 días, más cuanto más cerca). La regla dura de 7 días no cambia. El menú del cole se sigue usando solo en los días en que está cargado; sin él no hay restricción.
+- **Test:** proponer un mes no repite a menos de 7 días y al menos el 60 % de las cenas son platos distintos (falla con el motor anterior).
+- **Límite conocido:** con un catálogo pequeño, un mes obliga a repetir; y la compra de un mes entero sigue sin tener en cuenta lo perecedero (ver D-044).

@@ -15,7 +15,7 @@ import { type ItemDespensa, fechaIsoSchema, platoSchema } from "./tipos";
  * Reglas duras (nunca se rompen): ingredientes excluidos (alergias, sabores raros), tiempo máximo
  * del día, complementar el menú del cole según su recomendador de cenas (ver `recomendadosParaCenar`), no repetir un plato elegido en los 7 días cercanos
  * y no repetir grupo con el día anterior o el siguiente ya elegidos. Un plato ya elegido no vuelve a
- * ofrecerse hasta pasados 7 días, así que se puede planificar una quincena sin agotar el catálogo.
+ * ofrecerse hasta pasados 7 días, así que se puede planificar una quincena o un mes sin agotar el catálogo. Aun pudiendo, repetir a menos de 28 días resta puntos (más cuanto más cerca).
  * Reglas blandas (puntúan): valoración, tiempo desde la última vez, aprovechar caducidades y lo que
  * ya hay en casa, rapidez y variedad entre las opciones.
  */
@@ -156,6 +156,8 @@ const DIAS_REPETICION_FUERTE = 7;
 /** Un plato elegido no se vuelve a ofrecer a menos de esta distancia (en días). */
 const DISTANCIA_MINIMA_REPETIR = 7;
 const DIAS_ANTIGUEDAD_MAX = 21;
+/** Hasta qué distancia pesa, aunque ya se pueda, repetir un plato ya elegido en otra fecha. */
+const DIAS_REPETICION_SUAVE = 28;
 
 /** ¿Cumple el plato las reglas duras de ese día? */
 export function cumpleReglasDuras(
@@ -240,6 +242,17 @@ function puntuar(
   }
 
   if (ofrecidos.has(plato.id)) p -= 3;
+
+  // Planificando semanas seguidas, lo ya elegido en otra fecha cercana también pesa: sin esto el
+  // mejor plato de cada día se repite justo a los 7-8 días y el menú sale en ciclo semanal.
+  let repeticion = 0;
+  for (const [f, id] of Object.entries(ctx.elegidos ?? {})) {
+    if (id !== plato.id || f === dia.fecha) continue;
+    const d = Math.abs(diasEntre(f, dia.fecha));
+    if (d < DIAS_REPETICION_SUAVE)
+      repeticion += ((DIAS_REPETICION_SUAVE - d) / DIAS_REPETICION_SUAVE) * 5;
+  }
+  p -= repeticion;
   p += desempate(plato.id, dia.fecha);
 
   return { plato, puntuacion: redondear(p, 3), motivos };

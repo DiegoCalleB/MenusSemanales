@@ -109,6 +109,7 @@ export function MenuVista() {
             [
               ["semana", "Semana"],
               ["quincena", "15 días"],
+              ["mes", "Un mes"],
             ] as const
           ).map(([valor, texto]) => (
             <button
