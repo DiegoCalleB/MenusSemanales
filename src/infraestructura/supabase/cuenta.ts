@@ -102,3 +102,18 @@ export const aplicarCambiosATablas = (cliente: Cliente, hogarId: string, cambios
 /** Enlace secreto del calendario del hogar (D-083). Con `renovar`, el anterior deja de valer. */
 export const enlaceDelCalendario = (cliente: Cliente, hogarId: string, renovar = false) =>
   cliente.rpc("enlace_calendario", { p_hogar_id: hogarId, p_renovar: renovar });
+
+/** Guarda la suscripción de este móvil para las notificaciones (D-115). */
+export const guardarSuscripcionPush = (
+  cliente: Cliente,
+  hogarId: string,
+  s: { endpoint: string; p256dh: string; auth: string },
+) =>
+  cliente.rpc("guardar_suscripcion_push", {
+    p_hogar_id: hogarId,
+    p_endpoint: s.endpoint,
+    p_p256dh: s.p256dh,
+    p_auth: s.auth,
+  });
+export const quitarSuscripcionPush = (cliente: Cliente, endpoint: string) =>
+  cliente.rpc("quitar_suscripcion_push", { p_endpoint: endpoint });

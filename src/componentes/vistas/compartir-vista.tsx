@@ -18,6 +18,7 @@ import {
   textoMenu,
 } from "@/dominio/compartir";
 import { AvisosCalendario } from "../avisos-calendario";
+import { NotificacionesMovil } from "../notificaciones-movil";
 import { BotonesCompartir } from "../compartir-botones";
 import { useHogar } from "../proveedor-hogar";
 import { useFormatoMenu } from "../usar-formato-menu";
@@ -127,6 +128,7 @@ export function CompartirVista() {
       <Tarjeta titulo="Próximas fechas" emoji="📌" texto={textoDeFechas} />
       <Tarjeta titulo="Lo que toca en casa" emoji="🏠" texto={textoDeCasa} />
 
+      <NotificacionesMovil />
       <AvisosCalendario />
 
       <p className="text-tinta-suave text-base">

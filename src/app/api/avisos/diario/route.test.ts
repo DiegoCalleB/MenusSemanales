@@ -1,10 +1,25 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
-const m = vi.hoisted(() => ({ enviar: vi.fn(), leer: vi.fn() }));
+const m = vi.hoisted(() => ({
+  enviar: vi.fn(),
+  leer: vi.fn(),
+  push: vi.fn(),
+  subs: vi.fn(),
+  olvidar: vi.fn(),
+  pushActivo: { v: false },
+}));
 vi.mock("@/infraestructura/avisos/resend", () => ({
   CorreoNoConfigurado: class CorreoNoConfigurado extends Error {},
   enviarCorreo: m.enviar,
+}));
+vi.mock("@/infraestructura/avisos/push", () => ({
+  enviarPush: m.push,
+  pushConfigurado: () => m.pushActivo.v,
+}));
+vi.mock("@/infraestructura/avisos/suscripciones", () => ({
+  leerSuscripciones: m.subs,
+  olvidarSuscripcion: m.olvidar,
 }));
 vi.mock("@/infraestructura/calendario-suscrito", () => ({
   hoyEnMadrid: () => "2026-11-03",
@@ -39,6 +54,10 @@ beforeEach(() => {
   vi.stubEnv("AVISOS_CORREO", "diego@ejemplo.test");
   m.enviar.mockReset().mockResolvedValue(undefined);
   m.leer.mockReset().mockResolvedValue(resumen);
+  m.pushActivo.v = false;
+  m.push.mockReset().mockResolvedValue("ok");
+  m.subs.mockReset().mockResolvedValue([]);
+  m.olvidar.mockReset().mockResolvedValue(undefined);
 });
 
 describe("POST /api/avisos/diario", () => {
@@ -94,5 +113,66 @@ describe("POST /api/avisos/diario", () => {
   it("si no hay plan guardado para ese token, 404", async () => {
     m.leer.mockResolvedValue(null);
     expect((await pedir(`Bearer ${SECRETO}`, "?forzar=1")).status).toBe(404);
+  });
+
+  describe("notificaciones push", () => {
+    const sub = (n: number) => ({
+      endpoint: `https://push.example.test/${n}`,
+      p256dh: "p".repeat(30),
+      auth: "a".repeat(12),
+    });
+
+    it("manda una notificación a cada móvil suscrito, además del correo", async () => {
+      m.pushActivo.v = true;
+      m.subs.mockResolvedValue([sub(1), sub(2)]);
+      const r = await pedir(`Bearer ${SECRETO}`, "?forzar=1");
+      const cuerpo = await r.json();
+      expect(r.status).toBe(200);
+      expect(cuerpo).toMatchObject({
+        enviado: true,
+        correo: "ok",
+        push: { enviadas: 2, caducadas: 0, fallos: 0 },
+      });
+      expect(m.push).toHaveBeenCalledTimes(2);
+      expect(m.push.mock.calls[0]?.[1]).toMatchObject({
+        titulo: expect.stringContaining("Pollo empanado"),
+      });
+    });
+
+    it("olvida las suscripciones que el servicio de notificaciones da por caducadas", async () => {
+      m.pushActivo.v = true;
+      m.subs.mockResolvedValue([sub(1), sub(2)]);
+      m.push.mockResolvedValueOnce("ok").mockResolvedValueOnce("caducada");
+      const cuerpo = await (await pedir(`Bearer ${SECRETO}`, "?forzar=1")).json();
+      expect(cuerpo.push).toEqual({ enviadas: 1, caducadas: 1, fallos: 0 });
+      expect(m.olvidar).toHaveBeenCalledWith(TOKEN, "https://push.example.test/2");
+    });
+
+    it("solo con push (sin correo) también funciona", async () => {
+      vi.stubEnv("AVISOS_CORREO", "");
+      m.pushActivo.v = true;
+      m.subs.mockResolvedValue([sub(1)]);
+      const r = await pedir(`Bearer ${SECRETO}`, "?forzar=1");
+      expect(r.status).toBe(200);
+      expect(m.enviar).not.toHaveBeenCalled();
+      expect((await r.json()).push.enviadas).toBe(1);
+    });
+
+    it("si el correo falla pero la notificación llega, no es un error", async () => {
+      m.pushActivo.v = true;
+      m.subs.mockResolvedValue([sub(1)]);
+      m.enviar.mockRejectedValue(new Error("x"));
+      const r = await pedir(`Bearer ${SECRETO}`, "?forzar=1");
+      expect(r.status).toBe(200);
+      expect(await r.json()).toMatchObject({ enviado: true, correo: "fallo" });
+    });
+
+    it("con push configurado y ningún móvil suscrito, no es un error", async () => {
+      vi.stubEnv("AVISOS_CORREO", "");
+      m.pushActivo.v = true;
+      const r = await pedir(`Bearer ${SECRETO}`, "?forzar=1");
+      expect(r.status).toBe(200);
+      expect((await r.json()).enviado).toBe(false);
+    });
   });
 });

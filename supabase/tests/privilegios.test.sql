@@ -41,12 +41,13 @@ select pg_temp.igual('Nadie inserta hogares ni miembros directamente (solo por f
   (has_table_privilege('authenticated', 'public.hogar', 'INSERT')
    or has_table_privilege('authenticated', 'public.miembro', 'INSERT'))::int, 0);
 
--- Funciones: anon no ejecuta ninguna función propia de public, salvo la que lee el calendario
--- suscrito por token (D-083): la llama el servidor con la clave pública y devuelve solo un resumen.
-select pg_temp.igual('anon solo puede ejecutar estado_para_calendario',
+-- Funciones: anon no ejecuta ninguna función propia de public, salvo las que el servidor llama
+-- con la clave pública y el token secreto del calendario: el resumen del calendario suscrito
+-- (D-083) y las dos del aviso diario por notificación push (D-115).
+select pg_temp.igual('anon solo puede ejecutar las funciones con token del calendario',
   (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public' and has_function_privilege('anon', p.oid, 'EXECUTE')
-      and p.proname <> 'estado_para_calendario'), 0);
+      and p.proname not in ('estado_para_calendario', 'suscripciones_para_avisos', 'olvidar_suscripcion_push')), 0);
 select pg_temp.igual('anon sí puede ejecutar estado_para_calendario (y nada más del calendario)',
   (has_function_privilege('anon', 'public.estado_para_calendario(text)', 'EXECUTE')
    and not has_function_privilege('anon', 'public.enlace_calendario(uuid, boolean)', 'EXECUTE'))::int, 1);

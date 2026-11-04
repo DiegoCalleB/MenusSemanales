@@ -983,6 +983,25 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 
+  test("avisos: la pantalla de enviar ofrece las notificaciones y la campanita lleva a ella", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/");
+    await pagina.getByRole("button", { name: /^Avisos/ }).click();
+    await pagina.getByRole("link", { name: /Recibir estos avisos en el móvil/ }).click();
+    await expect(pagina).toHaveURL(/\/compartir$/);
+    const tarjeta = pagina.getByRole("region", { name: "Notificaciones en el móvil" });
+    await expect(tarjeta).toBeVisible();
+    // Sin nube configurada en esta versión de prueba, pide entrar primero.
+    await expect(tarjeta.getByText(/Primero entra con tu cuenta/)).toBeVisible();
+    const axe = await new AxeBuilder({ page: pagina })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+      .analyze();
+    expect(axe.violations).toEqual([]);
+    await contexto.close();
+  });
+
   test("enviar: el menú se puede mandar como agenda, tabla o completo", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/compartir");

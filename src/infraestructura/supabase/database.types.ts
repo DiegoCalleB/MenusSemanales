@@ -1107,6 +1107,14 @@ export type Database = {
         Args: { p_hogar_id: string; p_cambios: Json }
         Returns: undefined
       }
+      guardar_suscripcion_push: {
+        Args: { p_hogar_id: string; p_endpoint: string; p_p256dh: string; p_auth: string }
+        Returns: undefined
+      }
+      quitar_suscripcion_push: {
+        Args: { p_endpoint: string }
+        Returns: undefined
+      }
       aplicar_cambios_registro: {
         Args: { p_hogar_id: string; p_cambios: Json }
         Returns: undefined

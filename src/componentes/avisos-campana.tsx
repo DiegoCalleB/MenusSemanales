@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { avisosDelEstado } from "@/aplicacion/avisos";
 import { type Aviso, avisosQueImportan } from "@/dominio/avisos";
@@ -98,6 +99,13 @@ export function BotonAvisos() {
         >
           <h2 className="mb-2 text-lg font-extrabold">Avisos de hoy</h2>
           <ListaDeAvisos avisos={avisos} />
+          <Link
+            href="/compartir"
+            onClick={() => setAbierto(false)}
+            className="text-marca-fuerte mt-2 flex min-h-11 items-center text-base font-semibold"
+          >
+            📲 Recibir estos avisos en el móvil →
+          </Link>
         </div>
       )}
     </div>
