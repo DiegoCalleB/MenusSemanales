@@ -1,10 +1,10 @@
 /**
- * Mensaje de bienvenida personal (regalo para Ana, 7 de noviembre de 2026). Es solo lógica de
+ * Mensaje de bienvenida personal (regalo para Ana, 7 de noviembre de 2026; se adelanta al 6 para revisarlo). Es solo lógica de
  * cuándo sale y el texto; la pantalla y el sonido viven en `componentes`.
  */
 
 /** Primer día en que puede salir. Antes de esa fecha no se enseña nunca. */
-export const BIENVENIDA_ANA_DESDE = "2026-11-07";
+export const BIENVENIDA_ANA_DESDE = "2026-11-06";
 /** Cuántas veces sale en un mismo móvil («las primeras veces»). */
 export const BIENVENIDA_ANA_VECES = 3;
 

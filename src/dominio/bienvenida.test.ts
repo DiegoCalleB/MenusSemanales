@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { BIENVENIDA_ANA_VECES, tocaBienvenidaAna } from "./bienvenida";
 
-const base = { nombre: "Ana", hoy: "2026-11-07", vistas: 0 };
+const base = { nombre: "Ana", hoy: "2026-11-06", vistas: 0 };
 
 describe("tocaBienvenidaAna", () => {
-  it("sale a Ana el 7 de noviembre", () => {
+  it("sale a Ana desde el 6 de noviembre", () => {
     expect(tocaBienvenidaAna(base)).toBe(true);
   });
-  it("no sale antes del 7", () => {
-    expect(tocaBienvenidaAna({ ...base, hoy: "2026-11-06" })).toBe(false);
+  it("no sale antes del 6", () => {
+    expect(tocaBienvenidaAna({ ...base, hoy: "2026-11-05" })).toBe(false);
   });
   it("sigue saliendo los días siguientes hasta las veces previstas", () => {
     expect(

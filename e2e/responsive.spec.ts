@@ -1571,25 +1571,25 @@ test.describe("regalo en un enlace", () => {
 test.describe("bienvenida para Ana", () => {
   const AXE = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 
-  test("no sale antes del 7 de noviembre ni a otra persona", async ({ browser }) => {
+  test("no sale antes del 6 de noviembre ni a otra persona", async ({ browser }) => {
     const ana = await abrir(browser, 390, 844, "light", "ana");
-    await ana.contexto.clock.setFixedTime(new Date("2026-11-06T10:00:00+01:00"));
+    await ana.contexto.clock.setFixedTime(new Date("2026-11-05T10:00:00+01:00"));
     await ana.pagina.goto("/", { waitUntil: "networkidle" });
     await expect(ana.pagina.getByRole("dialog")).toHaveCount(0);
     await ana.contexto.close();
 
     const diego = await abrir(browser, 390, 844, "light", "diego");
-    await diego.contexto.clock.setFixedTime(new Date("2026-11-07T10:00:00+01:00"));
+    await diego.contexto.clock.setFixedTime(new Date("2026-11-06T10:00:00+01:00"));
     await diego.pagina.goto("/", { waitUntil: "networkidle" });
     await expect(diego.pagina.getByRole("dialog")).toHaveCount(0);
     await diego.contexto.close();
   });
 
-  test("el 7 de noviembre sale las tres primeras veces, con el maullido, y después no", async ({
+  test("desde el 6 de noviembre sale las tres primeras veces, con el maullido, y después no", async ({
     browser,
   }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844, "light", "ana");
-    await contexto.clock.setFixedTime(new Date("2026-11-07T10:00:00+01:00"));
+    await contexto.clock.setFixedTime(new Date("2026-11-06T10:00:00+01:00"));
     for (let vez = 1; vez <= 3; vez++) {
       await pagina.goto("/", { waitUntil: "networkidle" });
       const dialogo = pagina.getByRole("dialog", { name: "¡Felicidades, Ana!" });
