@@ -43,5 +43,5 @@ export const TEXTO_BIENVENIDA_ANA = {
     "Olvídate de todo ahora: toca disfrutar de la vida. 🌷",
   ],
   despedida: "¡¡¡Te quiero muchísimo!!!",
-  firma: "Tu gatito 🐱",
+  firma: "Tu gatito",
 } as const;

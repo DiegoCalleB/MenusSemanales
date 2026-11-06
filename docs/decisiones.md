@@ -1057,7 +1057,8 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 
 - **Qué es:** un mensaje personal de Diego para Ana, que sale a pantalla completa las primeras veces que ella entra (cebra, confeti, texto y un botón «Miauuu» que maúlla). Texto en `dominio/bienvenida.ts`; pantalla en `componentes/bienvenida-ana.tsx`.
 - **Cuándo sale:** solo a la persona llamada «Ana» (por nombre, porque en los datos reales los identificadores no se llaman «ana»), desde el 7 de noviembre de 2026 según el reloj de Madrid, y las **3 primeras veces en cada móvil** (se cuenta al pulsar «Entrar en ¡Hecho!», en el almacenamiento local de ese móvil). Para cambiar el número de veces o la fecha: `BIENVENIDA_ANA_VECES` y `BIENVENIDA_ANA_DESDE`.
-- **El maullido** no es un archivo: se sintetiza con Web Audio (voz que sube y baja con un filtro que abre y cierra la «a»). Suena solo al tocar el botón. Es una imitación, no la grabación de un gato.
+- **El maullido:** la primera versión se sintetizaba con Web Audio y sonaba mal. Ahora son 4 maullidos reales (efectos de sonido generados con ElevenLabs y recortados en clips sueltos, `public/sonidos/miau-1..4.mp3`, ~8 KB cada uno); cada toque suena uno distinto del anterior. Suena solo al tocar el botón.
+- **El gatito:** el dibujo de Diego (`public/gatito.png`, trazo negro sobre transparente, sobre un recuadro blanco para que se vea en tema oscuro) sustituye al emoji de la firma.
 - **Prueba de accesibilidad:** axe encontró que la etiqueta del botón no contenía su texto visible; se dejó solo el texto visible.
 
 **Ajuste de D-128 (6 de noviembre):** para poder revisarla antes del día, la bienvenida se adelanta a partir del **6 de noviembre** (`BIENVENIDA_ANA_DESDE`). Sigue saliendo las 3 primeras veces por móvil, así que quien la vea para revisarla en su móvil no gasta las de Ana.

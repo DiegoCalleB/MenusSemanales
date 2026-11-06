@@ -76,10 +76,10 @@ export function BienvenidaAna() {
     setCerrada(true);
   }
 
-  function miau() {
-    maullar();
+  async function miau() {
     setMaullando(true);
-    window.setTimeout(() => setMaullando(false), 1400);
+    const duracion = await maullar();
+    window.setTimeout(() => setMaullando(false), duracion ?? 1200);
   }
 
   return (
@@ -122,12 +122,20 @@ export function BienvenidaAna() {
         <p className="text-2xl font-extrabold">
           {t.despedida} <span aria-hidden="true">❤️</span>
         </p>
+        {/* El dibujo es de trazo negro sobre fondo transparente: va sobre blanco en cualquier tema. */}
+        <div className="mx-auto w-fit rounded-3xl bg-white p-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/gatito.png"
+            alt="Dibujo de un gatito"
+            width={520}
+            height={530}
+            className={`mx-auto h-44 w-auto ${maullando ? "fiesta" : ""}`}
+          />
+        </div>
         <p className="text-tinta-suave text-lg font-semibold">{t.firma}</p>
         <button type="button" className="boton-suave justify-self-center text-lg" onClick={miau}>
-          <span aria-hidden="true" className={maullando ? "fiesta inline-block" : "inline-block"}>
-            🐱
-          </span>{" "}
-          Miauuu
+          <span aria-hidden="true">🐾</span> Miauuu
         </button>
         <p role="status" className="text-tinta-suave min-h-6 text-base font-semibold">
           {maullando ? "¡Miauuuu! 😸" : ""}
