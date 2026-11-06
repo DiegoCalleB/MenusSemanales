@@ -205,8 +205,8 @@ select pg_temp.falla('Si una parte falla no se aplica ninguna (apunte que acaba 
        "agenda":{"upsert":[{"id":"a0000000-0000-0000-0000-0000000000aa","fecha":"2026-11-20","hasta":"2026-11-20","titulo":"Mal"}]}}'::jsonb)$q$, '23514');
 select pg_temp.igual('…y la tarea de la primera parte tampoco quedó',
   (select count(*) from public.tarea_casa where titulo = 'No debe quedar'), 0);
-select pg_temp.falla('El horizonte solo es semana o quincena',
-  $q$select public.aplicar_cambios_tablas((select id from _ids where clave = 'HA'), '{"horizonte":"mes"}'::jsonb)$q$, '23514');
+select pg_temp.falla('El horizonte solo es semana, quincena o mes',
+  $q$select public.aplicar_cambios_tablas((select id from _ids where clave = 'HA'), '{"horizonte":"año"}'::jsonb)$q$, '23514');
 select pg_temp.falla('El 31 de abril no existe',
   $q$select public.aplicar_cambios_tablas((select id from _ids where clave = 'HA'),
      '{"cumples":{"upsert":[{"id":"c0000000-0000-0000-0000-0000000000bb","nombre":"X","dia":31,"mes":4}]}}'::jsonb)$q$, '23514');

@@ -113,8 +113,11 @@ select pg_temp.falla('Una tarea de casa no puede repetirse cada 0 días',
   $q$insert into public.tarea_casa (hogar_id, titulo, cada_dias, desde) select id, 'Mal', 0, '2026-11-02' from _ids where clave = 'HA'$q$, '23514');
 select pg_temp.falla('Ni repetir el mismo título',
   $q$insert into public.tarea_casa (hogar_id, titulo, cada_dias, desde) select id, ' COMPRAR ARENA', 7, '2026-11-02' from _ids where clave = 'HA'$q$, '23505');
-select pg_temp.falla('El horizonte solo es semana o quincena',
-  $q$update public.hogar_ajuste set horizonte = 'mes'$q$, '23514');
+select pg_temp.falla('El horizonte solo es semana, quincena o mes',
+  $q$update public.hogar_ajuste set horizonte = 'año'$q$, '23514');
+-- «mes» sí vale (planificar a un mes vista); si la restricción no lo admitiera, esto abortaría el test.
+update public.hogar_ajuste set horizonte = 'mes' where hogar_id in (select id from _ids where clave = 'HA');
+update public.hogar_ajuste set horizonte = 'quincena' where hogar_id in (select id from _ids where clave = 'HA');
 select pg_temp.falla('No se puede asignar una tarea a una persona de otro hogar',
   $q$insert into public.tarea_casa (hogar_id, titulo, cada_dias, desde, responsable_id)
        select h.id, 'Ajena', 7, '2026-11-02', gen_random_uuid() from _ids h where h.clave = 'HA'$q$, '23503');
