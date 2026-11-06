@@ -1567,3 +1567,46 @@ test.describe("regalo en un enlace", () => {
     await contexto.close();
   });
 });
+
+test.describe("bienvenida para Ana", () => {
+  const AXE = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
+
+  test("no sale antes del 7 de noviembre ni a otra persona", async ({ browser }) => {
+    const ana = await abrir(browser, 390, 844, "light", "ana");
+    await ana.contexto.clock.setFixedTime(new Date("2026-11-06T10:00:00+01:00"));
+    await ana.pagina.goto("/", { waitUntil: "networkidle" });
+    await expect(ana.pagina.getByRole("dialog")).toHaveCount(0);
+    await ana.contexto.close();
+
+    const diego = await abrir(browser, 390, 844, "light", "diego");
+    await diego.contexto.clock.setFixedTime(new Date("2026-11-07T10:00:00+01:00"));
+    await diego.pagina.goto("/", { waitUntil: "networkidle" });
+    await expect(diego.pagina.getByRole("dialog")).toHaveCount(0);
+    await diego.contexto.close();
+  });
+
+  test("el 7 de noviembre sale las tres primeras veces, con el maullido, y después no", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844, "light", "ana");
+    await contexto.clock.setFixedTime(new Date("2026-11-07T10:00:00+01:00"));
+    for (let vez = 1; vez <= 3; vez++) {
+      await pagina.goto("/", { waitUntil: "networkidle" });
+      const dialogo = pagina.getByRole("dialog", { name: "¡Felicidades, Ana!" });
+      await expect(dialogo).toBeVisible();
+      await expect(dialogo.getByText("Todo está ¡Hecho! o planeado.")).toBeVisible();
+      await expect(dialogo.getByText("Tu gatito")).toBeVisible();
+      if (vez === 1) {
+        await dialogo.getByRole("button", { name: "Miauuu" }).click();
+        await expect(dialogo.getByText("¡Miauuuu!")).toBeVisible();
+        const axe = await new AxeBuilder({ page: pagina }).withTags(AXE).analyze();
+        expect(axe.violations).toEqual([]);
+      }
+      await dialogo.getByRole("button", { name: /Entrar en ¡Hecho!/ }).click();
+      await expect(pagina.getByRole("dialog")).toHaveCount(0);
+    }
+    await pagina.goto("/", { waitUntil: "networkidle" });
+    await expect(pagina.getByRole("dialog")).toHaveCount(0);
+    await contexto.close();
+  });
+});

@@ -1052,3 +1052,10 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Problema:** al abrir el enlace del correo de acceso salía un error de Railway. Los registros de Supabase mostraban `redirect_to=https://menussemanales-production.up.railway.app`: el _Site URL_ de Supabase seguía siendo el dominio antiguo, que ya no existe, aunque la app se usaba desde `yaestahecho.up.railway.app`.
 - **Decisión:** `pedirCodigoPorCorreo` pasa `emailRedirectTo: URL_APP` (D-126). Además hay que poner en Supabase (Authentication → URL Configuration) el _Site URL_ y una _Redirect URL_ con `https://yaestahecho.up.railway.app`: sin eso Supabase ignora el destino pedido y usa el Site URL.
 - **Nota:** el enlace es de un solo uso. Tras corregirlo hay que pedir un correo nuevo; el del intento fallido ya no sirve.
+
+## D-128 · Bienvenida para Ana (7 de noviembre)
+
+- **Qué es:** un mensaje personal de Diego para Ana, que sale a pantalla completa las primeras veces que ella entra (cebra, confeti, texto y un botón «Miauuu» que maúlla). Texto en `dominio/bienvenida.ts`; pantalla en `componentes/bienvenida-ana.tsx`.
+- **Cuándo sale:** solo a la persona llamada «Ana» (por nombre, porque en los datos reales los identificadores no se llaman «ana»), desde el 7 de noviembre de 2026 según el reloj de Madrid, y las **3 primeras veces en cada móvil** (se cuenta al pulsar «Entrar en ¡Hecho!», en el almacenamiento local de ese móvil). Para cambiar el número de veces o la fecha: `BIENVENIDA_ANA_VECES` y `BIENVENIDA_ANA_DESDE`.
+- **El maullido** no es un archivo: se sintetiza con Web Audio (voz que sube y baja con un filtro que abre y cierra la «a»). Suena solo al tocar el botón. Es una imitación, no la grabación de un gato.
+- **Prueba de accesibilidad:** axe encontró que la etiqueta del botón no contenía su texto visible; se dejó solo el texto visible.
