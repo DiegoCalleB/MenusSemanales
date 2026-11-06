@@ -1,4 +1,5 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
+import { URL_APP } from "@/aplicacion/enlaces";
 import type { Database, Json } from "./database.types";
 import {
   guardarContrasenaEnElNavegador,
@@ -53,8 +54,16 @@ export async function hogarDelUsuario(cliente: Cliente): Promise<HogarDeUsuario 
   return { id: data.hogar_id, nombre: nombre ?? "Mi hogar", rol: data.rol };
 }
 
+/**
+ * El enlace del correo lleva a la dirección definitiva de la app (D-126) y no a la que Supabase
+ * tenga como «Site URL». Esa dirección debe estar también en las Redirect URLs de Supabase; si no
+ * lo está, Supabase vuelve a usar el Site URL.
+ */
 export const pedirCodigoPorCorreo = (cliente: Cliente, correo: string) =>
-  cliente.auth.signInWithOtp({ email: correo, options: { shouldCreateUser: true } });
+  cliente.auth.signInWithOtp({
+    email: correo,
+    options: { shouldCreateUser: true, emailRedirectTo: URL_APP },
+  });
 
 export const verificarCodigo = (cliente: Cliente, correo: string, codigo: string) =>
   cliente.auth.verifyOtp({ email: correo, token: codigo, type: "email" });

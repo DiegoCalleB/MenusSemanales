@@ -1046,3 +1046,9 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Decisión (Diego):** la dirección de la app es **https://yaestahecho.up.railway.app**. Los enlaces que se envían a otras personas la usan siempre, en lugar de la que tenga abierta quien los manda (`window.location.origin`), que podía ser un dominio antiguo, un acceso directo viejo o `localhost`.
 - **Qué cambia:** el mensaje de invitación con el **código de acceso** (Cuenta y Familia), el **enlace del regalo** y el **enlace del calendario suscrito**. La dirección vive en un solo sitio (`src/aplicacion/enlaces.ts`, `URL_APP`) y el mensaje de invitación, antes duplicado en dos pantallas, es una sola función con test (`mensajeDeInvitacion`).
 - **Si cambia el dominio:** se cambia `URL_APP` y nada más. En desarrollo, estos enlaces también apuntan a producción, que es lo que se quiere al mandarlos.
+
+## D-127 · El enlace del correo de acceso va a la dirección definitiva
+
+- **Problema:** al abrir el enlace del correo de acceso salía un error de Railway. Los registros de Supabase mostraban `redirect_to=https://menussemanales-production.up.railway.app`: el _Site URL_ de Supabase seguía siendo el dominio antiguo, que ya no existe, aunque la app se usaba desde `yaestahecho.up.railway.app`.
+- **Decisión:** `pedirCodigoPorCorreo` pasa `emailRedirectTo: URL_APP` (D-126). Además hay que poner en Supabase (Authentication → URL Configuration) el _Site URL_ y una _Redirect URL_ con `https://yaestahecho.up.railway.app`: sin eso Supabase ignora el destino pedido y usa el Site URL.
+- **Nota:** el enlace es de un solo uso. Tras corregirlo hay que pedir un correo nuevo; el del intento fallido ya no sirve.
