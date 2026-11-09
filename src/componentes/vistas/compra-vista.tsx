@@ -203,6 +203,7 @@ export function CompraVista() {
 
       {!modoTienda && (
         <ComprarOnline
+          hoy={estado.hoy}
           articulos={pendientes.map((i) => ({
             clave: i.clave,
             nombre: i.nombre,

@@ -408,6 +408,96 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 
+  test("compra online: el asistente va artículo a artículo y se acuerda por dónde ibas", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/compra");
+    await pagina.getByText("Comprar online en Mercadona").click();
+    const asistente = pagina.getByRole("group", { name: "Asistente paso a paso" });
+    await expect(asistente.getByText(/^0 de \d+ en la cesta$/)).toBeVisible();
+
+    // Enseña un artículo y su búsqueda; al marcarlo pasa al siguiente.
+    const ahora = asistente.getByText(/^Ahora:/);
+    const primero = await ahora.textContent();
+    await expect(asistente.getByRole("link", { name: /^Siguiente: buscar / })).toHaveAttribute(
+      "href",
+      /^https:\/\/tienda\.mercadona\.es\/search-results\?query=/,
+    );
+    await asistente.getByRole("button", { name: "✓ Ya está en la cesta" }).click();
+    await expect(asistente.getByText(/^1 de \d+ en la cesta$/)).toBeVisible();
+    await expect(ahora).not.toHaveText(primero!);
+
+    // Saltar lo deja para el final: cambia el artículo sin contarlo en la cesta.
+    const segundo = await ahora.textContent();
+    await asistente.getByRole("button", { name: "Saltar" }).click();
+    await expect(ahora).not.toHaveText(segundo!);
+    await expect(asistente.getByText(/^1 de \d+ en la cesta$/)).toBeVisible();
+
+    // Se acuerda por dónde iba al recargar.
+    await pagina.reload({ waitUntil: "networkidle" });
+    await pagina.getByText(/Comprar online en Mercadona/).click();
+    await expect(
+      pagina
+        .getByRole("group", { name: "Asistente paso a paso" })
+        .getByText(/^1 de \d+ en la cesta$/),
+    ).toBeVisible();
+
+    // Y se puede empezar de nuevo.
+    await pagina.getByRole("button", { name: "Empezar de nuevo" }).click();
+    await expect(
+      pagina
+        .getByRole("group", { name: "Asistente paso a paso" })
+        .getByText(/^0 de \d+ en la cesta$/),
+    ).toBeVisible();
+    await contexto.close();
+  });
+
+  test("compra online: se recuerda el producto elegido y la próxima vez abre directo", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/compra");
+    await pagina.getByText("Comprar online en Mercadona").click();
+    const asistente = pagina.getByRole("group", { name: "Asistente paso a paso" });
+
+    // Sin producto guardado, busca; se abre «Recordar» y se pega el enlace del producto elegido.
+    await expect(asistente.getByRole("link", { name: /^Siguiente: buscar / })).toBeVisible();
+    await asistente.getByText("Recordar el producto que elijas").click();
+    const campo = asistente.getByLabel("Enlace del producto");
+    // Un enlace de otro sitio o de una búsqueda no vale.
+    await campo.fill("https://malo.example/product/1/x");
+    await asistente.getByRole("button", { name: "Guardar el producto" }).click();
+    await expect(asistente.getByRole("alert")).toContainText("no es un enlace de un producto");
+    await campo.fill(
+      "Mira esto https://tienda.mercadona.es/product/10409/leche-entera-hacendado?x=1",
+    );
+    await asistente.getByRole("button", { name: "Guardar el producto" }).click();
+
+    // Ahora este artículo abre directo ese producto.
+    await expect(asistente.getByText("Tu producto: Leche entera hacendado")).toBeVisible();
+    const directo = asistente.getByRole("link", { name: /^Siguiente: abrir tu producto de / });
+    await expect(directo).toHaveAttribute(
+      "href",
+      "https://tienda.mercadona.es/product/10409/leche-entera-hacendado",
+    );
+    await expect(directo).toHaveAttribute("target", "_blank");
+
+    // Se acuerda al recargar.
+    await pagina.reload({ waitUntil: "networkidle" });
+    await pagina.getByText(/Comprar online en Mercadona/).click();
+    await expect(
+      pagina
+        .getByRole("group", { name: "Asistente paso a paso" })
+        .getByText("Tu producto: Leche entera hacendado"),
+    ).toBeVisible();
+
+    // Y se puede olvidar para volver a buscar.
+    await pagina.getByRole("button", { name: /^Olvidar el producto de / }).click();
+    await expect(pagina.getByRole("link", { name: /^Siguiente: buscar / })).toBeVisible();
+    await contexto.close();
+  });
+
   test("cuenta: enseña la versión de la app instalada", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/cuenta");
