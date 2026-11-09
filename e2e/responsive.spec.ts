@@ -408,6 +408,51 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 
+  test("compra online: el asistente va artículo a artículo y se acuerda por dónde ibas", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/compra");
+    await pagina.getByText("Comprar online en Mercadona").click();
+    const asistente = pagina.getByRole("group", { name: "Asistente paso a paso" });
+    await expect(asistente.getByText(/^0 de \d+ en la cesta$/)).toBeVisible();
+
+    // Enseña un artículo y su búsqueda; al marcarlo pasa al siguiente.
+    const ahora = asistente.getByText(/^Ahora:/);
+    const primero = await ahora.textContent();
+    await expect(asistente.getByRole("link", { name: /^Siguiente: buscar / })).toHaveAttribute(
+      "href",
+      /^https:\/\/tienda\.mercadona\.es\/search-results\?query=/,
+    );
+    await asistente.getByRole("button", { name: "✓ Ya está en la cesta" }).click();
+    await expect(asistente.getByText(/^1 de \d+ en la cesta$/)).toBeVisible();
+    await expect(ahora).not.toHaveText(primero!);
+
+    // Saltar lo deja para el final: cambia el artículo sin contarlo en la cesta.
+    const segundo = await ahora.textContent();
+    await asistente.getByRole("button", { name: "Saltar" }).click();
+    await expect(ahora).not.toHaveText(segundo!);
+    await expect(asistente.getByText(/^1 de \d+ en la cesta$/)).toBeVisible();
+
+    // Se acuerda por dónde iba al recargar.
+    await pagina.reload({ waitUntil: "networkidle" });
+    await pagina.getByText(/Comprar online en Mercadona/).click();
+    await expect(
+      pagina
+        .getByRole("group", { name: "Asistente paso a paso" })
+        .getByText(/^1 de \d+ en la cesta$/),
+    ).toBeVisible();
+
+    // Y se puede empezar de nuevo.
+    await pagina.getByRole("button", { name: "Empezar de nuevo" }).click();
+    await expect(
+      pagina
+        .getByRole("group", { name: "Asistente paso a paso" })
+        .getByText(/^0 de \d+ en la cesta$/),
+    ).toBeVisible();
+    await contexto.close();
+  });
+
   test("cuenta: enseña la versión de la app instalada", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/cuenta");
