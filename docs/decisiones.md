@@ -1085,3 +1085,23 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Límites:** (1) la app no sabe qué días son festivos; el día sin cole se nota porque no hay menú del cole o porque se apunta la comida. (2) Un día pasado no mete ingredientes en la compra, pero **la comida de hoy sí**: si se apunta ya comida, hoy sale su ingrediente en la lista (quitarlo con «no hace falta»).
 
 **Ampliación de D-128 (sugerencias al escribir):** el campo «Qué se come» sugiere, mientras se escribe, los platos de la casa que encajan (botones para apuntar con un toque). La búsqueda no distingue tildes ni mayúsculas y vale cualquier orden de palabras («milanesa pollo» encuentra «Milanesa de pollo»); primero salen los que empiezan por lo escrito (`coincideConBusqueda`, `ordenarPorBusqueda`). Antes solo se reconocía un plato al pulsar «Apuntar» y con el nombre exacto.
+
+## D-129 · La app funciona sin conexión
+
+- **Decisión (Diego):** la app debe seguir funcionando sin internet: poder ver la información y seguir guardando cosas, guardando en el móvil y subiendo los cambios cuando vuelva la conexión.
+- **Lo que ya había (D-102):** los datos viven en el móvil y los cambios se apuntan en una cola que sobrevive a cerrar la app y se envía sola al volver internet; si la app se abre sin conexión usa el último hogar conocido; la franja avisa de que lo apuntado aún no está en la nube. No se toca.
+- **Lo que faltaba:** que **la propia app abriera** sin internet. El service worker solo servía para notificaciones y no guardaba nada de la app, así que un móvil sin conexión no podía ni cargar las pantallas.
+- **Qué cambia (`public/sw.js`, `RegistrarServiceWorker`):**
+  - Al instalarse guarda en el móvil **todas las pantallas** de la app (aunque no se hayan abierto nunca) y los archivos de Next que usan, más los iconos y el manifiesto.
+  - **Páginas:** primero la red (si contesta en 4 s siempre se ve lo último) y, si no, la copia guardada; si esa pantalla no está guardada, la de inicio; y si nada, un aviso. Se guarda la copia de cada pantalla que se visita.
+  - **Archivos de Next (`/_next/static/`) e imágenes:** primero lo guardado (llevan el contenido en el nombre, no cambian). Tope de 500 archivos; al pasarse se borran los más antiguos.
+  - **No toca nunca:** lo que no sea GET, lo de otros dominios (Supabase) ni `/api/`. Los audios (que piden trozos) tampoco.
+  - Se registra al arrancar la app, solo en producción. Las copias de versiones anteriores se borran al activarse una nueva (`VERSION`).
+- **Seguridad:** la política de seguridad lleva un `nonce` distinto en cada página; la copia guardada incluye sus cabeceras y sus scripts con ese mismo `nonce`, así que sigue siendo coherente. Las respuestas con redirección no se guardan.
+- **Cómo se ha probado:** un E2E que corta la conexión de verdad: abre la app, espera a que el service worker esté activo, quita internet, abre una pantalla, apunta algo en la compra, abre una pantalla que nunca se había visitado, cambia de pantalla con la barra de navegación, recarga y comprueba que lo apuntado sigue ahí. Más pruebas unitarias de las funciones puras del service worker.
+- **Límites que hay que conocer:**
+  1. **Hay que abrir la app una vez con internet** para que se guarde (unos segundos). Solo entonces funciona sin conexión.
+  2. **No probado en un móvil real** (iPhone ni Android) ni con la nube real sin conexión; las pruebas simulan el corte en Chromium.
+  3. Sin conexión **no se puede**: entrar o unirse a un hogar por primera vez, lo que usa IA (leer el PDF del cole, ordenar la compra, completar un plato), las búsquedas de Mercadona ni el calendario suscrito. Esas funciones darán su error de siempre.
+  4. Con una versión nueva de la app, lo que se ve sin conexión es la **última copia guardada** de cada pantalla hasta que se abra con internet. Si cambia el propio `sw.js`, hay que subir `VERSION` para que se vuelvan a guardar todas.
+  5. Un navegador puede borrar los datos de un sitio que lleva semanas sin usarse, también lo apuntado sin enviar (la app ya pide almacenamiento persistente, D-102).

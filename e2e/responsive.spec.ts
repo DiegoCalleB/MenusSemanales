@@ -339,6 +339,69 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 
+  test("sin conexión: la app abre, se navega por todas las pantallas y lo apuntado se queda", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/");
+
+    // El service worker guarda toda la app en el móvil en cuanto se instala.
+    await expect
+      .poll(
+        () =>
+          pagina.evaluate(async () => {
+            const nombre = (await caches.keys()).find((n) => n.startsWith("hecho-paginas"));
+            return nombre ? (await (await caches.open(nombre)).keys()).length : 0;
+          }),
+        { timeout: 30_000 },
+      )
+      .toBeGreaterThanOrEqual(RUTAS.length);
+    // Y está activo y controlando esta página (si no, sin conexión no podría responder).
+    await pagina.evaluate(async () => {
+      await navigator.serviceWorker.ready;
+      if (!navigator.serviceWorker.controller) {
+        await new Promise((r) =>
+          navigator.serviceWorker.addEventListener("controllerchange", r, { once: true }),
+        );
+      }
+    });
+
+    // Se corta internet: se abre una pantalla, se apunta algo y se pasa a otras, también las que
+    // nunca se habían abierto.
+    await contexto.setOffline(true);
+    await pagina.goto("/compra");
+    await expect(
+      pagina.getByRole("heading", { level: 1, name: /Lista de la compra/ }),
+    ).toBeVisible();
+    await pagina.getByLabel("Añadir algo a la lista").fill("Velas sin conexión");
+    await pagina.getByRole("button", { name: "Añadir" }).click();
+    await expect(pagina.getByRole("checkbox", { name: /Velas sin conexión/ })).toBeVisible();
+
+    await pagina.goto("/reparto");
+    await expect(pagina.getByRole("heading", { level: 1 })).toBeVisible();
+    await pagina.goto("/fechas");
+    await expect(pagina.getByRole("heading", { level: 1, name: /^Fechas/ })).toBeVisible();
+
+    // Cambiar de pantalla con la barra de navegación, como en el uso normal.
+    await pagina
+      .getByRole("navigation", { name: "Principal" })
+      .getByRole("link", { name: "Casa" })
+      .click();
+    await expect(pagina.getByRole("heading", { level: 1, name: /Casa/ })).toBeVisible();
+
+    // Lo apuntado sin conexión sigue ahí al recargar y al volver a la lista.
+    await pagina.goto("/compra");
+    await expect(pagina.getByRole("checkbox", { name: /Velas sin conexión/ })).toBeVisible();
+    await pagina.reload();
+    await expect(pagina.getByRole("checkbox", { name: /Velas sin conexión/ })).toBeVisible();
+
+    // Al volver internet, todo sigue funcionando.
+    await contexto.setOffline(false);
+    await pagina.goto("/compra");
+    await expect(pagina.getByRole("checkbox", { name: /Velas sin conexión/ })).toBeVisible();
+    await contexto.close();
+  });
+
   test("menú: 15 días y menú del cole leído desde texto", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/menu");
