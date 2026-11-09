@@ -14,6 +14,7 @@ import {
 } from "@/dominio/habituales";
 import type { Unidad } from "@/dominio/tipos";
 import { BotonesCompartir } from "../compartir-botones";
+import { ComprarOnline } from "../comprar-online";
 import { CintaAnimal } from "../cinta-animal";
 import { EntradaCompra } from "../entrada-compra";
 import { OrdenarConIa } from "../ordenar-con-ia";
@@ -254,6 +255,15 @@ export function CompraVista() {
       )}
 
       {!modoTienda && <BotonesCompartir titulo="Lista de la compra" texto={textoDeCompra} />}
+      {!modoTienda && (
+        <ComprarOnline
+          articulos={pendientes.map((i) => ({
+            clave: i.clave,
+            nombre: i.nombre,
+            cantidad: i.cantidad,
+          }))}
+        />
+      )}
 
       {!modoTienda && quitados.length > 0 && (
         <details className="tarjeta p-2 sm:p-3">

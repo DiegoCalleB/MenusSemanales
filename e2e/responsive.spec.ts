@@ -276,6 +276,30 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 
+  test("compra: pasar la lista a Mercadona abre la búsqueda de cada artículo", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/compra");
+    await pagina.getByLabel("Añadir algo a la lista").fill("Leche entera (1 l)");
+    await pagina.getByRole("button", { name: "Añadir" }).click();
+
+    await pagina.getByText("Comprar online en Mercadona").click();
+    const enlace = pagina.getByRole("link", { name: "Buscar Leche entera (1 l) en Mercadona" });
+    await expect(enlace).toBeVisible();
+    // Busca por el nombre sin lo que va entre paréntesis, en una pestaña nueva y sin pasar el origen.
+    await expect(enlace).toHaveAttribute(
+      "href",
+      "https://tienda.mercadona.es/search-results?query=Leche%20entera",
+    );
+    await expect(enlace).toHaveAttribute("target", "_blank");
+    await expect(enlace).toHaveAttribute("rel", /noopener/);
+    await expect(
+      pagina.getByRole("link", { name: /Abrir la tienda de Mercadona/ }),
+    ).toHaveAttribute("href", "https://tienda.mercadona.es");
+    await contexto.close();
+  });
+
   test("menú: 15 días y menú del cole leído desde texto", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/menu");
