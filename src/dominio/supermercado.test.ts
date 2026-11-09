@@ -5,7 +5,10 @@ import {
   articuloActual,
   contarEnCesta,
   enlaceDeBusqueda,
+  enlaceDeProducto,
+  extraerEnlace,
   marcarEnCesta,
+  nombreDeProducto,
   podarProgreso,
   quitarDeCesta,
   saltar,
@@ -89,5 +92,46 @@ describe("asistente paso a paso de la compra online (D-131)", () => {
     const p = { hechos: ["leche", "viejo"], saltados: ["pan", "otro"] };
     expect(podarProgreso(p, claves)).toEqual({ hechos: ["leche"], saltados: ["pan"] });
     expect(contarEnCesta(["pan"], p)).toEqual({ hechos: 0, total: 1 });
+  });
+});
+
+describe("recordar el producto elegido (D-132)", () => {
+  it("saca el enlace de un texto pegado al compartir", () => {
+    expect(extraerEnlace("Mira esto: https://tienda.mercadona.es/product/1/x ¡rico!")).toBe(
+      "https://tienda.mercadona.es/product/1/x",
+    );
+    expect(extraerEnlace("sin enlace")).toBeNull();
+  });
+
+  it("acepta solo un enlace https de la tienda, y lo deja limpio", () => {
+    const m = mercadona;
+    const bueno = "https://tienda.mercadona.es/product/10409/leche-entera-hacendado";
+    expect(enlaceDeProducto(m, bueno)).toBe(bueno);
+    expect(enlaceDeProducto(m, `  ${bueno}/?utm=a&lang=es#fotos `)).toBe(bueno);
+    expect(enlaceDeProducto(m, `Mira este producto ${bueno} !`)).toBe(bueno);
+  });
+
+  it("rechaza lo que no es un producto de la tienda", () => {
+    const m = mercadona;
+    for (const malo of [
+      "",
+      "leche",
+      "http://tienda.mercadona.es/product/1/x", // sin https
+      "https://otro.es/product/1/x", // otro dominio
+      "https://tienda.mercadona.es.malo.com/product/1/x", // dominio parecido
+      "https://tienda.mercadona.es/", // la portada
+      "https://tienda.mercadona.es/search-results?query=leche", // una búsqueda
+      "javascript:alert(1)",
+    ]) {
+      expect(enlaceDeProducto(m, malo)).toBeNull();
+    }
+  });
+
+  it("pone un nombre legible al enlace", () => {
+    expect(
+      nombreDeProducto("https://tienda.mercadona.es/product/10409/leche-entera-hacendado"),
+    ).toBe("Leche entera hacendado");
+    expect(nombreDeProducto("https://tienda.mercadona.es/product/10409")).toBe("Producto guardado");
+    expect(nombreDeProducto("nada")).toBe("Producto guardado");
   });
 });

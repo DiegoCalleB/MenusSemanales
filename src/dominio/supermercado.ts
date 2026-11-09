@@ -107,3 +107,44 @@ export const contarEnCesta = (
   hechos: claves.filter((c) => p.hechos.includes(c)).length,
   total: claves.length,
 });
+
+/**
+ * Recordar el producto elegido (D-132). La app no puede ver qué producto se elige en la tienda, así
+ * que la persona pega su enlace («Compartir → Copiar enlace» en la web de Mercadona). Solo se
+ * aceptan enlaces https de la propia tienda: nunca se abre una dirección de otro sitio.
+ */
+
+/** El primer enlace de un texto pegado («Mira esto https://…» al compartir), o null. */
+export function extraerEnlace(texto: string): string | null {
+  const m = /https?:\/\/[^\s<>"']+/i.exec(texto);
+  return m ? m[0] : null;
+}
+
+/**
+ * La dirección limpia (sin parámetros ni «#») de un producto de esa tienda, o null si el texto no
+ * es un enlace https de su dominio, o es la portada o una búsqueda y no un producto.
+ */
+export function enlaceDeProducto(supermercado: Supermercado, texto: string): string | null {
+  try {
+    const u = new URL(extraerEnlace(texto) ?? texto.trim());
+    const tienda = new URL(supermercado.tienda);
+    if (u.protocol !== "https:" || u.host !== tienda.host) return null;
+    const ruta = u.pathname.replace(/\/+$/, "");
+    if (ruta === "" || ruta.startsWith("/search-results")) return null;
+    return `${u.origin}${ruta}`;
+  } catch {
+    return null;
+  }
+}
+
+/** Un nombre legible a partir del enlace («…/leche-entera-hacendado» → «Leche entera hacendado»). */
+export function nombreDeProducto(enlace: string): string {
+  try {
+    const ultimo = new URL(enlace).pathname.split("/").filter(Boolean).pop() ?? "";
+    const palabras = decodeURIComponent(ultimo).replace(/[-_]+/g, " ").trim();
+    if (palabras === "" || /^\d+$/.test(palabras)) return "Producto guardado";
+    return palabras.charAt(0).toUpperCase() + palabras.slice(1);
+  } catch {
+    return "Producto guardado";
+  }
+}

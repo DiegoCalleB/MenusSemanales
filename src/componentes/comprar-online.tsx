@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { type FormEvent, useEffect, useId, useState } from "react";
 import { type FechaIso, diasEntre } from "@/dominio/fechas";
 import {
   PROGRESO_VACIO,
@@ -9,11 +9,19 @@ import {
   articuloActual,
   contarEnCesta,
   enlaceDeBusqueda,
+  enlaceDeProducto,
   marcarEnCesta,
+  nombreDeProducto,
   podarProgreso,
   quitarDeCesta,
   saltar,
 } from "@/dominio/supermercado";
+import {
+  type ProductosOnline,
+  claveDeProducto,
+  guardarProductos,
+  leerProductos,
+} from "./productos-online";
 
 export interface ArticuloOnline {
   clave: string;
@@ -51,6 +59,65 @@ function guardarProgreso(hoy: FechaIso, p: ProgresoOnline) {
   }
 }
 
+/** Pegar el enlace del producto elegido en la tienda para que la app se acuerde de él. */
+function RecordarProducto({
+  nombreTienda,
+  alGuardar,
+}: {
+  nombreTienda: string;
+  alGuardar: (texto: string) => boolean;
+}) {
+  const id = useId();
+  const [texto, setTexto] = useState("");
+  const [problema, setProblema] = useState("");
+
+  function guardar(e: FormEvent) {
+    e.preventDefault();
+    if (alGuardar(texto)) {
+      setTexto("");
+      setProblema("");
+    } else {
+      setProblema(
+        `Ese no es un enlace de un producto de ${nombreTienda}. Cópialo desde su página.`,
+      );
+    }
+  }
+
+  return (
+    <details>
+      <summary className="text-marca-fuerte flex min-h-11 cursor-pointer items-center text-base font-semibold">
+        <span aria-hidden="true">📌 </span>&nbsp;Recordar el producto que elijas
+      </summary>
+      <form onSubmit={guardar} className="flex flex-col gap-2 pb-1">
+        <p className="text-tinta-suave text-sm">
+          En {nombreTienda}, abre el producto y copia su enlace (compartir → copiar enlace). Pégalo
+          aquí y la próxima vez este artículo abrirá directo ese producto.
+        </p>
+        <label htmlFor={`${id}-e`} className="sr-only">
+          Enlace del producto
+        </label>
+        <input
+          id={`${id}-e`}
+          className="campo"
+          inputMode="url"
+          autoComplete="off"
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+          placeholder={`Enlace del producto de ${nombreTienda}`}
+        />
+        {problema && (
+          <p role="alert" className="bg-aviso-fondo text-aviso-texto rounded-2xl p-2 text-sm">
+            {problema}
+          </p>
+        )}
+        <button type="submit" className="boton w-fit" disabled={texto.trim() === ""}>
+          Guardar el producto
+        </button>
+      </form>
+    </details>
+  );
+}
+
 /**
  * Pasar la lista pendiente a la tienda online del supermercado, paso a paso (D-127, D-131). Los
  * supermercados no ofrecen API para que una app llene el carrito, así que la app guía: enseña un
@@ -72,6 +139,11 @@ export function ComprarOnline({
     void Promise.resolve().then(() => setGuardado(leerProgreso(hoy)));
   }, [hoy]);
 
+  const [productos, setProductos] = useState<ProductosOnline>({});
+  useEffect(() => {
+    void Promise.resolve().then(() => setProductos(leerProductos()));
+  }, []);
+
   if (!super_ || articulos.length === 0) return null;
 
   const claves = articulos.map((a) => a.clave);
@@ -79,6 +151,23 @@ export function ComprarOnline({
   const cuenta = contarEnCesta(claves, progreso);
   const actual = articuloActual(claves, progreso);
   const ahora = articulos.find((a) => a.clave === actual);
+
+  /** Recuerda el producto de un artículo; false si el texto no es un enlace de producto de la tienda. */
+  function recordarProducto(nombre: string, texto: string): boolean {
+    const enlace = enlaceDeProducto(super_!, texto);
+    if (!enlace) return false;
+    const nuevo = { ...productos, [claveDeProducto(nombre)]: enlace };
+    setProductos(nuevo);
+    guardarProductos(nuevo);
+    return true;
+  }
+  function olvidarProducto(nombre: string) {
+    const resto = { ...productos };
+    delete resto[claveDeProducto(nombre)];
+    setProductos(resto);
+    guardarProductos(resto);
+  }
+  const productoDe = (nombre: string): string | undefined => productos[claveDeProducto(nombre)];
 
   function cambiar(f: (p: ProgresoOnline) => ProgresoOnline) {
     const nuevo = f(progreso);
@@ -133,15 +222,59 @@ export function ComprarOnline({
                   <span className="text-tinta-suave font-normal"> · {ahora.cantidad}</span>
                 )}
               </p>
-              <a
-                className="boton w-fit"
-                href={enlaceDeBusqueda(super_, ahora.nombre)}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={`Siguiente: buscar ${ahora.nombre} en ${super_.nombre}`}
-              >
-                Buscar en {super_.nombre} ↗
-              </a>
+              {productoDe(ahora.nombre) ? (
+                <>
+                  <p className="text-base font-semibold">
+                    <span aria-hidden="true">⭐ </span>Tu producto:{" "}
+                    {nombreDeProducto(productoDe(ahora.nombre) ?? "")}
+                  </p>
+                  <a
+                    className="boton w-fit"
+                    href={productoDe(ahora.nombre)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Siguiente: abrir tu producto de ${ahora.nombre} en ${super_.nombre}`}
+                  >
+                    Abrir mi producto ↗
+                  </a>
+                  <span className="flex flex-wrap gap-2">
+                    <a
+                      className="boton-suave"
+                      href={enlaceDeBusqueda(super_, ahora.nombre)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`Buscar otro ${ahora.nombre} en ${super_.nombre}`}
+                    >
+                      Buscar otro ↗
+                    </a>
+                    <button
+                      type="button"
+                      className="boton-suave"
+                      aria-label={`Olvidar el producto de ${ahora.nombre}`}
+                      onClick={() => olvidarProducto(ahora.nombre)}
+                    >
+                      Olvidar producto
+                    </button>
+                  </span>
+                </>
+              ) : (
+                <>
+                  <a
+                    className="boton w-fit"
+                    href={enlaceDeBusqueda(super_, ahora.nombre)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Siguiente: buscar ${ahora.nombre} en ${super_.nombre}`}
+                  >
+                    Buscar en {super_.nombre} ↗
+                  </a>
+                  <RecordarProducto
+                    key={ahora.clave}
+                    nombreTienda={super_.nombre}
+                    alGuardar={(t) => recordarProducto(ahora.nombre, t)}
+                  />
+                </>
+              )}
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -210,15 +343,27 @@ export function ComprarOnline({
                   >
                     {enCesta ? "✓ En la cesta" : "En la cesta"}
                   </button>
-                  <a
-                    className="boton-suave shrink-0"
-                    href={enlaceDeBusqueda(super_, a.nombre)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={`Buscar ${a.nombre} en ${super_.nombre}`}
-                  >
-                    Buscar ↗
-                  </a>
+                  {productoDe(a.nombre) ? (
+                    <a
+                      className="boton-suave shrink-0"
+                      href={productoDe(a.nombre)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`Abrir tu producto de ${a.nombre} en ${super_.nombre}`}
+                    >
+                      ⭐ Mi producto ↗
+                    </a>
+                  ) : (
+                    <a
+                      className="boton-suave shrink-0"
+                      href={enlaceDeBusqueda(super_, a.nombre)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`Buscar ${a.nombre} en ${super_.nombre}`}
+                    >
+                      Buscar ↗
+                    </a>
+                  )}
                 </span>
               </li>
             );
