@@ -73,6 +73,10 @@ export function ComidaDelDia({ fecha, puedeApuntar }: { fecha: FechaIso; puedeAp
       ))}
       {puedeApuntar && (
         <>
+          <p className="text-tinta-suave text-sm">
+            Un plato de tus platos cuenta para la compra y para decidir la cena (si hoy se ha comido
+            carne, mejor cenar huevo o pescado). Un texto libre solo se apunta.
+          </p>
           <form onSubmit={apuntar} className="flex flex-wrap items-end gap-2">
             <label htmlFor={`${id}-t`} className="sr-only">
               Qué se come

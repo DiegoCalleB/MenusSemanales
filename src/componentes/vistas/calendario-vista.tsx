@@ -10,6 +10,7 @@ import {
   MAX_PLATOS_POR_CENA,
   comidasDe,
   diaMenuDe,
+  fechaApuntable,
   fechaPlanificable,
   nombreDia,
   opcionesParaFecha,
@@ -322,7 +323,7 @@ export function CalendarioVista() {
 
           <TarjetaCole cole={cole} fecha={sel} />
 
-          <ComidaDelDia fecha={sel} puedeApuntar={planificable} />
+          <ComidaDelDia fecha={sel} puedeApuntar={fechaApuntable(estado, sel)} />
 
           {elegida ? (
             <div className="flex flex-col gap-2">

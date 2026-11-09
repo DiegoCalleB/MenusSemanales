@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { sumarDias } from "@/dominio/fechas";
+import { contarSemana } from "@/dominio/equilibrio";
+import { diaSemanaIso, sumarDias } from "@/dominio/fechas";
 import { esUuid } from "@/dominio/identificadores";
 import { type Cumple, estadoVigente } from "@/dominio/cumples";
 import { estadoInicialDemo } from "./datos-demo";
@@ -8,7 +9,12 @@ import {
   type EstadoHogar,
   articulosPendientes,
   articulosQuitados,
+  catalogoOrdenado,
   cenaDeEmergenciaHoy,
+  compatibilidadDe,
+  diaMenuDe,
+  explicacionDe,
+  mediodiaPorDia,
   diasDelMenu,
   menuDeLaSemana,
   normalizar,
@@ -1818,5 +1824,66 @@ describe("planificar un mes", () => {
     // Más variedad que el ciclo de siempre: casi cada cena es un plato distinto.
     const distintos = new Set(elegidas.map((c) => c.plato.id)).size;
     expect(distintos / elegidas.length).toBeGreaterThan(0.6);
+  });
+});
+
+describe("la comida de casa cuenta para la cena (D-128)", () => {
+  const base = estadoInicialDemo();
+  const hoy = base.hoy;
+  const carne = base.platos.find((p) => p.grupo === "carne" && !p.noProponer)!;
+  const aplicarA = (...a: Accion[]) => aplicar(base, ...a);
+
+  it("se puede apuntar lo que se comió hace unos días, pero no hace más de 14", () => {
+    const ayer = sumarDias(hoy, -3);
+    const e = aplicarA({ tipo: "almuerzo/anadir", fecha: ayer, platoId: carne.id });
+    expect(e.almuerzos).toMatchObject([{ fecha: ayer, platoId: carne.id }]);
+    const lejos = aplicarA({
+      tipo: "almuerzo/anadir",
+      fecha: sumarDias(hoy, -15),
+      platoId: carne.id,
+    });
+    expect(lejos.almuerzos).toEqual([]);
+    expect(lejos.aviso).toMatchObject({ tipo: "error" });
+    // Un día ya pasado no mete cosas en la lista de la compra.
+    expect(articulosPendientes(e)).toEqual(articulosPendientes(base));
+  });
+
+  it("una comida de casa hace de «cole» ese día y manda sobre el menú del cole", () => {
+    const e = aplicarA({ tipo: "almuerzo/anadir", fecha: hoy, platoId: carne.id });
+    const dia = mediodiaPorDia(e)[hoy];
+    expect(dia).toMatchObject({ segundo: "carne", origen: "casa", textoSegundo: carne.nombre });
+    expect(diaMenuDe(e, hoy).cole).toMatchObject({ origen: "casa" });
+    // Un texto libre no cuenta: no hay grupo.
+    const libre = aplicarA({ tipo: "almuerzo/anadir", fecha: hoy, texto: "Restaurante" });
+    expect(mediodiaPorDia(libre)[hoy]).toEqual(base.colegio[hoy]);
+  });
+
+  it("la explicación y la nota hablan de la comida de casa, no del cole", () => {
+    const e = aplicarA({ tipo: "almuerzo/anadir", fecha: hoy, platoId: carne.id });
+    const opciones = catalogoOrdenado(e, hoy);
+    const huevo = opciones.find((o) => o.plato.grupo === "huevo" || o.plato.grupo === "pescado");
+    expect(huevo).toBeDefined();
+    const expl = explicacionDe(e, hoy, huevo!);
+    expect(expl.resumen).toContain("Hoy habéis comido");
+    expect(expl.resumen).toContain("en casa");
+    expect(expl.resumen).not.toContain("las niñas");
+    const compat = compatibilidadDe(e, hoy, huevo!);
+    expect(compat).toMatchObject({ origen: "casa" });
+    expect(compat!.puntos).toBeGreaterThanOrEqual(4);
+    // Y repetir lo mismo que se comió puntúa peor.
+    const repite = compatibilidadDe(e, hoy, { ...huevo!, plato: carne });
+    expect(repite!.puntos).toBeLessThan(compat!.puntos);
+  });
+
+  it("cuenta en el equilibrio de la semana", () => {
+    // Un sábado de esta semana: no hay menú del cole, así que lo único que cuenta es la comida de casa.
+    const sabado = Array.from({ length: 7 }, (_, i) => sumarDias(hoy, i)).find(
+      (f) => diaSemanaIso(f) === 6,
+    )!;
+    expect(base.colegio[sabado]).toBeUndefined();
+    const antes = contarSemana(sabado, mediodiaPorDia(base), {});
+    const e = aplicarA({ tipo: "almuerzo/anadir", fecha: sabado, platoId: carne.id });
+    const despues = contarSemana(sabado, mediodiaPorDia(e), {});
+    expect(despues.carne ?? 0).toBe((antes.carne ?? 0) + 1);
   });
 });

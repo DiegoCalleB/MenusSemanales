@@ -65,6 +65,16 @@ async function abrir(
       }
     }, perfil);
   }
+  // La bienvenida de Ana sale desde el 6 de noviembre con la fecha real y tapa los clics de las demás
+  // pruebas cuando cambian a Ana desde la pantalla. Se da por vista, salvo en las que entran como
+  // Ana a propósito (las de su propia bienvenida).
+  if (perfil !== "ana") {
+    await pagina.addInitScript(() => {
+      if (!window.localStorage.getItem("menus-semanales:bienvenida-ana:vistas")) {
+        window.localStorage.setItem("menus-semanales:bienvenida-ana:vistas", "99");
+      }
+    });
+  }
   // El tema es claro siempre; el oscuro solo si la persona lo elige (se guarda en el dispositivo).
   if (tema === "dark") {
     await pagina.addInitScript(() => window.localStorage.setItem("menus-semanales:tema", "oscuro"));
@@ -297,6 +307,16 @@ test.describe("flujos en móvil", () => {
     await expect(
       pagina.getByRole("link", { name: /Abrir la tienda de Mercadona/ }),
     ).toHaveAttribute("href", "https://tienda.mercadona.es");
+    await contexto.close();
+  });
+
+  test("comida de hoy: se apunta desde la portada y sale en ella", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/");
+    await pagina.getByText("Apuntar la comida de hoy").click();
+    await pagina.getByLabel("Qué se come").fill("Arroz con pollo al curry");
+    await pagina.getByRole("button", { name: "Apuntar", exact: true }).click();
+    await expect(pagina.getByText(/Comida: Arroz con pollo al curry/)).toBeVisible();
     await contexto.close();
   });
 

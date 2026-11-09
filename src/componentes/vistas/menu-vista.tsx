@@ -5,7 +5,7 @@ import {
   MAX_PLATOS_POR_CENA,
   comidasDe,
   diasDelMenu,
-  fechaPlanificable,
+  fechaApuntable,
   menuDeLaSemana,
   nombreDia,
   opcionesParaFecha,
@@ -451,7 +451,7 @@ export function MenuVista() {
                     <div className="flex flex-col gap-3 pb-3">
                       <ComidaDelDia
                         fecha={dia.fecha}
-                        puedeApuntar={fechaPlanificable(estado, dia.fecha)}
+                        puedeApuntar={fechaApuntable(estado, dia.fecha)}
                       />
                       <NotaDelDia fecha={dia.fecha} />
                       <div className="flex flex-wrap items-center gap-2">

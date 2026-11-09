@@ -17,6 +17,7 @@ import { almuerzosDe } from "@/dominio/almuerzos";
 import { quePideHoy } from "@/dominio/casa";
 import { resumenDeTareas } from "@/dominio/tareas";
 import { CintaAnimal } from "../cinta-animal";
+import { ComidaDelDia } from "../comida-del-dia";
 import { LoDeHoy } from "../lo-de-hoy";
 import { NuevaCita } from "../nueva-cita";
 
@@ -131,6 +132,14 @@ export function InicioVista() {
             Hoy llego tarde
           </Link>
         </div>
+        <details>
+          <summary className="text-marca-fuerte flex min-h-11 cursor-pointer items-center text-base font-semibold">
+            <span aria-hidden="true">☀️ </span>&nbsp;Apuntar la comida de hoy
+          </summary>
+          <div className="pb-1">
+            <ComidaDelDia fecha={estado.hoy} puedeApuntar />
+          </div>
+        </details>
       </section>
 
       {diaCole && (

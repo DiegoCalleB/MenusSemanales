@@ -32,7 +32,12 @@ import {
   proximaFecha,
 } from "@/dominio/cumples";
 import { type FrecuenciaTarea, type Tarea, alternarTarea } from "@/dominio/tareas";
-import { type Almuerzo, MAX_LARGO_ALMUERZO } from "@/dominio/almuerzos";
+import {
+  type Almuerzo,
+  DIAS_ATRAS_COMIDA,
+  MAX_LARGO_ALMUERZO,
+  menuDeComidaEnCasa,
+} from "@/dominio/almuerzos";
 import { type Apunte, parsearAgenda } from "@/dominio/agenda";
 import {
   type ConjuntoCasa,
@@ -423,13 +428,37 @@ export function diaMenuDe(e: EstadoHogar, fecha: FechaIso): DiaMenu {
   return {
     fecha,
     minutosMax: e.llegoTarde.includes(fecha) ? 15 : laborable ? 30 : 60,
-    cole: e.colegio[fecha] ?? null,
+    cole: mediodiaPorDia(e)[fecha] ?? null,
   };
+}
+
+/**
+ * Lo que se comió al mediodía cada día (D-128): el menú del cole y, donde se haya apuntado una
+ * comida de casa con un plato del catálogo (fines de semana, fiestas…), esa: lo apuntado a mano
+ * manda sobre el cole ese día. Es lo que usan el recomendador, el equilibrio semanal y la nota de
+ * compatibilidad. La pantalla del cole sigue usando solo el menú real.
+ */
+export function mediodiaPorDia(e: EstadoHogar): Record<FechaIso, MenuCole> {
+  const deCasa = new Map<FechaIso, Array<{ grupo: GrupoPlato; nombre: string }>>();
+  for (const a of e.almuerzos) {
+    const plato = a.platoId ? e.platos.find((p) => p.id === a.platoId) : undefined;
+    if (plato) deCasa.set(a.fecha, [...(deCasa.get(a.fecha) ?? []), plato]);
+  }
+  const salida: Record<FechaIso, MenuCole> = { ...e.colegio };
+  for (const [fecha, platos] of deCasa) {
+    const menu = menuDeComidaEnCasa(platos);
+    if (menu) salida[fecha] = menu;
+  }
+  return salida;
 }
 
 /** ¿Se puede planificar esa fecha? Desde hoy y hasta 60 días por delante. */
 export const fechaPlanificable = (e: EstadoHogar, fecha: FechaIso): boolean =>
   fecha >= e.hoy && fecha <= sumarDias(e.hoy, 60);
+
+/** ¿Se puede apuntar la comida del mediodía de esa fecha? Lo de los últimos 14 días y hasta 60 por delante. */
+export const fechaApuntable = (e: EstadoHogar, fecha: FechaIso): boolean =>
+  fecha >= sumarDias(e.hoy, -DIAS_ATRAS_COMIDA) && fecha <= sumarDias(e.hoy, 60);
 
 /** Platos elegidos para una cena (puede haber varios si son pequeños). */
 export const comidasDe = (e: EstadoHogar, fecha: FechaIso): ComidaPlanificada[] =>
@@ -454,7 +483,7 @@ export function catalogoOrdenado(e: EstadoHogar, fecha: FechaIso, anadir = false
     catalogo: e.platos.filter((p) => !p.noProponer),
     despensa: e.despensa,
     excluirIngredientes: e.excluirIngredientes,
-    colegio: e.colegio,
+    colegio: mediodiaPorDia(e),
     elegidos: elegidosPrincipales(e, fecha),
     ...(anadir ? { complemento: true, excluirPlatos: ya.map((c) => c.plato.id) } : {}),
   });
@@ -504,7 +533,7 @@ export function opcionesParaFecha(e: EstadoHogar, fecha: FechaIso, anadir = fals
       catalogo: e.platos.filter((p) => !p.noProponer),
       despensa: e.despensa,
       excluirIngredientes: e.excluirIngredientes,
-      colegio: e.colegio,
+      colegio: mediodiaPorDia(e),
       elegidos,
     }).dias[0]?.opciones ?? []
   );
@@ -541,7 +570,7 @@ export function menuDeLaSemana(e: EstadoHogar, liberar?: FechaIso): MenuPropuest
     catalogo: e.platos.filter((p) => !p.noProponer),
     despensa: e.despensa,
     excluirIngredientes: e.excluirIngredientes,
-    colegio: e.colegio,
+    colegio: mediodiaPorDia(e),
     elegidos,
   });
 }
@@ -565,7 +594,7 @@ export function compatibilidadDe(
   return compatibilidadConCole({
     grupo: opcion.plato.grupo,
     cole: diaMenuDe(e, fecha).cole,
-    semana: contarSemana(fecha, e.colegio, cenasPorGrupoSin(e, fecha)),
+    semana: contarSemana(fecha, mediodiaPorDia(e), cenasPorGrupoSin(e, fecha)),
   });
 }
 
@@ -587,7 +616,7 @@ export function explicacionDe(e: EstadoHogar, fecha: FechaIso, opcion: Opcion): 
     motivos: opcion.motivos,
     dia: diaMenuDe(e, fecha),
     hoy: e.hoy,
-    semana: contarSemana(fecha, e.colegio, cenas),
+    semana: contarSemana(fecha, mediodiaPorDia(e), cenas),
     caducan,
     faltan: faltanComponentes(
       opcion.plato.ingredientes
@@ -612,7 +641,7 @@ export function cenaDeEmergenciaHoy(e: EstadoHogar): OpcionEmergencia[] {
     hoy: e.hoy,
     raciones: racionesDelHogar(e),
     excluirIngredientes: e.excluirIngredientes,
-    cole: e.colegio[e.hoy] ?? null,
+    cole: mediodiaPorDia(e)[e.hoy] ?? null,
   });
 }
 
@@ -1226,14 +1255,14 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
         texto === "" ||
         texto.length > MAX_LARGO_ALMUERZO ||
         (accion.platoId && !plato) ||
-        !fechaPlanificable(e, accion.fecha)
+        !fechaApuntable(e, accion.fecha)
       ) {
         return {
           ...e,
           siguienteId: e.siguienteId + 1,
           aviso: error(
             e,
-            `Escribe qué se come (hasta ${MAX_LARGO_ALMUERZO} caracteres), en un día desde hoy y hasta dentro de 60 días.`,
+            `Escribe qué se come (hasta ${MAX_LARGO_ALMUERZO} caracteres), en un día de los últimos ${DIAS_ATRAS_COMIDA} días o de los próximos 60.`,
           ),
         };
       }
