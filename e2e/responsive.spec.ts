@@ -65,6 +65,16 @@ async function abrir(
       }
     }, perfil);
   }
+  // La bienvenida de Ana sale desde el 6 de noviembre con la fecha real y tapa los clics de las demás
+  // pruebas cuando cambian a Ana desde la pantalla. Se da por vista, salvo en las que entran como
+  // Ana a propósito (las de su propia bienvenida).
+  if (perfil !== "ana") {
+    await pagina.addInitScript(() => {
+      if (!window.localStorage.getItem("menus-semanales:bienvenida-ana:vistas")) {
+        window.localStorage.setItem("menus-semanales:bienvenida-ana:vistas", "99");
+      }
+    });
+  }
   // El tema es claro siempre; el oscuro solo si la persona lo elige (se guarda en el dispositivo).
   if (tema === "dark") {
     await pagina.addInitScript(() => window.localStorage.setItem("menus-semanales:tema", "oscuro"));
