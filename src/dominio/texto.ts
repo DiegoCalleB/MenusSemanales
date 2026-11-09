@@ -39,3 +39,30 @@ export const NOMBRE_GRUPO_ES: Record<string, string> = {
   lacteo: "lácteos",
   otro: "otro tipo de plato",
 };
+
+const sinTildes = (t: string): string => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+/**
+ * ¿Encaja un nombre con lo que se está escribiendo? Sin tildes ni mayúsculas, y vale cualquier
+ * orden: cada palabra escrita tiene que estar en el nombre («milanesa pollo» encuentra «Milanesa
+ * de pollo»; «curry arroz», «Arroz con pollo al curry»). Con la consulta vacía encaja todo.
+ */
+export function coincideConBusqueda(nombre: string, consulta: string): boolean {
+  const palabras = sinTildes(consulta).split(/\s+/).filter(Boolean);
+  if (palabras.length === 0) return true;
+  const n = sinTildes(nombre);
+  return palabras.every((p) => n.includes(p));
+}
+
+/** Pone primero lo que EMPIEZA por lo escrito y, dentro de cada grupo, por orden alfabético. */
+export function ordenarPorBusqueda<T>(
+  lista: readonly T[],
+  nombreDe: (x: T) => string,
+  consulta: string,
+): T[] {
+  const q = sinTildes(consulta).trim();
+  const rango = (x: T) => (q !== "" && sinTildes(nombreDe(x)).startsWith(q) ? 0 : 1);
+  return [...lista].sort(
+    (a, b) => rango(a) - rango(b) || nombreDe(a).localeCompare(nombreDe(b), "es"),
+  );
+}

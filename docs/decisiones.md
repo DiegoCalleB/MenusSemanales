@@ -1083,3 +1083,5 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
   - **Desde la portada:** «☀️ Apuntar la comida de hoy», plegado en la tarjeta de hoy.
 - **Sin cambios de datos:** nada nuevo se guarda (el menú de casa se calcula a partir de los almuerzos y del catálogo) y no hay migración.
 - **Límites:** (1) la app no sabe qué días son festivos; el día sin cole se nota porque no hay menú del cole o porque se apunta la comida. (2) Un día pasado no mete ingredientes en la compra, pero **la comida de hoy sí**: si se apunta ya comida, hoy sale su ingrediente en la lista (quitarlo con «no hace falta»).
+
+**Ampliación de D-128 (sugerencias al escribir):** el campo «Qué se come» sugiere, mientras se escribe, los platos de la casa que encajan (botones para apuntar con un toque). La búsqueda no distingue tildes ni mayúsculas y vale cualquier orden de palabras («milanesa pollo» encuentra «Milanesa de pollo»); primero salen los que empiezan por lo escrito (`coincideConBusqueda`, `ordenarPorBusqueda`). Antes solo se reconocía un plato al pulsar «Apuntar» y con el nombre exacto.

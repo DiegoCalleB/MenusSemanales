@@ -320,6 +320,25 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 
+  test("comida de hoy: al escribir sugiere los platos de la casa y se apunta con un toque", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/");
+    await pagina.getByText("Apuntar la comida de hoy").click();
+    // Con una o dos palabras sueltas, en cualquier orden y sin tildes.
+    await pagina.getByLabel("Qué se come").fill("curry pollo");
+    const sugerencia = pagina.getByRole("button", { name: "Comer Arroz con pollo al curry" });
+    await expect(sugerencia).toBeVisible();
+    await sugerencia.click();
+    await expect(pagina.getByText(/Comida: Arroz con pollo al curry/)).toBeVisible();
+    await expect(pagina.getByLabel("Qué se come")).toHaveValue("");
+    // Algo que no está en los platos no sugiere nada.
+    await pagina.getByLabel("Qué se come").fill("zzzz inventado");
+    await expect(pagina.getByRole("list", { name: "Platos que coinciden" })).toHaveCount(0);
+    await contexto.close();
+  });
+
   test("menú: 15 días y menú del cole leído desde texto", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/menu");

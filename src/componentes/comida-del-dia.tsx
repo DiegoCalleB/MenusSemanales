@@ -3,11 +3,10 @@
 import { type FormEvent, useId, useState } from "react";
 import { almuerzosDe, POR_DECIDIR } from "@/dominio/almuerzos";
 import type { FechaIso } from "@/dominio/fechas";
+import { coincideConBusqueda, ordenarPorBusqueda } from "@/dominio/texto";
 import { EMOJI_GRUPO } from "./formato";
 import { OfrecerPlatoNuevo, existePlato, useCrearPlato } from "./plato-nuevo";
 import { useHogar } from "./proveedor-hogar";
-
-const sinTildes = (t: string) => t.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
 
 /**
  * La comida del mediodía de un día (D-079): hay días —fines de semana, fiestas— en que no solo hay
@@ -22,9 +21,20 @@ export function ComidaDelDia({ fecha, puedeApuntar }: { fecha: FechaIso; puedeAp
   const [buscando, setBuscando] = useState(false);
   const [q, setQ] = useState("");
   const lista = almuerzosDe(estado.almuerzos, fecha);
-  const platos = estado.platos
-    .filter((p) => !p.noProponer && (q === "" || sinTildes(p.nombre).includes(sinTildes(q))))
-    .slice(0, 8);
+  const platos = ordenarPorBusqueda(
+    estado.platos.filter((p) => !p.noProponer && coincideConBusqueda(p.nombre, q)),
+    (p) => p.nombre,
+    q,
+  ).slice(0, 8);
+  // Mientras se escribe en «Qué se come», los platos de la casa que encajan, para tocar uno.
+  const sugeridos =
+    texto.trim().length >= 2
+      ? ordenarPorBusqueda(
+          estado.platos.filter((p) => coincideConBusqueda(p.nombre, texto)),
+          (p) => p.nombre,
+          texto,
+        ).slice(0, 6)
+      : [];
 
   function apuntar(e: FormEvent) {
     e.preventDefault();
@@ -74,8 +84,7 @@ export function ComidaDelDia({ fecha, puedeApuntar }: { fecha: FechaIso; puedeAp
       {puedeApuntar && (
         <>
           <p className="text-tinta-suave text-sm">
-            Un plato de tus platos cuenta para la compra y para decidir la cena (si hoy se ha comido
-            carne, mejor cenar huevo o pescado). Un texto libre solo se apunta.
+            Un plato de los tuyos cuenta para la compra y para decidir la cena.
           </p>
           <form onSubmit={apuntar} className="flex flex-wrap items-end gap-2">
             <label htmlFor={`${id}-t`} className="sr-only">
@@ -93,6 +102,25 @@ export function ComidaDelDia({ fecha, puedeApuntar }: { fecha: FechaIso; puedeAp
               Apuntar
             </button>
           </form>
+          {sugeridos.length > 0 && !ofrecer && (
+            <ul aria-label="Platos que coinciden" className="flex flex-wrap gap-2">
+              {sugeridos.map((p) => (
+                <li key={p.id}>
+                  <button
+                    type="button"
+                    className="boton-suave"
+                    aria-label={`Comer ${p.nombre}`}
+                    onClick={() => {
+                      despachar({ tipo: "almuerzo/anadir", fecha, platoId: p.id });
+                      setTexto("");
+                    }}
+                  >
+                    <span aria-hidden="true">{EMOJI_GRUPO[p.grupo] ?? "🍽️"}</span> {p.nombre}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
           {ofrecer && (
             <OfrecerPlatoNuevo
               nombre={ofrecer}
