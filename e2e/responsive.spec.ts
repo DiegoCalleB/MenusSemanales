@@ -294,7 +294,13 @@ test.describe("flujos en móvil", () => {
     await pagina.getByLabel("Añadir algo a la lista").fill("Leche entera (1 l)");
     await pagina.getByRole("button", { name: "Añadir" }).click();
 
-    await pagina.getByText("Comprar online en Mercadona").click();
+    // Está ARRIBA, antes de la lista (no al final, donde nadie la encuentra).
+    const resumen = pagina.getByText("Comprar online en Mercadona");
+    await expect(resumen).toBeVisible();
+    const yResumen = (await resumen.boundingBox())!.y;
+    const yPrimerArticulo = (await pagina.getByRole("checkbox").first().boundingBox())!.y;
+    expect(yResumen).toBeLessThan(yPrimerArticulo);
+    await resumen.click();
     const enlace = pagina.getByRole("link", { name: "Buscar Leche entera (1 l) en Mercadona" });
     await expect(enlace).toBeVisible();
     // Busca por el nombre sin lo que va entre paréntesis, en una pestaña nueva y sin pasar el origen.
@@ -317,6 +323,96 @@ test.describe("flujos en móvil", () => {
     await pagina.getByLabel("Qué se come").fill("Arroz con pollo al curry");
     await pagina.getByRole("button", { name: "Apuntar", exact: true }).click();
     await expect(pagina.getByText(/Comida: Arroz con pollo al curry/)).toBeVisible();
+    await contexto.close();
+  });
+
+  test("comida de hoy: al escribir sugiere los platos de la casa y se apunta con un toque", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/");
+    await pagina.getByText("Apuntar la comida de hoy").click();
+    // Con una o dos palabras sueltas, en cualquier orden y sin tildes.
+    await pagina.getByLabel("Qué se come").fill("curry pollo");
+    const sugerencia = pagina.getByRole("button", { name: "Comer Arroz con pollo al curry" });
+    await expect(sugerencia).toBeVisible();
+    await sugerencia.click();
+    await expect(pagina.getByText(/Comida: Arroz con pollo al curry/)).toBeVisible();
+    await expect(pagina.getByLabel("Qué se come")).toHaveValue("");
+    // Algo que no está en los platos no sugiere nada.
+    await pagina.getByLabel("Qué se come").fill("zzzz inventado");
+    await expect(pagina.getByRole("list", { name: "Platos que coinciden" })).toHaveCount(0);
+    await contexto.close();
+  });
+
+  test("sin conexión: la app abre, se navega por todas las pantallas y lo apuntado se queda", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/");
+
+    // El service worker guarda toda la app en el móvil en cuanto se instala.
+    await expect
+      .poll(
+        () =>
+          pagina.evaluate(async () => {
+            const nombre = (await caches.keys()).find((n) => n.startsWith("hecho-paginas"));
+            return nombre ? (await (await caches.open(nombre)).keys()).length : 0;
+          }),
+        { timeout: 30_000 },
+      )
+      .toBeGreaterThanOrEqual(RUTAS.length);
+    // Y está activo y controlando esta página (si no, sin conexión no podría responder).
+    await pagina.evaluate(async () => {
+      await navigator.serviceWorker.ready;
+      if (!navigator.serviceWorker.controller) {
+        await new Promise((r) =>
+          navigator.serviceWorker.addEventListener("controllerchange", r, { once: true }),
+        );
+      }
+    });
+
+    // Se corta internet: se abre una pantalla, se apunta algo y se pasa a otras, también las que
+    // nunca se habían abierto.
+    await contexto.setOffline(true);
+    await pagina.goto("/compra");
+    await expect(
+      pagina.getByRole("heading", { level: 1, name: /Lista de la compra/ }),
+    ).toBeVisible();
+    await pagina.getByLabel("Añadir algo a la lista").fill("Velas sin conexión");
+    await pagina.getByRole("button", { name: "Añadir" }).click();
+    await expect(pagina.getByRole("checkbox", { name: /Velas sin conexión/ })).toBeVisible();
+
+    await pagina.goto("/reparto");
+    await expect(pagina.getByRole("heading", { level: 1 })).toBeVisible();
+    await pagina.goto("/fechas");
+    await expect(pagina.getByRole("heading", { level: 1, name: /^Fechas/ })).toBeVisible();
+
+    // Cambiar de pantalla con la barra de navegación, como en el uso normal.
+    await pagina
+      .getByRole("navigation", { name: "Principal" })
+      .getByRole("link", { name: "Casa" })
+      .click();
+    await expect(pagina.getByRole("heading", { level: 1, name: /Casa/ })).toBeVisible();
+
+    // Lo apuntado sin conexión sigue ahí al recargar y al volver a la lista.
+    await pagina.goto("/compra");
+    await expect(pagina.getByRole("checkbox", { name: /Velas sin conexión/ })).toBeVisible();
+    await pagina.reload();
+    await expect(pagina.getByRole("checkbox", { name: /Velas sin conexión/ })).toBeVisible();
+
+    // Al volver internet, todo sigue funcionando.
+    await contexto.setOffline(false);
+    await pagina.goto("/compra");
+    await expect(pagina.getByRole("checkbox", { name: /Velas sin conexión/ })).toBeVisible();
+    await contexto.close();
+  });
+
+  test("cuenta: enseña la versión de la app instalada", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/cuenta");
+    // En desarrollo y en las pruebas no hay commit de Railway.
+    await expect(pagina.getByText(/Versión de la app:\s*desarrollo/)).toBeVisible();
     await contexto.close();
   });
 
@@ -721,8 +817,9 @@ test.describe("flujos en móvil", () => {
     const visibles = await filas.evaluateAll(
       (els) => els.filter((e) => e.getBoundingClientRect().bottom < window.innerHeight).length,
     );
-    // (Las seis pestañas de Comer ocupan dos filas para verse enteras, y eso quita una fila.)
-    expect(visibles).toBeGreaterThanOrEqual(4);
+    // (Las seis pestañas de Comer ocupan dos filas para verse enteras, y eso quita una fila. Y la
+    // entrada «Comprar online» va arriba, a la vista, y quita otra: es mejor que se encuentre.)
+    expect(visibles).toBeGreaterThanOrEqual(3);
 
     // Apuntar con cantidad, y editar nombre y cantidad en el sitio.
     await pagina.getByLabel("Añadir algo a la lista").fill("huevos 12");
@@ -845,7 +942,7 @@ test.describe("flujos en móvil", () => {
       .click(); // abre la fila
     await pagina.getByRole("button", { name: "A la lista de la compra: Arena para gatos" }).click();
     await pagina.goto("/compra", { waitUntil: "networkidle" });
-    await expect(pagina.getByText("Arena para gatos").first()).toBeVisible();
+    await expect(pagina.getByRole("checkbox", { name: /Arena para gatos/ })).toBeVisible();
     await pagina.goto("/casa", { waitUntil: "networkidle" });
     await pagina.getByRole("button", { name: "Marcar hecha: Limpiar los areneros" }).click();
     await expect(

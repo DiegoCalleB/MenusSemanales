@@ -19,7 +19,7 @@ const ETIQUETA_SYNC = {
 } as const;
 
 /** Entrar, crear o unirse a un hogar e invitar a la familia. Todo lo demás lo hace la sincronización. */
-export function CuentaVista() {
+export function CuentaVista({ version }: { version?: string }) {
   const cuenta = useCuenta();
   const { restablecer } = useHogar();
   const [mensaje, setMensaje] = useState("");
@@ -166,6 +166,11 @@ export function CuentaVista() {
       <AjusteEstampado />
       <PanelRespaldo />
       <PanelTablas />
+      {version && (
+        <p className="text-tinta-suave text-center text-sm">
+          Versión de la app: <span className="font-semibold">{version}</span>
+        </p>
+      )}
     </div>
   );
 }

@@ -201,6 +201,16 @@ export function CompraVista() {
 
       {!modoTienda && <OrdenarConIa yaEnLista={pendientes.map((i) => i.nombre)} />}
 
+      {!modoTienda && (
+        <ComprarOnline
+          articulos={pendientes.map((i) => ({
+            clave: i.clave,
+            nombre: i.nombre,
+            cantidad: i.cantidad,
+          }))}
+        />
+      )}
+
       {pendientes.length === 0 ? (
         <section
           aria-label="Lista vacía"
@@ -255,15 +265,6 @@ export function CompraVista() {
       )}
 
       {!modoTienda && <BotonesCompartir titulo="Lista de la compra" texto={textoDeCompra} />}
-      {!modoTienda && (
-        <ComprarOnline
-          articulos={pendientes.map((i) => ({
-            clave: i.clave,
-            nombre: i.nombre,
-            cantidad: i.cantidad,
-          }))}
-        />
-      )}
 
       {!modoTienda && quitados.length > 0 && (
         <details className="tarjeta p-2 sm:p-3">

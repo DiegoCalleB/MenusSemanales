@@ -17,11 +17,11 @@ export function ComprarOnline({ articulos }: { articulos: readonly ArticuloOnlin
   const super_ = SUPERMERCADOS[0];
   if (!super_ || articulos.length === 0) return null;
   return (
-    <details className="tarjeta p-0">
-      <summary className="flex min-h-14 cursor-pointer items-center gap-2 px-4 py-2 text-lg font-extrabold">
+    <details className="flex flex-col gap-2">
+      <summary className="boton-suave w-fit cursor-pointer list-none">
         <span aria-hidden="true">🛍️</span> Comprar online en {super_.nombre}
       </summary>
-      <div className="flex flex-col gap-3 px-4 pb-4">
+      <div className="tarjeta mt-2 flex flex-col gap-3">
         <p className="text-tinta-suave text-base">
           Toca cada artículo: se abre su búsqueda en {super_.nombre}. Lo añades a la cesta y vuelves
           aquí. La app no compra por ti ni guarda tu contraseña.
