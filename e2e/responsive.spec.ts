@@ -294,7 +294,13 @@ test.describe("flujos en móvil", () => {
     await pagina.getByLabel("Añadir algo a la lista").fill("Leche entera (1 l)");
     await pagina.getByRole("button", { name: "Añadir" }).click();
 
-    await pagina.getByText("Comprar online en Mercadona").click();
+    // Está ARRIBA, antes de la lista (no al final, donde nadie la encuentra).
+    const resumen = pagina.getByText("Comprar online en Mercadona");
+    await expect(resumen).toBeVisible();
+    const yResumen = (await resumen.boundingBox())!.y;
+    const yPrimerArticulo = (await pagina.getByRole("checkbox").first().boundingBox())!.y;
+    expect(yResumen).toBeLessThan(yPrimerArticulo);
+    await resumen.click();
     const enlace = pagina.getByRole("link", { name: "Buscar Leche entera (1 l) en Mercadona" });
     await expect(enlace).toBeVisible();
     // Busca por el nombre sin lo que va entre paréntesis, en una pestaña nueva y sin pasar el origen.
@@ -399,6 +405,14 @@ test.describe("flujos en móvil", () => {
     await contexto.setOffline(false);
     await pagina.goto("/compra");
     await expect(pagina.getByRole("checkbox", { name: /Velas sin conexión/ })).toBeVisible();
+    await contexto.close();
+  });
+
+  test("cuenta: enseña la versión de la app instalada", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/cuenta");
+    // En desarrollo y en las pruebas no hay commit de Railway.
+    await expect(pagina.getByText(/Versión de la app:\s*desarrollo/)).toBeVisible();
     await contexto.close();
   });
 
@@ -803,8 +817,9 @@ test.describe("flujos en móvil", () => {
     const visibles = await filas.evaluateAll(
       (els) => els.filter((e) => e.getBoundingClientRect().bottom < window.innerHeight).length,
     );
-    // (Las seis pestañas de Comer ocupan dos filas para verse enteras, y eso quita una fila.)
-    expect(visibles).toBeGreaterThanOrEqual(4);
+    // (Las seis pestañas de Comer ocupan dos filas para verse enteras, y eso quita una fila. Y la
+    // entrada «Comprar online» va arriba, a la vista, y quita otra: es mejor que se encuentre.)
+    expect(visibles).toBeGreaterThanOrEqual(3);
 
     // Apuntar con cantidad, y editar nombre y cantidad en el sitio.
     await pagina.getByLabel("Añadir algo a la lista").fill("huevos 12");
@@ -927,7 +942,7 @@ test.describe("flujos en móvil", () => {
       .click(); // abre la fila
     await pagina.getByRole("button", { name: "A la lista de la compra: Arena para gatos" }).click();
     await pagina.goto("/compra", { waitUntil: "networkidle" });
-    await expect(pagina.getByText("Arena para gatos").first()).toBeVisible();
+    await expect(pagina.getByRole("checkbox", { name: /Arena para gatos/ })).toBeVisible();
     await pagina.goto("/casa", { waitUntil: "networkidle" });
     await pagina.getByRole("button", { name: "Marcar hecha: Limpiar los areneros" }).click();
     await expect(

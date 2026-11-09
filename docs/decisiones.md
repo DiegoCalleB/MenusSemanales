@@ -1105,3 +1105,9 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
   3. Sin conexión **no se puede**: entrar o unirse a un hogar por primera vez, lo que usa IA (leer el PDF del cole, ordenar la compra, completar un plato), las búsquedas de Mercadona ni el calendario suscrito. Esas funciones darán su error de siempre.
   4. Con una versión nueva de la app, lo que se ve sin conexión es la **última copia guardada** de cada pantalla hasta que se abra con internet. Si cambia el propio `sw.js`, hay que subir `VERSION` para que se vuelvan a guardar todas.
   5. Un navegador puede borrar los datos de un sitio que lleva semanas sin usarse, también lo apuntado sin enviar (la app ya pide almacenamiento persistente, D-102).
+
+## D-130 · La compra online se ve arriba y Cuenta enseña la versión instalada
+
+- **Qué pasó:** la sección «Comprar online en Mercadona» (D-127) estaba al **final** de la lista, plegada y como una tarjeta más, después de todas las secciones y de los botones de compartir. Con una lista larga había que bajar mucho para encontrarla, y Diego «seguía sin verla». (No sale en la vista «Tienda» ni con la lista vacía, a propósito.)
+- **Qué cambia:** la entrada sube **encima de la lista**, como una pastilla compacta («🛍️ Comprar online en Mercadona»); al tocarla se abre el panel con los «Buscar ↗». Cuesta una fila de pantalla: en el móvil caben 3 filas de lista a la vista, no 4 (umbral del E2E de «filas compactas» bajado de 4 a 3, con el motivo escrito). Se prefirió que se encuentre.
+- **Versión instalada:** en **Cuenta**, al final, «Versión de la app: 792eb3d» (los 7 primeros caracteres del commit que Railway ha desplegado, `RAILWAY_GIT_COMMIT_SHA`, leída al pedir la página). Sirve para saber de un vistazo si el servidor ya tiene lo último; si pone «desarrollo», no es un despliegue de Railway. Si Railway no pasa esa variable, saldrá «desarrollo».
