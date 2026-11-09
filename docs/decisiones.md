@@ -1062,3 +1062,12 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Prueba de accesibilidad:** axe encontró que la etiqueta del botón no contenía su texto visible; se dejó solo el texto visible.
 
 **Ajuste de D-128 (6 de noviembre):** para poder revisarla antes del día, la bienvenida se adelanta a partir del **6 de noviembre** (`BIENVENIDA_ANA_DESDE`). Sigue saliendo las 3 primeras veces por móvil, así que quien la vea para revisarla en su móvil no gasta las de Ana.
+
+## D-127 · Pasar la lista de la compra a Mercadona (compra online)
+
+- **Decisión (Diego):** empezar a hacer la compra online con **Mercadona**, desde la lista de la compra.
+- **Qué no se hace, y por qué:** que la app haga el pedido por vosotros. Ningún supermercado español ofrece una API pública para que una aplicación de terceros llene el carrito o cree un pedido (en Mercadona solo existen APIs no oficiales de lectura del catálogo y herramientas que manejan una sesión iniciada; se rompen cuando la web cambia). Pedir la contraseña del súper en la app infringiría sus condiciones y es un riesgo de seguridad, así que **la app no pide ni guarda ninguna contraseña**.
+- **Qué se hace:** una sección plegable **«Comprar online en Mercadona»** en la lista de la compra (`ComprarOnline`). Cada artículo pendiente tiene un botón «Buscar» que abre en una pestaña nueva la búsqueda de ese producto en la tienda; se añade a la cesta con la cuenta de cada uno y se vuelve a la app. Se busca por el nombre sin lo que va entre paréntesis.
+- **Dónde vive el criterio:** `src/dominio/supermercado.ts` (`SUPERMERCADOS`): cada tienda es una entrada con su dirección de búsqueda; añadir Carrefour, Dia u otro es añadir una entrada.
+- **Por verificar:** la dirección de búsqueda de Mercadona (`https://tienda.mercadona.es/search-results?query=…`) **no se ha podido comprobar** desde el entorno de desarrollo (la tienda no es alcanzable desde él). Si no abre la búsqueda, se corrige solo en `SUPERMERCADOS`. La tienda pide el código postal la primera vez.
+- **Ideas aparte (no hechas):** estimar lo que costará la cesta con precios del catálogo no oficial, y añadir más supermercados.
