@@ -62,6 +62,11 @@ export interface MenuCole {
   /** Guarnición o ensalada que acompaña al segundo. */
   guarnicion?: string | null;
   kcal?: number | null;
+  /**
+   * De dónde sale lo que se comió: del menú del «cole» (por defecto) o de una comida apuntada en
+   * «casa» (fines de semana, fiestas…, D-128). Solo cambia cómo se cuenta; se calcula, no se guarda.
+   */
+  origen?: "cole" | "casa";
 }
 
 /**

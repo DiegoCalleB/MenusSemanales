@@ -60,8 +60,19 @@ export function explicarOpcion(args: {
     const comido = formatearLista(
       [cole.primero, cole.segundo].filter((g): g is GrupoPlato => g !== null).map((g) => GRUPO[g]),
     );
-    resumen = `Hoy las niñas ${verbo} ${comido} en el cole; para compensar, ${plato.nombre} (${gp}).`;
-    if (dia.fecha !== hoy) resumen = resumen.replace("Hoy las niñas", "Ese día las niñas");
+    if (cole.origen === "casa") {
+      // Una comida de casa apuntada a mano (fin de semana, fiesta…), no el menú del cole.
+      const sujeto =
+        dia.fecha === hoy
+          ? "Hoy habéis comido"
+          : dia.fecha < hoy
+            ? "Ese día comisteis"
+            : "Ese día comeréis";
+      resumen = `${sujeto} ${comido} en casa; para compensar, ${plato.nombre} (${gp}).`;
+    } else {
+      resumen = `Hoy las niñas ${verbo} ${comido} en el cole; para compensar, ${plato.nombre} (${gp}).`;
+      if (dia.fecha !== hoy) resumen = resumen.replace("Hoy las niñas", "Ese día las niñas");
+    }
     const r = recomendacionesPorPlato(cole);
     const apoyos: string[] = [];
     if (cole.primero && r.trasPrimero.includes(plato.grupo)) {
@@ -76,7 +87,7 @@ export function explicarOpcion(args: {
     }
     if (apoyos.length > 0) {
       lineas.push(
-        `Encaja con el cole: ${apoyos.join("; ")} (${plato.grupo === "otro" ? "este plato" : gp} lo cumple).`,
+        `Encaja con ${cole.origen === "casa" ? "la comida" : "el cole"}: ${apoyos.join("; ")} (${plato.grupo === "otro" ? "este plato" : gp} lo cumple).`,
       );
     }
     if (cole.kcal != null && cole.kcal >= KCAL_CONTUNDENTE && LIGEROS.includes(plato.grupo)) {

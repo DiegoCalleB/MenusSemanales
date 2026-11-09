@@ -36,6 +36,8 @@ export type Puntos = 1 | 2 | 3 | 4 | 5;
 
 export interface Compatibilidad {
   puntos: Puntos;
+  /** Con qué se compara: el menú del cole o una comida de casa apuntada (fines de semana, fiestas). */
+  origen: "cole" | "casa";
   /** Una palabra o dos para decirlo («Muy buena»). */
   etiqueta: string;
   /** Lo que suma y lo que resta, en frases cortas, de lo más importante a lo menos. */
@@ -89,7 +91,7 @@ export function compatibilidadConCole(args: {
     const repetidos = [cole.primero, cole.segundo].filter((x) => x === grupo).length;
     if (repetidos > 0) {
       puntos -= repetidos;
-      razones.push(`Repite ${g}, que ya comieron en el cole.`);
+      razones.push(`Repite ${g}, que ya comieron al mediodía.`);
     }
   }
 
@@ -123,9 +125,14 @@ export function compatibilidadConCole(args: {
   }
 
   const final = Math.min(5, Math.max(1, puntos)) as Puntos;
-  return { puntos: final, etiqueta: ETIQUETA_PUNTOS[final], razones };
+  return {
+    puntos: final,
+    origen: cole.origen ?? "cole",
+    etiqueta: ETIQUETA_PUNTOS[final],
+    razones,
+  };
 }
 
 /** Texto corto para lectores de pantalla y para copiar («Compatibilidad con el cole: 4 de 5, muy buena»). */
 export const textoCompatibilidad = (c: Compatibilidad): string =>
-  `Compatibilidad con el cole: ${c.puntos} de 5, ${c.etiqueta.toLowerCase()}`;
+  `Compatibilidad con ${c.origen === "casa" ? "la comida" : "el cole"}: ${c.puntos} de 5, ${c.etiqueta.toLowerCase()}`;

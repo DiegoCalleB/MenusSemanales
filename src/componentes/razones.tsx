@@ -12,7 +12,7 @@ function Puntuacion({ c }: { c: Compatibilidad }) {
     <p className="flex flex-wrap items-center gap-x-2 text-base font-semibold">
       <span className="sr-only">{textoCompatibilidad(c)}</span>
       <span aria-hidden="true" className="flex items-center gap-2">
-        <span>🎒 Con el cole</span>
+        <span>{c.origen === "casa" ? "☀️ Con la comida" : "🎒 Con el cole"}</span>
         <span className="flex gap-1">
           {[1, 2, 3, 4, 5].map((n) => (
             <span
@@ -51,7 +51,8 @@ export function Razones({ fecha, opcion }: { fecha: FechaIso; opcion: Opcion }) 
           {compat && (
             <>
               <p className="text-tinta font-semibold">
-                Compatibilidad con el cole: {compat.puntos} de 5
+                Compatibilidad con {compat.origen === "casa" ? "la comida" : "el cole"}:{" "}
+                {compat.puntos} de 5
               </p>
               <ul className="text-tinta-suave ml-5 list-disc space-y-1">
                 {compat.razones.map((r) => (

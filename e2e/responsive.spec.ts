@@ -310,6 +310,16 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 
+  test("comida de hoy: se apunta desde la portada y sale en ella", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/");
+    await pagina.getByText("Apuntar la comida de hoy").click();
+    await pagina.getByLabel("Qué se come").fill("Arroz con pollo al curry");
+    await pagina.getByRole("button", { name: "Apuntar", exact: true }).click();
+    await expect(pagina.getByText(/Comida: Arroz con pollo al curry/)).toBeVisible();
+    await contexto.close();
+  });
+
   test("menú: 15 días y menú del cole leído desde texto", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/menu");

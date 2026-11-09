@@ -1071,3 +1071,15 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Dónde vive el criterio:** `src/dominio/supermercado.ts` (`SUPERMERCADOS`): cada tienda es una entrada con su dirección de búsqueda; añadir Carrefour, Dia u otro es añadir una entrada.
 - **Por verificar:** la dirección de búsqueda de Mercadona (`https://tienda.mercadona.es/search-results?query=…`) **no se ha podido comprobar** desde el entorno de desarrollo (la tienda no es alcanzable desde él). Si no abre la búsqueda, se corrige solo en `SUPERMERCADOS`. La tienda pide el código postal la primera vez.
 - **Ideas aparte (no hechas):** estimar lo que costará la cesta con precios del catálogo no oficial, y añadir más supermercados.
+
+## D-128 · La comida de casa (fines de semana y fiestas) cuenta para la cena
+
+- **Decisión (Diego):** poder apuntar y tener en cuenta la comida de los fines de semana y de los días en que se come en casa (festivos, vacaciones…), como «Milanesa de pollo» un día festivo en Madrid.
+- **Qué ya existía (D-079):** apuntar la comida del mediodía de un día (un plato del catálogo, que entra en la compra, o un texto libre). Faltaba que **contara**: la cena solo tenía en cuenta el menú del cole.
+- **Qué cambia:**
+  - **Cuenta para la cena:** una comida de casa con un plato del catálogo hace de «cole» ese día (`mediodiaPorDia`, `menuDeComidaEnCasa`). Carne, pescado y huevo hacen de segundo plato; pasta, arroz, verdura y legumbre, de primero. Así el recomendador de cenas (milanesa → huevo o pescado), el equilibrio semanal y la nota de compatibilidad (D-125) la usan igual que el menú del cole. Lo apuntado a mano **manda sobre el cole** ese día. Un texto libre solo se apunta (no tiene grupo).
+  - **Se dice bien:** la explicación habla de «habéis comido … en casa» (no de «las niñas en el cole») y la nota sale como «☀️ Con la comida».
+  - **Días pasados:** se puede apuntar lo de los **últimos 14 días** (el fin de semana que acaba de pasar), no solo desde hoy (`fechaApuntable`).
+  - **Desde la portada:** «☀️ Apuntar la comida de hoy», plegado en la tarjeta de hoy.
+- **Sin cambios de datos:** nada nuevo se guarda (el menú de casa se calcula a partir de los almuerzos y del catálogo) y no hay migración.
+- **Límites:** (1) la app no sabe qué días son festivos; el día sin cole se nota porque no hay menú del cole o porque se apunta la comida. (2) Un día pasado no mete ingredientes en la compra, pero **la comida de hoy sí**: si se apunta ya comida, hoy sale su ingrediente en la lista (quitarlo con «no hace falta»).
