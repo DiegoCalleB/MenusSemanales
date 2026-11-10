@@ -14,6 +14,8 @@ export interface Supermercado {
   nombre: string;
   /** Página de inicio de la tienda online. */
   tienda: string;
+  /** Dominio de la empresa: valen su web y sus subdominios («tienda.», «www.»…), nada más. */
+  dominio: string;
   /** Dirección que abre la búsqueda de un producto. */
   buscar: (termino: string) => string;
 }
@@ -23,6 +25,7 @@ export const SUPERMERCADOS: readonly Supermercado[] = [
     id: "mercadona",
     nombre: "Mercadona",
     tienda: "https://tienda.mercadona.es",
+    dominio: "mercadona.es",
     buscar: (termino) =>
       `https://tienda.mercadona.es/search-results?query=${encodeURIComponent(termino)}`,
   },
@@ -111,7 +114,7 @@ export const contarEnCesta = (
 /**
  * Recordar el producto elegido (D-132). La app no puede ver qué producto se elige en la tienda, así
  * que la persona pega su enlace («Compartir → Copiar enlace» en la web de Mercadona). Solo se
- * aceptan enlaces https de la propia tienda: nunca se abre una dirección de otro sitio.
+ * aceptan enlaces de la web de la propia empresa: nunca se abre una dirección de otro sitio.
  */
 
 /** El primer enlace de un texto pegado («Mira esto https://…» al compartir), o null. */
@@ -120,21 +123,44 @@ export function extraerEnlace(texto: string): string | null {
   return m ? m[0] : null;
 }
 
+/** Por qué no vale lo que se ha pegado como enlace de un producto. */
+export type RechazoProducto = "no-es-enlace" | "otro-sitio" | "portada" | "busqueda";
+
+export type RevisionProducto =
+  { ok: true; enlace: string } | { ok: false; motivo: RechazoProducto; host?: string };
+
 /**
- * La dirección limpia (sin parámetros ni «#») de un producto de esa tienda, o null si el texto no
- * es un enlace https de su dominio, o es la portada o una búsqueda y no un producto.
+ * Mira si lo pegado es el enlace de un producto de esa tienda y, si no, dice por qué (para poder
+ * explicárselo a la persona). Vale la web de la empresa y sus subdominios (`tienda.mercadona.es`,
+ * `www.mercadona.es`…), por `https` (un `http` de esa web se sube a `https`); nada de otros sitios,
+ * ni de dominios que solo se le parecen. La portada y las búsquedas no son un producto.
  */
-export function enlaceDeProducto(supermercado: Supermercado, texto: string): string | null {
+export function revisarEnlaceDeProducto(
+  supermercado: Supermercado,
+  texto: string,
+): RevisionProducto {
+  let u: URL;
   try {
-    const u = new URL(extraerEnlace(texto) ?? texto.trim());
-    const tienda = new URL(supermercado.tienda);
-    if (u.protocol !== "https:" || u.host !== tienda.host) return null;
-    const ruta = u.pathname.replace(/\/+$/, "");
-    if (ruta === "" || ruta.startsWith("/search-results")) return null;
-    return `${u.origin}${ruta}`;
+    u = new URL(extraerEnlace(texto) ?? texto.trim());
   } catch {
-    return null;
+    return { ok: false, motivo: "no-es-enlace" };
   }
+  if (u.protocol !== "https:" && u.protocol !== "http:") {
+    return { ok: false, motivo: "no-es-enlace" };
+  }
+  const host = u.hostname.toLowerCase();
+  const propio = host === supermercado.dominio || host.endsWith(`.${supermercado.dominio}`);
+  if (!propio) return { ok: false, motivo: "otro-sitio", host };
+  const ruta = u.pathname.replace(/\/+$/, "");
+  if (ruta === "") return { ok: false, motivo: "portada", host };
+  if (ruta.startsWith("/search-results")) return { ok: false, motivo: "busqueda", host };
+  return { ok: true, enlace: `https://${u.host}${ruta}` };
+}
+
+/** La dirección limpia (sin parámetros ni «#») de un producto de esa tienda, o null si no vale. */
+export function enlaceDeProducto(supermercado: Supermercado, texto: string): string | null {
+  const r = revisarEnlaceDeProducto(supermercado, texto);
+  return r.ok ? r.enlace : null;
 }
 
 /** Un nombre legible a partir del enlace («…/leche-entera-hacendado» → «Leche entera hacendado»). */

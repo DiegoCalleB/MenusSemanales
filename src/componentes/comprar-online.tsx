@@ -9,10 +9,11 @@ import {
   articuloActual,
   contarEnCesta,
   enlaceDeBusqueda,
-  enlaceDeProducto,
+  type RevisionProducto,
   marcarEnCesta,
   nombreDeProducto,
   podarProgreso,
+  revisarEnlaceDeProducto,
   quitarDeCesta,
   saltar,
 } from "@/dominio/supermercado";
@@ -59,13 +60,28 @@ function guardarProgreso(hoy: FechaIso, p: ProgresoOnline) {
   }
 }
 
+/** Qué decirle a la persona cuando el enlace pegado no vale, con el motivo concreto. */
+function textoDeRechazo(r: Extract<RevisionProducto, { ok: false }>, tienda: string): string {
+  switch (r.motivo) {
+    case "otro-sitio":
+      return `Ese enlace es de ${r.host ?? "otro sitio"}, no de ${tienda}. Cópialo desde la página del producto en ${tienda}.`;
+    case "busqueda":
+      return `Ese enlace es una búsqueda, no un producto. Abre el producto en ${tienda}, toca compartir y copia su enlace.`;
+    case "portada":
+      return `Ese enlace es la portada de ${tienda}, no un producto. Abre el producto, toca compartir y copia su enlace.`;
+    default:
+      return "Eso no parece un enlace. Pega el enlace completo del producto (compartir → copiar enlace).";
+  }
+}
+
 /** Pegar el enlace del producto elegido en la tienda para que la app se acuerde de él. */
 function RecordarProducto({
   nombreTienda,
   alGuardar,
 }: {
   nombreTienda: string;
-  alGuardar: (texto: string) => boolean;
+  /** Devuelve null si se guardó, o el motivo por el que no vale. */
+  alGuardar: (texto: string) => string | null;
 }) {
   const id = useId();
   const [texto, setTexto] = useState("");
@@ -73,14 +89,9 @@ function RecordarProducto({
 
   function guardar(e: FormEvent) {
     e.preventDefault();
-    if (alGuardar(texto)) {
-      setTexto("");
-      setProblema("");
-    } else {
-      setProblema(
-        `Ese no es un enlace de un producto de ${nombreTienda}. Cópialo desde su página.`,
-      );
-    }
+    const motivo = alGuardar(texto);
+    setProblema(motivo ?? "");
+    if (!motivo) setTexto("");
   }
 
   return (
@@ -152,14 +163,14 @@ export function ComprarOnline({
   const actual = articuloActual(claves, progreso);
   const ahora = articulos.find((a) => a.clave === actual);
 
-  /** Recuerda el producto de un artículo; false si el texto no es un enlace de producto de la tienda. */
-  function recordarProducto(nombre: string, texto: string): boolean {
-    const enlace = enlaceDeProducto(super_!, texto);
-    if (!enlace) return false;
-    const nuevo = { ...productos, [claveDeProducto(nombre)]: enlace };
+  /** Recuerda el producto de un artículo; devuelve null si se guardó o por qué no vale el enlace. */
+  function recordarProducto(nombre: string, texto: string): string | null {
+    const r = revisarEnlaceDeProducto(super_!, texto);
+    if (!r.ok) return textoDeRechazo(r, super_!.nombre);
+    const nuevo = { ...productos, [claveDeProducto(nombre)]: r.enlace };
     setProductos(nuevo);
     guardarProductos(nuevo);
-    return true;
+    return null;
   }
   function olvidarProducto(nombre: string) {
     const resto = { ...productos };

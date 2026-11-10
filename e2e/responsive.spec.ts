@@ -468,7 +468,11 @@ test.describe("flujos en móvil", () => {
     // Un enlace de otro sitio o de una búsqueda no vale.
     await campo.fill("https://malo.example/product/1/x");
     await asistente.getByRole("button", { name: "Guardar el producto" }).click();
-    await expect(asistente.getByRole("alert")).toContainText("no es un enlace de un producto");
+    await expect(asistente.getByRole("alert")).toContainText("Ese enlace es de malo.example");
+    // Una búsqueda tampoco es un producto, y se explica.
+    await campo.fill("https://tienda.mercadona.es/search-results?query=leche");
+    await asistente.getByRole("button", { name: "Guardar el producto" }).click();
+    await expect(asistente.getByRole("alert")).toContainText("es una búsqueda, no un producto");
     await campo.fill(
       "Mira esto https://tienda.mercadona.es/product/10409/leche-entera-hacendado?x=1",
     );
