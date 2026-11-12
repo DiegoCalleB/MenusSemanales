@@ -13,6 +13,8 @@ export interface EventoExterno {
   hora: string | null;
   /** Último día, si dura varios. */
   hasta?: FechaIso | null;
+  /** El apunte de agenda del que viene, si viene de ahí (se puede editar); no si es de Google. */
+  agendaId?: string;
 }
 
 interface Crudo {

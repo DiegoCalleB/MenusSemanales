@@ -5,6 +5,7 @@ import type { FrecuenciaTarea } from "@/dominio/tareas";
 import { estaHecha, resumenDeTareas, tareasDeHoy } from "@/dominio/tareas";
 import { saldoDeEstrellas } from "@/dominio/premios";
 import { PremiosPersona } from "@/componentes/premios-persona";
+import { EditarTarea } from "../editar";
 import { useHogar } from "../proveedor-hogar";
 import { useYo } from "../yo";
 
@@ -24,6 +25,7 @@ export function TareasVista() {
   const [texto, setTexto] = useState("");
   const [frecuencia, setFrecuencia] = useState<FrecuenciaTarea>("puntual");
   const [editando, setEditando] = useState(false);
+  const [enEdicion, setEnEdicion] = useState<string | null>(null);
 
   const persona = personas.find((p) => p.id === personaId) ?? personas[0];
   if (!persona) return null;
@@ -113,6 +115,13 @@ export function TareasVista() {
           <ul>
             {tareas.map((t) => {
               const hecha = estaHecha(t, estado.hoy);
+              if (enEdicion === t.id) {
+                return (
+                  <li key={t.id} className="py-2">
+                    <EditarTarea tarea={t} alCerrar={() => setEnEdicion(null)} />
+                  </li>
+                );
+              }
               return (
                 <li key={t.id} className="flex items-center gap-1">
                   <label className="hover:bg-fondo flex min-h-14 flex-1 cursor-pointer items-center gap-3 rounded-xl px-2 py-2">
@@ -134,14 +143,24 @@ export function TareasVista() {
                     )}
                   </label>
                   {editando && (
-                    <button
-                      type="button"
-                      className="boton-suave shrink-0"
-                      aria-label={`Quitar la tarea ${t.texto}`}
-                      onClick={() => despachar({ tipo: "tarea/borrar", id: t.id })}
-                    >
-                      ✕
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        className="boton-suave shrink-0"
+                        aria-label={`Editar la tarea ${t.texto}`}
+                        onClick={() => setEnEdicion(t.id)}
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        type="button"
+                        className="boton-suave shrink-0"
+                        aria-label={`Quitar la tarea ${t.texto}`}
+                        onClick={() => despachar({ tipo: "tarea/borrar", id: t.id })}
+                      >
+                        ✕
+                      </button>
+                    </>
                   )}
                 </li>
               );

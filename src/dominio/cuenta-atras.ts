@@ -14,6 +14,8 @@ export interface CuentaAtras {
   dias: number;
   /** «5 días», «mañana»… listo para mostrar. */
   texto: string;
+  /** De qué cumpleaños o apunte de agenda sale (D-133), para poder editarlo; no si es de Google. */
+  origen?: { tipo: "cumple" | "cita"; id: string };
 }
 
 export const textoDias = (dias: number): string =>
@@ -55,6 +57,7 @@ export function cuentaAtras(
       titulo: `${c.nombre}${edad !== null ? ` (${edad})` : ""}`,
       dias,
       texto: textoDias(dias),
+      origen: { tipo: "cumple", id: c.id },
     });
   }
   for (const [fecha, ev] of Object.entries(eventos)) {
@@ -88,6 +91,7 @@ export function cuentaAtras(
       titulo: ev.titulo,
       dias,
       texto: textoDias(dias),
+      ...(ev.agendaId ? { origen: { tipo: "cita" as const, id: ev.agendaId } } : {}),
     });
   }
   return lista

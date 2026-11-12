@@ -4,6 +4,7 @@ import { type FormEvent, useId, useState } from "react";
 import { almuerzosDe, POR_DECIDIR } from "@/dominio/almuerzos";
 import type { FechaIso } from "@/dominio/fechas";
 import { coincideConBusqueda, ordenarPorBusqueda } from "@/dominio/texto";
+import { BotonEditar, EditarComida } from "./editar";
 import { EMOJI_GRUPO } from "./formato";
 import { OfrecerPlatoNuevo, existePlato, useCrearPlato } from "./plato-nuevo";
 import { useHogar } from "./proveedor-hogar";
@@ -19,6 +20,7 @@ export function ComidaDelDia({ fecha, puedeApuntar }: { fecha: FechaIso; puedeAp
   const id = useId();
   const [texto, setTexto] = useState("");
   const [buscando, setBuscando] = useState(false);
+  const [editando, setEditando] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const lista = almuerzosDe(estado.almuerzos, fecha);
   const platos = ordenarPorBusqueda(
@@ -62,25 +64,32 @@ export function ComidaDelDia({ fecha, puedeApuntar }: { fecha: FechaIso; puedeAp
           {puedeApuntar ? "Sin comida pensada." : "Sin comida apuntada."}
         </p>
       )}
-      {lista.map((a) => (
-        <div
-          key={a.id}
-          className="bg-ok-fondo text-ok-texto flex flex-wrap items-center justify-between gap-3 rounded-2xl p-3"
-        >
-          <p className="text-base font-bold">
-            <span aria-hidden="true">✓ </span>
-            {a.texto}
-          </p>
-          <button
-            type="button"
-            className="boton-suave"
-            aria-label={`Quitar comida: ${a.texto}`}
-            onClick={() => despachar({ tipo: "almuerzo/borrar", id: a.id })}
+      {lista.map((a) =>
+        editando === a.id ? (
+          <EditarComida key={a.id} comida={a} alCerrar={() => setEditando(null)} />
+        ) : (
+          <div
+            key={a.id}
+            className="bg-ok-fondo text-ok-texto flex flex-wrap items-center justify-between gap-3 rounded-2xl p-3"
           >
-            Quitar
-          </button>
-        </div>
-      ))}
+            <p className="text-base font-bold">
+              <span aria-hidden="true">✓ </span>
+              {a.texto}
+            </p>
+            <span className="flex gap-2">
+              <BotonEditar nombre={`la comida ${a.texto}`} alPulsar={() => setEditando(a.id)} />
+              <button
+                type="button"
+                className="boton-suave"
+                aria-label={`Quitar comida: ${a.texto}`}
+                onClick={() => despachar({ tipo: "almuerzo/borrar", id: a.id })}
+              >
+                Quitar
+              </button>
+            </span>
+          </div>
+        ),
+      )}
       {puedeApuntar && (
         <>
           <p className="text-tinta-suave text-sm">

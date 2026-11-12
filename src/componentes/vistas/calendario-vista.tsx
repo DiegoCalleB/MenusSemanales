@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { esCumpleRepetido } from "@/dominio/cuenta-atras";
 import { ComidaDelDia } from "../comida-del-dia";
+import { BotonEditar, EditarCita } from "../editar";
 import { NuevaCita } from "../nueva-cita";
 import { useCalendarioFamilia } from "../usar-calendario-familia";
 import { useMemo, useState } from "react";
@@ -97,6 +98,7 @@ export function CalendarioVista() {
       .join(" + ");
   const [anadiendoA, setAnadiendoA] = useState<FechaIso | null>(null);
   const [verTodosEn, setVerTodosEn] = useState<FechaIso | null>(null);
+  const [editandoCita, setEditandoCita] = useState<string | null>(null);
   const [anadiendoCita, setAnadiendoCita] = useState<FechaIso | null>(null);
   const cocinaDe = (f: FechaIso) => {
     const turno = estado.turnos.find((t) => t.cargaId === "cenas" && t.fecha === f);
@@ -273,32 +275,41 @@ export function CalendarioVista() {
               <p className="text-tinta-suave text-base">Nada apuntado este día.</p>
             )}
             <ul className="flex flex-col">
-              {citasDelDia.map((a) => (
-                <li
-                  key={a.id}
-                  className="border-borde flex min-h-11 items-center justify-between gap-2 border-b last:border-b-0"
-                >
-                  <span className="min-w-0 text-base">
-                    <span aria-hidden="true">📌 </span>
-                    {a.hora && <strong>{a.hora} </strong>}
-                    {a.titulo}
-                    {a.hasta && (
-                      <span className="text-tinta-suave text-sm">
-                        {" "}
-                        · hasta el {a.hasta.slice(8)}
-                      </span>
-                    )}
-                  </span>
-                  <button
-                    type="button"
-                    className="boton-suave px-4"
-                    aria-label={`Quitar la cita ${a.titulo}`}
-                    onClick={() => despachar({ tipo: "agenda/borrar", id: a.id })}
+              {citasDelDia.map((a) =>
+                editandoCita === a.id ? (
+                  <li key={a.id} className="py-2">
+                    <EditarCita cita={a} alCerrar={() => setEditandoCita(null)} />
+                  </li>
+                ) : (
+                  <li
+                    key={a.id}
+                    className="border-borde flex min-h-11 items-center justify-between gap-2 border-b last:border-b-0"
                   >
-                    Quitar
-                  </button>
-                </li>
-              ))}
+                    <span className="min-w-0 text-base">
+                      <span aria-hidden="true">📌 </span>
+                      {a.hora && <strong>{a.hora} </strong>}
+                      {a.titulo}
+                      {a.hasta && (
+                        <span className="text-tinta-suave text-sm">
+                          {" "}
+                          · hasta el {a.hasta.slice(8)}
+                        </span>
+                      )}
+                    </span>
+                    <span className="flex shrink-0 gap-2">
+                      <BotonEditar nombre={a.titulo} alPulsar={() => setEditandoCita(a.id)} />
+                      <button
+                        type="button"
+                        className="boton-suave px-4"
+                        aria-label={`Quitar la cita ${a.titulo}`}
+                        onClick={() => despachar({ tipo: "agenda/borrar", id: a.id })}
+                      >
+                        Quitar
+                      </button>
+                    </span>
+                  </li>
+                ),
+              )}
               {deGoogleDelDia.map((g, i) => (
                 <li key={`g${i}`} className="min-h-11 py-2 text-base">
                   <span aria-hidden="true">📅 </span>
