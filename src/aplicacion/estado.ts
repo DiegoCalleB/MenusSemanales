@@ -38,7 +38,7 @@ import {
   MAX_LARGO_ALMUERZO,
   menuDeComidaEnCasa,
 } from "@/dominio/almuerzos";
-import { type Apunte, parsearAgenda } from "@/dominio/agenda";
+import { type Apunte, parsearAgenda, separarHoraDelTitulo } from "@/dominio/agenda";
 import {
   type ConjuntoCasa,
   PLANTILLAS,
@@ -255,10 +255,23 @@ export type Accion =
       idBase?: string;
     }
   | { tipo: "agenda/borrar"; id: string }
+  /** Cambia una cita o fecha apuntada (D-133): título, día, último día y hora. */
+  | {
+      tipo: "agenda/editar";
+      id: string;
+      titulo: string;
+      fecha: FechaIso;
+      hasta?: string | null;
+      hora?: string | null;
+    }
   /** Quita de la agenda lo que ya pasó (D-123): lo que terminó antes de hoy. */
   | { tipo: "agenda/limpiar" }
+  /** Pasa a «hora» la que está escrita al final del título de una cita sin hora (D-134). */
+  | { tipo: "agenda/arreglarHoras" }
   | { tipo: "almuerzo/anadir"; fecha: FechaIso; texto?: string; platoId?: string; idBase?: string }
   | { tipo: "almuerzo/borrar"; id: string }
+  /** Cambia una comida del mediodía: el día y qué se come (D-133). */
+  | { tipo: "almuerzo/editar"; id: string; fecha: FechaIso; texto?: string; platoId?: string }
   | {
       tipo: "casa/anadir";
       titulo: string;
@@ -273,7 +286,20 @@ export type Accion =
   | { tipo: "casa/asignar"; id: string; responsableId: string | null }
   | { tipo: "casa/repartir" }
   | { tipo: "casa/borrar"; id: string }
+  /** Cambia una tarea recurrente de la casa: qué es, cada cuántos días y su dibujo (D-133). */
+  | { tipo: "casa/editar"; id: string; titulo: string; cadaDias: number; emoji?: string }
   | { tipo: "cumple/borrar"; id: string }
+  /** Cambia un cumpleaños: nombre, día, mes, año, relación y gustos (D-133). */
+  | {
+      tipo: "cumple/editar";
+      id: string;
+      nombre: string;
+      dia: number;
+      mes: number;
+      anio?: number | null;
+      relacion: Relacion;
+      gustos?: string[];
+    }
   | { tipo: "cumple/idea"; id: string; texto: string }
   | { tipo: "cumple/quitarIdea"; id: string; texto: string }
   | { tipo: "cumple/estado"; id: string; estado: EstadoRegalo }
@@ -286,6 +312,14 @@ export type Accion =
     }
   | { tipo: "tarea/alternar"; id: string }
   | { tipo: "tarea/borrar"; id: string }
+  /** Cambia una tarea de una persona: el texto, cada cuánto y a quién (D-133). */
+  | {
+      tipo: "tarea/editar";
+      id: string;
+      texto: string;
+      frecuencia: FrecuenciaTarea;
+      personaId?: string;
+    }
   | { tipo: "menu/anadir"; fecha: FechaIso; platoId: string }
   | { tipo: "menu/quitar"; fecha: FechaIso; platoId?: string }
   | { tipo: "menu/llegoTarde"; fecha: FechaIso }
@@ -451,6 +485,19 @@ export function mediodiaPorDia(e: EstadoHogar): Record<FechaIso, MenuCole> {
   }
   return salida;
 }
+
+/** Si la cita no tiene hora pero el título acaba en una («cena 21:30»), la pasa a su sitio (D-134). */
+function conHoraDelTitulo(
+  titulo: string,
+  hora: string | null,
+): { titulo: string; hora: string | null } {
+  if (hora !== null) return { titulo, hora };
+  return separarHoraDelTitulo(titulo);
+}
+
+/** ¿Es una fecha `AAAA-MM-DD` que existe de verdad (no el 31 de abril)? */
+const fechaIsoValida = (f: string): boolean =>
+  /^\d{4}-\d{2}-\d{2}$/.test(f) && new Date(`${f}T00:00:00Z`).toISOString().slice(0, 10) === f;
 
 /** ¿Se puede planificar esa fecha? Desde hoy y hasta 60 días por delante. */
 export const fechaPlanificable = (e: EstadoHogar, fecha: FechaIso): boolean =>
@@ -1292,6 +1339,48 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
     case "almuerzo/borrar":
       return { ...e, almuerzos: e.almuerzos.filter((a) => a.id !== accion.id) };
 
+    case "almuerzo/editar": {
+      const actual = e.almuerzos.find((a) => a.id === accion.id);
+      const plato = accion.platoId ? e.platos.find((p) => p.id === accion.platoId) : undefined;
+      const texto = (plato?.nombre ?? accion.texto ?? "").replace(/\s+/g, " ").trim();
+      if (
+        !actual ||
+        texto === "" ||
+        texto.length > MAX_LARGO_ALMUERZO ||
+        (accion.platoId && !plato) ||
+        !fechaApuntable(e, accion.fecha)
+      ) {
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: error(
+            e,
+            `Escribe qué se come (hasta ${MAX_LARGO_ALMUERZO} caracteres), en un día de los últimos ${DIAS_ATRAS_COMIDA} días o de los próximos 60.`,
+          ),
+        };
+      }
+      const k = claveArticulo(texto);
+      if (
+        e.almuerzos.some(
+          (a) => a.id !== accion.id && a.fecha === accion.fecha && claveArticulo(a.texto) === k,
+        )
+      ) {
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: error(e, `Ya estaba apuntado «${texto}» ese día.`),
+        };
+      }
+      return {
+        ...e,
+        almuerzos: e.almuerzos.map((a) =>
+          a.id === accion.id ? { ...a, fecha: accion.fecha, texto, platoId: plato?.id ?? null } : a,
+        ),
+        siguienteId: e.siguienteId + 1,
+        aviso: ok(e, `Comida del ${nombreDia(accion.fecha)}: ${texto}.`),
+      };
+    }
+
     case "casa/anadir": {
       const titulo = accion.titulo.replace(/\s+/g, " ").trim();
       if (titulo === "" || titulo.length > MAX_LARGO_ARTICULO || !(accion.cadaDias >= 1)) {
@@ -1323,6 +1412,46 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
         ],
         siguienteId: e.siguienteId + 1,
         aviso: ok(e, `Apuntado: ${titulo}.`),
+      };
+    }
+
+    case "casa/editar": {
+      const actual = e.casa.find((t) => t.id === accion.id);
+      const titulo = accion.titulo.replace(/\s+/g, " ").trim();
+      const cadaDias = Math.round(accion.cadaDias);
+      const emoji = accion.emoji?.trim();
+      if (
+        !actual ||
+        titulo === "" ||
+        titulo.length > MAX_LARGO_ARTICULO ||
+        !(cadaDias >= 1 && cadaDias <= 3650) ||
+        (emoji !== undefined && (emoji === "" || emoji.length > 8))
+      ) {
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: error(
+            e,
+            `Escribe qué hay que hacer (hasta ${MAX_LARGO_ARTICULO} caracteres) y cada cuántos días (de 1 a 3650).`,
+          ),
+        };
+      }
+      if (
+        e.casa.some((t) => t.id !== accion.id && claveArticulo(t.titulo) === claveArticulo(titulo))
+      ) {
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: error(e, `Ya hay otra tarea «${titulo}».`),
+        };
+      }
+      return {
+        ...e,
+        casa: e.casa.map((t) =>
+          t.id === accion.id ? { ...t, titulo, cadaDias, ...(emoji ? { emoji } : {}) } : t,
+        ),
+        siguienteId: e.siguienteId + 1,
+        aviso: ok(e, `Cambiado: ${titulo}.`),
       };
     }
 
@@ -1396,8 +1525,10 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
       return { ...e, casa: e.casa.filter((t) => t.id !== accion.id) };
 
     case "agenda/cita": {
-      const titulo = accion.titulo.replace(/\s+/g, " ").trim();
-      const hora = accion.hora && accion.hora !== "" ? accion.hora : null;
+      const { titulo, hora } = conHoraDelTitulo(
+        accion.titulo.replace(/\s+/g, " ").trim(),
+        accion.hora && accion.hora !== "" ? accion.hora : null,
+      );
       const hasta = accion.hasta && accion.hasta !== "" ? accion.hasta : null;
       const fechaValida = /^\d{4}-\d{2}-\d{2}$/.test(accion.fecha);
       const mal =
@@ -1444,6 +1575,63 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
     case "agenda/borrar":
       return { ...e, agenda: e.agenda.filter((a) => a.id !== accion.id) };
 
+    case "agenda/editar": {
+      const actual = e.agenda.find((a) => a.id === accion.id);
+      const { titulo, hora } = conHoraDelTitulo(
+        accion.titulo.replace(/\s+/g, " ").trim(),
+        accion.hora && accion.hora !== "" ? accion.hora : null,
+      );
+      const hasta = accion.hasta && accion.hasta !== "" ? accion.hasta : null;
+      const mal =
+        !actual ||
+        titulo === "" ||
+        titulo.length > 120 ||
+        !fechaIsoValida(accion.fecha) ||
+        (hora !== null && !/^([01]\d|2[0-3]):[0-5]\d$/.test(hora)) ||
+        (hasta !== null && !(fechaIsoValida(hasta) && hasta > accion.fecha));
+      if (mal) {
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: error(
+            e,
+            "Para cambiar una cita hace falta un título (hasta 120 letras), un día y, si la pones, una hora válida o un último día posterior.",
+          ),
+        };
+      }
+      const k = `${accion.fecha}|${claveArticulo(titulo)}`;
+      if (
+        e.agenda.some((a) => a.id !== accion.id && `${a.fecha}|${claveArticulo(a.titulo)}` === k)
+      ) {
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: error(e, `Ya hay otra cita «${titulo}» ese día.`),
+        };
+      }
+      return {
+        ...e,
+        agenda: e.agenda.map((a) =>
+          a.id === accion.id ? { ...a, titulo, fecha: accion.fecha, hasta, hora } : a,
+        ),
+        siguienteId: e.siguienteId + 1,
+        aviso: ok(e, `Cambiado: ${titulo}.`),
+      };
+    }
+
+    case "agenda/arreglarHoras": {
+      let cambiado = false;
+      const agenda = e.agenda.map((a) => {
+        if (a.hora !== null) return a;
+        const separada = separarHoraDelTitulo(a.titulo);
+        if (separada.hora === null) return a;
+        cambiado = true;
+        return { ...a, titulo: separada.titulo, hora: separada.hora };
+      });
+      // Sin nada que arreglar se devuelve el mismo estado: no hay cambio que guardar.
+      return cambiado ? { ...e, agenda } : e;
+    }
+
     case "agenda/limpiar": {
       const vigentes = e.agenda.filter((a) => (a.hasta ?? a.fecha) >= e.hoy);
       // Sin nada que quitar se devuelve el mismo estado: no hay cambio que guardar ni que enseñar.
@@ -1452,6 +1640,76 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
 
     case "cumple/borrar":
       return { ...e, cumples: e.cumples.filter((c) => c.id !== accion.id) };
+
+    case "cumple/editar": {
+      const actual = e.cumples.find((c) => c.id === accion.id);
+      const nombre = accion.nombre.replace(/\s+/g, " ").trim();
+      const maxDia = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][accion.mes - 1];
+      const anio = accion.anio ?? null;
+      const anioHoy = Number(e.hoy.slice(0, 4));
+      if (
+        !actual ||
+        nombre === "" ||
+        nombre.length > 60 ||
+        !maxDia ||
+        !Number.isInteger(accion.dia) ||
+        accion.dia < 1 ||
+        accion.dia > maxDia ||
+        (anio !== null && !(Number.isInteger(anio) && anio >= 1900 && anio <= anioHoy))
+      ) {
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: error(e, "Revisa el nombre, la fecha y el año."),
+        };
+      }
+      if (
+        e.cumples.some(
+          (c) =>
+            c.id !== accion.id &&
+            claveArticulo(c.nombre) === claveArticulo(nombre) &&
+            c.dia === accion.dia &&
+            c.mes === accion.mes,
+        )
+      ) {
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: error(e, `Ya hay otro cumpleaños de ${nombre} ese día.`),
+        };
+      }
+      // Si no estaba ligado a nadie y ahora el nombre es el de una persona del hogar, se liga.
+      const persona =
+        actual.personaId ??
+        e.personas.find((p) => claveArticulo(p.nombre) === claveArticulo(nombre))?.id ??
+        null;
+      return {
+        ...e,
+        cumples: e.cumples.map((c) =>
+          c.id === accion.id
+            ? {
+                ...c,
+                nombre,
+                dia: accion.dia,
+                mes: accion.mes,
+                anio,
+                relacion: accion.relacion,
+                personaId: persona,
+                ...(accion.gustos !== undefined
+                  ? {
+                      gustos: accion.gustos
+                        .map((g) => g.trim())
+                        .filter(Boolean)
+                        .slice(0, 10),
+                    }
+                  : {}),
+              }
+            : c,
+        ),
+        siguienteId: e.siguienteId + 1,
+        aviso: ok(e, `Cumpleaños de ${nombre} cambiado.`),
+      };
+    }
 
     case "cumple/idea": {
       const texto = accion.texto.trim().slice(0, 120);
@@ -1525,6 +1783,58 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
         ],
         siguienteId: e.siguienteId + 1,
         aviso: ok(e, `Añadido a ${persona.nombre}: ${nuevas.join(", ")}.`),
+      };
+    }
+
+    case "tarea/editar": {
+      const actual = e.tareas.find((t) => t.id === accion.id);
+      const texto = accion.texto.replace(/\s+/g, " ").trim();
+      const personaId = accion.personaId ?? actual?.personaId;
+      const persona = e.personas.find((p) => p.id === personaId && p.activa);
+      if (
+        !actual ||
+        !persona ||
+        texto === "" ||
+        texto.length > MAX_LARGO_ARTICULO ||
+        (accion.frecuencia !== "diaria" && accion.frecuencia !== "puntual")
+      ) {
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: error(e, `Escribe la tarea (hasta ${MAX_LARGO_ARTICULO} caracteres).`),
+        };
+      }
+      if (
+        e.tareas.some(
+          (t) =>
+            t.id !== accion.id &&
+            t.personaId === persona.id &&
+            t.frecuencia === accion.frecuencia &&
+            claveArticulo(t.texto) === claveArticulo(texto),
+        )
+      ) {
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: error(e, `${persona.nombre} ya tiene «${texto}».`),
+        };
+      }
+      return {
+        ...e,
+        tareas: e.tareas.map((t) =>
+          t.id === accion.id
+            ? {
+                ...t,
+                texto,
+                personaId: persona.id,
+                frecuencia: accion.frecuencia,
+                // Si cambia de «cada día» a «una vez» (o al revés), lo hecho deja de valer.
+                hechas: t.frecuencia === accion.frecuencia ? t.hechas : [],
+              }
+            : t,
+        ),
+        siguienteId: e.siguienteId + 1,
+        aviso: ok(e, `Cambiado: ${texto}.`),
       };
     }
 

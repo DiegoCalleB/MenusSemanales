@@ -502,6 +502,155 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 
+  test("editar: una cita apuntada (título, día y hora), desde «Apuntado» y desde «Próximas fechas»", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/fechas");
+    await pagina.getByLabel(/Escribe como en una nota/).fill("5 Noviembre 18:15 Psicotécnico");
+    await pagina.getByRole("button", { name: "Apuntar", exact: true }).click();
+    const apuntes = pagina.getByRole("list", { name: "Apuntes" });
+    await expect(apuntes.getByText(/Psicotécnico · 18:15/)).toBeVisible();
+
+    // Si algo no vale, el formulario se queda abierto y lo dice.
+    await apuntes.getByRole("button", { name: "Editar Psicotécnico" }).click();
+    const formulario = pagina.getByRole("form", { name: "Editar Psicotécnico" });
+    await formulario.getByLabel("Qué es").fill("  ");
+    await formulario.getByRole("button", { name: "Guardar" }).click();
+    await expect(formulario.getByRole("alert")).toContainText("hace falta un título");
+    await expect(formulario).toBeVisible();
+
+    // Con datos buenos, cambia el título, el día y la hora.
+    await formulario.getByLabel("Qué es").fill("Psicotécnico de Diego");
+    await formulario.getByLabel("Día", { exact: true }).fill("2026-11-09");
+    await formulario.getByLabel("Hora (si la tiene)").fill("09:30");
+    await formulario.getByRole("button", { name: "Guardar" }).click();
+    await expect(formulario).toHaveCount(0);
+    await expect(apuntes.getByText(/Psicotécnico de Diego · 09:30/)).toBeVisible();
+    await expect(apuntes.getByText(/Psicotécnico · 18:15/)).toHaveCount(0);
+
+    // También se edita desde la lista de «Próximas fechas».
+    const fechas = pagina.getByRole("list", { name: "Fechas" });
+    await fechas.getByRole("button", { name: /^Editar Psicotécnico de Diego/ }).click();
+    await pagina
+      .getByRole("form", { name: "Editar Psicotécnico de Diego" })
+      .getByLabel("Qué es")
+      .fill("Revisión");
+    await pagina
+      .getByRole("form", { name: "Editar Psicotécnico de Diego" })
+      .getByRole("button", { name: "Guardar" })
+      .click();
+    await expect(fechas.getByText("Revisión")).toBeVisible();
+    // Y se recuerda al recargar.
+    await pagina.reload({ waitUntil: "networkidle" });
+    await expect(pagina.getByRole("list", { name: "Apuntes" }).getByText(/Revisión/)).toBeVisible();
+    await contexto.close();
+  });
+
+  test("editar: un cumpleaños (nombre, día y mes) y que no deja fechas imposibles", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/cumples");
+    await pagina.getByLabel("Nombre").fill("Lucas");
+    await pagina.getByLabel(/Fecha/).fill("20/11/2017");
+    await pagina.getByRole("button", { name: "Guardar cumpleaños" }).click();
+    await pagina.getByRole("button", { name: /Lucas/ }).click();
+    await pagina.getByRole("button", { name: "Editar el cumpleaños de Lucas" }).click();
+    const formulario = pagina.getByRole("form", { name: "Editar el cumpleaños de Lucas" });
+
+    // 31 de abril no existe: lo dice y no cambia nada.
+    await formulario.getByLabel("Día").fill("31");
+    await formulario.getByLabel("Mes").selectOption({ label: "abril" });
+    await formulario.getByRole("button", { name: "Guardar" }).click();
+    await expect(formulario.getByRole("alert")).toContainText(
+      "Revisa el nombre, la fecha y el año",
+    );
+
+    await formulario.getByLabel("Nombre").fill("Lucas Martín");
+    await formulario.getByLabel("Día").fill("21");
+    await formulario.getByLabel("Mes").selectOption({ label: "noviembre" });
+    await formulario.getByRole("button", { name: "Guardar" }).click();
+    await expect(formulario).toHaveCount(0);
+    await expect(pagina.getByRole("heading", { level: 2, name: /Lucas Martín/ })).toBeVisible();
+    await expect(pagina.getByRole("heading", { level: 2, name: /Lucas Martín/ })).toContainText(
+      /9 años/,
+    );
+    await pagina.reload({ waitUntil: "networkidle" });
+    await expect(pagina.getByRole("heading", { level: 2, name: /Lucas Martín/ })).toBeVisible();
+    await contexto.close();
+  });
+
+  test("editar: una tarea de la casa (qué es, cada cuántos días)", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/casa");
+    await pagina.getByRole("button", { name: "Añadir la plantilla de la casa" }).click();
+    await pagina
+      .getByRole("button", { name: /Cambiar las sábanas de mamá y papá/, expanded: false })
+      .first()
+      .click();
+    await pagina.getByRole("button", { name: "Editar Cambiar las sábanas de mamá y papá" }).click();
+    const formulario = pagina.getByRole("form", {
+      name: "Editar Cambiar las sábanas de mamá y papá",
+    });
+
+    await formulario.getByLabel("Cada cuántos días").fill("0");
+    await formulario.getByRole("button", { name: "Guardar" }).click();
+    await expect(formulario.getByRole("alert")).toContainText("cada cuántos días");
+
+    await formulario.getByLabel("Qué hay que hacer").fill("Cambiar las sábanas");
+    await formulario.getByLabel("Cada cuántos días").fill("7");
+    await formulario.getByRole("button", { name: "Guardar" }).click();
+    await expect(formulario).toHaveCount(0);
+    // El título nuevo está y el viejo ya no.
+    await expect(pagina.getByText(/Cambiar las sábanas/).first()).toBeVisible();
+    await expect(pagina.getByText(/de mamá y papá/)).toHaveCount(0);
+    await contexto.close();
+  });
+
+  test("editar: una tarea de una persona (texto y cada cuánto)", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/tareas");
+    await pagina.getByRole("button", { name: /^Alba/ }).click();
+    await pagina.getByLabel("Añadir una tarea a Alba").fill("sacar la basura");
+    await pagina.getByRole("button", { name: "Añadir", exact: true }).click();
+    await expect(pagina.getByRole("checkbox", { name: /Sacar la basura/ })).toBeVisible();
+
+    await pagina.getByRole("button", { name: "Editar", exact: true }).click();
+    await pagina.getByRole("button", { name: "Editar la tarea Sacar la basura" }).click();
+    const formulario = pagina.getByRole("form", { name: "Editar la tarea Sacar la basura" });
+    await formulario.getByLabel("La tarea").fill("Bajar la basura");
+    await formulario.getByLabel("Cada cuánto").selectOption("diaria");
+    await formulario.getByRole("button", { name: "Guardar" }).click();
+    await expect(formulario).toHaveCount(0);
+    await expect(pagina.getByRole("checkbox", { name: /Bajar la basura/ })).toBeVisible();
+    await expect(pagina.getByRole("checkbox", { name: /Sacar la basura/ })).toHaveCount(0);
+    await expect(pagina.getByText(/cada día/).first()).toBeVisible();
+    await contexto.close();
+  });
+
+  test("editar: la comida de hoy (qué se come)", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/");
+    await pagina.getByText("Apuntar la comida de hoy").click();
+    await pagina.getByLabel("Qué se come").fill("Arroz con pollo al curry");
+    await pagina.getByRole("button", { name: "Apuntar", exact: true }).click();
+    await expect(pagina.getByText(/Comida: Arroz con pollo al curry/)).toBeVisible();
+
+    await pagina.getByRole("button", { name: "Editar la comida Arroz con pollo al curry" }).click();
+    const formulario = pagina.getByRole("form", {
+      name: "Editar la comida Arroz con pollo al curry",
+    });
+    await formulario.getByLabel("Qué se come").fill("  ");
+    await formulario.getByRole("button", { name: "Guardar" }).click();
+    await expect(formulario.getByRole("alert")).toContainText("Escribe qué se come");
+    await formulario.getByLabel("Qué se come").fill("En casa de los abuelos");
+    await formulario.getByRole("button", { name: "Guardar" }).click();
+    await expect(formulario).toHaveCount(0);
+    await expect(pagina.getByText(/Comida: En casa de los abuelos/)).toBeVisible();
+    await contexto.close();
+  });
+
   test("cuenta: enseña la versión de la app instalada", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/cuenta");
@@ -1536,6 +1685,35 @@ test.describe("flujos en móvil", () => {
     await expect(pagina.getByRole("button", { name: "Devolver Un abrazo" })).toBeVisible();
     await pagina.getByRole("button", { name: "Devolver Un abrazo" }).click();
     await expect(pagina.getByRole("button", { name: "Devolver Un abrazo" })).toHaveCount(0);
+    await contexto.close();
+  });
+
+  test("editar: un premio (nombre y estrellas que cuesta)", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/tareas");
+    await pagina.getByRole("button", { name: /^Alba/ }).click();
+    await pagina.getByRole("button", { name: "Poner premios de ejemplo" }).click();
+    await pagina.getByRole("button", { name: "Editar", exact: true }).click();
+    await pagina
+      .getByRole("button", { name: /^Editar el premio / })
+      .first()
+      .click();
+    const formulario = pagina.getByRole("form", { name: /^Editar el premio / });
+
+    // Sin estrellas válidas no se guarda y lo dice.
+    await formulario.getByLabel("Cuántas estrellas cuesta").fill("0");
+    await formulario.getByRole("button", { name: "Guardar" }).click();
+    await expect(formulario.getByRole("alert")).toBeVisible();
+
+    await formulario.getByLabel("Premio", { exact: true }).fill("Helado en familia");
+    await formulario.getByLabel("Cuántas estrellas cuesta").fill("3");
+    await formulario.getByRole("button", { name: "Guardar" }).click();
+    await expect(formulario).toHaveCount(0);
+    await expect(pagina.getByText("Helado en familia").first()).toBeVisible();
+    await expect(pagina.getByText(/^3 ⭐/).first()).toBeVisible();
+    await pagina.reload({ waitUntil: "networkidle" });
+    await pagina.getByRole("button", { name: /^Alba/ }).click();
+    await expect(pagina.getByText("Helado en familia").first()).toBeVisible();
     await contexto.close();
   });
 

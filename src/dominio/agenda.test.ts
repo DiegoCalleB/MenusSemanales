@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { enlaceGoogleCalendar, parsearAgenda, resumenApunte, textoParaKeep } from "./agenda";
+import {
+  enlaceGoogleCalendar,
+  parsearAgenda,
+  resumenApunte,
+  separarHoraDelTitulo,
+  textoParaKeep,
+} from "./agenda";
 
 const HOY = "2026-11-02";
 const leer = (t: string) =>
@@ -96,5 +102,62 @@ describe("llevar los apuntes a Keep y al calendario", () => {
     );
     expect(enlaceGoogleCalendar({ ...base, anual: true })).toContain("recur=RRULE%3AFREQ%3DYEARLY");
     expect(enlaceGoogleCalendar({ ...base, hora: "23:15" })).toContain("T231500%2F20261105T235900");
+  });
+});
+
+describe("la hora escrita al final del título (D-134)", () => {
+  it("la saca del título: «18:00», «21h30» y «a las 18»", () => {
+    expect(separarHoraDelTitulo("circo del sol kurios 18:00")).toEqual({
+      titulo: "circo del sol kurios",
+      hora: "18:00",
+    });
+    expect(separarHoraDelTitulo("Cena con Marta 21h30")).toEqual({
+      titulo: "Cena con Marta",
+      hora: "21:30",
+    });
+    expect(separarHoraDelTitulo("Dentista a las 9:15")).toEqual({
+      titulo: "Dentista",
+      hora: "09:15",
+    });
+    expect(separarHoraDelTitulo("Reunión, a las 18")).toEqual({ titulo: "Reunión", hora: "18:00" });
+    expect(separarHoraDelTitulo("Peli a las 20.30 h")).toEqual({ titulo: "Peli", hora: "20:30" });
+    expect(separarHoraDelTitulo("Cole - 8:00h")).toEqual({ titulo: "Cole", hora: "08:00" });
+  });
+
+  it("no toca lo que no es una hora clara: precios, duraciones, horas imposibles o solo la hora", () => {
+    for (const t of [
+      "Regalo 12.50",
+      "Curso de 8h",
+      "Reunión 25:00",
+      "Cita 18:75",
+      "18:00",
+      "Piscina 2",
+      "Ver la 3:00ª",
+    ]) {
+      expect(separarHoraDelTitulo(t).hora).toBeNull();
+    }
+    expect(separarHoraDelTitulo("  Piscina   Alba  ")).toEqual({
+      titulo: "Piscina Alba",
+      hora: null,
+    });
+  });
+
+  it("al apuntar una línea, la hora del final cuenta, y la del principio sigue valiendo", () => {
+    const hoy = "2026-11-04";
+    const final = parsearAgenda("13 noviembre circo del sol kurios 18:00", hoy).conFecha[0];
+    expect(final).toMatchObject({
+      fecha: "2026-11-13",
+      hora: "18:00",
+      titulo: "circo del sol kurios",
+    });
+    const inicio = parsearAgenda("13 noviembre 18:00 circo del sol kurios", hoy).conFecha[0];
+    expect(inicio).toMatchObject({ hora: "18:00", titulo: "circo del sol kurios" });
+    // Sin hora, queda como evento de todo el día.
+    expect(parsearAgenda("13 noviembre circo del sol kurios", hoy).conFecha[0]?.hora).toBeNull();
+    // Y con la fecha «12/3» también.
+    expect(parsearAgenda("12/11 Dentista a las 17:30", hoy).conFecha[0]).toMatchObject({
+      hora: "17:30",
+      titulo: "Dentista",
+    });
   });
 });

@@ -8,6 +8,7 @@ import { type CuentaAtras, cuentaAtras } from "@/dominio/cuenta-atras";
 import { fechasParaCompartir } from "@/aplicacion/compartir";
 import { textoFechas } from "@/dominio/compartir";
 import { Apuntar } from "../apuntar";
+import { BotonEditar, EditarCita, EditarCumple } from "../editar";
 import { LeerCircular } from "../leer-circular";
 import { BotonesCompartir } from "../compartir-botones";
 import { useHogar, useCuenta } from "../proveedor-hogar";
@@ -66,11 +67,13 @@ export function FechasVista() {
   const { estado } = useHogar();
   const deGoogle = useCalendarioFamilia(estado.hoy);
   const [aviso, setAviso] = useState("");
+  const [editando, setEditando] = useState<string | null>(null);
   const lista = cuentaAtras(estado.cumples, estado.eventos, estado.hoy, {
     maxDias: 180,
     max: 60,
     externos: [
       ...estado.agenda.map((a) => ({
+        agendaId: a.id,
         fecha: a.fecha,
         titulo: a.titulo,
         hora: a.hora,
@@ -116,42 +119,66 @@ export function FechasVista() {
           </p>
         ) : (
           <ul aria-label="Fechas" className="flex flex-col gap-2">
-            {lista.map((c) => (
-              <li
-                key={c.clave}
-                className="border-borde bg-fondo flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-3"
-              >
-                <p className="min-w-0 text-base">
-                  <span aria-hidden="true">{c.emoji} </span>
-                  <strong>{c.titulo}</strong>
-                  <span className="text-tinta-suave block text-sm">
-                    {fechaLarga(c.fecha)}
-                    {c.hora ? ` · ${c.hora}` : ""} · {c.dias <= 1 ? c.texto : `en ${c.texto}`}
+            {lista.map((c) => {
+              const cumple =
+                c.origen?.tipo === "cumple"
+                  ? estado.cumples.find((x) => x.id === c.origen?.id)
+                  : undefined;
+              const cita =
+                c.origen?.tipo === "cita"
+                  ? estado.agenda.find((x) => x.id === c.origen?.id)
+                  : undefined;
+              if (editando === c.clave && (cumple || cita)) {
+                return (
+                  <li key={c.clave}>
+                    {cumple ? (
+                      <EditarCumple cumple={cumple} alCerrar={() => setEditando(null)} />
+                    ) : cita ? (
+                      <EditarCita cita={cita} alCerrar={() => setEditando(null)} />
+                    ) : null}
+                  </li>
+                );
+              }
+              return (
+                <li
+                  key={c.clave}
+                  className="border-borde bg-fondo flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-3"
+                >
+                  <p className="min-w-0 text-base">
+                    <span aria-hidden="true">{c.emoji} </span>
+                    <strong>{c.titulo}</strong>
+                    <span className="text-tinta-suave block text-sm">
+                      {fechaLarga(c.fecha)}
+                      {c.hora ? ` · ${c.hora}` : ""} · {c.dias <= 1 ? c.texto : `en ${c.texto}`}
+                    </span>
+                  </p>
+                  <span className="flex flex-wrap gap-2">
+                    {(cumple || cita) && (
+                      <BotonEditar nombre={c.titulo} alPulsar={() => setEditando(c.clave)} />
+                    )}
+                    <a
+                      className="boton-suave"
+                      href={enlaceGoogleCalendar({ ...c, anual: c.anual })}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`Añadir ${c.titulo} a Google Calendar`}
+                    >
+                      ＋ Google
+                    </a>
+                    <button
+                      type="button"
+                      className="boton-suave"
+                      aria-label={`Descargar ${c.titulo} para el calendario`}
+                      onClick={() =>
+                        descargar("fecha.ics", generarIcs("Fecha", [comoEvento(c)], new Date()))
+                      }
+                    >
+                      ＋ .ics
+                    </button>
                   </span>
-                </p>
-                <span className="flex flex-wrap gap-2">
-                  <a
-                    className="boton-suave"
-                    href={enlaceGoogleCalendar({ ...c, anual: c.anual })}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={`Añadir ${c.titulo} a Google Calendar`}
-                  >
-                    ＋ Google
-                  </a>
-                  <button
-                    type="button"
-                    className="boton-suave"
-                    aria-label={`Descargar ${c.titulo} para el calendario`}
-                    onClick={() =>
-                      descargar("fecha.ics", generarIcs("Fecha", [comoEvento(c)], new Date()))
-                    }
-                  >
-                    ＋ .ics
-                  </button>
-                </span>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         )}
 

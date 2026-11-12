@@ -15,6 +15,7 @@ import {
 } from "@/dominio/cumples";
 import { ideasDeRegalo } from "@/dominio/ideas-regalo";
 import { claveArticulo } from "@/dominio/habituales";
+import { BotonEditar, EditarCumple } from "../editar";
 import { useHogar } from "../proveedor-hogar";
 import { useYo } from "../yo";
 
@@ -43,6 +44,7 @@ export function CumplesVista() {
   const { estado, despachar } = useHogar();
   const [yo] = useYo();
   const [abierto, setAbierto] = useState<string | null>(null);
+  const [editando, setEditando] = useState<string | null>(null);
   const ordenados = [...estado.cumples].sort(
     (a, b) => diasHasta(a, estado.hoy) - diasHasta(b, estado.hoy),
   );
@@ -120,14 +122,24 @@ export function CumplesVista() {
                     ) : (
                       <Detalle c={c} edad={edad} estadoActual={est} />
                     )}
-                    <button
-                      type="button"
-                      className="boton-suave w-fit"
-                      aria-label={`Quitar el cumpleaños de ${c.nombre}`}
-                      onClick={() => despachar({ tipo: "cumple/borrar", id: c.id })}
-                    >
-                      Quitar cumpleaños
-                    </button>
+                    {editando === c.id ? (
+                      <EditarCumple cumple={c} alCerrar={() => setEditando(null)} />
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        <BotonEditar
+                          nombre={`el cumpleaños de ${c.nombre}`}
+                          alPulsar={() => setEditando(c.id)}
+                        />
+                        <button
+                          type="button"
+                          className="boton-suave w-fit"
+                          aria-label={`Quitar el cumpleaños de ${c.nombre}`}
+                          onClick={() => despachar({ tipo: "cumple/borrar", id: c.id })}
+                        >
+                          Quitar cumpleaños
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </li>

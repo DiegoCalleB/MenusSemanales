@@ -9,6 +9,7 @@ import {
   rachaActual,
   saldoDeEstrellas,
 } from "@/dominio/premios";
+import { EditarPremio } from "./editar";
 import { useHogar } from "./proveedor-hogar";
 
 /**
@@ -28,6 +29,7 @@ export function PremiosPersona({
   const [nuevoNombre, setNuevoNombre] = useState("");
   const [nuevoCoste, setNuevoCoste] = useState("5");
   const [nuevoEmoji, setNuevoEmoji] = useState("🎁");
+  const [editandoPremio, setEditandoPremio] = useState<string | null>(null);
 
   const saldo = saldoDeEstrellas(estado.tareas, estado.canjes, personaId);
   const ganadas = estrellasGanadas(estado.tareas, personaId);
@@ -99,6 +101,13 @@ export function PremiosPersona({
         <ul className="flex flex-col gap-2">
           {estado.premios.map((p) => {
             const puede = saldo >= p.coste;
+            if (editando && editandoPremio === p.id) {
+              return (
+                <li key={p.id}>
+                  <EditarPremio premio={p} alCerrar={() => setEditandoPremio(null)} />
+                </li>
+              );
+            }
             return (
               <li key={p.id} className="flex items-center gap-2">
                 <span className="text-3xl" aria-hidden="true">
@@ -111,14 +120,24 @@ export function PremiosPersona({
                   </span>
                 </span>
                 {editando ? (
-                  <button
-                    type="button"
-                    className="boton-suave shrink-0"
-                    aria-label={`Quitar el premio ${p.nombre}`}
-                    onClick={() => despachar({ tipo: "premio/borrar", id: p.id })}
-                  >
-                    ✕
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      className="boton-suave shrink-0"
+                      aria-label={`Editar el premio ${p.nombre}`}
+                      onClick={() => setEditandoPremio(p.id)}
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      type="button"
+                      className="boton-suave shrink-0"
+                      aria-label={`Quitar el premio ${p.nombre}`}
+                      onClick={() => despachar({ tipo: "premio/borrar", id: p.id })}
+                    >
+                      ✕
+                    </button>
+                  </>
                 ) : (
                   <button
                     type="button"

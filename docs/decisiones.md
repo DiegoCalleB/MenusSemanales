@@ -1130,3 +1130,29 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Límites:** (1) el formato de los enlaces de producto de Mercadona no se ha podido comprobar desde el entorno de desarrollo; se acepta cualquier ruta de su tienda salvo la portada y las búsquedas, y el nombre legible sale del final del enlace (o «Producto guardado» si es solo un número). (2) Un enlace de producto puede dejar de existir si Mercadona lo retira: «Olvidar producto» y «Buscar otro» sirven para eso. (3) Para compartir los productos entre los móviles de Diego y Ana habría que llevarlos a la nube del hogar (tabla y migración); no está hecho.
 
 **Ampliación de D-132 (10 de noviembre, «no se guarda el link»):** Diego no conseguía guardar el enlace y la app solo decía «no es un enlace de un producto», sin explicar por qué. Ahora (`revisarEnlaceDeProducto`) acepta **la web de Mercadona y sus subdominios** (`tienda.`, `www.`…), no solo `tienda.mercadona.es`, y sube un `http` a `https`; sigue rechazando otros sitios, dominios que solo se le parecen (`tienda.mercadona.es.malo.com`, `malomercadona.es`), la portada y las búsquedas. Y el aviso dice el **motivo concreto**: «Ese enlace es de _dominio_, no de Mercadona», «es una búsqueda, no un producto» o «es la portada». Así, si Mercadona comparte los enlaces de otra forma (p. ej. un enlace corto de otro dominio), el aviso dirá cuál y se podrá ajustar. **No se ha podido reproducir el fallo de Diego**: se desconoce el enlace que pegó y el aviso que le salió.
+
+## D-133 · Todo lo que se puede añadir se puede editar
+
+- **Decisión (Diego):** «necesito que se puedan editar todos los elementos, fechas, cumples, etc.».
+- **Qué se podía editar ya:** los platos, las personas, la compra apuntada a mano y la nota del día. **Qué no** (solo se podía añadir y quitar): las citas y fechas apuntadas, los cumpleaños, las tareas de Casa, las tareas por persona, la comida del mediodía y los premios (que tenían la acción, pero no el botón).
+- **Qué cambia:** cada una tiene su acción de edición en el estado (`agenda/editar`, `cumple/editar`, `casa/editar`, `tarea/editar`, `almuerzo/editar`; los premios usan `premio/guardar` con su `id`) y su botón **«✏️ Editar»**, que abre un formulario en el sitio con lo que ya hay.
+  - **Citas y fechas apuntadas:** título, día, «hasta el día» (si dura varios) y hora. Desde «Apuntado», desde el calendario del día y desde la lista de «Próximas fechas».
+  - **Cumpleaños:** nombre, día, mes, año de nacimiento y relación; las ideas y el estado del regalo se conservan. Desde «Cumpleaños» (al abrir la tarjeta) y desde «Próximas fechas». Si el nombre pasa a ser el de una persona del hogar, se liga a ella.
+  - **Tareas de Casa:** qué es, cada cuántos días y el dibujo. La última vez que se hizo no se toca.
+  - **Tareas por persona:** el texto, cada cuánto (cada día / una vez) y a quién le toca. Al pasar de «cada día» a «una vez» (o al revés), lo ya marcado como hecho se borra, porque deja de significar lo mismo. En «Editar» de la lista.
+  - **Comida del mediodía:** qué se come (con sugerencia de los platos de la casa; si coincide con uno, cuenta para la compra y la cena) y el día.
+  - **Premios:** nombre, estrellas y dibujo. En el modo «Editar» de las estrellas.
+- **Mismas reglas que al crear:** se valida igual (título obligatorio, días que existen —no el 31 de abril—, hora válida, último día posterior, año entre 1900 y hoy, 1 a 3650 días…) y no deja dos iguales (misma cita el mismo día, mismo cumpleaños, misma tarea). Si algo no vale, **el formulario se queda abierto** y dice por qué (se prueba la acción antes de aplicarla), con la validación nuestra en español y no la del navegador (`noValidate`).
+- **Sincronización:** editar es un cambio de esa fila, no borrar y crear: la comparación por filas de la nube ya lo manda (comprobado en los tests de cada una). Nada nuevo en la base de datos: sin migración.
+- **Lo que sigue sin editarse:** las **fechas señaladas** del calendario (festivos y similares, `eventos`), que vienen de los datos y no se crean desde la app; y lo de Google Calendar, que se cambia en Google.
+
+## D-134 · Google Calendar: los eventos salían sin hora
+
+- **Problema (Diego, captura de Google Calendar):** «📌 circo del sol kurios 18:00» aparecía como evento de **todo el día**.
+- **Causas:** (1) la hora escrita **al final del título** («circo del sol kurios 18:00») no se reconocía como hora —solo se leía justo después de la fecha—, así que la cita quedaba sin hora y salía de todo el día; (2) las horas del `.ics` iban «flotantes» (sin zona), algo que Google interpreta a su manera.
+- **Qué cambia:**
+  - `separarHoraDelTitulo` (dominio): saca la hora final del título («18:00», «21h30», «a las 18», «a las 18.30»). **No** la confunde con precios («12.50»), duraciones («8h») ni horas imposibles, y no deja el título vacío. Se usa al crear, al editar y al leer notas (`parsearAgenda`) cuando no hay hora justo tras la fecha.
+  - **Arreglo de lo ya apuntado:** la acción `agenda/arreglarHoras` pone la hora a las citas existentes sin hora cuyo título acaba en una. La lanza sola `LimpiarFechas` al abrir la app (se sincroniza como cualquier cambio); no hace nada si no hay qué arreglar.
+  - **`.ics`:** los eventos con hora llevan `DTSTART;TZID=Europe/Madrid`, un bloque `VTIMEZONE` (CET/CEST) y `X-WR-TIMEZONE`. Los de todo el día no cambian. Comprobado con una librería de calendarios independiente: 18:00 de noviembre sale +01:00 y 18:00 de julio +02:00.
+- **Por diseño siguen siendo de todo el día:** cumpleaños, cenas, comidas y tareas de Casa en el calendario suscrito. Se les podría dar una hora por defecto si se quiere.
+- **Aviso:** Google refresca los calendarios suscritos cada 12–24 h; el cambio no se ve al instante.

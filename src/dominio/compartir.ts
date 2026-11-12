@@ -268,6 +268,32 @@ function plegar(linea: string): string[] {
 const sinGuiones = (f: FechaIso) => f.replace(/-/g, "");
 
 /** Archivo de calendario con un evento de todo el día por cada fecha. Lo importa Google Calendar. */
+/**
+ * La zona horaria de las horas del calendario (D-134). Las horas se mandan con su zona y esta
+ * definición (horario de invierno y de verano), no como «hora flotante» sin zona: así Google y el
+ * iPhone las enseñan a la hora de Madrid en lugar de interpretarlas a su manera.
+ */
+const ZONA = "Europe/Madrid";
+const VTIMEZONE_MADRID = [
+  "BEGIN:VTIMEZONE",
+  `TZID:${ZONA}`,
+  "BEGIN:STANDARD",
+  "DTSTART:19701025T030000",
+  "RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU",
+  "TZOFFSETFROM:+0200",
+  "TZOFFSETTO:+0100",
+  "TZNAME:CET",
+  "END:STANDARD",
+  "BEGIN:DAYLIGHT",
+  "DTSTART:19700329T020000",
+  "RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU",
+  "TZOFFSETFROM:+0100",
+  "TZOFFSETTO:+0200",
+  "TZNAME:CEST",
+  "END:DAYLIGHT",
+  "END:VTIMEZONE",
+];
+
 export function generarIcs(
   nombre: string,
   eventos: readonly EventoCalendario[],
@@ -286,6 +312,7 @@ export function generarIcs(
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     `X-WR-CALNAME:${escaparIcs(nombre)}`,
+    `X-WR-TIMEZONE:${ZONA}`,
     ...(refrescoHoras
       ? [
           `REFRESH-INTERVAL;VALUE=DURATION:PT${refrescoHoras}H`,
@@ -293,6 +320,7 @@ export function generarIcs(
         ]
       : []),
   ];
+  if (eventos.some((e) => e.hora)) lineas.push(...VTIMEZONE_MADRID);
   eventos.forEach((e, i) => {
     lineas.push(
       "BEGIN:VEVENT",
@@ -300,8 +328,8 @@ export function generarIcs(
       `DTSTAMP:${sello}`,
       ...(e.hora
         ? [
-            `DTSTART:${sinGuiones(e.fecha)}T${sinDosPuntos(e.hora)}`,
-            `DTEND:${sinGuiones(e.fecha)}T${sinDosPuntos(unaHoraMas(e.hora))}`,
+            `DTSTART;TZID=${ZONA}:${sinGuiones(e.fecha)}T${sinDosPuntos(e.hora)}`,
+            `DTEND;TZID=${ZONA}:${sinGuiones(e.fecha)}T${sinDosPuntos(unaHoraMas(e.hora))}`,
           ]
         : [
             `DTSTART;VALUE=DATE:${sinGuiones(e.fecha)}`,

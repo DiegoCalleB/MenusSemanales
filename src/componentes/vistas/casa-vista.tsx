@@ -14,6 +14,7 @@ import {
 import { casaParaCompartir } from "@/aplicacion/compartir";
 import { textoCasa } from "@/dominio/compartir";
 import { BotonesCompartir } from "../compartir-botones";
+import { BotonEditar, EditarTareaCasa } from "../editar";
 import { useHogar } from "../proveedor-hogar";
 import { useYo } from "../yo";
 
@@ -35,6 +36,7 @@ export function CasaVista() {
   const [cada, setCada] = useState(14);
   const [quien, setQuien] = useState("");
   const [abierto, setAbierto] = useState<string | null>(null);
+  const [editando, setEditando] = useState<string | null>(null);
   const ordenadas = ordenadasPorFecha(estado.casa, estado.hoy);
   const grupos: Array<{ id: string; titulo: string; lista: TareaCasa[] }> = [
     {
@@ -182,7 +184,12 @@ export function CasaVista() {
                         </span>
                       )}
                     </div>
-                    {abierta && (
+                    {abierta && editando === t.id && (
+                      <div className="mb-1">
+                        <EditarTareaCasa tarea={t} alCerrar={() => setEditando(null)} />
+                      </div>
+                    )}
+                    {abierta && editando !== t.id && (
                       <div className="bg-fondo mb-1 flex flex-wrap items-center gap-2 rounded-xl p-2">
                         <label className="flex items-center gap-2 text-base">
                           <span className="text-tinta-suave text-sm">Le toca a</span>
@@ -226,6 +233,7 @@ export function CasaVista() {
                             🛒 A la lista
                           </button>
                         )}
+                        <BotonEditar nombre={t.titulo} alPulsar={() => setEditando(t.id)} />
                         <button
                           type="button"
                           className="boton-suave"

@@ -58,6 +58,28 @@ const hora = (h: string | undefined, m: string | undefined): string | null | "ma
   return Number(h) < 24 && Number(m) < 60 ? `${h.padStart(2, "0")}:${m}` : "mala";
 };
 
+/**
+ * Una hora escrita AL FINAL del título («circo del sol 18:00», «cena 21h30», «cita a las 18»), que
+ * la persona no ha puesto donde debe y deja el evento sin hora (D-134). Devuelve el título sin ella
+ * y la hora, o el título tal cual y `null` si no hay ninguna clara. Solo vale con «:» o «h» entre
+ * hora y minutos («18:00», «18h30») o con «a las» delante («a las 18», «a las 18.30»): un «12.50»
+ * suelto puede ser un precio y un «8h» suelto, una duración.
+ */
+export function separarHoraDelTitulo(titulo: string): { titulo: string; hora: string | null } {
+  const limpio = titulo.replace(/\s+/g, " ").trim();
+  const m =
+    /^(.*?)[\s,;:–-]*(?:\ba las (\d{1,2})(?:[:.h](\d{2}))?|\b(\d{1,2})[:h](\d{2}))\s*(?:h|hs|horas)?\s*$/iu.exec(
+      limpio,
+    );
+  if (!m) return { titulo: limpio, hora: null };
+  const leida = hora(m[2] ?? m[4], m[3] ?? m[5] ?? "00");
+  const sin = (m[1] ?? "").trim();
+  if (leida === "mala" || leida === null || sin === "" || sin.length > MAX_TITULO) {
+    return { titulo: limpio, hora: null };
+  }
+  return { titulo: sin, hora: leida };
+}
+
 const diasDelMes = (mes: number, anio: number) => new Date(Date.UTC(anio, mes, 0)).getUTCDate();
 
 /** Próxima vez que cae ese día y mes desde hoy (hoy incluido). */
@@ -115,8 +137,16 @@ export function parsearAgenda(texto: string, hoy: FechaIso): AgendaLeida {
     }
 
     const h = /^(\d{1,2})[:.h](\d{2})\b\s*(.*)$/.exec(resto);
-    const horaLeida = hora(h?.[1], h?.[2]);
-    const titulo = (h ? (h[3] ?? "") : resto).trim();
+    let horaLeida = hora(h?.[1], h?.[2]);
+    let titulo = (h ? (h[3] ?? "") : resto).trim();
+    // Sin hora al principio, se busca al final: «13 noviembre circo del sol 18:00».
+    if (!h) {
+      const alFinal = separarHoraDelTitulo(titulo);
+      if (alFinal.hora) {
+        titulo = alFinal.titulo;
+        horaLeida = alFinal.hora;
+      }
+    }
     const anioReal = anio ?? Number(hoy.slice(0, 4));
     const valido =
       horaLeida !== "mala" &&

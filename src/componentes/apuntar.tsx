@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { parsearAgenda, resumenApunte } from "@/dominio/agenda";
+import { BotonEditar, EditarCita } from "./editar";
 import { useHogar } from "./proveedor-hogar";
 import { useYo } from "./yo";
 
@@ -16,6 +17,7 @@ export function Apuntar() {
   const [yo] = useYo();
   const [texto, setTexto] = useState("");
   const [revisando, setRevisando] = useState(false);
+  const [editando, setEditando] = useState<string | null>(null);
   const leido = parsearAgenda(texto, estado.hoy);
   const total = leido.conFecha.length + leido.sinFecha.length;
   const proximos = estado.agenda
@@ -81,24 +83,33 @@ export function Apuntar() {
         <>
           <h3 className="text-base font-extrabold">Apuntado</h3>
           <ul aria-label="Apuntes" className="flex flex-col gap-2">
-            {proximos.slice(0, 8).map((a) => (
-              <li
-                key={a.id}
-                className="border-borde bg-fondo flex items-center justify-between gap-3 rounded-2xl border p-3"
-              >
-                <p className="min-w-0 text-base">
-                  <strong>{fechaCorta(a.fecha)}</strong> · {resumenApunte(a)}
-                </p>
-                <button
-                  type="button"
-                  className="boton-suave"
-                  aria-label={`Quitar ${a.titulo}`}
-                  onClick={() => despachar({ tipo: "agenda/borrar", id: a.id })}
+            {proximos.slice(0, 8).map((a) =>
+              editando === a.id ? (
+                <li key={a.id}>
+                  <EditarCita cita={a} alCerrar={() => setEditando(null)} />
+                </li>
+              ) : (
+                <li
+                  key={a.id}
+                  className="border-borde bg-fondo flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-3"
                 >
-                  Quitar
-                </button>
-              </li>
-            ))}
+                  <p className="min-w-0 text-base">
+                    <strong>{fechaCorta(a.fecha)}</strong> · {resumenApunte(a)}
+                  </p>
+                  <span className="flex shrink-0 gap-2">
+                    <BotonEditar nombre={a.titulo} alPulsar={() => setEditando(a.id)} />
+                    <button
+                      type="button"
+                      className="boton-suave"
+                      aria-label={`Quitar ${a.titulo}`}
+                      onClick={() => despachar({ tipo: "agenda/borrar", id: a.id })}
+                    >
+                      Quitar
+                    </button>
+                  </span>
+                </li>
+              ),
+            )}
           </ul>
           {proximos.length > 8 && (
             <p className="text-tinta-suave text-sm">Y {proximos.length - 8} más.</p>

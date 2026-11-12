@@ -187,12 +187,16 @@ describe("generarIcs: apuntes con hora y de varios días", () => {
       ],
       ahora,
     );
-    expect(ics).toContain("DTSTART:20261105T181500");
-    expect(ics).toContain("DTEND:20261105T191500");
+    expect(ics).toContain("DTSTART;TZID=Europe/Madrid:20261105T181500");
+    // Con la definición de la zona, para que no sea una hora «flotante».
+    expect(ics).toContain("BEGIN:VTIMEZONE");
+    expect(ics).toContain("TZID:Europe/Madrid");
+    expect(ics).not.toMatch(/DTSTART:2026\d{4}T/);
+    expect(ics).toContain("DTEND;TZID=Europe/Madrid:20261105T191500");
     expect(ics).toContain("TRIGGER:-PT1H");
     expect(ics).toContain("DTSTART;VALUE=DATE:20261117");
     expect(ics).toContain("DTEND;VALUE=DATE:20261120");
-    expect(ics).toContain("DTEND:20261106T235900");
+    expect(ics).toContain("DTEND;TZID=Europe/Madrid:20261106T235900");
   });
 });
 
