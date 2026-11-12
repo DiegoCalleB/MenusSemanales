@@ -61,6 +61,9 @@ describe("calendario suscrito", () => {
       aviso: true,
     });
     expect(e.find((x) => x.titulo === "🍽️ Cena: Sopa + Pan")?.aviso).toBeUndefined();
+    // Las comidas y cenas salen a su hora (D-135), sin alarma.
+    expect(e.find((x) => x.titulo === "🍽️ Cena: Sopa + Pan")?.hora).toBe("21:00");
+    expect(e.find((x) => x.titulo === "☀️ Comida: Paella")?.hora).toBe("14:00");
   });
 
   it("los cumpleaños salen siempre; los avisos del regalo, solo a quien no cumple", () => {

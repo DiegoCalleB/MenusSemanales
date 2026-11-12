@@ -60,6 +60,10 @@ export const proyeccionSchema = z.object({
 });
 export type ProyeccionCalendario = z.infer<typeof proyeccionSchema>;
 
+/** A qué hora salen en el calendario las comidas y cenas (no llevan hora propia en la app). */
+export const HORA_COMIDA = "14:00";
+export const HORA_CENA = "21:00";
+
 const limpio = (t: string) =>
   t
     .normalize("NFD")
@@ -93,6 +97,7 @@ export function eventosSuscritos(
       fecha: f,
       titulo: `🍽️ Cena: ${platos.join(" + ")}`,
       descripcion: `Platos: ${platos.join(", ")}`,
+      hora: HORA_CENA,
     });
   }
   for (const [f, textos] of porFecha(p.almuerzos)) {
@@ -101,6 +106,7 @@ export function eventosSuscritos(
       fecha: f,
       titulo: `☀️ Comida: ${textos.join(" + ")}`,
       descripcion: `Comida: ${textos.join(", ")}`,
+      hora: HORA_COMIDA,
     });
   }
   for (const [f, ev] of Object.entries(p.eventos).sort(([a], [b]) => a.localeCompare(b))) {

@@ -1158,3 +1158,9 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Aviso:** Google refresca los calendarios suscritos cada 12–24 h; el cambio no se ve al instante.
 
 **Ampliación de D-133 (12 de noviembre, «ocupan demasiado los botones»):** en las listas de fechas cada apunte ocupaba tres líneas por los botones «✏️ Editar» y «Quitar». Ahora cada fecha es **una fila**: el texto a la izquierda y, a la derecha, botones **solo con icono** (✏️ editar, 🗑️ quitar; 📅 y ⬇️ para Google Calendar y .ics en «Próximas fechas») de 44 × 44 px (`.boton-icono`; el tamaño táctil mínimo no se toca). El nombre accesible sigue en `aria-label` y `title`, así que lectores de pantalla y tests no cambian. `BotonEditar` es ahora solo icono en todas las pantallas.
+
+## D-135 · Cenas y comidas con hora en el calendario suscrito
+
+- **Decisión (Diego):** «pon horas a cenas y comidas». Salían de todo el día en Google Calendar.
+- **Qué cambia:** en el calendario suscrito, la cena sale a las **21:00** y la comida a las **14:00** (`HORA_CENA`, `HORA_COMIDA`; duran una hora, como cualquier evento con hora). Siguen **sin alarma**, como antes.
+- **Límites:** la hora es la misma para todos los días y no se puede cambiar desde la app (las comidas y cenas no guardan hora propia). Cumpleaños, tareas de Casa y fechas señaladas siguen siendo de todo el día. Google tarda hasta 24 h en reflejarlo.
