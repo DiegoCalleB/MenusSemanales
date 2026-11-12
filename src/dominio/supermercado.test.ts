@@ -9,6 +9,7 @@ import {
   extraerEnlace,
   marcarEnCesta,
   nombreDeProducto,
+  revisarEnlaceDeProducto,
   podarProgreso,
   quitarDeCesta,
   saltar,
@@ -111,20 +112,45 @@ describe("recordar el producto elegido (D-132)", () => {
     expect(enlaceDeProducto(m, `Mira este producto ${bueno} !`)).toBe(bueno);
   });
 
-  it("rechaza lo que no es un producto de la tienda", () => {
+  it("vale la web de la empresa y sus subdominios, y sube un http a https", () => {
     const m = mercadona;
-    for (const malo of [
-      "",
-      "leche",
-      "http://tienda.mercadona.es/product/1/x", // sin https
-      "https://otro.es/product/1/x", // otro dominio
-      "https://tienda.mercadona.es.malo.com/product/1/x", // dominio parecido
-      "https://tienda.mercadona.es/", // la portada
-      "https://tienda.mercadona.es/search-results?query=leche", // una búsqueda
-      "javascript:alert(1)",
-    ]) {
-      expect(enlaceDeProducto(m, malo)).toBeNull();
+    expect(enlaceDeProducto(m, "http://tienda.mercadona.es/product/1/x")).toBe(
+      "https://tienda.mercadona.es/product/1/x",
+    );
+    expect(enlaceDeProducto(m, "https://www.mercadona.es/product/1/x?a=b")).toBe(
+      "https://www.mercadona.es/product/1/x",
+    );
+    expect(enlaceDeProducto(m, "https://TIENDA.Mercadona.es/product/1/x")).toBe(
+      "https://tienda.mercadona.es/product/1/x",
+    );
+  });
+
+  it("rechaza lo que no es un producto de la tienda, y dice por qué", () => {
+    const m = mercadona;
+    const motivo = (t: string) => {
+      const r = revisarEnlaceDeProducto(m, t);
+      return r.ok ? "OK" : r.motivo;
+    };
+    for (const malo of ["", "leche", "javascript:alert(1)", "ftp://tienda.mercadona.es/x"]) {
+      expect(motivo(malo)).toBe("no-es-enlace");
     }
+    for (const otro of [
+      "https://otro.es/product/1/x",
+      "https://tienda.mercadona.es.malo.com/product/1/x", // dominio parecido
+      "https://malomercadona.es/product/1/x", // acaba igual pero no es un subdominio
+    ]) {
+      expect(motivo(otro)).toBe("otro-sitio");
+    }
+    expect(motivo("https://tienda.mercadona.es/")).toBe("portada");
+    expect(motivo("https://tienda.mercadona.es")).toBe("portada");
+    expect(motivo("https://tienda.mercadona.es/search-results?query=leche")).toBe("busqueda");
+    // Y dice de qué sitio era, para poder explicárselo a la persona.
+    expect(revisarEnlaceDeProducto(m, "https://otro.es/x")).toEqual({
+      ok: false,
+      motivo: "otro-sitio",
+      host: "otro.es",
+    });
+    expect(enlaceDeProducto(m, "https://otro.es/x")).toBeNull();
   });
 
   it("pone un nombre legible al enlace", () => {
