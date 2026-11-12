@@ -62,8 +62,24 @@ describe("calendario suscrito", () => {
     });
     expect(e.find((x) => x.titulo === "🍽️ Cena: Sopa + Pan")?.aviso).toBeUndefined();
     // Las comidas y cenas salen a su hora (D-135), sin alarma.
-    expect(e.find((x) => x.titulo === "🍽️ Cena: Sopa + Pan")?.hora).toBe("21:00");
+    // El 9 de noviembre de 2026 es lunes: se cena a las 20:00.
+    expect(e.find((x) => x.titulo === "🍽️ Cena: Sopa + Pan")?.hora).toBe("20:00");
     expect(e.find((x) => x.titulo === "☀️ Comida: Paella")?.hora).toBe("14:00");
+  });
+
+  it("la cena es a las 21:00 en fin de semana y a las 20:00 entre semana", () => {
+    const e = eventosSuscritos(
+      base({
+        cenas: [
+          { fecha: "2026-11-13", nombre: "Viernes" },
+          { fecha: "2026-11-14", nombre: "Sábado" },
+          { fecha: "2026-11-15", nombre: "Domingo" },
+        ],
+      }),
+      { hoy: HOY, para: "diego" },
+    );
+    const hora = (n: string) => e.find((x) => x.titulo === `🍽️ Cena: ${n}`)?.hora;
+    expect([hora("Viernes"), hora("Sábado"), hora("Domingo")]).toEqual(["20:00", "21:00", "21:00"]);
   });
 
   it("los cumpleaños salen siempre; los avisos del regalo, solo a quien no cumple", () => {

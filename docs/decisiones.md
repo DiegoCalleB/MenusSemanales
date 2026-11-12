@@ -1162,5 +1162,5 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 ## D-135 · Cenas y comidas con hora en el calendario suscrito
 
 - **Decisión (Diego):** «pon horas a cenas y comidas». Salían de todo el día en Google Calendar.
-- **Qué cambia:** en el calendario suscrito, la cena sale a las **21:00** y la comida a las **14:00** (`HORA_CENA`, `HORA_COMIDA`; duran una hora, como cualquier evento con hora). Siguen **sin alarma**, como antes.
+- **Qué cambia:** en el calendario suscrito, la comida sale a las **14:00** y la cena a las **20:00 entre semana** y a las **21:00 sábados y domingos** (ajuste de Diego: «entre semana adelantaría la cena a las 20:00»; `HORA_COMIDA`, `HORA_CENA_SEMANA`, `HORA_CENA`; duran una hora, como cualquier evento con hora). Siguen **sin alarma**, como antes.
 - **Límites:** la hora es la misma para todos los días y no se puede cambiar desde la app (las comidas y cenas no guardan hora propia). Cumpleaños, tareas de Casa y fechas señaladas siguen siendo de todo el día. Google tarda hasta 24 h en reflejarlo.

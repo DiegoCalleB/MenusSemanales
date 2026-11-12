@@ -62,7 +62,12 @@ export type ProyeccionCalendario = z.infer<typeof proyeccionSchema>;
 
 /** A qué hora salen en el calendario las comidas y cenas (no llevan hora propia en la app). */
 export const HORA_COMIDA = "14:00";
+/** Entre semana se cena antes (20:00); sábados y domingos, a las 21:00. */
+export const HORA_CENA_SEMANA = "20:00";
 export const HORA_CENA = "21:00";
+
+/** ¿Es sábado o domingo? (`AAAA-MM-DD`, sin depender de la zona horaria). */
+const esFinDeSemana = (f: string) => [0, 6].includes(new Date(`${f}T12:00:00Z`).getUTCDay());
 
 const limpio = (t: string) =>
   t
@@ -97,7 +102,7 @@ export function eventosSuscritos(
       fecha: f,
       titulo: `🍽️ Cena: ${platos.join(" + ")}`,
       descripcion: `Platos: ${platos.join(", ")}`,
-      hora: HORA_CENA,
+      hora: esFinDeSemana(f) ? HORA_CENA : HORA_CENA_SEMANA,
     });
   }
   for (const [f, textos] of porFecha(p.almuerzos)) {
