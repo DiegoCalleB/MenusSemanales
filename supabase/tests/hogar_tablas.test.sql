@@ -236,8 +236,15 @@ select pg_temp.falla('Otro hogar no lee este',
 select pg_temp.falla('Ni lo escribe',
   $q$select public.aplicar_cambios_tablas((select id from _ids where clave = 'HA'), '{"horizonte":"semana"}'::jsonb)$q$, '42501');
 -- Reutilizar el identificador de una fila ajena no la cambia ni la mueve (el upsert solo toca las del hogar).
-select public.aplicar_cambios_tablas((select id from _ids where clave = 'HC'),
-  '{"casa":{"upsert":[{"id":"b0000000-0000-0000-0000-000000000002","titulo":"Secuestrada","cadaDias":1,"desde":"2026-11-02"}]}}'::jsonb);
+-- Según la versión de Postgres, el intento se ignora sin más o se rechaza con un error de RLS (42501);
+-- en los dos casos la fila ajena queda intacta, que es lo que se comprueba justo después.
+do $$
+begin
+  perform public.aplicar_cambios_tablas((select id from _ids where clave = 'HC'),
+    '{"casa":{"upsert":[{"id":"b0000000-0000-0000-0000-000000000002","titulo":"Secuestrada","cadaDias":1,"desde":"2026-11-02"}]}}'::jsonb);
+exception when insufficient_privilege then
+  null;
+end $$;
 select pg_temp.igual('Su hogar está vacío', (select jsonb_array_length(public.leer_hogar_tablas((select id from _ids where clave = 'HC'))->'personas')), 0);
 select pg_temp.fin();
 select pg_temp.igual('La tarea de la otra familia no cambió y nada se coló en el hogar C',
