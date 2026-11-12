@@ -130,6 +130,10 @@ body {
   .boton-suave {
     @apply border-borde bg-superficie text-tinta hover:bg-fondo inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-full border px-5 text-base font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
   }
+  /* Botón solo con icono (editar, quitar…): mide 44 × 44 y no ocupa más. El nombre va en aria-label. */
+  .boton-icono {
+    @apply border-borde bg-superficie text-tinta hover:bg-fondo inline-flex size-11 shrink-0 items-center justify-center rounded-full border text-lg transition-colors;
+  }
   /* 16 px como mínimo: iOS no amplía la pantalla al enfocar un campo. */
   .campo {
     @apply border-borde bg-superficie text-tinta placeholder:text-tinta-suave min-h-11 w-full rounded-2xl border px-4 text-base;

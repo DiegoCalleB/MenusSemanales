@@ -283,7 +283,7 @@ export function CalendarioVista() {
                 ) : (
                   <li
                     key={a.id}
-                    className="border-borde flex min-h-11 flex-wrap items-center justify-between gap-2 border-b py-2 last:border-b-0"
+                    className="border-borde flex min-h-11 items-center justify-between gap-2 border-b py-1 last:border-b-0"
                   >
                     <span className="min-w-0 text-base">
                       <span aria-hidden="true">📌 </span>
@@ -296,15 +296,16 @@ export function CalendarioVista() {
                         </span>
                       )}
                     </span>
-                    <span className="flex shrink-0 gap-2">
+                    <span className="flex shrink-0 gap-1">
                       <BotonEditar nombre={a.titulo} alPulsar={() => setEditandoCita(a.id)} />
                       <button
                         type="button"
-                        className="boton-suave px-4"
+                        className="boton-icono"
                         aria-label={`Quitar la cita ${a.titulo}`}
+                        title="Quitar"
                         onClick={() => despachar({ tipo: "agenda/borrar", id: a.id })}
                       >
-                        Quitar
+                        <span aria-hidden="true">🗑️</span>
                       </button>
                     </span>
                   </li>
