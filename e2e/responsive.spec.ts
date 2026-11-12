@@ -1688,6 +1688,35 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 
+  test("editar: un premio (nombre y estrellas que cuesta)", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/tareas");
+    await pagina.getByRole("button", { name: /^Alba/ }).click();
+    await pagina.getByRole("button", { name: "Poner premios de ejemplo" }).click();
+    await pagina.getByRole("button", { name: "Editar", exact: true }).click();
+    await pagina
+      .getByRole("button", { name: /^Editar el premio / })
+      .first()
+      .click();
+    const formulario = pagina.getByRole("form", { name: /^Editar el premio / });
+
+    // Sin estrellas válidas no se guarda y lo dice.
+    await formulario.getByLabel("Cuántas estrellas cuesta").fill("0");
+    await formulario.getByRole("button", { name: "Guardar" }).click();
+    await expect(formulario.getByRole("alert")).toBeVisible();
+
+    await formulario.getByLabel("Premio", { exact: true }).fill("Helado en familia");
+    await formulario.getByLabel("Cuántas estrellas cuesta").fill("3");
+    await formulario.getByRole("button", { name: "Guardar" }).click();
+    await expect(formulario).toHaveCount(0);
+    await expect(pagina.getByText("Helado en familia").first()).toBeVisible();
+    await expect(pagina.getByText(/^3 ⭐/).first()).toBeVisible();
+    await pagina.reload({ waitUntil: "networkidle" });
+    await pagina.getByRole("button", { name: /^Alba/ }).click();
+    await expect(pagina.getByText("Helado en familia").first()).toBeVisible();
+    await contexto.close();
+  });
+
   test("tareas: apuntar para una persona, marcar, recargar y quitar", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/tareas");

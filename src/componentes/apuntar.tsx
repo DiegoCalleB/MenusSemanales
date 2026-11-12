@@ -91,7 +91,7 @@ export function Apuntar() {
               ) : (
                 <li
                   key={a.id}
-                  className="border-borde bg-fondo flex items-center justify-between gap-3 rounded-2xl border p-3"
+                  className="border-borde bg-fondo flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-3"
                 >
                   <p className="min-w-0 text-base">
                     <strong>{fechaCorta(a.fecha)}</strong> · {resumenApunte(a)}
