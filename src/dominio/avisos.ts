@@ -197,6 +197,28 @@ export function avisosDeHoy(e: EntradaAvisos): Aviso[] {
     .map((x) => x.a);
 }
 
+/**
+ * El recordatorio de la noche (D-139): lo que hay que dejar preparado hoy (la mochila) y las
+ * citas de mañana. Vacío si no hay nada: entonces no se manda.
+ */
+export function avisosDeLaNoche(e: EntradaAvisos): Aviso[] {
+  return avisosDeHoy(e).filter(
+    (a) => a.id.startsWith("mochila-") || (a.id.startsWith("cita-") && a.nivel === "pronto"),
+  );
+}
+
+export function notificacionDeLaNoche(avisos: readonly Aviso[]) {
+  const mochila = avisos.filter((a) => a.id.startsWith("mochila-"));
+  return {
+    titulo: mochila.length > 0 ? "🎒 Antes de dormir" : "Para mañana",
+    cuerpo: avisos
+      .slice(0, 4)
+      .map((a) => `${a.emoji} ${a.titulo}`)
+      .join("\n")
+      .slice(0, 240),
+  };
+}
+
 /** Avisos que piden hacer algo (los que dan la campanita y las notificaciones). */
 export const avisosQueImportan = (avisos: readonly Aviso[]) =>
   avisos.filter((a) => a.nivel !== "info");

@@ -7,6 +7,9 @@ vi.mock("@/infraestructura/acceso-miembro", () => ({
   tokenDeLaPeticion: (r: Request) =>
     /^Bearer (.+)$/.exec(r.headers.get("authorization") ?? "")?.[1],
 }));
+vi.mock("@/infraestructura/avisos/claves", () => ({
+  clavePublicaDeAvisos: async () => process.env.CLAVE_EN_BD ?? null,
+}));
 vi.mock("@/infraestructura/avisos/push", () => ({
   claveVapidPublica: () => process.env.VAPID_PUBLIC_KEY ?? null,
   generarClavesVapid: () => ({ publicKey: "PUB", privateKey: "PRIV" }),
@@ -41,6 +44,8 @@ beforeEach(() => {
 describe("GET /api/push/clave", () => {
   it("404 si no está configurado y la clave pública si lo está", async () => {
     expect((await clave()).status).toBe(404);
+    vi.stubEnv("CLAVE_EN_BD", "DE_LA_BASE");
+    expect(await (await clave()).json()).toEqual({ clave: "DE_LA_BASE" });
     vi.stubEnv("VAPID_PUBLIC_KEY", "PUBLICA");
     expect(await (await clave()).json()).toEqual({ clave: "PUBLICA" });
   });

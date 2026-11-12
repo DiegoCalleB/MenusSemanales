@@ -1115,6 +1115,10 @@ export type Database = {
         Args: { p_endpoint: string }
         Returns: undefined
       }
+      pedir_prueba_push: {
+        Args: { p_hogar_id: string; p_endpoint: string }
+        Returns: boolean
+      }
       aplicar_cambios_registro: {
         Args: { p_hogar_id: string; p_cambios: Json }
         Returns: undefined

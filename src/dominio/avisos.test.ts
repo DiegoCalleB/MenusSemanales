@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   type EntradaAvisos,
   avisosDeHoy,
+  avisosDeLaNoche,
+  notificacionDeLaNoche,
   avisosQueImportan,
   direccionesDeAvisos,
   entradaDeProyeccion,
@@ -205,5 +207,25 @@ describe("avisos de qué llevar (D-136) y del domingo (D-137)", () => {
     expect(
       avisosDeHoy({ ...base, diasConCena: [] }).some((x) => x.id.startsWith("plan-semana")),
     ).toBe(false);
+  });
+});
+
+describe("recordatorio de la noche (D-139)", () => {
+  it("solo lo que hay que preparar hoy y las citas de mañana", () => {
+    const a = avisosDeLaNoche({
+      ...base,
+      hoy: "2026-11-19",
+      citas: [
+        { fecha: "2026-11-19", titulo: "Hoy no", hora: "10:00" },
+        { fecha: "2026-11-20", titulo: "Dentista", hora: "9:30" },
+      ],
+      mochila: [{ texto: "Patines", persona: "Emma", dias: [5], fecha: null, antes: 1 }],
+    });
+    expect(a.map((x) => x.titulo)).toEqual([
+      "Deja preparado: Patines de Emma (para mañana)",
+      "Mañana 9:30: Dentista",
+    ]);
+    expect(notificacionDeLaNoche(a).titulo).toBe("🎒 Antes de dormir");
+    expect(avisosDeLaNoche({ ...base, hoy: "2026-11-18" })).toEqual([]);
   });
 });

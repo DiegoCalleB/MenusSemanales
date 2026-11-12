@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { crearClienteNavegador } from "@/infraestructura/supabase/cliente-navegador";
-import { guardarSuscripcionPush, quitarSuscripcionPush } from "@/infraestructura/supabase/cuenta";
+import {
+  guardarSuscripcionPush,
+  pedirPruebaPush,
+  quitarSuscripcionPush,
+} from "@/infraestructura/supabase/cuenta";
 import { useCuenta } from "./proveedor-hogar";
 
 type Estado =
@@ -28,9 +32,10 @@ const estaInstalada = () =>
   (navigator as unknown as { standalone?: boolean }).standalone === true;
 
 /**
- * Notificaciones en el móvil (D-115): cada mañana a las 10 llega el aviso de hoy aunque la app
- * esté cerrada. Cada móvil las activa por su cuenta. Necesita que el servidor tenga sus claves
- * (se generan desde aquí una vez y se ponen en Railway) y, en iPhone, la app instalada.
+ * Notificaciones en el móvil (D-115, D-139): cada mañana a las 9 llega el aviso de hoy y a las 20
+ * el recordatorio de lo que hay que dejar preparado, aunque la app esté cerrada. Cada móvil las
+ * activa por su cuenta. Las claves del servidor las crea y guarda la base de datos sola (antes había
+ * que ponerlas en Railway; sigue pudiéndose) y, en iPhone, hace falta la app instalada.
  */
 export function NotificacionesMovil() {
   const { fase, hogar } = useCuenta();
@@ -142,6 +147,20 @@ export function NotificacionesMovil() {
         headers: { Authorization: `Bearer ${await token()}`, "Content-Type": "application/json" },
         body: JSON.stringify(sub.toJSON()),
       });
+      // Sin claves en Railway, las tiene la base de datos: ella pide a la app que mande la prueba (D-139).
+      if (r.status === 503 && hogar) {
+        const { data, error } = await pedirPruebaPush(
+          crearClienteNavegador(),
+          hogar.id,
+          sub.endpoint,
+        );
+        setMensaje(
+          !error && data
+            ? "Prueba pedida: te llegará en unos segundos."
+            : "No se ha podido enviar la prueba. Desactívalas y vuelve a activarlas.",
+        );
+        return;
+      }
       setMensaje(
         r.ok
           ? "Prueba enviada: debería llegarte ahora mismo."
@@ -188,8 +207,9 @@ export function NotificacionesMovil() {
         <span aria-hidden="true">📲 </span>Notificaciones en el móvil
       </h2>
       <p className="text-base">
-        Cada mañana a las 10 te llega el aviso de hoy: la cena, las citas, lo que toca en casa y los
-        cumpleaños que se acercan. Aunque la app esté cerrada.
+        Cada mañana a las 9 te llega el aviso de hoy: la cena, las citas, lo que toca en casa y los
+        cumpleaños que se acercan. Y a las 20, si hay que dejar algo preparado (la mochila) o hay
+        una cita mañana, un recordatorio. Aunque la app esté cerrada.
       </p>
 
       {fase !== "conectado" || !hogar ? (
@@ -210,62 +230,80 @@ export function NotificacionesMovil() {
       ) : estado === "sin-configurar" ? (
         <div className="flex flex-col gap-3">
           <p className="bg-suave-1 rounded-2xl p-3 text-base">
-            <strong>Falta un paso, una sola vez.</strong> El servidor necesita unas claves para
-            poder enviar notificaciones. Genéralas aquí y ponlas en Railway → tu servicio →
-            Variables: <code>VAPID_PUBLIC_KEY</code> (la pública) y <code>VAPID_PRIVATE_KEY</code>{" "}
-            (la privada). Cuando Railway termine de desplegar, vuelve aquí.
+            <strong>El servidor aún está preparando las notificaciones.</strong> Lo hace solo la
+            primera vez y tarda como mucho una hora. Vuelve a intentarlo en un rato.
           </p>
-          {!claves ? (
-            <button
-              type="button"
-              className="boton w-fit"
-              disabled={ocupado}
-              onClick={() => void generarClaves()}
-            >
-              Generar las claves
-            </button>
-          ) : (
-            <div className="flex flex-col gap-2">
-              <p className="text-aviso-texto text-base font-semibold">
-                🔒 La privada es secreta: pégala solo en Railway, no la mandes por ningún chat.
-                Estas claves no se guardan en ningún sitio: si cierras esto, genera otras.
-              </p>
-              {(
-                [
-                  ["VAPID_PUBLIC_KEY", claves.publica, "Clave pública"],
-                  ["VAPID_PRIVATE_KEY", claves.privada, "Clave privada"],
-                ] as const
-              ).map(([nombre, valor, etiqueta]) => (
-                <div key={nombre} className="flex flex-col gap-1">
-                  <label className="text-sm font-semibold" htmlFor={nombre}>
-                    {nombre}
-                  </label>
-                  <input
-                    id={nombre}
-                    className="campo font-mono text-sm"
-                    readOnly
-                    value={valor}
-                    onFocus={(e) => e.currentTarget.select()}
-                  />
-                  <button
-                    type="button"
-                    className="boton-suave w-fit"
-                    onClick={() => void copiar(valor, etiqueta)}
-                  >
-                    Copiar {etiqueta.toLowerCase()}
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
           <button
             type="button"
-            className="boton-suave w-fit"
+            className="boton w-fit"
             disabled={ocupado}
             onClick={() => void activar()}
           >
-            Ya las he puesto: activar ahora
+            Volver a intentarlo
           </button>
+          <details>
+            <summary className="text-tinta-suave cursor-pointer text-sm">
+              Hacerlo a mano (claves en Railway)
+            </summary>
+            <div className="mt-2 flex flex-col gap-3">
+              <p className="text-base">
+                Genera aquí las claves y ponlas en Railway → tu servicio → Variables:{" "}
+                <code>VAPID_PUBLIC_KEY</code> (la pública) y <code>VAPID_PRIVATE_KEY</code> (la
+                privada). Cuando Railway termine de desplegar, vuelve aquí.
+              </p>
+              {!claves ? (
+                <button
+                  type="button"
+                  className="boton w-fit"
+                  disabled={ocupado}
+                  onClick={() => void generarClaves()}
+                >
+                  Generar las claves
+                </button>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <p className="text-aviso-texto text-base font-semibold">
+                    🔒 La privada es secreta: pégala solo en Railway, no la mandes por ningún chat.
+                    Estas claves no se guardan en ningún sitio: si cierras esto, genera otras.
+                  </p>
+                  {(
+                    [
+                      ["VAPID_PUBLIC_KEY", claves.publica, "Clave pública"],
+                      ["VAPID_PRIVATE_KEY", claves.privada, "Clave privada"],
+                    ] as const
+                  ).map(([nombre, valor, etiqueta]) => (
+                    <div key={nombre} className="flex flex-col gap-1">
+                      <label className="text-sm font-semibold" htmlFor={nombre}>
+                        {nombre}
+                      </label>
+                      <input
+                        id={nombre}
+                        className="campo font-mono text-sm"
+                        readOnly
+                        value={valor}
+                        onFocus={(e) => e.currentTarget.select()}
+                      />
+                      <button
+                        type="button"
+                        className="boton-suave w-fit"
+                        onClick={() => void copiar(valor, etiqueta)}
+                      >
+                        Copiar {etiqueta.toLowerCase()}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <button
+                type="button"
+                className="boton-suave w-fit"
+                disabled={ocupado}
+                onClick={() => void activar()}
+              >
+                Ya las he puesto: activar ahora
+              </button>
+            </div>
+          </details>
         </div>
       ) : estado === "denegado" ? (
         <p className="bg-suave-1 rounded-2xl p-3 text-base font-semibold">

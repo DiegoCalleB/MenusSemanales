@@ -25,9 +25,11 @@ export async function enviarPush(
   sub: SuscripcionPush,
   mensaje: { titulo: string; cuerpo: string },
   enviar: typeof webpush.sendNotification = webpush.sendNotification,
+  /** Las claves guardadas en la base de datos (D-139); sin ellas, las de las variables. */
+  claves?: { publica: string; privada: string } | null,
 ): Promise<ResultadoPush> {
-  const publica = process.env.VAPID_PUBLIC_KEY;
-  const privada = process.env.VAPID_PRIVATE_KEY;
+  const publica = claves?.publica ?? process.env.VAPID_PUBLIC_KEY;
+  const privada = claves?.privada ?? process.env.VAPID_PRIVATE_KEY;
   if (!publica || !privada) return "fallo";
   const sujeto =
     process.env.VAPID_SUBJECT?.trim() ||
