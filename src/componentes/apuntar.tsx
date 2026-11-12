@@ -91,20 +91,21 @@ export function Apuntar() {
               ) : (
                 <li
                   key={a.id}
-                  className="border-borde bg-fondo flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-3"
+                  className="border-borde bg-fondo flex items-center justify-between gap-2 rounded-2xl border py-1.5 pr-1.5 pl-3"
                 >
                   <p className="min-w-0 text-base">
                     <strong>{fechaCorta(a.fecha)}</strong> · {resumenApunte(a)}
                   </p>
-                  <span className="flex shrink-0 gap-2">
+                  <span className="flex shrink-0 gap-1">
                     <BotonEditar nombre={a.titulo} alPulsar={() => setEditando(a.id)} />
                     <button
                       type="button"
-                      className="boton-suave"
+                      className="boton-icono"
                       aria-label={`Quitar ${a.titulo}`}
+                      title="Quitar"
                       onClick={() => despachar({ tipo: "agenda/borrar", id: a.id })}
                     >
-                      Quitar
+                      <span aria-hidden="true">🗑️</span>
                     </button>
                   </span>
                 </li>

@@ -142,7 +142,7 @@ export function FechasVista() {
               return (
                 <li
                   key={c.clave}
-                  className="border-borde bg-fondo flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-3"
+                  className="border-borde bg-fondo flex items-center justify-between gap-2 rounded-2xl border py-1.5 pr-1.5 pl-3"
                 >
                   <p className="min-w-0 text-base">
                     <span aria-hidden="true">{c.emoji} </span>
@@ -152,28 +152,30 @@ export function FechasVista() {
                       {c.hora ? ` · ${c.hora}` : ""} · {c.dias <= 1 ? c.texto : `en ${c.texto}`}
                     </span>
                   </p>
-                  <span className="flex flex-wrap gap-2">
+                  <span className="flex shrink-0 gap-1">
                     {(cumple || cita) && (
                       <BotonEditar nombre={c.titulo} alPulsar={() => setEditando(c.clave)} />
                     )}
                     <a
-                      className="boton-suave"
+                      className="boton-icono"
                       href={enlaceGoogleCalendar({ ...c, anual: c.anual })}
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={`Añadir ${c.titulo} a Google Calendar`}
+                      title="Añadir a Google Calendar"
                     >
-                      ＋ Google
+                      <span aria-hidden="true">📅</span>
                     </a>
                     <button
                       type="button"
-                      className="boton-suave"
+                      className="boton-icono"
                       aria-label={`Descargar ${c.titulo} para el calendario`}
+                      title="Descargar para el calendario"
                       onClick={() =>
                         descargar("fecha.ics", generarIcs("Fecha", [comoEvento(c)], new Date()))
                       }
                     >
-                      ＋ .ics
+                      <span aria-hidden="true">⬇️</span>
                     </button>
                   </span>
                 </li>

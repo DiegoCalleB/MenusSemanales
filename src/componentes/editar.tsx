@@ -91,11 +91,12 @@ export function BotonEditar({ nombre, alPulsar }: { nombre: string; alPulsar: ()
   return (
     <button
       type="button"
-      className="boton-suave"
+      className="boton-icono"
       aria-label={`Editar ${nombre}`}
+      title="Editar"
       onClick={alPulsar}
     >
-      <span aria-hidden="true">✏️ </span>Editar
+      <span aria-hidden="true">✏️</span>
     </button>
   );
 }
