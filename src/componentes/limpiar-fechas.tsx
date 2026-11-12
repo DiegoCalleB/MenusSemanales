@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { separarHoraDelTitulo } from "@/dominio/agenda";
 import { useCuenta, useHogar } from "./proveedor-hogar";
 
 /**
@@ -11,11 +12,16 @@ export function LimpiarFechas() {
   const { estado, despachar } = useHogar();
   const { fase } = useCuenta();
   const hayPasadas = estado.agenda.some((a) => (a.hasta ?? a.fecha) < estado.hoy);
+  // Citas que se apuntaron con la hora dentro del título («circo 18:00») y salen de todo el día.
+  const hayHorasPorArreglar = estado.agenda.some(
+    (a) => a.hora === null && separarHoraDelTitulo(a.titulo).hora !== null,
+  );
 
   useEffect(() => {
-    if (fase === "cargando" || !hayPasadas) return;
-    despachar({ tipo: "agenda/limpiar" });
-  }, [fase, hayPasadas, estado.hoy, despachar]);
+    if (fase === "cargando") return;
+    if (hayPasadas) despachar({ tipo: "agenda/limpiar" });
+    if (hayHorasPorArreglar) despachar({ tipo: "agenda/arreglarHoras" });
+  }, [fase, hayPasadas, hayHorasPorArreglar, estado.hoy, despachar]);
 
   return null;
 }

@@ -365,3 +365,71 @@ describe("editar la comida del mediodía (almuerzo/editar)", () => {
     }
   });
 });
+
+describe("la hora escrita en el título de una cita (D-134)", () => {
+  it("al crear una cita con la hora al final del título, la pasa a su sitio", () => {
+    const e = aplicar(base(), {
+      tipo: "agenda/cita",
+      titulo: "Circo del Sol Kurios 18:00",
+      fecha: "2026-11-13",
+      idBase: BASE,
+    });
+    expect(e.agenda.at(-1)).toMatchObject({ titulo: "Circo del Sol Kurios", hora: "18:00" });
+  });
+
+  it("al editar una cita que ya la lleva en el título, basta con guardar", () => {
+    const e0 = aplicar(base(), {
+      tipo: "agenda/cita",
+      titulo: "Dentista",
+      fecha: "2026-12-10",
+      idBase: BASE,
+    });
+    const id = e0.agenda.at(-1)!.id;
+    const d = reducir(e0, {
+      tipo: "agenda/editar",
+      id,
+      titulo: "Dentista 17:30",
+      fecha: "2026-12-10",
+    });
+    expect(d.agenda.find((a) => a.id === id)).toMatchObject({ titulo: "Dentista", hora: "17:30" });
+    // Si ya tiene hora, el título no se toca.
+    const conHora = reducir(e0, {
+      tipo: "agenda/editar",
+      id,
+      titulo: "Dentista 17:30",
+      fecha: "2026-12-10",
+      hora: "09:00",
+    });
+    expect(conHora.agenda.find((a) => a.id === id)).toMatchObject({
+      titulo: "Dentista 17:30",
+      hora: "09:00",
+    });
+  });
+
+  it("arregla de golpe las citas que ya estaban guardadas con la hora en el título", () => {
+    const e = {
+      ...base(),
+      agenda: [
+        {
+          id: "a1",
+          fecha: "2026-11-13",
+          hasta: null,
+          hora: null,
+          titulo: "circo del sol kurios 18:00",
+        },
+        { id: "a2", fecha: "2026-11-14", hasta: null, hora: null, titulo: "Piscina" },
+        { id: "a3", fecha: "2026-11-15", hasta: null, hora: "10:00", titulo: "Cole 9:00" },
+      ],
+    };
+    const d = reducir(e, { tipo: "agenda/arreglarHoras" });
+    expect(d.agenda).toEqual([
+      { id: "a1", fecha: "2026-11-13", hasta: null, hora: "18:00", titulo: "circo del sol kurios" },
+      { id: "a2", fecha: "2026-11-14", hasta: null, hora: null, titulo: "Piscina" },
+      { id: "a3", fecha: "2026-11-15", hasta: null, hora: "10:00", titulo: "Cole 9:00" },
+    ]);
+    // Sin nada que arreglar, es el mismo estado (no hay nada que guardar).
+    expect(reducir(d, { tipo: "agenda/arreglarHoras" })).toBe(d);
+    // Y se manda como un cambio de esa fila.
+    expect(diferencias(e, d, HOGAR)?.agenda?.upsert).toHaveLength(1);
+  });
+});

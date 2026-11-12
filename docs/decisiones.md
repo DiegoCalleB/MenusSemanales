@@ -1145,3 +1145,14 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Mismas reglas que al crear:** se valida igual (título obligatorio, días que existen —no el 31 de abril—, hora válida, último día posterior, año entre 1900 y hoy, 1 a 3650 días…) y no deja dos iguales (misma cita el mismo día, mismo cumpleaños, misma tarea). Si algo no vale, **el formulario se queda abierto** y dice por qué (se prueba la acción antes de aplicarla), con la validación nuestra en español y no la del navegador (`noValidate`).
 - **Sincronización:** editar es un cambio de esa fila, no borrar y crear: la comparación por filas de la nube ya lo manda (comprobado en los tests de cada una). Nada nuevo en la base de datos: sin migración.
 - **Lo que sigue sin editarse:** las **fechas señaladas** del calendario (festivos y similares, `eventos`), que vienen de los datos y no se crean desde la app; y lo de Google Calendar, que se cambia en Google.
+
+## D-134 · Google Calendar: los eventos salían sin hora
+
+- **Problema (Diego, captura de Google Calendar):** «📌 circo del sol kurios 18:00» aparecía como evento de **todo el día**.
+- **Causas:** (1) la hora escrita **al final del título** («circo del sol kurios 18:00») no se reconocía como hora —solo se leía justo después de la fecha—, así que la cita quedaba sin hora y salía de todo el día; (2) las horas del `.ics` iban «flotantes» (sin zona), algo que Google interpreta a su manera.
+- **Qué cambia:**
+  - `separarHoraDelTitulo` (dominio): saca la hora final del título («18:00», «21h30», «a las 18», «a las 18.30»). **No** la confunde con precios («12.50»), duraciones («8h») ni horas imposibles, y no deja el título vacío. Se usa al crear, al editar y al leer notas (`parsearAgenda`) cuando no hay hora justo tras la fecha.
+  - **Arreglo de lo ya apuntado:** la acción `agenda/arreglarHoras` pone la hora a las citas existentes sin hora cuyo título acaba en una. La lanza sola `LimpiarFechas` al abrir la app (se sincroniza como cualquier cambio); no hace nada si no hay qué arreglar.
+  - **`.ics`:** los eventos con hora llevan `DTSTART;TZID=Europe/Madrid`, un bloque `VTIMEZONE` (CET/CEST) y `X-WR-TIMEZONE`. Los de todo el día no cambian. Comprobado con una librería de calendarios independiente: 18:00 de noviembre sale +01:00 y 18:00 de julio +02:00.
+- **Por diseño siguen siendo de todo el día:** cumpleaños, cenas, comidas y tareas de Casa en el calendario suscrito. Se les podría dar una hora por defecto si se quiere.
+- **Aviso:** Google refresca los calendarios suscritos cada 12–24 h; el cambio no se ve al instante.

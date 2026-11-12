@@ -38,7 +38,7 @@ import {
   MAX_LARGO_ALMUERZO,
   menuDeComidaEnCasa,
 } from "@/dominio/almuerzos";
-import { type Apunte, parsearAgenda } from "@/dominio/agenda";
+import { type Apunte, parsearAgenda, separarHoraDelTitulo } from "@/dominio/agenda";
 import {
   type ConjuntoCasa,
   PLANTILLAS,
@@ -266,6 +266,8 @@ export type Accion =
     }
   /** Quita de la agenda lo que ya pasó (D-123): lo que terminó antes de hoy. */
   | { tipo: "agenda/limpiar" }
+  /** Pasa a «hora» la que está escrita al final del título de una cita sin hora (D-134). */
+  | { tipo: "agenda/arreglarHoras" }
   | { tipo: "almuerzo/anadir"; fecha: FechaIso; texto?: string; platoId?: string; idBase?: string }
   | { tipo: "almuerzo/borrar"; id: string }
   /** Cambia una comida del mediodía: el día y qué se come (D-133). */
@@ -482,6 +484,15 @@ export function mediodiaPorDia(e: EstadoHogar): Record<FechaIso, MenuCole> {
     if (menu) salida[fecha] = menu;
   }
   return salida;
+}
+
+/** Si la cita no tiene hora pero el título acaba en una («cena 21:30»), la pasa a su sitio (D-134). */
+function conHoraDelTitulo(
+  titulo: string,
+  hora: string | null,
+): { titulo: string; hora: string | null } {
+  if (hora !== null) return { titulo, hora };
+  return separarHoraDelTitulo(titulo);
 }
 
 /** ¿Es una fecha `AAAA-MM-DD` que existe de verdad (no el 31 de abril)? */
@@ -1514,8 +1525,10 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
       return { ...e, casa: e.casa.filter((t) => t.id !== accion.id) };
 
     case "agenda/cita": {
-      const titulo = accion.titulo.replace(/\s+/g, " ").trim();
-      const hora = accion.hora && accion.hora !== "" ? accion.hora : null;
+      const { titulo, hora } = conHoraDelTitulo(
+        accion.titulo.replace(/\s+/g, " ").trim(),
+        accion.hora && accion.hora !== "" ? accion.hora : null,
+      );
       const hasta = accion.hasta && accion.hasta !== "" ? accion.hasta : null;
       const fechaValida = /^\d{4}-\d{2}-\d{2}$/.test(accion.fecha);
       const mal =
@@ -1564,8 +1577,10 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
 
     case "agenda/editar": {
       const actual = e.agenda.find((a) => a.id === accion.id);
-      const titulo = accion.titulo.replace(/\s+/g, " ").trim();
-      const hora = accion.hora && accion.hora !== "" ? accion.hora : null;
+      const { titulo, hora } = conHoraDelTitulo(
+        accion.titulo.replace(/\s+/g, " ").trim(),
+        accion.hora && accion.hora !== "" ? accion.hora : null,
+      );
       const hasta = accion.hasta && accion.hasta !== "" ? accion.hasta : null;
       const mal =
         !actual ||
@@ -1602,6 +1617,19 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
         siguienteId: e.siguienteId + 1,
         aviso: ok(e, `Cambiado: ${titulo}.`),
       };
+    }
+
+    case "agenda/arreglarHoras": {
+      let cambiado = false;
+      const agenda = e.agenda.map((a) => {
+        if (a.hora !== null) return a;
+        const separada = separarHoraDelTitulo(a.titulo);
+        if (separada.hora === null) return a;
+        cambiado = true;
+        return { ...a, titulo: separada.titulo, hora: separada.hora };
+      });
+      // Sin nada que arreglar se devuelve el mismo estado: no hay cambio que guardar.
+      return cambiado ? { ...e, agenda } : e;
     }
 
     case "agenda/limpiar": {
