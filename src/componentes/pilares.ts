@@ -42,6 +42,7 @@ export const PILARES: readonly Pilar[] = [
     pestanas: [
       { href: "/casa", texto: "Recurrente" },
       { href: "/tareas", texto: "Por persona" },
+      { href: "/mochila", texto: "Mochila" },
       { href: "/reparto", texto: "Reparto" },
     ],
   },
@@ -77,6 +78,9 @@ export function pilarDe(ruta: string): Pilar | null {
   if (ruta === "/") return PILARES[0] ?? null;
   // «Llego tarde» ya no es una pestaña (se llega desde la portada y desde Cena), pero sigue siendo de Comer.
   if (ruta === "/menu/emergencia") return PILARES.find((p) => p.id === "comer") ?? null;
+  // Lo compartido desde otra app acaba en fechas; el plan de la semana es de «Hoy».
+  if (ruta === "/compartido") return PILARES.find((p) => p.id === "fechas") ?? null;
+  if (ruta === "/semana") return PILARES[0] ?? null;
   return PILARES.find((p) => p.pestanas.some((t) => coincide(ruta, t.href))) ?? null;
 }
 

@@ -735,6 +735,7 @@ export function migrarIdsDePersonas(e: EstadoHogar, hogarId: string): EstadoHoga
     cumples: e.cumples.map((c) => (c.personaId ? { ...c, personaId: id(c.personaId) } : c)),
     casa: e.casa.map((t) => ({ ...t, responsableId: idONulo(t.responsableId) })),
     tareas: e.tareas.map((t) => (t.personaId ? { ...t, personaId: id(t.personaId) } : t)),
+    mochila: (e.mochila ?? []).map((c) => ({ ...c, personaId: id(c.personaId) })),
   };
 }
 

@@ -15,7 +15,9 @@ insert into _ids values ('HA', public.crear_hogar('Hogar A'));
 -- El documento viejo dice una cosa; las tablas, otra. Manda lo de las tablas.
 select public.guardar_estado_hogar((select id from _ids where clave = 'HA'), 0,
   '{"personas":[{"id":"viejo","nombre":"Viejo","tipo":"adulto","activa":true}],
-    "comidas":[{"fecha":"2026-11-09","plato":{"nombre":"Del documento"}}]}'::jsonb);
+    "comidas":[{"fecha":"2026-11-09","plato":{"nombre":"Del documento"}}],
+    "mochila":[{"id":"m1","personaId":"dddddddd-0000-0000-0000-000000000001","texto":"Patines",
+                "dias":[5],"fecha":null,"antes":1,"preparadas":["2026-11-06"],"secreto":"no sale"}]}'::jsonb);
 insert into _t select 'A', public.enlace_calendario((select id from _ids where clave = 'HA'));
 select pg_temp.fin();
 
@@ -61,9 +63,15 @@ select pg_temp.igual('No sale nada del documento viejo',
   (select (j::text !~ 'Del documento' and j::text !~ 'Viejo')::int from _r where clave = 'r'), 1);
 select pg_temp.igual('Solo las claves de siempre',
   (select (select count(*)::int from jsonb_object_keys(j) k where k in
-     ('agenda','almuerzos','casa','cenas','cumples','eventos','personas')) from _r where clave = 'r'), 7);
+     ('agenda','almuerzos','casa','cenas','cumples','eventos','mochila','personas')) from _r where clave = 'r'), 8);
 select pg_temp.igual('Y ninguna más',
-  (select count(*)::int from _r, jsonb_object_keys(j) where clave = 'r'), 7);
+  (select count(*)::int from _r, jsonb_object_keys(j) where clave = 'r'), 8);
+-- Qué llevar (D-136) sale del documento, solo con persona, texto, días, fecha y antelación.
+select pg_temp.igual('Qué llevar sale del documento',
+  (select ((j->'mochila'->0->>'texto') = 'Patines' and (j->'mochila'->0->'dias') = '[5]'::jsonb
+        and (j->'mochila'->0->>'antes')::int = 1)::int from _r where clave = 'r'), 1);
+select pg_temp.igual('De qué llevar no sale nada más',
+  (select (j::text !~ 'no sale' and j::text !~ '2026-11-06')::int from _r where clave = 'r'), 1);
 select pg_temp.igual('Token inventado: nada',
   (select (public.estado_para_calendario(repeat('0', 64)) is null)::int), 1);
 

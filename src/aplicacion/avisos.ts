@@ -15,6 +15,16 @@ export function entradaDeEstado(e: EstadoHogar): EntradaAvisos {
     citas: e.agenda.map((a) => ({ fecha: a.fecha, titulo: a.titulo, hora: a.hora })),
     tareas: e.casa,
     cumples: e.cumples.map((c) => ({ nombre: c.nombre, dia: c.dia, mes: c.mes })),
+    mochila: e.mochila.map((c) => ({
+      texto: c.texto,
+      persona: e.personas.find((p) => p.id === c.personaId)?.nombre ?? "",
+      dias: c.dias,
+      fecha: c.fecha,
+      antes: c.antes,
+      preparadas: c.preparadas,
+    })),
+    diasConCena: [...new Set(e.comidas.map((c) => c.fecha))],
+    diasSinCena: e.saltados,
   };
 }
 

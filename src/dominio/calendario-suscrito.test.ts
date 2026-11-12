@@ -233,3 +233,36 @@ describe("el resumen que llega de la base de datos", () => {
     ).toBe(false);
   });
 });
+
+describe("qué llevar en el calendario (D-136)", () => {
+  it("pone el recordatorio el día de prepararlo, a las 20:00 y con alarma", () => {
+    // HOY (2026-11-02) es lunes: el piano del martes se prepara hoy; los patines, el jueves 5.
+    const e = eventosSuscritos(
+      base({
+        personas: [...base().personas, { id: "emma", nombre: "Emma", tipo: "nino", activa: true }],
+        mochila: [
+          { personaId: "alba", texto: "Carpeta de piano", dias: [2], fecha: null, antes: 1 },
+          { personaId: "emma", texto: "Patines", dias: [5], fecha: null, antes: 1 },
+        ],
+      }),
+      { hoy: HOY, para: "diego" },
+    ).filter((x) => x.titulo.startsWith("🎒"));
+    expect(e.slice(0, 2)).toEqual([
+      expect.objectContaining({
+        fecha: "2026-11-02",
+        titulo: "🎒 Preparar: Carpeta de piano de Alba (para mañana)",
+        hora: "20:00",
+        aviso: true,
+      }),
+      expect.objectContaining({
+        fecha: "2026-11-05",
+        titulo: "🎒 Preparar: Patines de Emma (para mañana)",
+      }),
+    ]);
+    expect(e).toHaveLength(16); // 8 semanas × 2
+  });
+
+  it("sin «mochila» en el resumen (función SQL anterior) no rompe", () => {
+    expect(proyeccionSchema.safeParse(base()).success).toBe(true);
+  });
+});

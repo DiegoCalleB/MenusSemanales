@@ -32,6 +32,7 @@ import {
   proximaFecha,
 } from "@/dominio/cumples";
 import { type FrecuenciaTarea, type Tarea, alternarTarea } from "@/dominio/tareas";
+import { type CosaQueLlevar, MAX_ANTES, podarPreparadas } from "@/dominio/mochila";
 import {
   type Almuerzo,
   DIAS_ATRAS_COMIDA,
@@ -191,6 +192,8 @@ export interface EstadoHogar {
   canjes: Canje[];
   /** Tareas de cada persona (rutinas diarias y cosas puntuales). */
   tareas: Tarea[];
+  /** Qué llevar al cole o a una actividad (D-136). En el documento del hogar. */
+  mochila: CosaQueLlevar[];
   /** Días en que no se planifica cena en casa (salir, comer fuera, no hace falta). */
   saltados: FechaIso[];
   personas: Persona[];
@@ -320,6 +323,28 @@ export type Accion =
       frecuencia: FrecuenciaTarea;
       personaId?: string;
     }
+  /** Qué llevar (D-136): días de la semana o un día suelto, y con cuánta antelación prepararlo. */
+  | {
+      tipo: "mochila/anadir";
+      personaId: string;
+      texto: string;
+      dias: number[];
+      fecha: FechaIso | null;
+      antes: number;
+      idBase?: string;
+    }
+  | {
+      tipo: "mochila/editar";
+      id: string;
+      personaId: string;
+      texto: string;
+      dias: number[];
+      fecha: FechaIso | null;
+      antes: number;
+    }
+  | { tipo: "mochila/borrar"; id: string }
+  /** Marca (o desmarca) como preparado lo que se lleva el día `para`. */
+  | { tipo: "mochila/preparar"; id: string; para: FechaIso }
   | { tipo: "menu/anadir"; fecha: FechaIso; platoId: string }
   | { tipo: "menu/quitar"; fecha: FechaIso; platoId?: string }
   | { tipo: "menu/llegoTarde"; fecha: FechaIso }
@@ -373,6 +398,7 @@ export const ACCIONES_QUE_CREAN = [
   "casa/anadir",
   "casa/plantilla",
   "tarea/anadir",
+  "mochila/anadir",
   "premio/guardar",
   "premio/canjear",
 ] as const;
@@ -735,6 +761,7 @@ export const normalizar = (e: EstadoHogar): EstadoHogar =>
   Array.isArray(e.registro) &&
   Array.isArray(e.premios) &&
   Array.isArray(e.canjes) &&
+  Array.isArray(e.mochila) &&
   typeof e.ajustesCompra === "object" &&
   e.ajustesCompra !== null
     ? e
@@ -746,6 +773,7 @@ export const normalizar = (e: EstadoHogar): EstadoHogar =>
         registro: Array.isArray(e.registro) ? e.registro : [],
         premios: Array.isArray(e.premios) ? e.premios : [],
         canjes: Array.isArray(e.canjes) ? e.canjes : [],
+        mochila: Array.isArray(e.mochila) ? e.mochila : [],
         agenda: Array.isArray(e.agenda) ? e.agenda : [],
         casa: Array.isArray(e.casa) ? e.casa : [],
         almuerzos: Array.isArray(e.almuerzos) ? e.almuerzos : [],
@@ -1846,6 +1874,83 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
 
     case "tarea/borrar":
       return { ...e, tareas: e.tareas.filter((t) => t.id !== accion.id) };
+
+    case "mochila/anadir":
+    case "mochila/editar": {
+      const texto = accion.texto.replace(/\s+/g, " ").trim();
+      const persona = e.personas.find((p) => p.id === accion.personaId && p.activa);
+      const dias = [...new Set(accion.dias)].filter((d) => Number.isInteger(d) && d >= 1 && d <= 7);
+      const fecha = accion.fecha && accion.fecha !== "" ? accion.fecha : null;
+      const antes = Math.trunc(accion.antes);
+      const fallo = (t: string): EstadoHogar => ({
+        ...e,
+        siguienteId: e.siguienteId + 1,
+        aviso: error(e, t),
+      });
+      if (!persona) return fallo("Elige para quién es.");
+      if (texto === "" || texto.length > MAX_LARGO_ARTICULO) {
+        return fallo(`Escribe qué hay que llevar (hasta ${MAX_LARGO_ARTICULO} caracteres).`);
+      }
+      if (fecha !== null && !fechaIsoValida(fecha)) return fallo("Ese día no existe.");
+      if (fecha === null && dias.length === 0) {
+        return fallo("Elige algún día de la semana o un día concreto.");
+      }
+      if (!(antes >= 0 && antes <= MAX_ANTES)) return fallo("La antelación va de 0 a 7 días.");
+      const datos = {
+        personaId: persona.id,
+        texto,
+        dias: fecha ? [] : dias.sort((a, b) => a - b),
+        fecha,
+        antes,
+      };
+      const clave = (c: { personaId: string; texto: string }) =>
+        `${c.personaId}|${claveArticulo(c.texto)}`;
+      if (accion.tipo === "mochila/anadir") {
+        if (e.mochila.some((c) => clave(c) === clave(datos) && c.fecha === fecha)) {
+          return { ...e, siguienteId: e.siguienteId + 1, aviso: ok(e, "Ya estaba apuntado.") };
+        }
+        const id = idNuevo(accion.idBase, "mochila", "0", `m-${e.siguienteId}`);
+        return {
+          ...e,
+          mochila: [...e.mochila, { id, ...datos, preparadas: [] }],
+          siguienteId: e.siguienteId + 1,
+          aviso: ok(e, `Apuntado: ${texto}.`),
+        };
+      }
+      const actual = e.mochila.find((c) => c.id === accion.id);
+      if (!actual) return e;
+      if (
+        e.mochila.some((c) => c.id !== actual.id && clave(c) === clave(datos) && c.fecha === fecha)
+      ) {
+        return fallo("Ya hay otra igual.");
+      }
+      return {
+        ...e,
+        mochila: e.mochila.map((c) => (c.id === actual.id ? { ...actual, ...datos } : c)),
+        siguienteId: e.siguienteId + 1,
+        aviso: ok(e, "Guardado."),
+      };
+    }
+
+    case "mochila/borrar":
+      return { ...e, mochila: e.mochila.filter((c) => c.id !== accion.id) };
+
+    case "mochila/preparar": {
+      if (!fechaIsoValida(accion.para)) return e;
+      return {
+        ...e,
+        mochila: e.mochila.map((c) => {
+          if (c.id !== accion.id) return c;
+          const podada = podarPreparadas(c, e.hoy);
+          return {
+            ...podada,
+            preparadas: podada.preparadas.includes(accion.para)
+              ? podada.preparadas.filter((f) => f !== accion.para)
+              : [...podada.preparadas, accion.para],
+          };
+        }),
+      };
+    }
 
     case "menu/anadir": {
       const plato = e.platos.find((p) => p.id === accion.platoId);

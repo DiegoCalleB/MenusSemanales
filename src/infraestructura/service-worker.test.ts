@@ -8,6 +8,7 @@ const sw = require("../../public/sw.js") as {
   extraerRecursos: (html: string) => string[];
   clavePagina: (url: string) => string;
   esEstatico: (ruta: string) => boolean;
+  destinoCompartido: (campos: Record<string, unknown>, hayArchivo: boolean) => string;
   RUTAS: string[];
   SUELTOS: string[];
 };
@@ -46,5 +47,20 @@ describe("service worker (uso sin conexión, D-129)", () => {
     }
     expect(new Set(sw.RUTAS).size).toBe(sw.RUTAS.length);
     expect(sw.RUTAS.every((r) => r.startsWith("/"))).toBe(true);
+  });
+});
+
+describe("compartir con la app desde otra (D-138)", () => {
+  it("lleva el texto a /compartido y avisa si hay archivo", () => {
+    expect(sw.destinoCompartido({ text: "Excursión el 20" }, false)).toBe(
+      "/compartido?text=Excursi%C3%B3n+el+20",
+    );
+    expect(sw.destinoCompartido({ title: null, text: "" }, true)).toBe("/compartido?archivo=1");
+    expect(sw.destinoCompartido({}, false)).toBe("/compartido");
+    expect(sw.destinoCompartido({ text: "x".repeat(7000) }, false).length).toBeLessThan(6100);
+  });
+
+  it("guarda la pantalla de lo compartido y la del plan de la semana para usarlas sin conexión", () => {
+    expect(sw.RUTAS).toEqual(expect.arrayContaining(["/compartido", "/semana", "/mochila"]));
   });
 });

@@ -167,3 +167,43 @@ describe("direccionesDeAvisos", () => {
     expect(direccionesDeAvisos(undefined)).toEqual([]);
   });
 });
+
+describe("avisos de qué llevar (D-136) y del domingo (D-137)", () => {
+  const patines = { texto: "Patines", persona: "Emma", dias: [5], fecha: null, antes: 1 };
+
+  it("el jueves avisa de dejar preparados los patines del viernes", () => {
+    // 2026-11-19 es jueves.
+    const a = avisosDeHoy({ ...base, hoy: "2026-11-19", mochila: [patines] });
+    expect(a.find((x) => x.emoji === "🎒")).toMatchObject({
+      titulo: "Deja preparado: Patines de Emma (para mañana)",
+      nivel: "ya",
+    });
+    expect(
+      avisosDeHoy({ ...base, hoy: "2026-11-18", mochila: [patines] }).some((x) => x.emoji === "🎒"),
+    ).toBe(false);
+  });
+
+  it("si ya está preparado, no avisa", () => {
+    const hecho = { ...patines, preparadas: ["2026-11-20"] };
+    expect(
+      avisosDeHoy({ ...base, hoy: "2026-11-19", mochila: [hecho] }).some((x) => x.emoji === "🎒"),
+    ).toBe(false);
+  });
+
+  it("el domingo propone planear la semana con las cenas que faltan y las citas", () => {
+    // 2026-11-15 es domingo; la semana es del 16 al 22.
+    const a = avisosDeHoy({
+      ...base,
+      hoy: "2026-11-15",
+      diasConCena: ["2026-11-16", "2026-11-17"],
+      diasSinCena: ["2026-11-21"],
+      citas: [{ fecha: "2026-11-18", titulo: "AMPA", hora: "16:00" }],
+    });
+    expect(a.find((x) => x.id === "plan-semana-2026-11-15")?.titulo).toBe(
+      "Planea la semana: faltan 4 cenas, 1 cita",
+    );
+    expect(
+      avisosDeHoy({ ...base, diasConCena: [] }).some((x) => x.id.startsWith("plan-semana")),
+    ).toBe(false);
+  });
+});

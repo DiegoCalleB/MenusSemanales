@@ -1164,3 +1164,25 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Decisión (Diego):** «pon horas a cenas y comidas». Salían de todo el día en Google Calendar.
 - **Qué cambia:** en el calendario suscrito, la comida sale a las **14:00** y la cena a las **20:00 entre semana** y a las **21:00 sábados y domingos** (ajuste de Diego: «entre semana adelantaría la cena a las 20:00»; `HORA_COMIDA`, `HORA_CENA_SEMANA`, `HORA_CENA`; duran una hora, como cualquier evento con hora). Siguen **sin alarma**, como antes.
 - **Límites:** la hora es la misma para todos los días y no se puede cambiar desde la app (las comidas y cenas no guardan hora propia). Cumpleaños, tareas de Casa y fechas señaladas siguen siendo de todo el día. Google tarda hasta 24 h en reflejarlo.
+
+## D-136 · Qué llevar (la mochila de cada niño)
+
+- **Decisión (Diego):** «Alba tiene que llevar la carpeta de piano los martes y Emma los patines los viernes, ¡y hay que dejarlos preparados el jueves sin falta!». Es carga mental que no estaba en ningún sitio.
+- **Qué es:** cada cosa tiene persona, texto, **días de la semana** (o un **día suelto**: excursión, disfraz) y **con cuánta antelación se prepara** (de «el mismo día» a 7 días antes; por defecto, la víspera). Se marca como preparada para cada día de uso.
+- **Dónde se ve:** pantalla **Casa → Mochila** (`/mochila`) para apuntar, editar y quitar; en **Hoy**, la tarjeta «🎒 Hoy toca dejar preparado» con casillas (y «Hoy llevan…»); en el **aviso del móvil** de la mañana («Deja preparado: Patines de Emma (para mañana)»), que desaparece al marcarlo; y en el **calendario suscrito** de Google, el día de prepararlo a las **20:00 con alarma a las 19:00**, ocho semanas por delante.
+- **Dónde se guarda:** en el **documento del hogar** (`hogar_estado`), no en tablas: no necesita tabla ni RLS nuevas. La migración `20261113000000_mochila_en_calendario.sql` añade `mochila` al resumen del calendario (solo persona, texto, días, fecha y antelación; nunca lo marcado como preparado), también en los hogares que ya tienen lo demás en tablas.
+- **Límites:** «preparado» se guarda en la app; el calendario de Google no lo sabe y la alarma suena igual. Los recordatorios del calendario son por persona del hogar, no por quien mira el calendario.
+
+## D-137 · Plan de la semana y aviso del domingo
+
+- **Decisión (Diego):** «el resumen semanal está genial, molaría planear la semana, la compra y todo».
+- **Pantalla `/semana`** (botón «🗓️ Planear la semana» en Hoy; destacado el sábado y el domingo): día a día, cumpleaños, citas con hora, comida, cena (o «por decidir»), qué preparar y llevar, y lo de la casa. Arriba, lo que falta con su botón: **«✨ Proponer cenas»** (rellena los laborables sin cena, la misma acción que en Cena), **«Hacer la compra»** (lista y asistente de Mercadona) y **«📤 Mandar el plan por WhatsApp»**.
+- **Qué semana:** el sábado y el domingo, la siguiente (lunes a domingo); entre semana, lo que queda de la actual.
+- **Aviso del domingo:** en el aviso diario del domingo, «🗓️ Planea la semana: faltan N cenas, M citas» (los días que no se cena en casa no cuentan como falta).
+
+## D-138 · Compartir con la app desde WhatsApp
+
+- **Decisión (Diego):** «¡me encanta!»: que lo que llega por los grupos del cole se pueda mandar a la app sin copiar y pegar.
+- **Cómo:** el manifiesto declara la app como destino de **Compartir** (`share_target`, POST con texto y foto o PDF). En Android, con la app instalada, aparece «¡Hecho!» en el menú de compartir. El **service worker** recoge lo compartido (la foto, en una caché propia) y abre **`/compartido`**, que lo lee con la IA de las circulares (D-116) y propone las fechas; tú revisas y apuntas. También: «🛒 Es para la compra».
+- **Si el service worker aún no está activo**, `POST /compartir-recibido` lo recibe el servidor, se queda solo con el texto y abre `/compartido` (una foto no se puede guardar ahí: se pide volver a compartirla).
+- **Límites:** el iPhone no permite que una web reciba lo compartido; allí sigue «Leer una circular del cole» pegando el texto. Android puede tardar en enterarse del cambio del manifiesto: si «¡Hecho!» no sale al compartir, hay que quitar la app de la pantalla de inicio e instalarla otra vez. Cada lectura gasta una consulta de IA del cupo del hogar.

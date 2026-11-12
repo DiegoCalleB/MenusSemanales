@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { MAX_BYTES_CIRCULAR, type ItemCircular } from "@/dominio/ia-circular";
 import { TIPOS_ARCHIVO_COLE } from "@/dominio/ia-cole";
 import { mensajeDeIa } from "./ia-mensajes";
@@ -19,13 +19,21 @@ const fechaCorta = (f: string) =>
  * la IA saca las citas con día y las tareas sin día. Tú revisas la lista, quitas lo que no quieras
  * y apuntas el resto. La IA solo propone.
  */
-export function LeerCircular() {
+export function LeerCircular({
+  inicial,
+  alTerminar,
+}: {
+  /** Lo que llega compartido desde otra app (D-138): se lee nada más abrir. */
+  inicial?: { texto?: string; archivo?: File };
+  /** Tras apuntar (o descartar) lo leído. */
+  alTerminar?: (apuntadas: number) => void;
+} = {}) {
   const { despachar } = useHogar();
   const [yo] = useYo();
   const idArchivo = useId();
   const idTexto = useId();
-  const [abierto, setAbierto] = useState(false);
-  const [texto, setTexto] = useState("");
+  const [abierto, setAbierto] = useState(Boolean(inicial));
+  const [texto, setTexto] = useState(inicial?.texto ?? "");
   const [leyendo, setLeyendo] = useState(false);
   const [problema, setProblema] = useState("");
   const [filas, setFilas] = useState<Fila[] | null>(null);
@@ -63,6 +71,18 @@ export function LeerCircular() {
     }
   }
 
+  // Lo compartido se lee solo, una vez.
+  const leido = useRef(false);
+  useEffect(() => {
+    if (leido.current || !inicial) return;
+    const d = new FormData();
+    if (inicial.archivo) d.append("archivo", inicial.archivo);
+    else if (inicial.texto && inicial.texto.trim().length >= 5) d.append("texto", inicial.texto);
+    else return;
+    leido.current = true;
+    void Promise.resolve().then(() => leer(d));
+  }, [inicial]);
+
   function subir(archivo: File | undefined) {
     if (!archivo) return;
     if (archivo.size > MAX_BYTES_CIRCULAR) {
@@ -97,6 +117,7 @@ export function LeerCircular() {
     setFilas(null);
     setTexto("");
     setAbierto(false);
+    alTerminar?.(elegidas.length);
   }
 
   const total = filas?.filter((f) => f.elegido).length ?? 0;

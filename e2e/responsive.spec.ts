@@ -30,6 +30,9 @@ const RUTAS = [
   "/menu/platos",
   "/compartir",
   "/tareas",
+  "/mochila",
+  "/semana",
+  "/compartido",
   "/cuenta",
   "/personas",
   "/cumples",
@@ -2020,6 +2023,107 @@ test.describe("bienvenida para Ana", () => {
     }
     await pagina.goto("/", { waitUntil: "networkidle" });
     await expect(pagina.getByRole("dialog")).toHaveCount(0);
+    await contexto.close();
+  });
+});
+
+test.describe("mochila, compartir y plan de la semana", () => {
+  test("qué llevar (D-136): se apunta, se edita y se quita", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/mochila");
+    // Lo del ejemplo: la carpeta de piano de Alba y los patines de Emma.
+    await expect(pagina.getByRole("list", { name: "Qué lleva Alba" })).toContainText(
+      "Carpeta de piano",
+    );
+    await expect(pagina.getByRole("list", { name: "Qué lleva Emma" })).toContainText(
+      "los viernes · se prepara la víspera",
+    );
+
+    await pagina.getByRole("button", { name: "＋ Apuntar algo que llevar" }).click();
+    const form = pagina.getByRole("form", { name: "Apuntar algo que llevar" });
+    await form.getByLabel("Qué").fill("Flauta");
+    await form.getByRole("button", { name: "Alba", exact: true }).click();
+    await form.getByRole("button", { name: "Guardar" }).click();
+    // Sin días no se guarda y dice por qué.
+    await expect(form.getByRole("alert")).toContainText("Elige algún día");
+    await form.getByRole("button", { name: "jue", exact: true }).click();
+    await form.getByRole("button", { name: "Guardar" }).click();
+    const alba = pagina.getByRole("list", { name: "Qué lleva Alba" });
+    await expect(alba).toContainText("Flauta");
+    await expect(alba).toContainText("los jueves");
+
+    await alba.getByRole("button", { name: "Editar Flauta" }).click();
+    const edicion = pagina.getByRole("form", { name: "Editar Flauta" });
+    await edicion.getByLabel("Dejarlo preparado").selectOption({ label: "2 días antes" });
+    await edicion.getByRole("button", { name: "Guardar" }).click();
+    await expect(alba).toContainText("se prepara 2 días antes");
+
+    await alba.getByRole("button", { name: "Quitar Flauta de Alba" }).click();
+    await expect(alba).not.toContainText("Flauta");
+    await contexto.close();
+  });
+
+  test("compartir (D-138): un mensaje de WhatsApp se lee con IA y se apunta", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await pagina.route("**/api/ia/circular", (ruta) =>
+      ruta.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          items: [
+            {
+              tipo: "cita",
+              titulo: "Reunión AMPA de prueba",
+              fecha: "2026-12-02",
+              hasta: null,
+              hora: "16:00",
+            },
+          ],
+          pasados: 0,
+          usadas: 1,
+          limite: 40,
+        }),
+      }),
+    );
+    await cargar(pagina, "/compartido?text=Reuni%C3%B3n%20del%20AMPA%20el%202%20a%20las%2016h");
+    await expect(pagina.getByText("Reunión del AMPA el 2 a las 16h")).toBeVisible();
+    const circular = pagina.getByRole("region", { name: "Leer una circular del cole" });
+    await expect(circular.getByText(/Revísalo/)).toBeVisible();
+    await circular.getByRole("button", { name: "Apuntar 1 cosa" }).click();
+    await expect(pagina.getByText("✅ Apuntada 1 cosa.")).toBeVisible();
+    await pagina.getByRole("link", { name: "Ver las fechas" }).click();
+    await expect(pagina.getByText("Reunión AMPA de prueba").first()).toBeVisible();
+    await contexto.close();
+  });
+
+  test("compartir (D-138): sin service worker, el servidor recoge el texto y abre la pantalla", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    const r = await pagina.request.post("/compartir-recibido", {
+      multipart: { title: "Grupo clase", text: "Excursión el 20" },
+      maxRedirects: 0,
+    });
+    expect(r.status()).toBe(303);
+    expect(r.headers().location).toBe("/compartido?title=Grupo+clase&text=Excursi%C3%B3n+el+20");
+    await contexto.close();
+  });
+
+  test("plan de la semana (D-137): días, cenas que faltan y botón de WhatsApp", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/");
+    await pagina.getByRole("link", { name: /Planear la semana/ }).click();
+    await expect(pagina.getByRole("heading", { level: 1 })).toHaveText(/Plan de la semana/);
+    const dias = pagina.getByRole("list", { name: "Días de la semana" }).getByRole("listitem");
+    expect(await dias.count()).toBeGreaterThan(0);
+    expect(await dias.count()).toBeLessThanOrEqual(7);
+    await expect(
+      pagina.getByRole("link", { name: "📤 Mandar el plan por WhatsApp" }),
+    ).toHaveAttribute("href", /^https:\/\/wa\.me\/\?text=/);
     await contexto.close();
   });
 });
