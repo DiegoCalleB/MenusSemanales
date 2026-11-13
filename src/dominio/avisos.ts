@@ -3,6 +3,7 @@ import { type TareaCasa, diasParaCasa } from "./casa";
 import { diasHasta } from "./cumples";
 import { type FechaIso, diaSemanaIso, sumarDias } from "./fechas";
 import { paraPreparar } from "./mochila";
+import { type AjusteCole, consultaCole, diaDeCole } from "./calendario-escolar";
 
 /**
  * Avisos del día (D-114): lo que merece que alguien lo vea hoy. Es el mismo cálculo para la
@@ -39,6 +40,10 @@ export interface EntradaAvisos {
   diasConCena?: readonly FechaIso[];
   /** Días en que no se cena en casa (no cuentan como «falta cena»). */
   diasSinCena?: readonly FechaIso[];
+  /** Lo que apunta la familia sobre el calendario escolar (D-144). */
+  diasCole?: readonly AjusteCole[];
+  /** ¿Avisar de los días sin cole? Solo si el hogar tiene algo del cole (mochila, menú). */
+  conCole?: boolean;
 }
 
 export interface CosaParaAviso {
@@ -48,6 +53,8 @@ export interface CosaParaAviso {
   fecha: FechaIso | null;
   antes: number;
   preparadas?: readonly FechaIso[];
+  /** Solo los días que hay cole (D-144). Si falta, sí. */
+  soloConCole?: boolean;
 }
 
 const DIAS = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"];
@@ -147,8 +154,10 @@ export function avisosDeHoy(e: EntradaAvisos): Aviso[] {
     fecha: c.fecha,
     antes: c.antes,
     preparadas: [...(c.preparadas ?? [])],
+    soloConCole: c.soloConCole !== false,
   }));
-  for (const { cosa, para, hecho } of paraPreparar(cosas, e.hoy)) {
+  const ajustes = e.diasCole ?? [];
+  for (const { cosa, para, hecho } of paraPreparar(cosas, e.hoy, consultaCole(ajustes))) {
     if (hecho) continue;
     const cuando =
       para === e.hoy ? "para hoy" : para === manana ? "para mañana" : `para el ${fechaLarga(para)}`;
@@ -158,6 +167,33 @@ export function avisosDeHoy(e: EntradaAvisos): Aviso[] {
       titulo: `Deja preparado: ${cosa.texto}${cosa.personaId ? ` de ${cosa.personaId}` : ""} (${cuando})`,
       nivel: "ya",
     });
+  }
+
+  // Calendario escolar (D-144): el aviso de que mañana no hay cole (solo el primer día de cada
+  // parón, no cada día de unas vacaciones) y de que mañana vuelve.
+  if (e.conCole) {
+    const d = diaDeCole(manana, ajustes);
+    if (diaSemanaIso(manana) <= 5) {
+      let anterior = sumarDias(manana, -1);
+      while (diaSemanaIso(anterior) >= 6) anterior = sumarDias(anterior, -1);
+      const antes = diaDeCole(anterior, ajustes);
+      if (!d.hay && antes.hay) {
+        out.push({
+          id: `cole-no-${manana}`,
+          emoji: "🏫",
+          titulo: `Mañana no hay cole: ${d.motivo}`,
+          nivel: "pronto",
+        });
+      } else if (d.hay && !antes.hay && antes.origen !== "fin-de-semana") {
+        out.push({
+          id: `cole-vuelve-${manana}`,
+          emoji: "🏫",
+          titulo: "Mañana vuelve el cole",
+          detalle: "Mochila, uniforme y lo que haya que llevar.",
+          nivel: "pronto",
+        });
+      }
+    }
   }
 
   // El domingo, planear la semana que empieza (D-137).
@@ -203,7 +239,10 @@ export function avisosDeHoy(e: EntradaAvisos): Aviso[] {
  */
 export function avisosDeLaNoche(e: EntradaAvisos): Aviso[] {
   return avisosDeHoy(e).filter(
-    (a) => a.id.startsWith("mochila-") || (a.id.startsWith("cita-") && a.nivel === "pronto"),
+    (a) =>
+      a.id.startsWith("mochila-") ||
+      a.id.startsWith("cole-") ||
+      (a.id.startsWith("cita-") && a.nivel === "pronto"),
   );
 }
 
@@ -296,8 +335,12 @@ export function entradaDeProyeccion(p: ProyeccionCalendario, hoy: FechaIso): Ent
       dias: c.dias,
       fecha: c.fecha ?? null,
       antes: c.antes,
+      soloConCole: c.soloConCole !== false,
     })),
     diasConCena: [...new Set(p.cenas.map((c) => c.fecha))],
+    diasCole: p.diasCole ?? [],
+    conCole:
+      (p.mochila ?? []).length > 0 || (p.cole ?? []).length > 0 || (p.diasCole ?? []).length > 0,
   };
 }
 

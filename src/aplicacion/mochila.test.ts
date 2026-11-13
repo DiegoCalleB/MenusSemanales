@@ -84,3 +84,71 @@ describe("qué llevar en el estado", () => {
     expect(normalizar(viejo as EstadoHogar).mochila).toEqual([]);
   });
 });
+
+describe("calendario escolar en el estado (D-144)", () => {
+  const e0 = (): EstadoHogar => ({ ...base(), diasCole: [] });
+
+  it("lo nuevo es del cole salvo que se diga; lo antiguo sin el campo, también", () => {
+    const e = aplicar(e0(), {
+      tipo: "mochila/anadir",
+      personaId: "alba",
+      texto: "Piano",
+      dias: [2],
+      fecha: null,
+      antes: 1,
+    });
+    expect(e.mochila[0]?.soloConCole).toBe(true);
+    const { id, personaId, texto, dias, fecha, antes } = e.mochila[0]!;
+    const editar = { tipo: "mochila/editar" as const, id, personaId, texto, dias, fecha, antes };
+    const f = reducir(e, { ...editar, soloConCole: false });
+    expect(f.mochila[0]?.soloConCole).toBe(false);
+    // Editar sin decirlo conserva lo que había.
+    expect(reducir(f, editar).mochila[0]?.soloConCole).toBe(false);
+    const viejo = {
+      ...e0(),
+      mochila: [{ ...e.mochila[0]!, soloConCole: undefined }],
+    } as unknown as EstadoHogar;
+    expect(normalizar(viejo).mochila[0]?.soloConCole).toBe(true);
+    const sinDias: Partial<EstadoHogar> = { ...e0() };
+    delete sinDias.diasCole;
+    expect(normalizar(sinDias as EstadoHogar).diasCole).toEqual([]);
+  });
+
+  it("apunta días sin cole y «sí hay cole», y vuelve a lo oficial", () => {
+    let e = reducir(e0(), {
+      tipo: "cole/dia",
+      fecha: "2026-11-24",
+      hay: false,
+      motivo: "  Libre ",
+    });
+    expect(e.diasCole).toEqual([{ fecha: "2026-11-24", hay: false, motivo: "Libre" }]);
+    e = reducir(e, { tipo: "cole/dia", fecha: "2026-12-08", hay: true });
+    expect(e.diasCole.map((a) => a.fecha)).toEqual(["2026-11-24", "2026-12-08"]);
+    // Volver a decir que ese día sí hay cole lo cambia, no lo duplica.
+    e = reducir(e, { tipo: "cole/dia", fecha: "2026-11-24", hay: true });
+    expect(e.diasCole.map((a) => a.fecha)).toEqual(["2026-12-08"]);
+    e = reducir(e, { tipo: "cole/oficial", fecha: "2026-12-08" });
+    expect(e.diasCole).toEqual([]);
+  });
+
+  it("no apunta lo que ya dice el calendario oficial", () => {
+    const e = reducir(e0(), { tipo: "cole/dia", fecha: "2026-12-08", hay: false });
+    expect(e.diasCole).toEqual([]);
+    expect(reducir(e0(), { tipo: "cole/dia", fecha: "2026-11-24", hay: true }).diasCole).toEqual(
+      [],
+    );
+  });
+
+  it("rechaza fines de semana, días que no existen y motivos larguísimos", () => {
+    for (const a of [
+      { tipo: "cole/dia", fecha: "2026-11-21", hay: false },
+      { tipo: "cole/dia", fecha: "2026-02-30", hay: false },
+      { tipo: "cole/dia", fecha: "", hay: false },
+      { tipo: "cole/dia", fecha: "2026-11-24", hay: false, motivo: "x".repeat(61) },
+    ] as Accion[]) {
+      const e = reducir(e0(), a);
+      expect(e.aviso).toMatchObject({ tipo: "error" });
+      expect(e.diasCole).toEqual([]);
+    }
+  });
+});

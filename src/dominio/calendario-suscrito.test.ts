@@ -251,11 +251,74 @@ describe("qué llevar en el calendario (D-136)", () => {
         titulo: "🎒 Preparar: Patines de Emma (para mañana)",
       }),
     ]);
-    expect(e).toHaveLength(16); // 8 semanas × 2
+    // 8 semanas × 2, menos las vísperas sin cole al día siguiente (D-144): el martes 8 de diciembre
+    // (la Inmaculada) y el viernes 25 (Navidad).
+    expect(e).toHaveLength(14);
+    expect(e.some((x) => x.fecha === "2026-12-07" || x.fecha === "2026-12-24")).toBe(false);
+  });
+
+  it("lo que no es del cole se recuerda también los días sin cole", () => {
+    const e = eventosSuscritos(
+      base({
+        mochila: [
+          {
+            personaId: "alba",
+            texto: "Piano",
+            dias: [2],
+            fecha: null,
+            antes: 1,
+            soloConCole: false,
+          },
+        ],
+      }),
+      { hoy: HOY, para: "diego" },
+    ).filter((x) => x.titulo.startsWith("🎒"));
+    expect(e).toHaveLength(8);
   });
 
   it("sin «mochila» en el resumen (función SQL anterior) no rompe", () => {
     expect(proyeccionSchema.safeParse(base()).success).toBe(true);
+  });
+});
+
+describe("días sin cole en el calendario (D-144)", () => {
+  const conMochila = base({
+    mochila: [{ personaId: "alba", texto: "Piano", dias: [2], fecha: null, antes: 1 }],
+    diasCole: [{ fecha: "2026-11-24", hay: false, motivo: "Libre disposición" }],
+  });
+
+  it("salen de todo el día, sin alarma, juntando las vacaciones, solo en el de fechas", () => {
+    const e = eventosSuscritos(conMochila, { hoy: HOY, para: "diego" }).filter((x) =>
+      x.titulo.startsWith("🏫 Sin cole"),
+    );
+    expect(e.slice(0, 6)).toEqual([
+      expect.objectContaining({ fecha: "2026-11-02", titulo: "🏫 Sin cole: Todos los Santos" }),
+      { uid: "sin-cole-2026-11-09", fecha: "2026-11-09", hasta: null, titulo: "🏫 Sin cole: La Almudena (fiesta local)", descripcion: "No hay cole: La Almudena (fiesta local)." },
+      expect.objectContaining({ fecha: "2026-11-24", titulo: "🏫 Sin cole: Libre disposición" }),
+      expect.objectContaining({ fecha: "2026-12-07", hasta: null }),
+      expect.objectContaining({ fecha: "2026-12-08", hasta: null }),
+      expect.objectContaining({ fecha: "2026-12-23", hasta: "2027-01-06", titulo: "🏫 Sin cole: Vacaciones de Navidad" }),
+    ]); // prettier-ignore
+    expect(e.every((x) => !x.aviso && !x.hora)).toBe(true);
+    expect(
+      eventosSuscritos(conMochila, { hoy: HOY, para: "diego", solo: "comidas" }).some((x) =>
+        x.titulo.includes("Sin cole"),
+      ),
+    ).toBe(false);
+  });
+
+  it("en un hogar sin nada del cole no salen", () => {
+    expect(
+      eventosSuscritos(base(), { hoy: HOY, para: "diego" }).some((x) =>
+        x.titulo.includes("Sin cole"),
+      ),
+    ).toBe(false);
+  });
+
+  it("un resumen con días mal formados no rompe: se descartan", () => {
+    const r = proyeccionSchema.safeParse({ ...base(), diasCole: [{ fecha: "mal", hay: "no" }] });
+    expect(r.success).toBe(true);
+    expect(r.success && r.data.diasCole).toEqual([]);
   });
 });
 
@@ -278,7 +341,7 @@ describe("el menú del cole en el calendario de comidas (D-141)", () => {
       }),
     ]);
     expect(
-      eventosSuscritos(p, { hoy: HOY, para: "diego" }).some((e) => e.titulo.startsWith("🏫")),
+      eventosSuscritos(p, { hoy: HOY, para: "diego" }).some((e) => e.titulo.startsWith("🏫 Cole")),
     ).toBe(false);
   });
 });

@@ -447,9 +447,10 @@ export function estadoInicialDemo(): EstadoHogar {
     eventos: {},
     tareas: [],
     mochila: [
-      { id: "m-piano", personaId: "alba", texto: "Carpeta de piano", dias: [2], fecha: null, antes: 1, preparadas: [] },
-      { id: "m-patines", personaId: "emma", texto: "Patines", dias: [5], fecha: null, antes: 1, preparadas: [] },
+      { id: "m-piano", personaId: "alba", texto: "Carpeta de piano", dias: [2], fecha: null, antes: 1, preparadas: [], soloConCole: true },
+      { id: "m-patines", personaId: "emma", texto: "Patines", dias: [5], fecha: null, antes: 1, preparadas: [], soloConCole: true },
     ], // prettier-ignore
+    diasCole: [],
     agenda: [],
     notasMenu: {},
     registro: [],

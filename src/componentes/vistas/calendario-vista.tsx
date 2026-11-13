@@ -25,6 +25,7 @@ import { NotaDelDia } from "../nota-del-dia";
 import { PlatoRapido } from "../plato-rapido";
 import { TodosLosPlatos } from "../todos-los-platos";
 import { paraLlevar, paraPreparar } from "@/dominio/mochila";
+import { hayColeDe, sinColeEntreSemana } from "@/aplicacion/cole";
 import { useHogar } from "../proveedor-hogar";
 
 const MESES = [
@@ -93,9 +94,18 @@ export function CalendarioVista() {
   ];
   // Qué llevar (D-136): el día de dejarlo preparado también se marca en el mes.
   const nombreDe = (id: string) => estado.personas.find((p) => p.id === id)?.nombre ?? "";
+  const hayCole = hayColeDe(estado);
   for (const f of celdas) {
     if (!f) continue;
-    const texto = paraPreparar(estado.mochila, f)
+    // Días sin cole entre semana (D-144): se marcan en el mes, antes que lo demás del día.
+    const sinCole = sinColeEntreSemana(estado, f);
+    if (sinCole) {
+      const ya = eventos[f];
+      eventos[f] = ya
+        ? { ...ya, titulo: `${ya.titulo} · 🏫 Sin cole: ${sinCole}` }
+        : { emoji: "🏫", titulo: `Sin cole: ${sinCole}` };
+    }
+    const texto = paraPreparar(estado.mochila, f, hayCole)
       .map((p) => `🎒 Preparar ${p.cosa.texto} (${nombreDe(p.cosa.personaId)})`)
       .join(" · ");
     if (!texto) continue;
@@ -129,8 +139,9 @@ export function CalendarioVista() {
   );
   const citasDelDia = estado.agenda.filter((a) => a.fecha <= sel && (a.hasta ?? a.fecha) >= sel);
   const deGoogleDelDia = deGoogle.filter((g) => g.fecha === sel);
-  const prepararDelDia = paraPreparar(estado.mochila, sel);
-  const llevarDelDia = paraLlevar(estado.mochila, sel);
+  const prepararDelDia = paraPreparar(estado.mochila, sel, hayCole);
+  const llevarDelDia = paraLlevar(estado.mochila, sel, hayCole);
+  const sinColeDelDia = sinColeEntreSemana(estado, sel);
   const tarde = estado.llegoTarde.includes(sel);
   const cocina = cocinaDe(sel);
 
@@ -278,6 +289,12 @@ export function CalendarioVista() {
             <p className="bg-suave-1 rounded-2xl p-3 text-base font-bold">
               <span aria-hidden="true">{fijos[sel]?.emoji} </span>
               {fijos[sel]?.titulo}
+            </p>
+          )}
+
+          {sinColeDelDia && (
+            <p className="bg-suave-1 rounded-2xl p-3 text-base font-bold">
+              <span aria-hidden="true">🏫 </span>Sin cole: {sinColeDelDia}
             </p>
           )}
 

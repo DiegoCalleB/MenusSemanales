@@ -229,3 +229,52 @@ describe("recordatorio de la noche (D-139)", () => {
     expect(avisosDeLaNoche({ ...base, hoy: "2026-11-18" })).toEqual([]);
   });
 });
+
+describe("avisos y calendario escolar (D-144)", () => {
+  const patines = { texto: "Patines", persona: "Emma", dias: [5], fecha: null, antes: 1 };
+
+  it("el jueves antes de un viernes sin cole no pide preparar los patines", () => {
+    // 2027-02-12 (viernes) es día no lectivo.
+    const a = avisosDeHoy({ ...base, hoy: "2027-02-11", mochila: [patines], conCole: true });
+    expect(a.some((x) => x.emoji === "🎒")).toBe(false);
+    expect(a.find((x) => x.id === "cole-no-2027-02-12")?.titulo).toBe(
+      "Mañana no hay cole: Día no lectivo",
+    );
+    // Si son de fuera del cole, sí.
+    const fuera = { ...patines, soloConCole: false };
+    expect(
+      avisosDeHoy({ ...base, hoy: "2027-02-11", mochila: [fuera] }).some((x) => x.emoji === "🎒"),
+    ).toBe(true);
+  });
+
+  it("avisa el primer día de un parón y la víspera de la vuelta, no cada día de vacaciones", () => {
+    const ids2 = (hoy: string) =>
+      ids({ ...base, hoy, conCole: true }).filter((i) => i.startsWith("cole-"));
+    expect(ids2("2026-12-22")).toEqual(["cole-no-2026-12-23"]);
+    expect(ids2("2026-12-27")).toEqual([]); // domingo en mitad de Navidad
+    expect(ids2("2026-12-28")).toEqual([]);
+    // El viernes 8 de enero es no lectivo y el lunes 11 se vuelve: se avisa el domingo 10.
+    expect(ids2("2027-01-10")).toEqual(["cole-vuelve-2027-01-11"]);
+    // Viernes antes del puente de diciembre: el aviso llega el domingo 6.
+    expect(ids2("2026-12-04")).toEqual([]);
+    expect(ids2("2026-12-06")).toEqual(["cole-no-2026-12-07"]);
+    // Un fin de semana normal, nada.
+    expect(ids2("2026-11-15")).toEqual([]);
+  });
+
+  it("sin nada del cole en el hogar, no avisa de días sin cole", () => {
+    expect(ids({ ...base, hoy: "2026-12-22" }).some((i) => i.startsWith("cole-"))).toBe(false);
+  });
+
+  it("el día que apunta la familia también cuenta, y entra en el recordatorio de la noche", () => {
+    const e = {
+      ...base,
+      hoy: "2026-11-23",
+      conCole: true,
+      diasCole: [{ fecha: "2026-11-24", hay: false, motivo: "Libre disposición" }],
+    };
+    expect(avisosDeLaNoche(e).map((a) => a.titulo)).toEqual([
+      "Mañana no hay cole: Libre disposición",
+    ]);
+  });
+});

@@ -2084,6 +2084,42 @@ test.describe("mochila, compartir y plan de la semana", () => {
     await contexto.close();
   });
 
+  test("días sin cole (D-144): el calendario de Madrid viene puesto y se apuntan los del cole", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/mochila");
+    const dias = pagina.getByRole("list", { name: "Próximos días sin cole" });
+    await expect(dias).toContainText("Vacaciones de Navidad");
+    await expect(dias).toContainText("del miércoles 23 de diciembre al miércoles 6 de enero");
+    // Lo del ejemplo es del cole.
+    await expect(pagina.getByRole("list", { name: "Qué lleva Emma" })).toContainText(
+      "solo con cole",
+    );
+
+    await pagina.getByRole("button", { name: "＋ Apuntar un día sin cole" }).click();
+    const form = pagina.getByRole("form", { name: "Apuntar un día sin cole" });
+    // Un sábado no vale: nunca hay cole.
+    await form.getByLabel("Día").fill("2026-12-12");
+    await form.getByRole("button", { name: "Guardar" }).click();
+    await expect(form.getByRole("alert")).toContainText("fin de semana");
+    await form.getByLabel("Día").fill("2026-12-11");
+    await form.getByRole("button", { name: "Guardar" }).click();
+    await expect(dias).toContainText("Día de libre disposición");
+    await expect(dias).toContainText("viernes 11 de diciembre · lo apuntasteis vosotros");
+    await dias.getByRole("button", { name: /Quitar Día de libre disposición/ }).click();
+    await expect(dias).not.toContainText("Día de libre disposición");
+
+    // Al apuntar algo nuevo, «Es para el cole» viene marcado.
+    await pagina.getByRole("button", { name: "＋ Apuntar algo que llevar" }).click();
+    await expect(
+      pagina.getByRole("form", { name: "Apuntar algo que llevar" }).getByRole("checkbox", {
+        name: /Es para el cole/,
+      }),
+    ).toBeChecked();
+    await contexto.close();
+  });
+
   test("compartir (D-138): un mensaje de WhatsApp se lee con IA y se apunta", async ({
     browser,
   }) => {

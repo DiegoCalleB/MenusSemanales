@@ -17,7 +17,8 @@ select public.guardar_estado_hogar((select id from _ids where clave = 'HA'), 0,
   '{"personas":[{"id":"viejo","nombre":"Viejo","tipo":"adulto","activa":true}],
     "comidas":[{"fecha":"2026-11-09","plato":{"nombre":"Del documento"}}],
     "mochila":[{"id":"m1","personaId":"dddddddd-0000-0000-0000-000000000001","texto":"Patines",
-                "dias":[5],"fecha":null,"antes":1,"preparadas":["2026-11-06"],"secreto":"no sale"}]}'::jsonb);
+                "dias":[5],"fecha":null,"antes":1,"preparadas":["2026-11-06"],"secreto":"no sale"}],
+    "diasCole":[{"fecha":"2026-12-04","hay":false,"motivo":"Libre disposición","otro":"no sale"}]}'::jsonb);
 insert into _t select 'A', public.enlace_calendario((select id from _ids where clave = 'HA'));
 -- Menú del cole (D-141): uno de hoy (sale) y uno de hace un mes (no sale).
 select public.aplicar_cambios_cole((select id from _ids where clave = 'HA'), jsonb_build_object(
@@ -69,9 +70,16 @@ select pg_temp.igual('No sale nada del documento viejo',
   (select (j::text !~ 'Del documento' and j::text !~ 'Viejo')::int from _r where clave = 'r'), 1);
 select pg_temp.igual('Solo las claves de siempre',
   (select (select count(*)::int from jsonb_object_keys(j) k where k in
-     ('agenda','almuerzos','casa','cenas','cole','cumples','eventos','mochila','personas')) from _r where clave = 'r'), 9);
+     ('agenda','almuerzos','casa','cenas','cole','cumples','diasCole','eventos','mochila','personas')) from _r where clave = 'r'), 10);
 select pg_temp.igual('Y ninguna más',
-  (select count(*)::int from _r, jsonb_object_keys(j) where clave = 'r'), 9);
+  (select count(*)::int from _r, jsonb_object_keys(j) where clave = 'r'), 10);
+-- Calendario escolar (D-144): los días que apunta la familia y si lo de la mochila es del cole.
+select pg_temp.igual('Los días sin cole de la familia salen del documento, solo fecha, si hay y motivo',
+  (select ((j->'diasCole'->0->>'fecha') = '2026-12-04' and (j->'diasCole'->0->>'hay') = 'false'
+        and (j->'diasCole'->0->>'motivo') = 'Libre disposición'
+        and not (j->'diasCole'->0 ? 'otro'))::int from _r where clave = 'r'), 1);
+select pg_temp.igual('Lo de la mochila sin el campo cuenta como del cole',
+  (select ((j->'mochila'->0->>'soloConCole') = 'true')::int from _r where clave = 'r'), 1);
 select pg_temp.igual('El menú del cole sale con sus platos, y solo los días cercanos (D-141)',
   (select (jsonb_array_length(j->'cole') = 1 and (j->'cole'->0->>'primero') = 'Lentejas'
         and (j->'cole'->0->>'postre') = 'Fruta' and not (j->'cole'->0 ? 'kcal'))::int from _r where clave = 'r'), 1);

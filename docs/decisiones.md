@@ -1225,3 +1225,18 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 
 - **Decisión (Diego):** «no quiero que ponga lo de pensar regalo, quiero que ponga cumple de Diego y con una tarta al principio».
 - **Qué cambia:** el calendario suscrito ya no lleva los avisos «🎁 Pensar el regalo» (30 días antes) ni «🎁 Comprar el regalo» (14 días antes). Cada cumpleaños sale **solo el mismo día**, como «🎂 Cumple de Diego», de todo el día, cada año y con alarma a las 9:00. Lo mismo en el `.ics` que se descarga desde «Enviar». Los avisos de regalo siguen dentro de la app (campanita y Cumples).
+- **Actualización:** Google no siempre enseñaba los cumpleaños «cada año» cuyo primer día quedaba lejos. Ahora cada cumple sale con sus **tres próximas fechas**, como eventos sueltos, sin repetición.
+
+## D-144 · Calendario escolar: días sin cole
+
+- **Petición (Diego):** «integrar el calendario escolar de la Comunidad de Madrid para tener en cuenta los días que no hay cole, y no preparar la mochila del cole un día si al día siguiente no hay cole. Que todo sea perfecto y no haya errores posibles».
+- **Datos oficiales, en la app** (`src/dominio/calendario-escolar.ts`), copiados del texto publicado y comprobados día a día en los tests:
+  - Orden 2034/2026 (BOCM núm. 131, 4-6-2026): Infantil (2.º ciclo) y Primaria del **7 de septiembre de 2026 al 18 de junio de 2027**; Navidad del 23 de diciembre al 6 de enero; Semana Santa del 20 al 28 de marzo; festivos 12 de octubre, 2 de noviembre, 7 y 8 de diciembre; días no lectivos 7 y 8 de enero, 12 y 15 de febrero, 19 y 29 de marzo.
+  - Decreto 82/2026 (BOCM núm. 234, 1-10-2026), fiestas de 2027 (San José, Jueves y Viernes Santo…).
+  - Fiestas locales de **Madrid capital** (la Almudena, 9 de noviembre de 2026; San Isidro, 15 de mayo de 2027, sábado).
+  - Un test comprueba además el mínimo legal de 175 días lectivos.
+- **Los días del centro los pone la familia** (Mochila → «Días sin cole»): días de libre disposición del consejo escolar y, al revés, «sí hay cole» (p. ej. un concertado que cambia un día no lectivo por su patrón). Lo de la familia manda sobre lo oficial; el fin de semana nunca tiene cole. Viven en el documento (`diasCole`).
+- **Mochila:** cada cosa semanal tiene «Es para el cole» (marcado por defecto; lo de antes, como la carpeta de piano y los patines, cuenta como del cole). Si el día que se lleva no hay cole, **no se pide prepararla** en ningún sitio: Hoy, campanita, notificación de la noche, plan de la semana, calendario de la app y calendario de Google. En Hoy se explica: «No hace falta preparar Patines de Emma: mañana no hay cole (Día no lectivo)». Las de un día concreto se avisan siempre, porque ese día lo eligió la familia.
+- **Dónde se ve:** «🏫 Sin cole: Vacaciones de Navidad» en el plan de la semana, en el mes y en el día del calendario de la app y, en Google, en el calendario de fechas (de todo el día, sin alarma, las vacaciones en un solo evento). Aviso «Mañana no hay cole» solo el primer día de cada parón (no cada día de las vacaciones) y «Mañana vuelve el cole» la víspera de la vuelta, también en la notificación de la noche. Solo en hogares con algo del cole (mochila, menú del cole o días apuntados).
+- **Ante la duda, avisar:** fuera del curso conocido (desde el 1 de septiembre de 2027) se supone que hay cole de lunes a viernes. Así se avisa de más, nunca de menos, y la pantalla dice que falta el calendario del curso siguiente. Hay que añadirlo cuando se publique (normalmente en mayo o junio).
+- **Base de datos** (`20261114000000_calendario_escolar.sql`): el resumen del calendario añade `diasCole` (fecha, si hay cole y motivo) y `soloConCole` en cada cosa de la mochila. Nada más del documento.

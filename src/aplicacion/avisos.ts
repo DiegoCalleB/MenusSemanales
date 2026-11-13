@@ -22,9 +22,12 @@ export function entradaDeEstado(e: EstadoHogar): EntradaAvisos {
       fecha: c.fecha,
       antes: c.antes,
       preparadas: c.preparadas,
+      soloConCole: c.soloConCole,
     })),
     diasConCena: [...new Set(e.comidas.map((c) => c.fecha))],
     diasSinCena: e.saltados,
+    diasCole: e.diasCole,
+    conCole: e.mochila.length > 0 || Object.keys(e.colegio).length > 0 || e.diasCole.length > 0,
   };
 }
 
