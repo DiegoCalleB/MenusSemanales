@@ -1220,3 +1220,8 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Decisión (Diego):** «podríamos poner submódulos en el menú lateral» y «lo de la mochila no va al calendario?».
 - **Barra lateral (tablet y escritorio):** bajo la sección en la que se está salen sus apartados (p. ej. Casa → Recurrente, Por persona, Mochila, Reparto), con el actual marcado; solo se despliega la sección activa, para que el menú siga siendo corto. En pantallas anchas desaparecen las pestañas de arriba (`Apartados`), que siguen en el móvil.
 - **Calendario de la app:** el día de dejar algo preparado se marca en el mes (🎒) y, al elegir un día, sale «Mochila» con la casilla de preparado y lo que se lleva ese día. (En Google Calendar ya salía, D-136.)
+
+## D-143 · En el calendario, el cumple y no el regalo
+
+- **Decisión (Diego):** «no quiero que ponga lo de pensar regalo, quiero que ponga cumple de Diego y con una tarta al principio».
+- **Qué cambia:** el calendario suscrito ya no lleva los avisos «🎁 Pensar el regalo» (30 días antes) ni «🎁 Comprar el regalo» (14 días antes). Cada cumpleaños sale **solo el mismo día**, como «🎂 Cumple de Diego», de todo el día, cada año y con alarma a las 9:00. Los avisos de regalo siguen dentro de la app (campanita y Cumples).

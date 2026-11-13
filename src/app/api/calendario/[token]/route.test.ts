@@ -45,8 +45,8 @@ describe("GET /api/calendario/[token]", () => {
     expect(ics).toContain("BEGIN:VCALENDAR");
     expect(ics).toContain("SUMMARY:📌 Psicotécnico");
     expect(ics).toContain("SUMMARY:🎂 Cumple de Ana");
-    // Para Diego, los avisos del regalo de Ana sí; el token no se cuela en el calendario.
-    expect(ics).toContain("Pensar el regalo de Ana");
+    // Sin avisos de regalo (D-143); el token no se cuela en el calendario.
+    expect(ics).not.toContain("regalo");
     expect(ics).not.toContain(TOKEN);
     const [url, init] = fetchSimulado.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe("https://x.supabase.co/rest/v1/rpc/estado_para_calendario");
@@ -54,7 +54,7 @@ describe("GET /api/calendario/[token]", () => {
     expect((init.headers as Record<string, string>).apikey).toBe("sb_publishable_test");
   });
 
-  it("a Ana no le salen los avisos de su regalo, y sin «para» tampoco a nadie", async () => {
+  it("nadie recibe avisos de regalo en el calendario (D-143)", async () => {
     vi.stubGlobal("fetch", async () => Response.json(resumen));
     expect(await (await pedir(TOKEN, "?para=ana", "3.3.3.3")).text()).not.toContain("regalo");
     expect(await (await pedir(TOKEN, "", "3.3.3.4")).text()).not.toContain("regalo");
