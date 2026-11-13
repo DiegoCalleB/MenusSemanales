@@ -24,6 +24,7 @@ import { Razones } from "../razones";
 import { NotaDelDia } from "../nota-del-dia";
 import { PlatoRapido } from "../plato-rapido";
 import { TodosLosPlatos } from "../todos-los-platos";
+import { paraLlevar, paraPreparar } from "@/dominio/mochila";
 import { useHogar } from "../proveedor-hogar";
 
 const MESES = [
@@ -90,6 +91,17 @@ export function CalendarioVista() {
     ...Array.from({ length: huecos }, () => null),
     ...Array.from({ length: diasEnMes }, (_, i) => sumarDias(mes, i)),
   ];
+  // Qué llevar (D-136): el día de dejarlo preparado también se marca en el mes.
+  const nombreDe = (id: string) => estado.personas.find((p) => p.id === id)?.nombre ?? "";
+  for (const f of celdas) {
+    if (!f) continue;
+    const texto = paraPreparar(estado.mochila, f)
+      .map((p) => `🎒 Preparar ${p.cosa.texto} (${nombreDe(p.cosa.personaId)})`)
+      .join(" · ");
+    if (!texto) continue;
+    const ya = eventos[f];
+    eventos[f] = ya ? { ...ya, titulo: `${ya.titulo} · ${texto}` } : { emoji: "🎒", titulo: texto };
+  }
 
   const cenaDe = (f: FechaIso) => comidasDe(estado, f)[0];
   const nombresDe = (f: FechaIso) =>
@@ -117,6 +129,8 @@ export function CalendarioVista() {
   );
   const citasDelDia = estado.agenda.filter((a) => a.fecha <= sel && (a.hasta ?? a.fecha) >= sel);
   const deGoogleDelDia = deGoogle.filter((g) => g.fecha === sel);
+  const prepararDelDia = paraPreparar(estado.mochila, sel);
+  const llevarDelDia = paraLlevar(estado.mochila, sel);
   const tarde = estado.llegoTarde.includes(sel);
   const cocina = cocinaDe(sel);
 
@@ -265,6 +279,42 @@ export function CalendarioVista() {
               <span aria-hidden="true">{fijos[sel]?.emoji} </span>
               {fijos[sel]?.titulo}
             </p>
+          )}
+
+          {(prepararDelDia.length > 0 || llevarDelDia.length > 0) && (
+            <section aria-labelledby="mochila-dia" className="flex flex-col gap-1">
+              <h3 id="mochila-dia" className="text-tinta-suave text-sm font-bold">
+                Mochila
+              </h3>
+              {prepararDelDia.length > 0 && (
+                <ul aria-label="Para dejar preparado este día" className="flex flex-col">
+                  {prepararDelDia.map(({ cosa, para, hecho }) => (
+                    <li key={`${cosa.id}-${para}`}>
+                      <label className="flex min-h-11 items-center gap-3 text-base">
+                        <input
+                          type="checkbox"
+                          className="size-6 shrink-0 accent-[var(--marca)]"
+                          checked={hecho}
+                          onChange={() =>
+                            despachar({ tipo: "mochila/preparar", id: cosa.id, para })
+                          }
+                        />
+                        <span className={hecho ? "text-tinta-suave line-through" : ""}>
+                          <span aria-hidden="true">🎒 </span>Preparar <strong>{cosa.texto}</strong>{" "}
+                          de {nombreDe(cosa.personaId)}
+                        </span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {llevarDelDia.length > 0 && (
+                <p className="text-base">
+                  <span aria-hidden="true">🎒 </span>Llevan:{" "}
+                  {llevarDelDia.map((c) => `${c.texto} (${nombreDe(c.personaId)})`).join(", ")}
+                </p>
+              )}
+            </section>
           )}
 
           <section aria-labelledby="citas-dia" className="flex flex-col gap-2">

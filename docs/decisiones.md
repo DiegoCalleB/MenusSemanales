@@ -1214,3 +1214,9 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Qué pasaba:** las comidas de casa sí iban en el calendario (D-135), pero solo las **apuntadas** a partir de hoy, y no había ninguna; el menú del cole no iba (D-083 lo dejaba fuera a propósito).
 - **Qué cambia:** el resumen del calendario (`20261113020000_cole_en_calendario.sql`) añade `cole`: primero, segundo y postre del menú del colegio del hogar, de ayer a 60 días vista (ni grupos, ni calorías, ni historial). En **«¡Hecho! · Comidas»** sale cada día de cole a las **13:00** como «🏫 Cole: Lentejas · Merluza» (el postre, en la descripción), sin alarma. El calendario de fechas no cambia.
 - **Comidas de casa:** salen a las 14:00 los días en que se apuntan (fines de semana, fiestas…); si no se apuntan, no hay nada que enseñar.
+
+## D-142 · Apartados en la barra lateral y la mochila en el calendario de la app
+
+- **Decisión (Diego):** «podríamos poner submódulos en el menú lateral» y «lo de la mochila no va al calendario?».
+- **Barra lateral (tablet y escritorio):** bajo la sección en la que se está salen sus apartados (p. ej. Casa → Recurrente, Por persona, Mochila, Reparto), con el actual marcado; solo se despliega la sección activa, para que el menú siga siendo corto. En pantallas anchas desaparecen las pestañas de arriba (`Apartados`), que siguen en el móvil.
+- **Calendario de la app:** el día de dejar algo preparado se marca en el mes (🎒) y, al elegir un día, sale «Mochila» con la casilla de preparado y lo que se lleva ese día. (En Google Calendar ya salía, D-136.)
