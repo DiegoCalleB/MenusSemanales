@@ -2,7 +2,8 @@ import { z } from "zod";
 import { proximaVez } from "./casa";
 import type { EventoCalendario } from "./compartir";
 import { proximaFecha } from "./cumples";
-import { type FechaIso, sumarDias } from "./fechas";
+import { type FechaIso, diaSemanaIso, sumarDias } from "./fechas";
+import { NOMBRE_DIA_LARGO, preparacionesEntre } from "./mochila";
 
 /**
  * Avisos fuera de la app (D-083): el calendario del móvil se suscribe a un enlace y avisa solo.
@@ -48,6 +49,19 @@ export const proyeccionSchema = z.object({
       aplazadaHasta: fecha.nullish(),
     }),
   ),
+  /** Qué llevar (D-136). Opcional: la función SQL anterior no lo manda. */
+  mochila: z
+    .array(
+      z.object({
+        personaId: z.string(),
+        texto,
+        dias: z.array(z.number().int().min(1).max(7)).catch([]),
+        fecha: fecha.nullish().catch(null),
+        antes: z.number().int().min(0).max(7).catch(1),
+      }),
+    )
+    .catch([])
+    .optional(),
   cumples: z.array(
     z.object({
       nombre: texto,
@@ -59,6 +73,20 @@ export const proyeccionSchema = z.object({
   ),
 });
 export type ProyeccionCalendario = z.infer<typeof proyeccionSchema>;
+
+/** A qué hora sale en el calendario el recordatorio de dejar preparada la mochila (alarma una hora antes). */
+export const HORA_MOCHILA = "20:00";
+/** Cuántos días por delante se ponen los recordatorios de la mochila. */
+const DIAS_MOCHILA = 56;
+
+/** A qué hora salen en el calendario las comidas y cenas (no llevan hora propia en la app). */
+export const HORA_COMIDA = "14:00";
+/** Entre semana se cena antes (20:00); sábados y domingos, a las 21:00. */
+export const HORA_CENA_SEMANA = "20:00";
+export const HORA_CENA = "21:00";
+
+/** ¿Es sábado o domingo? (`AAAA-MM-DD`, sin depender de la zona horaria). */
+const esFinDeSemana = (f: string) => [0, 6].includes(new Date(`${f}T12:00:00Z`).getUTCDay());
 
 const limpio = (t: string) =>
   t
@@ -75,7 +103,25 @@ const limpio = (t: string) =>
  * si el evento tiene hora). **Los avisos de regalo** («pensar» a 30 días, «comprar» a 14) solo van
  * a quien no cumple: a Ana no le llegan los de su regalo, y sin saber quién pide, no se incluyen.
  */
+/** Qué calendario se pide (D-140): las fechas (lo de no olvidar) o solo las comidas y cenas. */
+export type CalendarioSuscrito = "fechas" | "comidas";
+
+const esComida = (e: EventoCalendario) => /^(cena|comida)-/.test(e.uid ?? "");
+
+/**
+ * Los eventos de uno de los dos calendarios suscritos (D-140): «fechas» (citas, fechas señaladas,
+ * cumpleaños y regalos, casa y mochila) o «comidas» (comidas y cenas). Separados, en Google cada uno
+ * tiene su color y se puede ocultar.
+ */
 export function eventosSuscritos(
+  p: ProyeccionCalendario,
+  opciones: { hoy: FechaIso; para: string | null; solo?: CalendarioSuscrito },
+): EventoCalendario[] {
+  const todos = todosLosEventos(p, opciones);
+  return opciones.solo === "comidas" ? todos.filter(esComida) : todos.filter((e) => !esComida(e));
+}
+
+function todosLosEventos(
   p: ProyeccionCalendario,
   { hoy, para }: { hoy: FechaIso; para: string | null },
 ): EventoCalendario[] {
@@ -93,6 +139,7 @@ export function eventosSuscritos(
       fecha: f,
       titulo: `🍽️ Cena: ${platos.join(" + ")}`,
       descripcion: `Platos: ${platos.join(", ")}`,
+      hora: esFinDeSemana(f) ? HORA_CENA : HORA_CENA_SEMANA,
     });
   }
   for (const [f, textos] of porFecha(p.almuerzos)) {
@@ -101,6 +148,7 @@ export function eventosSuscritos(
       fecha: f,
       titulo: `☀️ Comida: ${textos.join(" + ")}`,
       descripcion: `Comida: ${textos.join(", ")}`,
+      hora: HORA_COMIDA,
     });
   }
   for (const [f, ev] of Object.entries(p.eventos).sort(([a], [b]) => a.localeCompare(b))) {
@@ -173,6 +221,31 @@ export function eventosSuscritos(
       fecha: dia,
       titulo: `${t.emoji} ${t.titulo}`,
       descripcion: `${t.titulo} (le toca a: ${nombre(t.responsableId)}). Se repite cada ${t.cadaDias} días desde la última vez que se hizo.`,
+      aviso: true,
+    });
+  }
+  // Qué llevar (D-136): el día de dejarlo preparado, a las 20:00 y con alarma.
+  const cosas = (p.mochila ?? []).map((c, i) => ({
+    ...c,
+    id: String(i),
+    fecha: c.fecha ?? null,
+    preparadas: [],
+  }));
+  const nombreDe = (id: string) => p.personas.find((x) => x.id === id)?.nombre ?? "";
+  for (const { dia, cosa, para } of preparacionesEntre(cosas, hoy, DIAS_MOCHILA)) {
+    const quien = nombreDe(cosa.personaId);
+    const cuando =
+      para === dia
+        ? "para hoy"
+        : para === sumarDias(dia, 1)
+          ? "para mañana"
+          : `para el ${NOMBRE_DIA_LARGO[diaSemanaIso(para) - 1]}`;
+    eventos.push({
+      uid: `mochila-${dia}-${limpio(cosa.texto)}-${limpio(quien)}`,
+      fecha: dia,
+      titulo: `🎒 Preparar: ${cosa.texto}${quien ? ` de ${quien}` : ""} (${cuando})`,
+      descripcion: `Dejar preparado ${cosa.texto}${quien ? ` de ${quien}` : ""} ${cuando}.`,
+      hora: HORA_MOCHILA,
       aviso: true,
     });
   }

@@ -126,3 +126,6 @@ export const guardarSuscripcionPush = (
   });
 export const quitarSuscripcionPush = (cliente: Cliente, endpoint: string) =>
   cliente.rpc("quitar_suscripcion_push", { p_endpoint: endpoint });
+/** Pide a la base de datos que mande una notificación de prueba a este móvil (D-139). */
+export const pedirPruebaPush = (cliente: Cliente, hogarId: string, endpoint: string) =>
+  cliente.rpc("pedir_prueba_push", { p_hogar_id: hogarId, p_endpoint: endpoint });

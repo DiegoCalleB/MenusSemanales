@@ -22,7 +22,7 @@ import { useHogar } from "./proveedor-hogar";
  * Prueba la acción sobre el estado actual: si el reductor la rechaza, devuelve el motivo y no
  * cambia nada; si vale, la despacha. Así el formulario no se cierra cuando algo está mal.
  */
-function useGuardar() {
+export function useGuardar() {
   const { estado, despachar } = useHogar();
   return (accion: Accion): string | null => {
     const prueba = reducir(estado, accion);
@@ -32,7 +32,7 @@ function useGuardar() {
   };
 }
 
-function Campo({ texto, children }: { texto: string; children: ReactNode }) {
+export function Campo({ texto, children }: { texto: string; children: ReactNode }) {
   return (
     <label className="flex flex-col gap-1 text-base font-semibold">
       {texto}
@@ -41,7 +41,7 @@ function Campo({ texto, children }: { texto: string; children: ReactNode }) {
   );
 }
 
-function Formulario({
+export function Formulario({
   nombre,
   alGuardar,
   alCerrar,

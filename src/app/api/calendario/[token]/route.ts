@@ -54,9 +54,11 @@ export async function GET(request: Request, ctx: { params: Promise<{ token: stri
   }
   if (!resumen) return noEncontrado();
 
+  // Dos calendarios con el mismo token (D-140): las fechas, o con `solo=comidas` las comidas y cenas.
+  const solo = new URL(request.url).searchParams.get("solo") === "comidas" ? "comidas" : "fechas";
   const ics = generarIcs(
-    "¡Hecho!",
-    eventosSuscritos(resumen, { hoy: hoyEnMadrid(), para }),
+    solo === "comidas" ? "¡Hecho! · Comidas" : "¡Hecho!",
+    eventosSuscritos(resumen, { hoy: hoyEnMadrid(), para, solo }),
     new Date(),
     1,
   );

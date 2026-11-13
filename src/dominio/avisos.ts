@@ -2,6 +2,7 @@ import { type ProyeccionCalendario } from "./calendario-suscrito";
 import { type TareaCasa, diasParaCasa } from "./casa";
 import { diasHasta } from "./cumples";
 import { type FechaIso, diaSemanaIso, sumarDias } from "./fechas";
+import { paraPreparar } from "./mochila";
 
 /**
  * Avisos del día (D-114): lo que merece que alguien lo vea hoy. Es el mismo cálculo para la
@@ -32,6 +33,21 @@ export interface EntradaAvisos {
   citas: ReadonlyArray<{ fecha: FechaIso; titulo: string; hora: string | null }>;
   tareas: readonly TareaCasa[];
   cumples: ReadonlyArray<{ nombre: string; dia: number; mes: number }>;
+  /** Qué llevar (D-136), con el nombre de la persona ya puesto. */
+  mochila?: ReadonlyArray<CosaParaAviso>;
+  /** Días con cena elegida (para el aviso del domingo, D-137). */
+  diasConCena?: readonly FechaIso[];
+  /** Días en que no se cena en casa (no cuentan como «falta cena»). */
+  diasSinCena?: readonly FechaIso[];
+}
+
+export interface CosaParaAviso {
+  texto: string;
+  persona: string;
+  dias: readonly number[];
+  fecha: FechaIso | null;
+  antes: number;
+  preparadas?: readonly FechaIso[];
 }
 
 const DIAS = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"];
@@ -122,6 +138,48 @@ export function avisosDeHoy(e: EntradaAvisos): Aviso[] {
     });
   }
 
+  // Qué llevar (D-136): lo que hay que dejar preparado hoy.
+  const cosas = (e.mochila ?? []).map((c, i) => ({
+    id: String(i),
+    personaId: c.persona,
+    texto: c.texto,
+    dias: [...c.dias],
+    fecha: c.fecha,
+    antes: c.antes,
+    preparadas: [...(c.preparadas ?? [])],
+  }));
+  for (const { cosa, para, hecho } of paraPreparar(cosas, e.hoy)) {
+    if (hecho) continue;
+    const cuando =
+      para === e.hoy ? "para hoy" : para === manana ? "para mañana" : `para el ${fechaLarga(para)}`;
+    out.push({
+      id: `mochila-${para}-${cosa.texto}-${cosa.personaId}`,
+      emoji: "🎒",
+      titulo: `Deja preparado: ${cosa.texto}${cosa.personaId ? ` de ${cosa.personaId}` : ""} (${cuando})`,
+      nivel: "ya",
+    });
+  }
+
+  // El domingo, planear la semana que empieza (D-137).
+  if (diaSemanaIso(e.hoy) === 7 && e.diasConCena) {
+    const semana = Array.from({ length: 7 }, (_, i) => sumarDias(e.hoy, i + 1));
+    const con = new Set(e.diasConCena);
+    const sin = new Set(e.diasSinCena ?? []);
+    const faltan = semana.filter((d) => !con.has(d) && !sin.has(d)).length;
+    const citas = e.citas.filter((c) => semana.includes(c.fecha)).length;
+    const partes = [
+      faltan > 0 ? `faltan ${faltan} ${faltan === 1 ? "cena" : "cenas"}` : "cenas listas",
+      `${citas} ${citas === 1 ? "cita" : "citas"}`,
+    ];
+    out.push({
+      id: `plan-semana-${e.hoy}`,
+      emoji: "🗓️",
+      titulo: `Planea la semana: ${partes.join(", ")}`,
+      detalle: "Ábrelo en «Hoy» → «Planear la semana»",
+      nivel: "pronto",
+    });
+  }
+
   // Mañana sin cena elegida: mejor pensarla hoy.
   if (e.cenaManana.length === 0 && !e.mananaSinCena) {
     out.push({
@@ -137,6 +195,28 @@ export function avisosDeHoy(e: EntradaAvisos): Aviso[] {
     .map((a, i) => ({ a, i }))
     .sort((x, y) => orden[x.a.nivel] - orden[y.a.nivel] || x.i - y.i)
     .map((x) => x.a);
+}
+
+/**
+ * El recordatorio de la noche (D-139): lo que hay que dejar preparado hoy (la mochila) y las
+ * citas de mañana. Vacío si no hay nada: entonces no se manda.
+ */
+export function avisosDeLaNoche(e: EntradaAvisos): Aviso[] {
+  return avisosDeHoy(e).filter(
+    (a) => a.id.startsWith("mochila-") || (a.id.startsWith("cita-") && a.nivel === "pronto"),
+  );
+}
+
+export function notificacionDeLaNoche(avisos: readonly Aviso[]) {
+  const mochila = avisos.filter((a) => a.id.startsWith("mochila-"));
+  return {
+    titulo: mochila.length > 0 ? "🎒 Antes de dormir" : "Para mañana",
+    cuerpo: avisos
+      .slice(0, 4)
+      .map((a) => `${a.emoji} ${a.titulo}`)
+      .join("\n")
+      .slice(0, 240),
+  };
 }
 
 /** Avisos que piden hacer algo (los que dan la campanita y las notificaciones). */
@@ -210,6 +290,14 @@ export function entradaDeProyeccion(p: ProyeccionCalendario, hoy: FechaIso): Ent
       aplazadaHasta: t.aplazadaHasta ?? null,
     })),
     cumples: p.cumples.map((c) => ({ nombre: c.nombre, dia: c.dia, mes: c.mes })),
+    mochila: (p.mochila ?? []).map((c) => ({
+      texto: c.texto,
+      persona: p.personas.find((x) => x.id === c.personaId)?.nombre ?? "",
+      dias: c.dias,
+      fecha: c.fecha ?? null,
+      antes: c.antes,
+    })),
+    diasConCena: [...new Set(p.cenas.map((c) => c.fecha))],
   };
 }
 

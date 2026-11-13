@@ -49,18 +49,45 @@ describe("calendario suscrito", () => {
       }),
       { hoy: HOY, para: "diego" },
     );
-    expect(titulos(e)).toEqual([
-      "🍽️ Cena: Sopa + Pan",
-      "☀️ Comida: Paella",
-      "🎉 Fiesta",
-      "📌 Psicotécnico",
-      "📌 Puente",
-    ]);
+    // Por defecto, el calendario de fechas (sin comidas); las comidas van en el suyo (D-140).
+    expect(titulos(e)).toEqual(["🎉 Fiesta", "📌 Psicotécnico", "📌 Puente"]);
+    const comidas = eventosSuscritos(
+      base({
+        cenas: [
+          { fecha: "2026-11-09", nombre: "Sopa" },
+          { fecha: "2026-11-09", nombre: "Pan" },
+          { fecha: "2026-10-30", nombre: "Pasada" },
+        ],
+        almuerzos: [{ fecha: "2026-11-08", texto: "Paella" }],
+        agenda: [{ fecha: "2026-11-12", hasta: null, hora: "18:15", titulo: "Psicotécnico" }],
+      }),
+      { hoy: HOY, para: "diego", solo: "comidas" },
+    );
+    expect(titulos(comidas)).toEqual(["🍽️ Cena: Sopa + Pan", "☀️ Comida: Paella"]);
     expect(e.find((x) => x.titulo === "📌 Psicotécnico")).toMatchObject({
       hora: "18:15",
       aviso: true,
     });
-    expect(e.find((x) => x.titulo === "🍽️ Cena: Sopa + Pan")?.aviso).toBeUndefined();
+    expect(comidas.find((x) => x.titulo === "🍽️ Cena: Sopa + Pan")?.aviso).toBeUndefined();
+    // Las comidas y cenas salen a su hora (D-135), sin alarma.
+    // El 9 de noviembre de 2026 es lunes: se cena a las 20:00.
+    expect(comidas.find((x) => x.titulo === "🍽️ Cena: Sopa + Pan")?.hora).toBe("20:00");
+    expect(comidas.find((x) => x.titulo === "☀️ Comida: Paella")?.hora).toBe("14:00");
+  });
+
+  it("la cena es a las 21:00 en fin de semana y a las 20:00 entre semana", () => {
+    const e = eventosSuscritos(
+      base({
+        cenas: [
+          { fecha: "2026-11-13", nombre: "Viernes" },
+          { fecha: "2026-11-14", nombre: "Sábado" },
+          { fecha: "2026-11-15", nombre: "Domingo" },
+        ],
+      }),
+      { hoy: HOY, para: "diego", solo: "comidas" },
+    );
+    const hora = (n: string) => e.find((x) => x.titulo === `🍽️ Cena: ${n}`)?.hora;
+    expect([hora("Viernes"), hora("Sábado"), hora("Domingo")]).toEqual(["20:00", "21:00", "21:00"]);
   });
 
   it("los cumpleaños salen siempre; los avisos del regalo, solo a quien no cumple", () => {
@@ -212,5 +239,38 @@ describe("el resumen que llega de la base de datos", () => {
         agenda: [{ fecha: HOY, hasta: null, hora: "9", titulo: "x" }],
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("qué llevar en el calendario (D-136)", () => {
+  it("pone el recordatorio el día de prepararlo, a las 20:00 y con alarma", () => {
+    // HOY (2026-11-02) es lunes: el piano del martes se prepara hoy; los patines, el jueves 5.
+    const e = eventosSuscritos(
+      base({
+        personas: [...base().personas, { id: "emma", nombre: "Emma", tipo: "nino", activa: true }],
+        mochila: [
+          { personaId: "alba", texto: "Carpeta de piano", dias: [2], fecha: null, antes: 1 },
+          { personaId: "emma", texto: "Patines", dias: [5], fecha: null, antes: 1 },
+        ],
+      }),
+      { hoy: HOY, para: "diego" },
+    ).filter((x) => x.titulo.startsWith("🎒"));
+    expect(e.slice(0, 2)).toEqual([
+      expect.objectContaining({
+        fecha: "2026-11-02",
+        titulo: "🎒 Preparar: Carpeta de piano de Alba (para mañana)",
+        hora: "20:00",
+        aviso: true,
+      }),
+      expect.objectContaining({
+        fecha: "2026-11-05",
+        titulo: "🎒 Preparar: Patines de Emma (para mañana)",
+      }),
+    ]);
+    expect(e).toHaveLength(16); // 8 semanas × 2
+  });
+
+  it("sin «mochila» en el resumen (función SQL anterior) no rompe", () => {
+    expect(proyeccionSchema.safeParse(base()).success).toBe(true);
   });
 });

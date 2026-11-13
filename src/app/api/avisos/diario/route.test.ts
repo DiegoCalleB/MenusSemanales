@@ -8,6 +8,12 @@ const m = vi.hoisted(() => ({
   subs: vi.fn(),
   olvidar: vi.fn(),
   pushActivo: { v: false },
+  comprobar: vi.fn(),
+  guardarClaves: vi.fn(),
+}));
+vi.mock("@/infraestructura/avisos/claves", () => ({
+  comprobarSecretoDeAvisos: m.comprobar,
+  guardarClavesDeAvisos: m.guardarClaves,
 }));
 vi.mock("@/infraestructura/avisos/resend", () => ({
   CorreoNoConfigurado: class CorreoNoConfigurado extends Error {},
@@ -16,6 +22,7 @@ vi.mock("@/infraestructura/avisos/resend", () => ({
 vi.mock("@/infraestructura/avisos/push", () => ({
   enviarPush: m.push,
   pushConfigurado: () => m.pushActivo.v,
+  generarClavesVapid: () => ({ publicKey: "P".repeat(87), privateKey: "k".repeat(43) }),
 }));
 vi.mock("@/infraestructura/avisos/suscripciones", () => ({
   leerSuscripciones: m.subs,
@@ -30,11 +37,12 @@ import { POST } from "./route";
 
 const TOKEN = "a".repeat(64);
 const SECRETO = "secreto-de-prueba-largo-1234567890";
-const pedir = (cabecera?: string, consulta = "") =>
+const pedir = (cabecera?: string, consulta = "", cuerpo?: unknown) =>
   POST(
     new Request(`http://localhost/api/avisos/diario${consulta}`, {
       method: "POST",
       headers: cabecera ? { authorization: cabecera } : {},
+      ...(cuerpo !== undefined ? { body: JSON.stringify(cuerpo) } : {}),
     }),
   );
 const resumen = {
@@ -58,6 +66,8 @@ beforeEach(() => {
   m.push.mockReset().mockResolvedValue("ok");
   m.subs.mockReset().mockResolvedValue([]);
   m.olvidar.mockReset().mockResolvedValue(undefined);
+  m.comprobar.mockReset().mockResolvedValue({ valido: false });
+  m.guardarClaves.mockReset();
 });
 
 describe("POST /api/avisos/diario", () => {
@@ -174,5 +184,71 @@ describe("POST /api/avisos/diario", () => {
       expect(r.status).toBe(200);
       expect((await r.json()).enviado).toBe(false);
     });
+  });
+
+  describe("llamada programada desde la base de datos (D-139)", () => {
+    const SECRETO_BD = "b".repeat(64);
+    const CLAVES = { publica: "P".repeat(87), privada: "k".repeat(43) };
+    const OTRO_TOKEN = "c".repeat(64);
+    beforeEach(() => {
+      vi.stubEnv("AVISOS_CRON_SECRET", "");
+      vi.stubEnv("AVISOS_CALENDARIO_TOKEN", "");
+    });
+
+    it("con un secreto que la base de datos no reconoce, 401", async () => {
+      expect((await pedir(`Bearer ${SECRETO_BD}`, "?forzar=1", { token: OTRO_TOKEN })).status).toBe(
+        401,
+      );
+      expect(m.leer).not.toHaveBeenCalled();
+    });
+
+    it("la primera vez crea las claves y las guarda, sin enviar nada", async () => {
+      m.comprobar.mockResolvedValue({ valido: true, claves: null });
+      m.guardarClaves.mockResolvedValue(CLAVES);
+      const r = await pedir(`Bearer ${SECRETO_BD}`, "", {});
+      expect(await r.json()).toEqual({ claves: "creadas" });
+      expect(m.guardarClaves).toHaveBeenCalledWith(SECRETO_BD, CLAVES);
+      expect(m.push).not.toHaveBeenCalled();
+    });
+
+    it("con claves, manda la notificación del hogar del token del cuerpo, con esas claves y sin correo", async () => {
+      m.comprobar.mockResolvedValue({ valido: true, claves: CLAVES });
+      m.subs.mockResolvedValue([
+        { endpoint: "https://push.example.test/1", p256dh: "p".repeat(30), auth: "a".repeat(12) },
+      ]);
+      const r = await pedir(`Bearer ${SECRETO_BD}`, "?forzar=1", { token: OTRO_TOKEN });
+      expect(r.status).toBe(200);
+      expect(m.leer).toHaveBeenCalledWith(OTRO_TOKEN);
+      expect(m.subs).toHaveBeenCalledWith(OTRO_TOKEN);
+      expect(m.push.mock.calls[0]?.[3]).toEqual(CLAVES);
+      expect(m.enviar).not.toHaveBeenCalled();
+    });
+
+    it("sin token en el cuerpo ni en las variables, no hace nada", async () => {
+      m.comprobar.mockResolvedValue({ valido: true, claves: CLAVES });
+      expect((await pedir(`Bearer ${SECRETO_BD}`, "?forzar=1", {})).status).toBe(503);
+    });
+  });
+
+  it("«Enviarme una prueba»: solo a ese móvil y solo si es del hogar (D-139)", async () => {
+    vi.stubEnv("AVISOS_CRON_SECRET", "");
+    const CLAVES = { publica: "P".repeat(87), privada: "k".repeat(43) };
+    m.comprobar.mockResolvedValue({ valido: true, claves: CLAVES });
+    m.subs.mockResolvedValue([
+      { endpoint: "https://push.example.test/1", p256dh: "p".repeat(30), auth: "a".repeat(12) },
+      { endpoint: "https://push.example.test/2", p256dh: "p".repeat(30), auth: "a".repeat(12) },
+    ]);
+    const r = await pedir(`Bearer ${"b".repeat(64)}`, "", {
+      token: "c".repeat(64),
+      prueba: "https://push.example.test/2",
+    });
+    expect(await r.json()).toEqual({ prueba: "ok" });
+    expect(m.push).toHaveBeenCalledTimes(1);
+    expect(m.push.mock.calls[0]?.[0].endpoint).toBe("https://push.example.test/2");
+    const ajena = await pedir(`Bearer ${"b".repeat(64)}`, "", {
+      token: "c".repeat(64),
+      prueba: "https://push.example.test/otra",
+    });
+    expect(ajena.status).toBe(404);
   });
 });

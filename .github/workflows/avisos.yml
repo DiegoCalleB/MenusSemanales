@@ -3,9 +3,10 @@ name: Avisos diarios
 # Pide a la app que mande el resumen de la mañana por correo. Madrid tiene dos horarios (UTC+1 en
 # invierno, UTC+2 en verano), así que se llama a las dos horas posibles y la app solo envía cuando
 # en Madrid son las 10 (o la hora elegida en AVISOS_HORA). Resend no repite el mismo correo.
+# Desde D-139 la propia base de datos llama a la app cada hora (pg_cron): este programa ya no se
+# ejecuta solo (llegaba con horas de retraso y fallaba sin sus secretos). Queda para lanzarlo a
+# mano con la configuración antigua por variables.
 on:
-  schedule:
-    - cron: "7 8,9 * * *"
   workflow_dispatch:
     inputs:
       forzar:

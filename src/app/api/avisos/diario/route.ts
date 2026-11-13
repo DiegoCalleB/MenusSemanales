@@ -1,13 +1,21 @@
 import { timingSafeEqual } from "node:crypto";
 import {
+  type Aviso,
   avisosDeHoy,
+  avisosDeLaNoche,
+  direccionesDeAvisos,
   entradaDeProyeccion,
+  notificacionDeLaNoche,
   notificacionDelDia,
   resumenDelDia,
 } from "@/dominio/avisos";
 import { hoyEnMadrid, leerResumenDelCalendario } from "@/infraestructura/calendario-suscrito";
-import { enviarPush, pushConfigurado } from "@/infraestructura/avisos/push";
-import { direccionesDeAvisos } from "@/dominio/avisos";
+import { enviarPush, generarClavesVapid, pushConfigurado } from "@/infraestructura/avisos/push";
+import {
+  type ClavesVapid,
+  comprobarSecretoDeAvisos,
+  guardarClavesDeAvisos,
+} from "@/infraestructura/avisos/claves";
 import { CorreoNoConfigurado, enviarCorreo } from "@/infraestructura/avisos/resend";
 import { leerSuscripciones, olvidarSuscripcion } from "@/infraestructura/avisos/suscripciones";
 
@@ -30,42 +38,125 @@ const horaEnMadrid = (ahora = new Date()) =>
     }).format(ahora),
   );
 
+const TOKEN = /^[0-9a-f]{64}$/;
+
 /**
- * El resumen de la mañana por correo (D-114). Lo llama un programa que se ejecuta solo cada día
- * (GitHub Actions), con un secreto en la cabecera: sin él, 401. Lee solo el resumen mínimo del
- * calendario (con su token), nunca claves maestras. Solo envía a la hora elegida (hora de Madrid,
- * por defecto las 10): así el programa puede llamar dos veces al día (horario de verano e
- * invierno) y solo una cuenta. `?forzar=1` salta la comprobación de la hora, para probar.
+ * Lo que manda la llamada programada en el cuerpo: el token del calendario del hogar y, para
+ * «Enviarme una prueba», el móvil al que mandarla (`{ "token": "…", "prueba": "https://…" }`).
+ */
+async function leerCuerpo(
+  request: Request,
+): Promise<{ token: string | null; prueba: string | null }> {
+  try {
+    const c = (await request.json()) as { token?: unknown; prueba?: unknown };
+    return {
+      token: typeof c?.token === "string" && TOKEN.test(c.token) ? c.token : null,
+      prueba:
+        typeof c?.prueba === "string" && c.prueba.startsWith("https://") && c.prueba.length <= 1000
+          ? c.prueba
+          : null,
+    };
+  } catch {
+    return { token: null, prueba: null };
+  }
+}
+
+/**
+ * Los avisos del día (D-114, D-115, D-139). Lo llama, con un secreto en la cabecera, la propia
+ * base de datos cada hora (pg_cron) o, con la configuración antigua, un programa con el secreto de
+ * las variables de Railway. Sin secreto válido, 401. A la hora de la mañana (`AVISOS_HORA`, por
+ * defecto las 9 de Madrid) manda el resumen del día; a la de la noche (`AVISOS_HORA_NOCHE`, por
+ * defecto las 20) solo si hay algo que dejar preparado o una cita mañana. A otras horas no hace
+ * nada. `?forzar=1` manda el de la mañana aunque no sea la hora, para probar.
+ *
+ * Con el secreto de la base de datos, la primera llamada crea las claves de las notificaciones y
+ * las guarda allí: no hay que configurar nada a mano.
  */
 export async function POST(request: Request) {
-  const secreto = process.env.AVISOS_CRON_SECRET;
-  if (!secreto || secreto.length < 24) return responder({ error: "no-configurado" }, 503);
   const dado = /^Bearer (.+)$/.exec(request.headers.get("authorization") ?? "")?.[1] ?? "";
-  if (!iguales(dado, secreto)) return responder({ error: "no-autorizado" }, 401);
+  const secretoVariables = process.env.AVISOS_CRON_SECRET ?? "";
+  const conVariables = secretoVariables.length >= 24;
 
-  const token = process.env.AVISOS_CALENDARIO_TOKEN ?? "";
-  const para = direccionesDeAvisos(process.env.AVISOS_CORREO);
+  // Las claves de las notificaciones: las de la base de datos o, si no, las de las variables.
+  let claves: ClavesVapid | null = null;
+  let porBaseDeDatos = false;
+  if (conVariables && iguales(dado, secretoVariables)) {
+    // Configuración antigua: todo por variables.
+  } else if (TOKEN.test(dado)) {
+    let r;
+    try {
+      r = await comprobarSecretoDeAvisos(dado);
+    } catch {
+      return responder({ error: "no-disponible" }, 502);
+    }
+    if (!r.valido) return responder({ error: "no-autorizado" }, 401);
+    porBaseDeDatos = true;
+    claves = r.claves;
+    if (!claves && !pushConfigurado()) {
+      // Primera llamada: se crean las claves y se guardan (si otra llamada se adelantó, valen las suyas).
+      const { publicKey, privateKey } = generarClavesVapid();
+      try {
+        claves = await guardarClavesDeAvisos(dado, { publica: publicKey, privada: privateKey });
+      } catch {
+        return responder({ error: "no-disponible" }, 502);
+      }
+      return responder({ claves: claves ? "creadas" : "fallo" }, claves ? 200 : 502);
+    }
+  } else {
+    return conVariables
+      ? responder({ error: "no-autorizado" }, 401)
+      : responder({ error: "no-configurado" }, 503);
+  }
+
+  const cuerpo = porBaseDeDatos ? await leerCuerpo(request) : { token: null, prueba: null };
+  const token = cuerpo.token ?? process.env.AVISOS_CALENDARIO_TOKEN ?? "";
+
+  // «Enviarme una prueba»: solo a ese móvil, y solo si es una suscripción de ese hogar.
+  if (cuerpo.prueba && cuerpo.token) {
+    try {
+      const s = (await leerSuscripciones(cuerpo.token)).find((x) => x.endpoint === cuerpo.prueba);
+      if (!s) return responder({ error: "no-encontrada" }, 404);
+      const r = await enviarPush(
+        { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
+        { titulo: "Notificaciones activadas 🎉", cuerpo: "Así te llegarán los avisos de ¡Hecho!." },
+        undefined,
+        claves,
+      );
+      if (r === "caducada") await olvidarSuscripcion(cuerpo.token, s.endpoint);
+      return responder({ prueba: r }, r === "ok" ? 200 : 502);
+    } catch {
+      return responder({ error: "no-disponible" }, 502);
+    }
+  }
+  // El correo es de la configuración antigua (con su token); la llamada de la base de datos, push.
+  const para = porBaseDeDatos ? [] : direccionesDeAvisos(process.env.AVISOS_CORREO);
   const quiereCorreo = para.length > 0;
-  const quierePush = pushConfigurado();
-  if (!/^[0-9a-f]{64}$/.test(token) || (!quiereCorreo && !quierePush)) {
+  const quierePush = claves !== null || pushConfigurado();
+  if (!TOKEN.test(token) || (!quiereCorreo && !quierePush)) {
     return responder({ error: "no-configurado" }, 503);
   }
 
   const forzar = new URL(request.url).searchParams.get("forzar") === "1";
-  const horaElegida = Number(process.env.AVISOS_HORA ?? "10");
-  if (!forzar && horaEnMadrid() !== horaElegida)
-    return responder({ enviado: false, motivo: "no-es-la-hora" }, 200);
+  const hora = horaEnMadrid();
+  const horaManana = Number(process.env.AVISOS_HORA ?? "9");
+  const horaNoche = Number(process.env.AVISOS_HORA_NOCHE ?? "20");
+  const momento = forzar || hora === horaManana ? "manana" : hora === horaNoche ? "noche" : null;
+  if (!momento) return responder({ enviado: false, motivo: "no-es-la-hora" }, 200);
 
   let hoy: string;
-  let avisos: ReturnType<typeof avisosDeHoy>;
+  let avisos: Aviso[];
   try {
     hoy = hoyEnMadrid();
     const resumen = await leerResumenDelCalendario(token);
     if (!resumen) return responder({ error: "sin-datos" }, 404);
-    avisos = avisosDeHoy(entradaDeProyeccion(resumen, hoy));
+    const entrada = entradaDeProyeccion(resumen, hoy);
+    avisos = momento === "manana" ? avisosDeHoy(entrada) : avisosDeLaNoche(entrada);
   } catch (e) {
     console.error("[avisos] lectura", e instanceof Error ? e.message : "desconocido");
     return responder({ error: "no-disponible" }, 502);
+  }
+  if (momento === "noche" && avisos.length === 0) {
+    return responder({ enviado: false, motivo: "nada-que-avisar" }, 200);
   }
 
   // Cada canal va por su cuenta: que falle uno no impide el otro. Sin detalles hacia fuera.
@@ -74,7 +165,7 @@ export async function POST(request: Request) {
     push?: { enviadas: number; caducadas: number; fallos: number };
   } = {};
 
-  if (quiereCorreo) {
+  if (quiereCorreo && momento === "manana") {
     try {
       const correo = resumenDelDia(hoy, avisos);
       await enviarCorreo({
@@ -92,11 +183,14 @@ export async function POST(request: Request) {
   if (quierePush) {
     const cuenta = { enviadas: 0, caducadas: 0, fallos: 0 };
     try {
-      const mensaje = notificacionDelDia(hoy, avisos);
+      const mensaje =
+        momento === "manana" ? notificacionDelDia(hoy, avisos) : notificacionDeLaNoche(avisos);
       for (const s of await leerSuscripciones(token)) {
         const r = await enviarPush(
           { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
           mensaje,
+          undefined,
+          claves,
         );
         if (r === "ok") cuenta.enviadas += 1;
         else if (r === "caducada") {

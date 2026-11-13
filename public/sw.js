@@ -11,9 +11,12 @@
  *    guardado, que nunca cambia con el mismo nombre.
  *  - No toca NUNCA: lo que no sea GET, lo de otros dominios (Supabase) ni `/api/`.
  */
-const VERSION = "v1";
+const VERSION = "v2";
 const CACHE_PAGINAS = `hecho-paginas-${VERSION}`;
 const CACHE_ESTATICOS = `hecho-estaticos-${VERSION}`;
+/** Lo último que se ha compartido con la app desde otra (WhatsApp…), para que lo lea la página. */
+const CACHE_COMPARTIDO = "hecho-compartido";
+const ARCHIVO_COMPARTIDO = "/compartido/archivo";
 
 /** Las pantallas de la app, para poder abrir cualquiera sin conexión aunque no se haya visitado. */
 const RUTAS = [
@@ -26,6 +29,7 @@ const RUTAS = [
   "/despensa",
   "/casa",
   "/tareas",
+  "/mochila",
   "/reparto",
   "/fechas",
   "/calendario",
@@ -33,6 +37,8 @@ const RUTAS = [
   "/cuenta",
   "/personas",
   "/compartir",
+  "/compartido",
+  "/semana",
 ];
 /** Imágenes y archivos sueltos de la app. */
 const SUELTOS = ["/icon-192.png", "/icon-512.png", "/gatito.png", "/manifest.webmanifest"];
@@ -56,6 +62,21 @@ function clavePagina(url) {
   const u = new URL(url, "https://ejemplo.invalid");
   const ruta = u.pathname.length > 1 ? u.pathname.replace(/\/+$/, "") : u.pathname;
   return ruta || "/";
+}
+
+/**
+ * La dirección a la que se manda a la app tras recibir algo compartido (D-138): el texto va en la
+ * URL y, si llegó un archivo, se avisa con `archivo=1` (el archivo se queda en la caché).
+ */
+function destinoCompartido(campos, hayArchivo) {
+  const q = new URLSearchParams();
+  for (const k of ["title", "text", "url"]) {
+    const v = typeof campos[k] === "string" ? campos[k].slice(0, 6000) : "";
+    if (v) q.set(k, v);
+  }
+  if (hayArchivo) q.set("archivo", "1");
+  const s = q.toString();
+  return s ? `/compartido?${s}` : "/compartido";
 }
 
 /** ¿Es un archivo que se guarda y se sirve «primero lo guardado»? */
@@ -166,7 +187,13 @@ if (typeof self !== "undefined" && typeof self.addEventListener === "function") 
         const nombres = await caches.keys();
         await Promise.all(
           nombres
-            .filter((n) => n.startsWith("hecho-") && n !== CACHE_PAGINAS && n !== CACHE_ESTATICOS)
+            .filter(
+              (n) =>
+                n.startsWith("hecho-") &&
+                n !== CACHE_PAGINAS &&
+                n !== CACHE_ESTATICOS &&
+                n !== CACHE_COMPARTIDO,
+            )
             .map((n) => caches.delete(n)),
         );
         await self.clients.claim();
@@ -174,8 +201,38 @@ if (typeof self !== "undefined" && typeof self.addEventListener === "function") 
     );
   });
 
+  /** Recibe lo compartido desde otra app (D-138): guarda el archivo y abre /compartido. */
+  async function recibirCompartido(peticion) {
+    try {
+      const datos = await peticion.formData();
+      const campos = {};
+      for (const k of ["title", "text", "url"]) campos[k] = datos.get(k);
+      const archivo = datos.getAll("archivo").find((f) => f && typeof f === "object" && f.size > 0);
+      const cache = await caches.open(CACHE_COMPARTIDO);
+      await cache.delete(ARCHIVO_COMPARTIDO);
+      if (archivo) {
+        await cache.put(
+          ARCHIVO_COMPARTIDO,
+          new Response(archivo, {
+            headers: {
+              "Content-Type": archivo.type || "application/octet-stream",
+              "X-Nombre": encodeURIComponent(archivo.name || "archivo"),
+            },
+          }),
+        );
+      }
+      return Response.redirect(destinoCompartido(campos, Boolean(archivo)), 303);
+    } catch {
+      return Response.redirect("/compartido", 303);
+    }
+  }
+
   self.addEventListener("fetch", (evento) => {
     const peticion = evento.request;
+    if (peticion.method === "POST" && new URL(peticion.url).pathname === "/compartir-recibido") {
+      evento.respondWith(recibirCompartido(peticion));
+      return;
+    }
     if (peticion.method !== "GET") return;
     const url = new URL(peticion.url);
     if (url.origin !== self.location.origin) return;
@@ -227,5 +284,5 @@ if (typeof self !== "undefined" && typeof self.addEventListener === "function") 
 
 // Para poder probar las funciones puras desde los tests (en el navegador `module` no existe).
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { extraerRecursos, clavePagina, esEstatico, RUTAS, SUELTOS };
+  module.exports = { extraerRecursos, clavePagina, esEstatico, destinoCompartido, RUTAS, SUELTOS };
 }
