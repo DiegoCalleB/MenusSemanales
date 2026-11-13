@@ -114,8 +114,8 @@ const limpio = (t: string) =>
 /**
  * Eventos del calendario suscrito de una persona (`para`). Lleva sus tareas de casa y las de «los
  * dos», las cenas y comidas, las fechas y los cumpleaños, con alarma a las 9:00 (o una hora antes
- * si el evento tiene hora). **Los avisos de regalo** («pensar» a 30 días, «comprar» a 14) solo van
- * a quien no cumple: a Ana no le llegan los de su regalo, y sin saber quién pide, no se incluyen.
+ * si el evento tiene hora). Los cumpleaños salen solo el día del cumple, con su tarta: sin avisos de
+ * «pensar» ni «comprar» el regalo (D-143; siguen en la app).
  */
 /** Qué calendario se pide (D-140): las fechas (lo de no olvidar) o solo las comidas y cenas. */
 export type CalendarioSuscrito = "fechas" | "comidas";
@@ -211,29 +211,7 @@ function todosLosEventos(
       anual: true,
       aviso: true,
     });
-    // Los avisos del regalo no son para quien cumple, ni para quien no se sabe quién es.
-    const esRegaloParaOtro =
-      persona !== null && persona.tipo === "adulto" && c.personaId !== persona.id;
-    if (esRegaloParaOtro) {
-      eventos.push(
-        {
-          uid: `regalo-pensar-${clave}`,
-          fecha: sumarDias(dia, -30),
-          titulo: `🎁 Pensar el regalo de ${c.nombre}`,
-          descripcion: `Faltan 30 días para el cumple de ${c.nombre}: ¡a pensar ideas!`,
-          anual: true,
-          aviso: true,
-        },
-        {
-          uid: `regalo-comprar-${clave}`,
-          fecha: sumarDias(dia, -14),
-          titulo: `🎁 Comprar el regalo de ${c.nombre}`,
-          descripcion: `Faltan 14 días para el cumple de ${c.nombre}: hay que comprar el regalo.`,
-          anual: true,
-          aviso: true,
-        },
-      );
-    }
+    // Sin avisos de «pensar» ni «comprar» el regalo (D-143): en el calendario, solo el cumple.
   }
 
   // Lo recurrente de la casa: un evento por tarea, en el día que toca (hoy si va atrasada). Al

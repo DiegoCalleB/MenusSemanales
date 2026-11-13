@@ -66,8 +66,8 @@ export function AvisosCalendario() {
       </h2>
       <p className="text-base">
         El móvil avisa solo, <strong>con la app cerrada</strong>: lo que toca en casa, las citas
-        apuntadas, los cumpleaños y los avisos para pensar y comprar los regalos (menos el tuyo). Se
-        actualiza solo en unas horas.
+        apuntadas, los cumpleaños (el mismo día, con su tarta 🎂) y lo que hay que dejar preparado
+        en la mochila. Se actualiza solo en unas horas.
       </p>
 
       {fase !== "conectado" || !hogar ? (

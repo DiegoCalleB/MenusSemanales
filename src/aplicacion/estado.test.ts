@@ -1311,7 +1311,7 @@ describe("compartir desde el estado de la app", () => {
 });
 
 describe("el archivo de calendario no destripa el regalo", () => {
-  it("los avisos del regalo solo van a un adulto que no cumple, y sin saber quién baja el archivo no van", async () => {
+  it("lleva el cumple con su tarta y ningún aviso de regalo (D-143)", async () => {
     const { eventosDeCalendario } = await import("./compartir");
     const e = aplicar(estadoInicialDemo(), {
       tipo: "cumple/anadir",
@@ -1321,20 +1321,9 @@ describe("el archivo de calendario no destripa el regalo", () => {
       relacion: "familia",
       personaId: "ana",
     });
-    const regalos = (yo: string | null) =>
-      eventosDeCalendario(e, yo)
-        .filter((x) => x.titulo.startsWith("🎁"))
-        .map((x) => x.titulo);
-    const adultos = e.personas.filter((p) => p.tipo === "adulto").map((p) => p.id);
-    const otro = adultos.find((id) => id !== "ana");
-    expect(regalos(otro ?? null)).toEqual([
-      "🎁 Pensar el regalo de Ana",
-      "🎁 Comprar el regalo de Ana",
-    ]);
-    expect(regalos("ana")).toEqual([]);
-    expect(regalos(null)).toEqual([]);
-    expect(regalos("nadie")).toEqual([]);
-    expect(eventosDeCalendario(e, "ana").some((x) => x.titulo === "🎂 Cumple de Ana")).toBe(true);
+    const titulos = eventosDeCalendario(e).map((x) => x.titulo);
+    expect(titulos.some((t) => t.startsWith("🎁"))).toBe(false);
+    expect(titulos).toContain("🎂 Cumple de Ana");
   });
 });
 

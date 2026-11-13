@@ -90,35 +90,19 @@ describe("calendario suscrito", () => {
     expect([hora("Viernes"), hora("Sábado"), hora("Domingo")]).toEqual(["20:00", "21:00", "21:00"]);
   });
 
-  it("los cumpleaños salen siempre; los avisos del regalo, solo a quien no cumple", () => {
+  it("los cumpleaños salen el día del cumple con su tarta, sin avisos de regalo (D-143)", () => {
     const c = base({ cumples });
-    const paraDiego = eventosSuscritos(c, { hoy: HOY, para: "diego" });
-    expect(titulos(paraDiego)).toEqual(
-      expect.arrayContaining([
-        "🎂 Cumple de Ana",
-        "🎁 Pensar el regalo de Ana",
-        "🎁 Comprar el regalo de Ana",
-        "🎂 Cumple de Alba",
-      ]),
-    );
-    expect(paraDiego.find((x) => x.titulo === "🎂 Cumple de Ana")).toMatchObject({
-      fecha: "2026-11-07",
-      anual: true,
-      aviso: true,
-    });
-    // A Ana no le llegan los avisos de su propio regalo (pero sí los del de Alba).
-    const paraAna = titulos(eventosSuscritos(c, { hoy: HOY, para: "ana" }));
-    expect(paraAna).toContain("🎂 Cumple de Ana");
-    expect(paraAna).not.toContain("🎁 Pensar el regalo de Ana");
-    expect(paraAna).not.toContain("🎁 Comprar el regalo de Ana");
-    expect(paraAna).toContain("🎁 Pensar el regalo de Alba");
-    // Sin saber quién pide, o una niña, o alguien que no existe: ningún aviso de regalo.
-    for (const para of [null, "alba", "nadie"]) {
+    for (const para of ["diego", "ana", null]) {
+      const t = titulos(eventosSuscritos(c, { hoy: HOY, para }));
+      expect(t).toEqual(expect.arrayContaining(["🎂 Cumple de Ana", "🎂 Cumple de Alba"]));
       expect(
-        titulos(eventosSuscritos(c, { hoy: HOY, para })).some((t) => t.startsWith("🎁")),
+        t.some((x) => x.startsWith("🎁")),
         String(para),
       ).toBe(false);
     }
+    expect(
+      eventosSuscritos(c, { hoy: HOY, para: "diego" }).find((x) => x.titulo === "🎂 Cumple de Ana"),
+    ).toMatchObject({ fecha: "2026-11-07", anual: true, aviso: true });
   });
 
   it("las tareas de casa van en el día que toca (hoy si están atrasadas) y a quien le tocan", () => {
