@@ -102,7 +102,7 @@ describe("calendario suscrito", () => {
     }
     expect(
       eventosSuscritos(c, { hoy: HOY, para: "diego" }).find((x) => x.titulo === "🎂 Cumple de Ana"),
-    ).toMatchObject({ fecha: "2026-11-07", anual: true, aviso: true });
+    ).toMatchObject({ fecha: "2026-11-07", aviso: true });
   });
 
   it("las tareas de casa van en el día que toca (hoy si están atrasadas) y a quien le tocan", () => {

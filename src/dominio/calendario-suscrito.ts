@@ -201,16 +201,20 @@ function todosLosEventos(
   }
 
   for (const c of p.cumples) {
-    const dia = proximaFecha(c, hoy);
     const clave = limpio(c.nombre);
-    eventos.push({
-      uid: `cumple-${clave}`,
-      fecha: dia,
-      titulo: `🎂 Cumple de ${c.nombre}`,
-      descripcion: `Cumpleaños de ${c.nombre}`,
-      anual: true,
-      aviso: true,
-    });
+    // Tres cumpleaños seguidos, cada uno con su fecha: Google no siempre enseña los que se repiten
+    // «cada año» cuando empiezan lejos, y así salen siempre.
+    let dia = proximaFecha(c, hoy);
+    for (let i = 0; i < 3; i++) {
+      eventos.push({
+        uid: `cumple-${clave}-${dia.slice(0, 4)}`,
+        fecha: dia,
+        titulo: `🎂 Cumple de ${c.nombre}`,
+        descripcion: `Cumpleaños de ${c.nombre}`,
+        aviso: true,
+      });
+      dia = proximaFecha(c, sumarDias(dia, 1));
+    }
     // Sin avisos de «pensar» ni «comprar» el regalo (D-143): en el calendario, solo el cumple.
   }
 
