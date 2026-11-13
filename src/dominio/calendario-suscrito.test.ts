@@ -49,22 +49,30 @@ describe("calendario suscrito", () => {
       }),
       { hoy: HOY, para: "diego" },
     );
-    expect(titulos(e)).toEqual([
-      "🍽️ Cena: Sopa + Pan",
-      "☀️ Comida: Paella",
-      "🎉 Fiesta",
-      "📌 Psicotécnico",
-      "📌 Puente",
-    ]);
+    // Por defecto, el calendario de fechas (sin comidas); las comidas van en el suyo (D-140).
+    expect(titulos(e)).toEqual(["🎉 Fiesta", "📌 Psicotécnico", "📌 Puente"]);
+    const comidas = eventosSuscritos(
+      base({
+        cenas: [
+          { fecha: "2026-11-09", nombre: "Sopa" },
+          { fecha: "2026-11-09", nombre: "Pan" },
+          { fecha: "2026-10-30", nombre: "Pasada" },
+        ],
+        almuerzos: [{ fecha: "2026-11-08", texto: "Paella" }],
+        agenda: [{ fecha: "2026-11-12", hasta: null, hora: "18:15", titulo: "Psicotécnico" }],
+      }),
+      { hoy: HOY, para: "diego", solo: "comidas" },
+    );
+    expect(titulos(comidas)).toEqual(["🍽️ Cena: Sopa + Pan", "☀️ Comida: Paella"]);
     expect(e.find((x) => x.titulo === "📌 Psicotécnico")).toMatchObject({
       hora: "18:15",
       aviso: true,
     });
-    expect(e.find((x) => x.titulo === "🍽️ Cena: Sopa + Pan")?.aviso).toBeUndefined();
+    expect(comidas.find((x) => x.titulo === "🍽️ Cena: Sopa + Pan")?.aviso).toBeUndefined();
     // Las comidas y cenas salen a su hora (D-135), sin alarma.
     // El 9 de noviembre de 2026 es lunes: se cena a las 20:00.
-    expect(e.find((x) => x.titulo === "🍽️ Cena: Sopa + Pan")?.hora).toBe("20:00");
-    expect(e.find((x) => x.titulo === "☀️ Comida: Paella")?.hora).toBe("14:00");
+    expect(comidas.find((x) => x.titulo === "🍽️ Cena: Sopa + Pan")?.hora).toBe("20:00");
+    expect(comidas.find((x) => x.titulo === "☀️ Comida: Paella")?.hora).toBe("14:00");
   });
 
   it("la cena es a las 21:00 en fin de semana y a las 20:00 entre semana", () => {
@@ -76,7 +84,7 @@ describe("calendario suscrito", () => {
           { fecha: "2026-11-15", nombre: "Domingo" },
         ],
       }),
-      { hoy: HOY, para: "diego" },
+      { hoy: HOY, para: "diego", solo: "comidas" },
     );
     const hora = (n: string) => e.find((x) => x.titulo === `🍽️ Cena: ${n}`)?.hora;
     expect([hora("Viernes"), hora("Sábado"), hora("Domingo")]).toEqual(["20:00", "21:00", "21:00"]);

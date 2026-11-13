@@ -103,7 +103,25 @@ const limpio = (t: string) =>
  * si el evento tiene hora). **Los avisos de regalo** («pensar» a 30 días, «comprar» a 14) solo van
  * a quien no cumple: a Ana no le llegan los de su regalo, y sin saber quién pide, no se incluyen.
  */
+/** Qué calendario se pide (D-140): las fechas (lo de no olvidar) o solo las comidas y cenas. */
+export type CalendarioSuscrito = "fechas" | "comidas";
+
+const esComida = (e: EventoCalendario) => /^(cena|comida)-/.test(e.uid ?? "");
+
+/**
+ * Los eventos de uno de los dos calendarios suscritos (D-140): «fechas» (citas, fechas señaladas,
+ * cumpleaños y regalos, casa y mochila) o «comidas» (comidas y cenas). Separados, en Google cada uno
+ * tiene su color y se puede ocultar.
+ */
 export function eventosSuscritos(
+  p: ProyeccionCalendario,
+  opciones: { hoy: FechaIso; para: string | null; solo?: CalendarioSuscrito },
+): EventoCalendario[] {
+  const todos = todosLosEventos(p, opciones);
+  return opciones.solo === "comidas" ? todos.filter(esComida) : todos.filter((e) => !esComida(e));
+}
+
+function todosLosEventos(
   p: ProyeccionCalendario,
   { hoy, para }: { hoy: FechaIso; para: string | null },
 ): EventoCalendario[] {

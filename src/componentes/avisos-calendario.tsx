@@ -27,6 +27,9 @@ export function AvisosCalendario() {
       ? enlaceDeApp(`/api/calendario/${token}.ics?para=${encodeURIComponent(persona.id)}`)
       : null;
   const webcal = enlace?.replace(/^https?:/, "webcal:") ?? null;
+  // Las comidas y cenas van en un calendario aparte (D-140).
+  const enlaceComidas = enlace ? `${enlace}&solo=comidas` : null;
+  const webcalComidas = enlaceComidas?.replace(/^https?:/, "webcal:") ?? null;
 
   async function pedir(renovar: boolean) {
     if (!hogar) return;
@@ -46,10 +49,10 @@ export function AvisosCalendario() {
     }
   }
 
-  async function copiar() {
-    if (!enlace) return;
+  async function copiar(cual: string | null = enlace) {
+    if (!cual) return;
     try {
-      await navigator.clipboard.writeText(enlace);
+      await navigator.clipboard.writeText(cual);
       setMensaje("Enlace copiado. En Google Calendar: «Otros calendarios» → «Desde URL».");
     } catch {
       setMensaje("No se ha podido copiar. Mantén pulsado el enlace de abajo y cópialo a mano.");
@@ -93,6 +96,26 @@ export function AvisosCalendario() {
             <button type="button" className="boton-suave" onClick={() => void copiar()}>
               Copiar el enlace
             </button>
+          </div>
+          <div className="border-borde flex flex-col gap-2 rounded-2xl border p-3">
+            <p className="text-base">
+              <span aria-hidden="true">🍽️ </span>
+              <strong>Comidas y cenas, en un calendario aparte</strong> (comida a las 14:00, cena a
+              las 20:00 entre semana y a las 21:00 el fin de semana). Así en Google tienen su color
+              y las puedes ocultar.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <a className="boton-suave" href={webcalComidas ?? undefined}>
+                Suscribir las comidas en el iPhone
+              </a>
+              <button
+                type="button"
+                className="boton-suave"
+                onClick={() => void copiar(enlaceComidas)}
+              >
+                Copiar el enlace de comidas y cenas
+              </button>
+            </div>
           </div>
           <ol className="text-tinta-suave list-decimal space-y-1 pl-5 text-base">
             <li>

@@ -1200,3 +1200,10 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Compatibilidad:** si se ponen las variables de antes (`AVISOS_CRON_SECRET`, `VAPID_*`, `AVISOS_CALENDARIO_TOKEN`), siguen valiendo y tienen prioridad. El correo (Resend) sigue siendo solo de esa configuración. El workflow de GitHub ya no se programa solo (se puede lanzar a mano).
 - **iPhone:** iOS 16.4 o posterior, con la app **instalada desde Safari** (Compartir → «Añadir a pantalla de inicio») y abierta desde el icono; ahí se activan igual que en Android.
 - **Límites:** depende de que pg_cron y pg_net estén activos en Supabase (lo están en el plan actual). Si se cambia la dirección de la app, hay que actualizar `privado.avisos_ajustes.url_app`.
+
+## D-140 · Comidas y cenas en su propio calendario suscrito
+
+- **Decisión (Diego):** «las cenas no habría que incluirlas en el mismo calendario que las fechas y los cumples: una URL específica para comidas y cenas».
+- **Cómo:** el mismo token con `&solo=comidas` da el calendario **«¡Hecho! · Comidas»** (comida a las 14:00; cena a las 20:00 entre semana y a las 21:00 el fin de semana, D-135; sin alarma). El enlace de siempre (**«¡Hecho!»**) lleva ya solo lo de no olvidar: citas, fechas señaladas, cumpleaños y regalos, casa y mochila. En Más → Enviar hay un botón para copiar cada enlace (y otro para suscribir las comidas en el iPhone).
+- **Por qué:** en Google cada calendario suscrito tiene su color y su casilla para ocultarlo; las comidas eran dos eventos diarios que tapaban lo importante.
+- **Ojo:** al desplegarlo, las comidas desaparecen del calendario ya suscrito; hay que añadir el segundo enlace una vez.
