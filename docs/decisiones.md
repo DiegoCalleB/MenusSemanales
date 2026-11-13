@@ -1207,3 +1207,10 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Cómo:** el mismo token con `&solo=comidas` da el calendario **«¡Hecho! · Comidas»** (comida a las 14:00; cena a las 20:00 entre semana y a las 21:00 el fin de semana, D-135; sin alarma). El enlace de siempre (**«¡Hecho!»**) lleva ya solo lo de no olvidar: citas, fechas señaladas, cumpleaños y regalos, casa y mochila. En Más → Enviar hay un botón para copiar cada enlace (y otro para suscribir las comidas en el iPhone).
 - **Por qué:** en Google cada calendario suscrito tiene su color y su casilla para ocultarlo; las comidas eran dos eventos diarios que tapaban lo importante.
 - **Ojo:** al desplegarlo, las comidas desaparecen del calendario ya suscrito; hay que añadir el segundo enlace una vez.
+
+## D-141 · El menú del cole en el calendario de comidas
+
+- **Petición (Diego):** «solo salen las cenas, deberían salir también las comidas del cole y de casa».
+- **Qué pasaba:** las comidas de casa sí iban en el calendario (D-135), pero solo las **apuntadas** a partir de hoy, y no había ninguna; el menú del cole no iba (D-083 lo dejaba fuera a propósito).
+- **Qué cambia:** el resumen del calendario (`20261113020000_cole_en_calendario.sql`) añade `cole`: primero, segundo y postre del menú del colegio del hogar, de ayer a 60 días vista (ni grupos, ni calorías, ni historial). En **«¡Hecho! · Comidas»** sale cada día de cole a las **13:00** como «🏫 Cole: Lentejas · Merluza» (el postre, en la descripción), sin alarma. El calendario de fechas no cambia.
+- **Comidas de casa:** salen a las 14:00 los días en que se apuntan (fines de semana, fiestas…); si no se apuntan, no hay nada que enseñar.
