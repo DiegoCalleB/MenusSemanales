@@ -22,7 +22,6 @@ import { NotificacionesMovil } from "../notificaciones-movil";
 import { BotonesCompartir } from "../compartir-botones";
 import { useHogar } from "../proveedor-hogar";
 import { useFormatoMenu } from "../usar-formato-menu";
-import { useYo } from "../yo";
 
 function Tarjeta({
   titulo,
@@ -63,7 +62,6 @@ function Tarjeta({
 /** Sacar el plan de la app: mensaje de WhatsApp, lista para Keep y archivo de calendario. */
 export function CompartirVista() {
   const { estado } = useHogar();
-  const [yo] = useYo();
   const [aviso, setAviso] = useState("");
   const plan = useMemo(() => planParaCompartir(estado), [estado]);
   const compra = useMemo(() => seccionesDeCompra(estado), [estado]);
@@ -75,7 +73,7 @@ export function CompartirVista() {
   const hayEventos = estado.comidas.length > 0 || Object.keys(estado.eventos).length > 0;
 
   function descargarIcs() {
-    const ics = generarIcs("¡Hecho!", eventosDeCalendario(estado, yo), new Date());
+    const ics = generarIcs("¡Hecho!", eventosDeCalendario(estado), new Date());
     const url = URL.createObjectURL(new Blob([ics], { type: "text/calendar;charset=utf-8" }));
     const a = document.createElement("a");
     a.href = url;

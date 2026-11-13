@@ -1224,4 +1224,4 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 ## D-143 · En el calendario, el cumple y no el regalo
 
 - **Decisión (Diego):** «no quiero que ponga lo de pensar regalo, quiero que ponga cumple de Diego y con una tarta al principio».
-- **Qué cambia:** el calendario suscrito ya no lleva los avisos «🎁 Pensar el regalo» (30 días antes) ni «🎁 Comprar el regalo» (14 días antes). Cada cumpleaños sale **solo el mismo día**, como «🎂 Cumple de Diego», de todo el día, cada año y con alarma a las 9:00. Los avisos de regalo siguen dentro de la app (campanita y Cumples).
+- **Qué cambia:** el calendario suscrito ya no lleva los avisos «🎁 Pensar el regalo» (30 días antes) ni «🎁 Comprar el regalo» (14 días antes). Cada cumpleaños sale **solo el mismo día**, como «🎂 Cumple de Diego», de todo el día, cada año y con alarma a las 9:00. Lo mismo en el `.ics` que se descarga desde «Enviar». Los avisos de regalo siguen dentro de la app (campanita y Cumples).
