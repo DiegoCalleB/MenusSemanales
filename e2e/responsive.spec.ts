@@ -398,6 +398,26 @@ test.describe("flujos en móvil", () => {
       .click();
     await expect(pagina.getByRole("heading", { level: 1, name: /Casa/ })).toBeVisible();
 
+    // Las pantallas nuevas también (D-136, D-137): apuntar en la mochila y ver el plan de la semana.
+    await pagina.goto("/mochila");
+    await pagina.getByRole("button", { name: "＋ Apuntar algo que llevar" }).click();
+    const form = pagina.getByRole("form", { name: "Apuntar algo que llevar" });
+    await form.getByLabel("Qué").fill("Flauta sin conexión");
+    await form.getByRole("button", { name: "Alba", exact: true }).click();
+    await form.getByRole("button", { name: "jue", exact: true }).click();
+    await form.getByRole("button", { name: "Guardar" }).click();
+    await expect(pagina.getByRole("list", { name: "Qué lleva Alba" })).toContainText(
+      "Flauta sin conexión",
+    );
+    await pagina.goto("/semana");
+    await expect(
+      pagina.getByRole("heading", { level: 1, name: /Plan de la semana/ }),
+    ).toBeVisible();
+    await pagina.goto("/mochila");
+    await expect(pagina.getByRole("list", { name: "Qué lleva Alba" })).toContainText(
+      "Flauta sin conexión",
+    );
+
     // Lo apuntado sin conexión sigue ahí al recargar y al volver a la lista.
     await pagina.goto("/compra");
     await expect(pagina.getByRole("checkbox", { name: /Velas sin conexión/ })).toBeVisible();
