@@ -69,11 +69,16 @@ export function NavegacionInferior() {
   );
 }
 
-/** Tablet y escritorio: barra lateral con el nombre de la app y las secciones. */
+/**
+ * Tablet y escritorio: barra lateral con el nombre de la app y las secciones. Bajo la sección en la
+ * que se está salen sus apartados (D-142): un clic para llegar a cualquiera, sin pestañas arriba.
+ */
 export function NavegacionLateral() {
   const ruta = usePathname();
   const pendientes = usePendientesDeCompra();
-  const actual = pilarDe(ruta)?.id;
+  const pilar = pilarDe(ruta);
+  const actual = pilar?.id;
+  const apartado = pilar ? pestanaActiva(pilar, ruta) : null;
   return (
     <aside className="border-borde bg-superficie sticky top-0 hidden h-dvh w-56 shrink-0 flex-col gap-6 border-r p-4 md:flex lg:w-64">
       <Link
@@ -90,7 +95,7 @@ export function NavegacionLateral() {
       </Link>
       <nav aria-label="Principal">
         <ul className="flex flex-col gap-1">
-          {PILARES.map(({ id, href, texto, Icono }) => {
+          {PILARES.map(({ id, href, texto, Icono, pestanas }) => {
             const esActivo = actual === id;
             return (
               <li key={id}>
@@ -107,6 +112,29 @@ export function NavegacionLateral() {
                   {texto}
                   {id === "comer" && actual !== "comer" && <Contador n={pendientes} />}
                 </Link>
+                {esActivo && pestanas.length > 0 && (
+                  <ul aria-label={`Apartados de ${texto}`} className="mt-1 mb-2 flex flex-col">
+                    {pestanas.map((t) => {
+                      const esActiva = apartado?.href === t.href;
+                      return (
+                        <li key={t.href}>
+                          <Link
+                            href={t.href}
+                            aria-current={esActiva ? "page" : undefined}
+                            className={`border-borde ml-7 flex min-h-11 items-center border-l-2 pl-5 text-base ${
+                              esActiva
+                                ? "border-marca text-marca-fuerte font-bold"
+                                : "text-tinta-suave hover:text-tinta font-medium"
+                            }`}
+                          >
+                            {t.texto}
+                            {t.href === "/compra" && <Contador n={pendientes} />}
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
               </li>
             );
           })}
@@ -124,7 +152,8 @@ export function NavegacionLateral() {
 
 /**
  * Las pantallas del pilar abierto, en una fila de pestañas pegada arriba (en dos filas si no caben, para
- * que se vean todas sin deslizar). La portada no lleva. Sirve igual en móvil y en escritorio.
+ * que se vean todas sin deslizar). La portada no lleva. Solo en el móvil: en pantallas anchas los
+ * apartados van en la barra lateral (D-142).
  */
 export function Pestanas() {
   const ruta = usePathname();
@@ -133,7 +162,7 @@ export function Pestanas() {
   if (!pilar || pilar.pestanas.length === 0) return null;
   const activa = pestanaActiva(pilar, ruta);
   return (
-    <nav aria-label="Apartados" className="-mx-4 mb-4 md:mx-0">
+    <nav aria-label="Apartados" className="-mx-4 mb-4 md:hidden">
       <ul className="flex flex-wrap gap-2 px-4 md:px-0">
         {pilar.pestanas.map((t) => {
           const esActiva = activa?.href === t.href;

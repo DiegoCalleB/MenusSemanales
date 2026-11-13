@@ -576,7 +576,7 @@ test.describe("flujos en móvil", () => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/cumples");
     await pagina.getByLabel("Nombre").fill("Lucas");
-    await pagina.getByLabel(/Fecha/).fill("20/11/2017");
+    await pagina.getByRole("textbox", { name: /Fecha/ }).fill("20/11/2017");
     await pagina.getByRole("button", { name: "Guardar cumpleaños" }).click();
     await pagina.getByRole("button", { name: /Lucas/ }).click();
     await pagina.getByRole("button", { name: "Editar el cumpleaños de Lucas" }).click();
@@ -1274,6 +1274,7 @@ test.describe("flujos en móvil", () => {
       ["Comer", "Platos", "/menu/platos"],
       ["Casa", "Recurrente", "/casa"],
       ["Casa", "Por persona", "/tareas"],
+      ["Casa", "Mochila", "/mochila"],
       ["Casa", "Reparto", "/reparto"],
       ["Fechas", "Próximas", "/fechas"],
       ["Fechas", "Calendario", "/calendario"],
@@ -1843,7 +1844,7 @@ test.describe("flujos en móvil", () => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/cumples");
     await pagina.getByLabel("Nombre").fill("Lucas");
-    await pagina.getByLabel(/Fecha/).fill("20/11/2017");
+    await pagina.getByRole("textbox", { name: /Fecha/ }).fill("20/11/2017");
     await pagina.getByRole("button", { name: "Guardar cumpleaños" }).click();
     await pagina.getByText("Pegar varios de una vez").click();
     await pagina.getByLabel(/Uno por línea/).fill("Ana 10/11\nAbuela Rosa 20 de enero");
@@ -1852,7 +1853,7 @@ test.describe("flujos en móvil", () => {
 
     // Fecha mal escrita: lo dice.
     await pagina.getByLabel("Nombre").fill("Error");
-    await pagina.getByLabel(/Fecha/).fill("31/2");
+    await pagina.getByRole("textbox", { name: /Fecha/ }).fill("31/2");
     await pagina.getByRole("button", { name: "Guardar cumpleaños" }).click();
     await expect(
       pagina.getByRole("alert").filter({ hasText: "No entiendo la fecha" }),
@@ -2144,6 +2145,40 @@ test.describe("mochila, compartir y plan de la semana", () => {
     await expect(
       pagina.getByRole("link", { name: "📤 Mandar el plan por WhatsApp" }),
     ).toHaveAttribute("href", /^https:\/\/wa\.me\/\?text=/);
+    await contexto.close();
+  });
+});
+
+test.describe("barra lateral con apartados (D-142)", () => {
+  test("en pantalla ancha, los apartados de la sección van en la barra lateral y no arriba", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 1280, 800);
+    await cargar(pagina, "/mochila");
+    const lateral = pagina.locator("aside").getByRole("navigation", { name: "Principal" });
+    const casa = lateral.getByRole("list", { name: "Apartados de Casa" });
+    await expect(casa.getByRole("link")).toHaveText([
+      "Recurrente",
+      "Por persona",
+      "Mochila",
+      "Reparto",
+    ]);
+    await expect(casa.getByRole("link", { name: "Mochila" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    await expect(pagina.getByRole("navigation", { name: "Apartados" })).toBeHidden();
+    // Solo se despliega la sección en la que se está.
+    await expect(lateral.getByRole("list", { name: "Apartados de Fechas" })).toHaveCount(0);
+    await casa.getByRole("link", { name: "Reparto" }).click();
+    await pagina.waitForURL("**/reparto");
+    await lateral.getByRole("link", { name: "Fechas" }).click();
+    await pagina.waitForURL("**/fechas");
+    await expect(
+      lateral
+        .getByRole("list", { name: "Apartados de Fechas" })
+        .getByRole("link", { name: "Calendario" }),
+    ).toBeVisible();
     await contexto.close();
   });
 });
