@@ -19,6 +19,12 @@ select public.guardar_estado_hogar((select id from _ids where clave = 'HA'), 0,
     "mochila":[{"id":"m1","personaId":"dddddddd-0000-0000-0000-000000000001","texto":"Patines",
                 "dias":[5],"fecha":null,"antes":1,"preparadas":["2026-11-06"],"secreto":"no sale"}]}'::jsonb);
 insert into _t select 'A', public.enlace_calendario((select id from _ids where clave = 'HA'));
+-- Menú del cole (D-141): uno de hoy (sale) y uno de hace un mes (no sale).
+select public.aplicar_cambios_cole((select id from _ids where clave = 'HA'), jsonb_build_object(
+  'centro', jsonb_build_object('nombre', 'CEIP Prueba', 'localidad', 'Madrid'),
+  'dias', jsonb_build_object('upsert', jsonb_build_array(
+    jsonb_build_object('fecha', current_date, 'primero', 'Lentejas', 'segundo', 'Merluza', 'postre', 'Fruta', 'kcal', 700),
+    jsonb_build_object('fecha', current_date - 30, 'primero', 'Viejo', 'segundo', 'Viejo')))));
 select pg_temp.fin();
 
 -- Datos en tablas (como propietario; en la app llegan por los motores).
@@ -63,9 +69,12 @@ select pg_temp.igual('No sale nada del documento viejo',
   (select (j::text !~ 'Del documento' and j::text !~ 'Viejo')::int from _r where clave = 'r'), 1);
 select pg_temp.igual('Solo las claves de siempre',
   (select (select count(*)::int from jsonb_object_keys(j) k where k in
-     ('agenda','almuerzos','casa','cenas','cumples','eventos','mochila','personas')) from _r where clave = 'r'), 8);
+     ('agenda','almuerzos','casa','cenas','cole','cumples','eventos','mochila','personas')) from _r where clave = 'r'), 9);
 select pg_temp.igual('Y ninguna más',
-  (select count(*)::int from _r, jsonb_object_keys(j) where clave = 'r'), 8);
+  (select count(*)::int from _r, jsonb_object_keys(j) where clave = 'r'), 9);
+select pg_temp.igual('El menú del cole sale con sus platos, y solo los días cercanos (D-141)',
+  (select (jsonb_array_length(j->'cole') = 1 and (j->'cole'->0->>'primero') = 'Lentejas'
+        and (j->'cole'->0->>'postre') = 'Fruta' and not (j->'cole'->0 ? 'kcal'))::int from _r where clave = 'r'), 1);
 -- Qué llevar (D-136) sale del documento, solo con persona, texto, días, fecha y antelación.
 select pg_temp.igual('Qué llevar sale del documento',
   (select ((j->'mochila'->0->>'texto') = 'Patines' and (j->'mochila'->0->'dias') = '[5]'::jsonb

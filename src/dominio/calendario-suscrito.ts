@@ -49,6 +49,18 @@ export const proyeccionSchema = z.object({
       aplazadaHasta: fecha.nullish(),
     }),
   ),
+  /** Menú del cole (D-141), solo los platos. Opcional: la función SQL anterior no lo manda. */
+  cole: z
+    .array(
+      z.object({
+        fecha,
+        primero: z.string().max(200).nullish(),
+        segundo: z.string().max(200).nullish(),
+        postre: z.string().max(200).nullish(),
+      }),
+    )
+    .catch([])
+    .optional(),
   /** Qué llevar (D-136). Opcional: la función SQL anterior no lo manda. */
   mochila: z
     .array(
@@ -81,6 +93,8 @@ const DIAS_MOCHILA = 56;
 
 /** A qué hora salen en el calendario las comidas y cenas (no llevan hora propia en la app). */
 export const HORA_COMIDA = "14:00";
+/** La comida del cole (D-141), un poco antes que la de casa. */
+export const HORA_COLE = "13:00";
 /** Entre semana se cena antes (20:00); sábados y domingos, a las 21:00. */
 export const HORA_CENA_SEMANA = "20:00";
 export const HORA_CENA = "21:00";
@@ -106,7 +120,7 @@ const limpio = (t: string) =>
 /** Qué calendario se pide (D-140): las fechas (lo de no olvidar) o solo las comidas y cenas. */
 export type CalendarioSuscrito = "fechas" | "comidas";
 
-const esComida = (e: EventoCalendario) => /^(cena|comida)-/.test(e.uid ?? "");
+const esComida = (e: EventoCalendario) => /^(cena|comida|cole)-/.test(e.uid ?? "");
 
 /**
  * Los eventos de uno de los dos calendarios suscritos (D-140): «fechas» (citas, fechas señaladas,
@@ -149,6 +163,19 @@ function todosLosEventos(
       titulo: `☀️ Comida: ${textos.join(" + ")}`,
       descripcion: `Comida: ${textos.join(", ")}`,
       hora: HORA_COMIDA,
+    });
+  }
+  // Menú del cole (D-141): primero y segundo en el título; el postre, en la descripción.
+  for (const c of p.cole ?? []) {
+    if (c.fecha < hoy) continue;
+    const platos = [c.primero, c.segundo].filter((x): x is string => Boolean(x && x.trim()));
+    if (platos.length === 0) continue;
+    eventos.push({
+      uid: `cole-${c.fecha}`,
+      fecha: c.fecha,
+      titulo: `🏫 Cole: ${platos.join(" · ")}`,
+      descripcion: `Comida del cole: ${platos.join(", ")}${c.postre ? `. Postre: ${c.postre}` : ""}`,
+      hora: HORA_COLE,
     });
   }
   for (const [f, ev] of Object.entries(p.eventos).sort(([a], [b]) => a.localeCompare(b))) {

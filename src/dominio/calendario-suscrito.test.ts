@@ -274,3 +274,27 @@ describe("qué llevar en el calendario (D-136)", () => {
     expect(proyeccionSchema.safeParse(base()).success).toBe(true);
   });
 });
+
+describe("el menú del cole en el calendario de comidas (D-141)", () => {
+  it("sale a las 13:00 con primero y segundo, solo en el de comidas", () => {
+    const p = base({
+      cole: [
+        { fecha: "2026-11-01", primero: "Pasado", segundo: "Pasado", postre: null },
+        { fecha: "2026-11-03", primero: "Lentejas", segundo: "Merluza", postre: "Fruta" },
+        { fecha: "2026-11-04", primero: null, segundo: null, postre: null },
+      ],
+    });
+    const comidas = eventosSuscritos(p, { hoy: HOY, para: "diego", solo: "comidas" });
+    expect(comidas).toEqual([
+      expect.objectContaining({
+        uid: "cole-2026-11-03",
+        titulo: "🏫 Cole: Lentejas · Merluza",
+        descripcion: "Comida del cole: Lentejas, Merluza. Postre: Fruta",
+        hora: "13:00",
+      }),
+    ]);
+    expect(
+      eventosSuscritos(p, { hoy: HOY, para: "diego" }).some((e) => e.titulo.startsWith("🏫")),
+    ).toBe(false);
+  });
+});

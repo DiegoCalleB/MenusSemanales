@@ -100,9 +100,9 @@ export function AvisosCalendario() {
           <div className="border-borde flex flex-col gap-2 rounded-2xl border p-3">
             <p className="text-base">
               <span aria-hidden="true">🍽️ </span>
-              <strong>Comidas y cenas, en un calendario aparte</strong> (comida a las 14:00, cena a
-              las 20:00 entre semana y a las 21:00 el fin de semana). Así en Google tienen su color
-              y las puedes ocultar.
+              <strong>Comidas y cenas, en un calendario aparte</strong>: el menú del cole a las
+              13:00, la comida de casa a las 14:00 y la cena a las 20:00 entre semana y a las 21:00
+              el fin de semana. Así en Google tienen su color y las puedes ocultar.
             </p>
             <div className="flex flex-wrap gap-2">
               <a className="boton-suave" href={webcalComidas ?? undefined}>
