@@ -1284,6 +1284,7 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
   - Un código de llovizna, lluvia, chubasco, nieve o tormenta.
 
   Motivo: el 14-11-2026, en Las Musas, había chubascos de 1 mm a las 7 y a las 8 con solo un 25–33 % de probabilidad. Con la regla del día (50 %) no se habría avisado. Si falta alguna hora de la franja, se mira el día entero y se avisa con «puede llover a la hora del cole».
+
 - **Avisos:**
   - **20:00 (la noche antes):** «🌂 Mañana llueve de camino al cole (de 8 a 9 h, 70 %): paraguas y chubasquero». Sustituye al de «lluvia» del día, que diría lo mismo con menos detalle.
   - **7:00, nuevo, antes de salir de casa:** un día de cole, se vuelve a leer la previsión sin la copia de media hora. Si va a llover en la ida o en la vuelta, llega «🌂 Coged el paraguas». Si solo llueve a la vuelta, dice «salid con paraguas», porque hay que cogerlo al salir de casa. Si no llueve, o no hay cole, no llega nada. La hora se cambia con `AVISOS_HORA_TEMPRANO`. No hace falta tocar la base de datos: la llamada de cada hora ya existe (D-139).
