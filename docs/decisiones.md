@@ -1290,3 +1290,35 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
   - **7:00, nuevo, antes de salir de casa:** un día de cole, se vuelve a leer la previsión sin la copia de media hora. Si va a llover en la ida o en la vuelta, llega «🌂 Coged el paraguas». Si solo llueve a la vuelta, dice «salid con paraguas», porque hay que cogerlo al salir de casa. Si no llueve, o no hay cole, no llega nada. La hora se cambia con `AVISOS_HORA_TEMPRANO`. No hace falta tocar la base de datos: la llamada de cada hora ya existe (D-139).
   - **En «Hoy»:** la tarjeta «El tiempo en Las Musas» dice a qué horas llueve en la ida y en la vuelta.
 - Los fines de semana y los días sin cole (D-144), el aviso de lluvia es el del día, como antes.
+
+## D-149 · El cole con margen: el viernes, el lunes y la semana que viene
+
+- **Petición (Diego):** que todo sea automático, sin complicar la app.
+- **El lunes sin cole se avisa el viernes.** Si el lunes no hay cole (puente, festivo, libre disposición), el viernes por la noche llega «🏫 El lunes no hay cole: …». Así hay margen para organizarse. El domingo se vuelve a recordar, como antes. Si el lunes se vuelve tras unas vacaciones, el viernes avisa «El lunes vuelve el cole».
+- **La semana que viene, el viernes.** Una línea con lo que no es de todas las semanas: los días sin cole, lo que hay que llevar un día concreto y las citas. Por ejemplo: «🗓️ La semana que viene: lunes sin cole (Libre disposición), miércoles Disfraz de Emma, jueves 17:00 Dentista». Si toda la semana es sin cole, se dice una vez. Sin nada, no sale. Va en el aviso de la noche y en la campanita.
+
+## D-150 · Recordar activar las notificaciones en cada móvil
+
+- **Problema:** ningún móvil tenía las notificaciones activas, así que no llegaba ningún aviso (ni el del paraguas ni el de la mochila).
+- **Qué:** en «Hoy» sale la tarjeta «📲 Activa los avisos en este móvil», con el botón «Activar», solo si este móvil puede tenerlas y aún no las tiene. En un iPhone sin la app instalada, explica cómo instalarla. «Ahora no» la esconde una semana, y se guarda solo en ese móvil. Con las notificaciones activas, bloqueadas o sin cuenta, no ocupa sitio.
+- La lógica de activar se comparte con la tarjeta de «Compartir» (`useNotificaciones`).
+
+## D-151 · «Hecho» desde la notificación de la mochila
+
+- **Qué:** la notificación de la noche («🎒 Antes de dormir») lleva un botón **«✅ Hecho»**. Al pulsarlo, lo de la mochila de esa notificación queda marcado como preparado sin abrir la app, y llega una confirmación sin sonido. Sin conexión, o si el código ya no vale, se abre la mochila para marcarlo a mano.
+- **Cómo, sin dar acceso a nada más:**
+  - Al mandar la notificación, la llamada programada (con el secreto de los avisos, D-139) pide a la base de datos un **código aleatorio de un solo propósito** (`crear_accion_aviso`).
+  - El código **vale 36 horas** y solo sirve para marcar esas cosas.
+  - El botón manda el código a `/api/avisos/hecho` y la base de datos (`marcar_hecho_desde_aviso`) añade ese día a `preparadas` en el documento del hogar. La versión sube y los móviles lo reciben en directo, como cualquier guardado (si alguien tenía cambios sin guardar, se rebasan, D-063).
+  - Pulsarlo dos veces, o desde dos móviles, no duplica nada.
+  - La app nunca tiene el secreto.
+  - Migración: `20261115000000_hecho_desde_aviso.sql`.
+- **Límites:**
+  - Solo las tareas de la mochila. Las de casa van juntas en una línea («En casa tocan: …») y no se sabría cuál marcar.
+  - En iPhone, las notificaciones web no enseñan botones. Allí se toca la notificación y se abre la app.
+
+## D-152 · Lo que ya pasó, con estrellas
+
+- **Petición (Diego):** «poner puntuaciones a los eventos una vez ocurridos y poder ver eventos pasados».
+- **Cambia D-123:** las citas pasadas **ya no se borran**. «Próximas fechas» sigue enseñando solo lo que viene. Debajo, **«Lo que ya pasó»** lista las citas terminadas, de la más reciente a la más antigua (de 10 en 10, con «Ver más»). Cada una tiene **de 1 a 5 estrellas**; tocar la que ya está puesta la quita. También vuelven a verse en el calendario.
+- **Dónde se guarda:** en el documento del hogar (`puntuacionesCitas`), por «fecha|título» sin mayúsculas ni tildes. Así no se pierde aunque la cita cambie de identificador al guardarse en las tablas. Editar la cita se lleva su puntuación, y borrarla la quita. Solo se puede puntuar lo que ya ha empezado.

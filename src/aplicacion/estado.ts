@@ -200,6 +200,11 @@ export interface EstadoHogar {
    * (libre disposición) o «ese día sí hay cole». Manda sobre el calendario oficial. En el documento.
    */
   diasCole: AjusteCole[];
+  /**
+   * Cómo fue cada cita ya pasada, de 1 a 5 estrellas (D-152), por «fecha|título»: así sigue
+   * valiendo aunque la cita cambie de identificador al guardarse en la nube. En el documento.
+   */
+  puntuacionesCitas: Record<string, number>;
   /** Días en que no se planifica cena en casa (salir, comer fuera, no hace falta). */
   saltados: FechaIso[];
   personas: Persona[];
@@ -273,8 +278,8 @@ export type Accion =
       hasta?: string | null;
       hora?: string | null;
     }
-  /** Quita de la agenda lo que ya pasó (D-123): lo que terminó antes de hoy. */
-  | { tipo: "agenda/limpiar" }
+  /** Puntúa una cita que ya ha pasado (D-152): de 1 a 5 estrellas; 0 la quita. */
+  | { tipo: "agenda/valorar"; id: string; estrellas: number }
   /** Pasa a «hora» la que está escrita al final del título de una cita sin hora (D-134). */
   | { tipo: "agenda/arreglarHoras" }
   | { tipo: "almuerzo/anadir"; fecha: FechaIso; texto?: string; platoId?: string; idBase?: string }
@@ -764,6 +769,25 @@ export const nombreDia = (fecha: FechaIso): string => NOMBRE_DIA[diaSemanaIso(fe
 // Reductor
 // --------------------------------------------------------------------------------------------
 
+/** La clave de la puntuación de una cita (D-152): su día y su título, sin mayúsculas ni tildes. */
+export const clavePuntuacion = (a: { fecha: FechaIso; titulo: string }) =>
+  `${a.fecha}|${claveArticulo(a.titulo)}`;
+
+/** Solo puntuaciones de 1 a 5 con una clave razonable; lo demás se descarta. */
+function puntuacionesValidas(v: unknown): Record<string, number> {
+  if (typeof v !== "object" || v === null || Array.isArray(v)) return {};
+  return Object.fromEntries(
+    Object.entries(v as Record<string, unknown>).filter(
+      ([k, n]) =>
+        k.length <= 140 &&
+        /^\d{4}-\d{2}-\d{2}\|/.test(k) &&
+        Number.isInteger(n) &&
+        (n as number) >= 1 &&
+        (n as number) <= 5,
+    ),
+  ) as Record<string, number>;
+}
+
 /** Completa lo que un estado guardado por una versión anterior no trae (agenda, casa y almuerzos, D-075, D-078 y D-079). */
 export const normalizar = (e: EstadoHogar): EstadoHogar =>
   Array.isArray(e.agenda) &&
@@ -777,6 +801,8 @@ export const normalizar = (e: EstadoHogar): EstadoHogar =>
   Array.isArray(e.mochila) &&
   e.mochila.every((c) => typeof c.soloConCole === "boolean") &&
   Array.isArray(e.diasCole) &&
+  typeof e.puntuacionesCitas === "object" &&
+  e.puntuacionesCitas !== null &&
   typeof e.ajustesCompra === "object" &&
   e.ajustesCompra !== null
     ? e
@@ -795,6 +821,7 @@ export const normalizar = (e: EstadoHogar): EstadoHogar =>
             )
           : [],
         diasCole: Array.isArray(e.diasCole) ? e.diasCole : [],
+        puntuacionesCitas: puntuacionesValidas(e.puntuacionesCitas),
         agenda: Array.isArray(e.agenda) ? e.agenda : [],
         casa: Array.isArray(e.casa) ? e.casa : [],
         almuerzos: Array.isArray(e.almuerzos) ? e.almuerzos : [],
@@ -1621,8 +1648,25 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
       };
     }
 
-    case "agenda/borrar":
-      return { ...e, agenda: e.agenda.filter((a) => a.id !== accion.id) };
+    case "agenda/borrar": {
+      const borrada = e.agenda.find((a) => a.id === accion.id);
+      const puntuacionesCitas = { ...e.puntuacionesCitas };
+      if (borrada) delete puntuacionesCitas[clavePuntuacion(borrada)];
+      return { ...e, agenda: e.agenda.filter((a) => a.id !== accion.id), puntuacionesCitas };
+    }
+
+    case "agenda/valorar": {
+      const a = e.agenda.find((x) => x.id === accion.id);
+      const n = Math.round(accion.estrellas);
+      // Solo lo que ya ha empezado (desde el mismo día) y de 0 a 5.
+      if (!a || a.fecha > e.hoy || !(n >= 0 && n <= 5)) return e;
+      const resto = { ...e.puntuacionesCitas };
+      delete resto[clavePuntuacion(a)];
+      return {
+        ...e,
+        puntuacionesCitas: n === 0 ? resto : { ...resto, [clavePuntuacion(a)]: n },
+      };
+    }
 
     case "agenda/editar": {
       const actual = e.agenda.find((a) => a.id === accion.id);
@@ -1658,8 +1702,16 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
           aviso: error(e, `Ya hay otra cita «${titulo}» ese día.`),
         };
       }
+      // La puntuación va con la cita aunque cambie de día o de título.
+      const antes = clavePuntuacion(actual);
+      const { [antes]: puntos, ...otras } = e.puntuacionesCitas;
+      const puntuacionesCitas =
+        puntos === undefined
+          ? e.puntuacionesCitas
+          : { ...otras, [clavePuntuacion({ fecha: accion.fecha, titulo })]: puntos };
       return {
         ...e,
+        puntuacionesCitas,
         agenda: e.agenda.map((a) =>
           a.id === accion.id ? { ...a, titulo, fecha: accion.fecha, hasta, hora } : a,
         ),
@@ -1679,12 +1731,6 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
       });
       // Sin nada que arreglar se devuelve el mismo estado: no hay cambio que guardar.
       return cambiado ? { ...e, agenda } : e;
-    }
-
-    case "agenda/limpiar": {
-      const vigentes = e.agenda.filter((a) => (a.hasta ?? a.fecha) >= e.hoy);
-      // Sin nada que quitar se devuelve el mismo estado: no hay cambio que guardar ni que enseñar.
-      return vigentes.length === e.agenda.length ? e : { ...e, agenda: vigentes };
     }
 
     case "cumple/borrar":

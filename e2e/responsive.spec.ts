@@ -525,6 +525,36 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 
+  test("lo que ya pasó (D-152): la cita pasada se queda y se puntúa con estrellas", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/fechas");
+    // «Hoy» en los datos de ejemplo es el 4 de noviembre de 2026.
+    await pagina.getByLabel(/Escribe como en una nota/).fill("31 Octubre 2026 Fiesta de Halloween");
+    await pagina.getByRole("button", { name: "Apuntar", exact: true }).click();
+    const pasadas = pagina.getByRole("list", { name: "Citas pasadas" });
+    await expect(pasadas.getByText("Fiesta de Halloween")).toBeVisible();
+    const estrellas = pasadas.getByRole("group", { name: "Puntuación de Fiesta de Halloween" });
+    await estrellas.getByRole("button", { name: "4 estrellas" }).click();
+    await expect(estrellas.getByRole("button", { name: "4 estrellas" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    // Al volver a entrar sigue ahí, con su puntuación; tocarla otra vez la quita.
+    await pagina.reload();
+    await expect(estrellas.getByRole("button", { name: "4 estrellas" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await estrellas.getByRole("button", { name: "4 estrellas" }).click();
+    await expect(estrellas.getByRole("button", { name: "4 estrellas" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    await contexto.close();
+  });
+
   test("editar: una cita apuntada (título, día y hora), desde «Apuntado» y desde «Próximas fechas»", async ({
     browser,
   }) => {

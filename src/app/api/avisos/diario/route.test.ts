@@ -11,11 +11,13 @@ const m = vi.hoisted(() => ({
   comprobar: vi.fn(),
   guardarClaves: vi.fn(),
   tiempo: vi.fn(),
+  accion: vi.fn(),
 }));
 vi.mock("@/infraestructura/tiempo", () => ({ leerPrevision: m.tiempo }));
 vi.mock("@/infraestructura/avisos/claves", () => ({
   comprobarSecretoDeAvisos: m.comprobar,
   guardarClavesDeAvisos: m.guardarClaves,
+  crearAccionDeAviso: m.accion,
 }));
 vi.mock("@/infraestructura/avisos/resend", () => ({
   CorreoNoConfigurado: class CorreoNoConfigurado extends Error {},
@@ -73,6 +75,7 @@ beforeEach(() => {
   m.comprobar.mockReset().mockResolvedValue({ valido: false });
   m.guardarClaves.mockReset();
   m.tiempo.mockReset().mockResolvedValue([]);
+  m.accion.mockReset().mockResolvedValue("d".repeat(64));
 });
 
 describe("POST /api/avisos/diario", () => {
@@ -227,6 +230,43 @@ describe("POST /api/avisos/diario", () => {
       expect(m.subs).toHaveBeenCalledWith(OTRO_TOKEN);
       expect(m.push.mock.calls[0]?.[3]).toEqual(CLAVES);
       expect(m.enviar).not.toHaveBeenCalled();
+    });
+
+    it("por la noche, lo de la mochila lleva el botón «Hecho» con un código de la base de datos (D-151)", async () => {
+      const h = Number(
+        new Intl.DateTimeFormat("es-ES", {
+          timeZone: "Europe/Madrid",
+          hour: "numeric",
+          hourCycle: "h23",
+        }).format(new Date()),
+      );
+      vi.stubEnv("AVISOS_HORA", String((h + 1) % 24));
+      vi.stubEnv("AVISOS_HORA_NOCHE", String(h));
+      m.comprobar.mockResolvedValue({ valido: true, claves: CLAVES });
+      m.subs.mockResolvedValue([
+        { endpoint: "https://push.example.test/1", p256dh: "p".repeat(30), auth: "a".repeat(12) },
+      ]);
+      m.leer.mockResolvedValue({
+        ...resumen,
+        personas: [{ id: "emma", nombre: "Emma", tipo: "nino", activa: true }],
+        // Miércoles 4: la flauta se deja preparada el martes 3.
+        mochila: [{ personaId: "emma", texto: "Flauta", dias: [3], fecha: null, antes: 1 }],
+      });
+      const r = await pedir(`Bearer ${SECRETO_BD}`, "", { token: OTRO_TOKEN });
+      expect(r.status).toBe(200);
+      expect(m.accion).toHaveBeenCalledWith(SECRETO_BD, OTRO_TOKEN, [
+        { texto: "Flauta", personaId: "emma", para: "2026-11-04" },
+      ]);
+      expect(m.push.mock.calls[0]?.[1]).toMatchObject({
+        titulo: "🎒 Antes de dormir",
+        hecho: "d".repeat(64),
+      });
+
+      // Si no se puede crear el código, la notificación sale igual, sin botón.
+      m.accion.mockResolvedValue(null);
+      m.push.mockClear();
+      await pedir(`Bearer ${SECRETO_BD}`, "", { token: OTRO_TOKEN });
+      expect(m.push.mock.calls[0]?.[1]).not.toHaveProperty("hecho");
     });
 
     it("sin token en el cuerpo ni en las variables, no hace nada", async () => {

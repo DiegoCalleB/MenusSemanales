@@ -79,6 +79,11 @@ function destinoCompartido(campos, hayArchivo) {
   return s ? `/compartido?${s}` : "/compartido";
 }
 
+/** El código del botón «Hecho» (D-151) si tiene la forma esperada; si no, null (sin botón). */
+function codigoHecho(v) {
+  return typeof v === "string" && /^[0-9a-f]{64}$/.test(v) ? v : null;
+}
+
 /** ¿Es un archivo que se guarda y se sirve «primero lo guardado»? */
 function esEstatico(ruta) {
   return ruta.startsWith("/_next/static/") || SUELTOS.includes(ruta);
@@ -249,7 +254,11 @@ if (typeof self !== "undefined" && typeof self.addEventListener === "function") 
     // conexión, Next abre la pantalla entera y eso lo responde la rama de arriba.
   });
 
-  /* Notificaciones de ¡Hecho! (D-115). Solo enseña el aviso y abre la app al tocarlo. */
+  /*
+   * Notificaciones de ¡Hecho! (D-115). Enseñan el aviso y, al tocarlas, abren la app. La de la
+   * noche puede llevar un botón «Hecho» (D-151): marca lo de la mochila como preparado sin abrir la
+   * app, con el código de un solo uso que va en la notificación.
+   */
   self.addEventListener("push", (evento) => {
     let datos = {};
     try {
@@ -260,29 +269,68 @@ if (typeof self !== "undefined" && typeof self.addEventListener === "function") 
     const titulo =
       typeof datos.titulo === "string" && datos.titulo ? datos.titulo.slice(0, 100) : "¡Hecho!";
     const cuerpo = typeof datos.cuerpo === "string" ? datos.cuerpo.slice(0, 300) : "";
+    const hecho = codigoHecho(datos.hecho);
     evento.waitUntil(
       self.registration.showNotification(titulo, {
         body: cuerpo,
         icon: "/icon-192.png",
         badge: "/icon-192.png",
         tag: "avisos-diarios",
-        data: { url: "/" },
+        data: { url: "/", hecho },
+        ...(hecho ? { actions: [{ action: "hecho", title: "✅ Hecho" }] } : {}),
       }),
     );
   });
 
+  const abrirApp = (url) =>
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((ventanas) => {
+      for (const v of ventanas) if ("focus" in v) return v.focus();
+      return self.clients.openWindow(url);
+    });
+
+  async function marcarHecho(codigo) {
+    try {
+      const r = await fetch("/api/avisos/hecho", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ codigo }),
+      });
+      if (!r.ok) throw new Error("no-marcado");
+      await self.registration.showNotification("✅ Apuntado como preparado", {
+        body: "Ya sale marcado en la app.",
+        icon: "/icon-192.png",
+        badge: "/icon-192.png",
+        tag: "avisos-diarios",
+        silent: true,
+        data: { url: "/mochila" },
+      });
+    } catch {
+      // Sin conexión o el código ya no vale: se abre la mochila para marcarlo a mano.
+      await abrirApp("/mochila");
+    }
+  }
+
   self.addEventListener("notificationclick", (evento) => {
     evento.notification.close();
-    evento.waitUntil(
-      self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((ventanas) => {
-        for (const v of ventanas) if ("focus" in v) return v.focus();
-        return self.clients.openWindow("/");
-      }),
-    );
+    const datos = evento.notification.data || {};
+    const hecho = codigoHecho(datos.hecho);
+    if (evento.action === "hecho" && hecho) {
+      evento.waitUntil(marcarHecho(hecho));
+      return;
+    }
+    evento.waitUntil(abrirApp(typeof datos.url === "string" ? datos.url : "/"));
   });
 }
 
 // Para poder probar las funciones puras desde los tests (en el navegador `module` no existe).
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { extraerRecursos, clavePagina, esEstatico, destinoCompartido, RUTAS, SUELTOS };
+  module.exports = {
+    extraerRecursos,
+    clavePagina,
+    esEstatico,
+    destinoCompartido,
+    codigoHecho,
+    RUTAS,
+    SUELTOS,
+  };
 }

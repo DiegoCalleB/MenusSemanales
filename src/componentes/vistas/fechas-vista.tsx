@@ -8,6 +8,7 @@ import { type CuentaAtras, cuentaAtras } from "@/dominio/cuenta-atras";
 import { fechasParaCompartir } from "@/aplicacion/compartir";
 import { textoFechas } from "@/dominio/compartir";
 import { Apuntar } from "../apuntar";
+import { CitasPasadas } from "../citas-pasadas";
 import { BotonEditar, EditarCita, EditarCumple } from "../editar";
 import { LeerCircular } from "../leer-circular";
 import { BotonesCompartir } from "../compartir-botones";
@@ -60,8 +61,8 @@ function EstadoGuardado() {
 }
 
 /**
- * Módulo de fechas: apuntar, ver «Próximas fechas» (solo lo que aún no ha pasado: lo ya pasado se
- * quita solo, D-123), copiarlo a Keep y llevarlo al calendario.
+ * Módulo de fechas: apuntar, ver «Próximas fechas» (solo lo que aún no ha pasado), copiarlo a Keep
+ * y llevarlo al calendario. Lo ya pasado se queda en «Lo que ya pasó», para puntuarlo (D-152).
  */
 export function FechasVista() {
   const { estado } = useHogar();
@@ -225,6 +226,8 @@ export function FechasVista() {
           elemento y, si la vuelves a copiar y pegar aquí, se apunta igual.
         </p>
       </section>
+
+      <CitasPasadas />
     </div>
   );
 }

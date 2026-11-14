@@ -1,35 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { crearClienteNavegador } from "@/infraestructura/supabase/cliente-navegador";
-import {
-  guardarSuscripcionPush,
-  pedirPruebaPush,
-  quitarSuscripcionPush,
-} from "@/infraestructura/supabase/cuenta";
+import { pedirPruebaPush, quitarSuscripcionPush } from "@/infraestructura/supabase/cuenta";
 import { useCuenta } from "./proveedor-hogar";
-
-type Estado =
-  | "comprobando"
-  | "no-soportado"
-  | "ios-sin-instalar"
-  | "sin-configurar"
-  | "denegado"
-  | "inactivas"
-  | "activas";
-
-const aBytes = (base64: string): Uint8Array<ArrayBuffer> => {
-  const limpio = (base64 + "=".repeat((4 - (base64.length % 4)) % 4))
-    .replace(/-/g, "+")
-    .replace(/_/g, "/");
-  const bin = atob(limpio);
-  return Uint8Array.from(bin, (c) => c.charCodeAt(0));
-};
-
-const esIos = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
-const estaInstalada = () =>
-  window.matchMedia("(display-mode: standalone)").matches ||
-  (navigator as unknown as { standalone?: boolean }).standalone === true;
+import { useNotificaciones } from "./usar-notificaciones";
 
 /**
  * Notificaciones en el móvil (D-115, D-139): cada mañana a las 9 llega el aviso de hoy y a las 20
@@ -39,81 +14,12 @@ const estaInstalada = () =>
  */
 export function NotificacionesMovil() {
   const { fase, hogar } = useCuenta();
-  const [estado, setEstado] = useState<Estado>("comprobando");
-  const [mensaje, setMensaje] = useState("");
-  const [ocupado, setOcupado] = useState(false);
+  const { estado, setEstado, mensaje, setMensaje, ocupado, setOcupado, activar } =
+    useNotificaciones();
   const [claves, setClaves] = useState<{ publica: string; privada: string } | null>(null);
-
-  const comprobar = useCallback(async () => {
-    if (
-      !("serviceWorker" in navigator) ||
-      !("PushManager" in window) ||
-      !("Notification" in window)
-    ) {
-      setEstado(esIos() && !estaInstalada() ? "ios-sin-instalar" : "no-soportado");
-      return;
-    }
-    if (esIos() && !estaInstalada()) return setEstado("ios-sin-instalar");
-    if (Notification.permission === "denied") return setEstado("denegado");
-    const reg = await navigator.serviceWorker.getRegistration("/");
-    const sub = await reg?.pushManager.getSubscription();
-    setEstado(sub ? "activas" : "inactivas");
-  }, []);
-
-  useEffect(() => {
-    void Promise.resolve().then(comprobar);
-  }, [comprobar]);
 
   const token = async () =>
     (await crearClienteNavegador().auth.getSession()).data.session?.access_token ?? "";
-
-  async function activar() {
-    if (!hogar) return;
-    setOcupado(true);
-    setMensaje("");
-    try {
-      // Primero se pregunta al servidor si ya tiene sus claves: si no, no tiene sentido pedir permiso.
-      const r = await fetch("/api/push/clave", { cache: "no-store" });
-      if (!r.ok) {
-        await r.text().catch(() => "");
-        setEstado("sin-configurar");
-        return;
-      }
-      const { clave } = (await r.json()) as { clave: string };
-      const permiso = await Notification.requestPermission();
-      if (permiso !== "granted") {
-        setEstado(permiso === "denied" ? "denegado" : "inactivas");
-        return;
-      }
-      await navigator.serviceWorker.register("/sw.js", { scope: "/" });
-      const reg = await navigator.serviceWorker.ready;
-      const sub =
-        (await reg.pushManager.getSubscription()) ??
-        (await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: aBytes(clave),
-        }));
-      const j = sub.toJSON();
-      if (!j.endpoint || !j.keys?.p256dh || !j.keys.auth) throw new Error("suscripcion-incompleta");
-      const { error } = await guardarSuscripcionPush(crearClienteNavegador(), hogar.id, {
-        endpoint: j.endpoint,
-        p256dh: j.keys.p256dh,
-        auth: j.keys.auth,
-      });
-      if (error) {
-        await sub.unsubscribe();
-        throw new Error("no-guardada");
-      }
-      setEstado("activas");
-      setMensaje("Notificaciones activadas en este móvil.");
-    } catch {
-      setMensaje(
-        "No se han podido activar. Si acabas de poner las claves en Railway, espera a que termine de desplegar y vuelve a intentarlo.",
-      );
-    } finally {
-      setOcupado(false);
-    }
-  }
 
   async function desactivar() {
     setOcupado(true);
@@ -208,8 +114,9 @@ export function NotificacionesMovil() {
       </h2>
       <p className="text-base">
         Cada mañana a las 9 te llega el aviso de hoy: la cena, las citas, lo que toca en casa y los
-        cumpleaños que se acercan. Y a las 20, si hay que dejar algo preparado (la mochila) o hay
-        una cita mañana, un recordatorio. Aunque la app esté cerrada.
+        cumpleaños que se acercan. A las 7, si va a llover a la hora del cole, el del paraguas. Y a
+        las 20, si hay que dejar algo preparado (la mochila) o hay una cita mañana, un recordatorio.
+        Aunque la app esté cerrada.
       </p>
 
       {fase !== "conectado" || !hogar ? (

@@ -257,11 +257,22 @@ describe("avisos y calendario escolar (D-144)", () => {
     expect(ids2("2026-12-28")).toEqual([]);
     // El viernes 8 de enero es no lectivo y el lunes 11 se vuelve: se avisa el domingo 10.
     expect(ids2("2027-01-10")).toEqual(["cole-vuelve-2027-01-11"]);
-    // Viernes antes del puente de diciembre: el aviso llega el domingo 6.
-    expect(ids2("2026-12-04")).toEqual([]);
+    // Viernes antes del puente de diciembre: se avisa ya el viernes (D-149) y otra vez el domingo.
+    expect(ids2("2026-12-04")).toEqual(["cole-no-2026-12-07"]);
+    expect(ids2("2026-12-05")).toEqual([]);
     expect(ids2("2026-12-06")).toEqual(["cole-no-2026-12-07"]);
     // Un fin de semana normal, nada.
     expect(ids2("2026-11-15")).toEqual([]);
+  });
+
+  it("el viernes avisa del lunes sin cole y de la vuelta, con margen (D-149)", () => {
+    const titulos = (hoy: string) =>
+      avisosDeLaNoche({ ...base, hoy, conCole: true })
+        .filter((a) => a.id.startsWith("cole-"))
+        .map((a) => a.titulo);
+    expect(titulos("2026-12-04")).toEqual(["El lunes no hay cole: Día de la Constitución"]);
+    // Viernes 8 de enero (no lectivo): el lunes 11 se vuelve.
+    expect(titulos("2027-01-08")).toEqual(["El lunes vuelve el cole"]);
   });
 
   it("sin nada del cole en el hogar, no avisa de días sin cole", () => {
@@ -405,6 +416,46 @@ describe("el paraguas a la hora del cole (D-148)", () => {
     expect(avisosDeLaNoche({ ...cole, hoy: "2026-11-20" }).map((a) => a.titulo)).toContain(
       "Mañana, lluvia (70 %): chubasquero y botas",
     );
+  });
+});
+
+describe("el viernes, la semana que viene (D-149)", () => {
+  it("días sin cole, lo de llevar un día concreto y las citas, por días", () => {
+    const e = {
+      ...base,
+      hoy: "2026-11-27", // viernes
+      conCole: true,
+      diasCole: [{ fecha: "2026-11-30", hay: false, motivo: "Libre disposición" }],
+      mochila: [
+        { texto: "Disfraz", persona: "Emma", dias: [], fecha: "2026-12-02", antes: 1 },
+        { texto: "Patines", persona: "Emma", dias: [5], fecha: null, antes: 1 },
+      ],
+      citas: [
+        { fecha: "2026-12-03", titulo: "Dentista", hora: "17:00" },
+        { fecha: "2026-12-10", titulo: "Lejos", hora: null },
+      ],
+    };
+    const semana = avisosDeLaNoche(e).find((a) => a.id === "semana-que-viene-2026-11-30");
+    expect(semana?.titulo).toBe(
+      "La semana que viene: lunes sin cole (Libre disposición), miércoles Disfraz de Emma, jueves 17:00 Dentista",
+    );
+  });
+
+  it("toda la semana sin cole se dice una vez; sin nada, no sale; otro día, tampoco", () => {
+    const navidad = avisosDeHoy({ ...base, hoy: "2026-12-25", conCole: true }).find((a) =>
+      a.id.startsWith("semana-que-viene-"),
+    );
+    expect(navidad?.titulo).toBe(
+      "La semana que viene: sin cole toda la semana (Vacaciones de Navidad)",
+    );
+    expect(
+      avisosDeHoy({ ...base, hoy: "2026-11-20" }).some((a) => a.id.startsWith("semana-que-viene-")),
+    ).toBe(false);
+    expect(
+      avisosDeHoy({ ...base, hoy: "2026-11-26", conCole: true }).some((a) =>
+        a.id.startsWith("semana-que-viene-"),
+      ),
+    ).toBe(false);
   });
 });
 

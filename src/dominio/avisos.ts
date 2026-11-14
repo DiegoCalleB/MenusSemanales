@@ -28,6 +28,8 @@ export interface Aviso {
   detalle?: string;
   /** «ya» pide hacer algo hoy; «pronto» se acerca; «info» solo informa. */
   nivel: NivelAviso;
+  /** Lo de la mochila que se puede marcar como preparado desde la notificación (D-151). */
+  preparar?: { texto: string; personaId: string | null; para: FechaIso };
 }
 
 export interface EntradaAvisos {
@@ -139,6 +141,8 @@ export interface CosaParaAviso {
   preparadas?: readonly FechaIso[];
   /** Solo los días que hay cole (D-144). Si falta, sí. */
   soloConCole?: boolean;
+  /** El id de la persona (el nombre va en `persona`): para marcarla desde la notificación (D-151). */
+  personaId?: string | null;
 }
 
 const DIAS = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"];
@@ -154,6 +158,41 @@ export function fechaLarga(f: FechaIso): string {
 }
 
 const MAX_TAREAS = 5;
+
+/** «La semana que viene: lunes sin cole (San José), miércoles flauta de Emma, jueves 17:00 dentista». */
+function semanaQueViene(
+  e: EntradaAvisos,
+  lunes: FechaIso,
+  cosas: ReadonlyArray<{ personaId: string; texto: string; fecha: FechaIso | null }>,
+): Aviso | null {
+  const ajustes = e.diasCole ?? [];
+  const dias = Array.from({ length: 7 }, (_, i) => sumarDias(lunes, i));
+  const sinCole = e.conCole ? dias.slice(0, 5).map((f) => diaDeCole(f, ajustes)) : [];
+  const todaSinCole = sinCole.length === 5 && sinCole.every((d) => !d.hay);
+  const partes: string[] = [];
+  if (todaSinCole) partes.push(`sin cole toda la semana (${sinCole[0]!.motivo})`);
+  for (const [i, f] of dias.entries()) {
+    const del: string[] = [];
+    const c = sinCole[i];
+    if (c && !c.hay && !todaSinCole) del.push(`sin cole (${c.motivo})`);
+    for (const x of cosas) {
+      if (x.fecha === f) del.push(`${x.texto}${x.personaId ? ` de ${x.personaId}` : ""}`);
+    }
+    for (const x of e.citas
+      .filter((x) => x.fecha === f)
+      .sort((a, b) => (a.hora ?? "").localeCompare(b.hora ?? ""))) {
+      del.push(`${x.hora ? `${x.hora} ` : ""}${x.titulo}`);
+    }
+    if (del.length > 0) partes.push(`${DIAS[i]} ${del.join(" y ")}`);
+  }
+  if (partes.length === 0) return null;
+  return {
+    id: `semana-que-viene-${lunes}`,
+    emoji: "🗓️",
+    titulo: `La semana que viene: ${partes.join(", ")}`,
+    nivel: "pronto",
+  };
+}
 /** Con esta antelación (en días) se avisa de un cumpleaños. */
 const AVISAR_CUMPLE = new Set([0, 1, 3, 7, 14, 30]);
 
@@ -245,11 +284,15 @@ export function avisosDeHoy(e: EntradaAvisos): Aviso[] {
     if (hecho) continue;
     const cuando =
       para === e.hoy ? "para hoy" : para === manana ? "para mañana" : `para el ${fechaLarga(para)}`;
+    const original = e.mochila?.[Number(cosa.id)];
     out.push({
       id: `mochila-${para}-${cosa.texto}-${cosa.personaId}`,
       emoji: "🎒",
       titulo: `Deja preparado: ${cosa.texto}${cosa.personaId ? ` de ${cosa.personaId}` : ""} (${cuando})`,
       nivel: "ya",
+      ...(original && original.personaId !== undefined
+        ? { preparar: { texto: cosa.texto, personaId: original.personaId, para } }
+        : {}),
     });
   }
 
@@ -257,30 +300,41 @@ export function avisosDeHoy(e: EntradaAvisos): Aviso[] {
   out.push(...avisosDelTiempo(e.tiempo, e.hoy, "Hoy", hayColeEse(e, e.hoy)));
 
   // Calendario escolar (D-144): el aviso de que mañana no hay cole (solo el primer día de cada
-  // parón, no cada día de unas vacaciones) y de que mañana vuelve.
+  // parón, no cada día de unas vacaciones) y de que mañana vuelve. El viernes se avisa ya del lunes
+  // (D-149), para organizarse con margen; el domingo se vuelve a recordar.
   if (e.conCole) {
-    const d = diaDeCole(manana, ajustes);
-    if (diaSemanaIso(manana) <= 5) {
-      let anterior = sumarDias(manana, -1);
+    const dias: Array<[FechaIso, string]> = [];
+    if (diaSemanaIso(manana) <= 5) dias.push([manana, "Mañana"]);
+    if (diaSemanaIso(e.hoy) === 5) dias.push([sumarDias(e.hoy, 3), "El lunes"]);
+    for (const [dia, cuando] of dias) {
+      const d = diaDeCole(dia, ajustes);
+      let anterior = sumarDias(dia, -1);
       while (diaSemanaIso(anterior) >= 6) anterior = sumarDias(anterior, -1);
       const antes = diaDeCole(anterior, ajustes);
       if (!d.hay && antes.hay) {
         out.push({
-          id: `cole-no-${manana}`,
+          id: `cole-no-${dia}`,
           emoji: "🏫",
-          titulo: `Mañana no hay cole: ${d.motivo}`,
+          titulo: `${cuando} no hay cole: ${d.motivo}`,
           nivel: "pronto",
         });
       } else if (d.hay && !antes.hay && antes.origen !== "fin-de-semana") {
         out.push({
-          id: `cole-vuelve-${manana}`,
+          id: `cole-vuelve-${dia}`,
           emoji: "🏫",
-          titulo: "Mañana vuelve el cole",
+          titulo: `${cuando} vuelve el cole`,
           detalle: "Mochila, uniforme y lo que haya que llevar.",
           nivel: "pronto",
         });
       }
     }
+  }
+
+  // El viernes, lo que trae la semana que viene (D-149): días sin cole, lo que hay que llevar un
+  // día concreto y las citas. Solo lo que no es de todas las semanas.
+  if (diaSemanaIso(e.hoy) === 5) {
+    const semana = semanaQueViene(e, sumarDias(e.hoy, 3), cosas);
+    if (semana) out.push(semana);
   }
 
   // Calendario escolar nuevo o actualizado (D-146): se avisa tres días, para que se vea.
@@ -346,6 +400,7 @@ export function avisosDeLaNoche(e: EntradaAvisos): Aviso[] {
     (a) =>
       a.id.startsWith("mochila-") ||
       a.id.startsWith("cole-") ||
+      a.id.startsWith("semana-que-viene-") ||
       (a.id.startsWith("cita-") && a.nivel === "pronto"),
   );
   // Lo de la mochila primero; luego el tiempo de mañana (D-145), que también se deja preparado.
@@ -357,6 +412,10 @@ export function avisosDeLaNoche(e: EntradaAvisos): Aviso[] {
     ...resto,
   ];
 }
+
+/** Lo que el botón «Hecho» de la notificación de la noche marcaría (D-151): lo de la mochila. */
+export const cosasParaMarcar = (avisos: readonly Aviso[]) =>
+  avisos.flatMap((a) => (a.preparar ? [a.preparar] : [])).slice(0, 10);
 
 export function notificacionDeLaNoche(avisos: readonly Aviso[]) {
   const mochila = avisos.filter((a) => a.id.startsWith("mochila-"));
@@ -448,6 +507,7 @@ export function entradaDeProyeccion(p: ProyeccionCalendario, hoy: FechaIso): Ent
       fecha: c.fecha ?? null,
       antes: c.antes,
       soloConCole: c.soloConCole !== false,
+      personaId: c.personaId ?? null,
     })),
     diasConCena: [...new Set(p.cenas.map((c) => c.fecha))],
     diasCole: p.diasCole ?? [],

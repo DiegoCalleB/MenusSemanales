@@ -19,6 +19,7 @@ export function entradaDeEstado(e: EstadoHogar): EntradaAvisos {
     mochila: e.mochila.map((c) => ({
       texto: c.texto,
       persona: e.personas.find((p) => p.id === c.personaId)?.nombre ?? "",
+      personaId: c.personaId,
       dias: c.dias,
       fecha: c.fecha,
       antes: c.antes,
