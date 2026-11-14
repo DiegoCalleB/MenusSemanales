@@ -1,5 +1,6 @@
 import { type EntradaAvisos, avisosDeHoy } from "@/dominio/avisos";
 import { sumarDias } from "@/dominio/fechas";
+import { tieneCole } from "./cole";
 import { comidasDe, type EstadoHogar } from "./estado";
 
 /** La entrada de los avisos a partir del estado de la app (la campanita). */
@@ -22,9 +23,12 @@ export function entradaDeEstado(e: EstadoHogar): EntradaAvisos {
       fecha: c.fecha,
       antes: c.antes,
       preparadas: c.preparadas,
+      soloConCole: c.soloConCole,
     })),
     diasConCena: [...new Set(e.comidas.map((c) => c.fecha))],
     diasSinCena: e.saltados,
+    diasCole: e.diasCole,
+    conCole: tieneCole(e),
   };
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { hayColeDe, sinColeEntreSemana } from "@/aplicacion/cole";
 import { nombreDia } from "@/aplicacion/estado";
 import { sumarDias } from "@/dominio/fechas";
 import { paraLlevar, paraPreparar } from "@/dominio/mochila";
@@ -14,9 +15,17 @@ export function MochilaHoy({ siempre = false }: { siempre?: boolean }) {
   const { estado, despachar } = useHogar();
   const hoy = estado.hoy;
   const nombre = (id: string) => estado.personas.find((p) => p.id === id)?.nombre ?? "";
-  const preparar = paraPreparar(estado.mochila, hoy);
-  const llevar = paraLlevar(estado.mochila, hoy);
-  if (!siempre && preparar.length === 0 && llevar.length === 0) return null;
+  const hayCole = hayColeDe(estado);
+  const preparar = paraPreparar(estado.mochila, hoy, hayCole);
+  const llevar = paraLlevar(estado.mochila, hoy, hayCole);
+  // Lo del cole que tocaría preparar hoy pero no hace falta, porque ese día no hay cole (D-144).
+  const ahorradas = paraPreparar(estado.mochila, hoy).filter(
+    (p) => !preparar.some((x) => x.cosa.id === p.cosa.id && x.para === p.para),
+  );
+  const sinColeManana = sinColeEntreSemana(estado, sumarDias(hoy, 1));
+  if (!siempre && preparar.length === 0 && llevar.length === 0 && ahorradas.length === 0) {
+    return null;
+  }
 
   const cuando = (para: string) =>
     para === hoy ? "hoy" : para === sumarDias(hoy, 1) ? "mañana" : `el ${nombreDia(para)}`;
@@ -58,7 +67,26 @@ export function MochilaHoy({ siempre = false }: { siempre?: boolean }) {
           {llevar.map((c) => `${c.texto} (${nombre(c.personaId)})`).join(", ")}
         </p>
       )}
-      {siempre && preparar.length === 0 && llevar.length === 0 && (
+      {ahorradas.length > 0 && (
+        <p className="bg-fondo rounded-2xl p-2 text-base">
+          <span aria-hidden="true">🏫 </span>
+          {ahorradas.map(({ cosa, para }) => {
+            const motivo = sinColeEntreSemana(estado, para);
+            return (
+              <span key={`${cosa.id}-${para}`} className="block">
+                No hace falta preparar <strong>{cosa.texto}</strong> de {nombre(cosa.personaId)}:{" "}
+                {cuando(para)} no hay cole{motivo ? ` (${motivo})` : ""}.
+              </span>
+            );
+          })}
+        </p>
+      )}
+      {siempre && sinColeManana && ahorradas.length === 0 && (
+        <p className="text-base">
+          <span aria-hidden="true">🏫 </span>Mañana no hay cole: {sinColeManana}.
+        </p>
+      )}
+      {siempre && preparar.length === 0 && llevar.length === 0 && ahorradas.length === 0 && (
         <p className="text-tinta-suave text-base">Hoy no hay nada que preparar ni que llevar.</p>
       )}
       {!siempre && (

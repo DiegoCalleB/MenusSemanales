@@ -92,6 +92,11 @@ export function SemanaVista() {
                   {d.evento.titulo}
                 </p>
               )}
+              {d.sinCole && (
+                <p className="text-base font-semibold">
+                  <span aria-hidden="true">🏫 </span>Sin cole: {d.sinCole}
+                </p>
+              )}
               {d.cumples.map((c) => (
                 <p key={c} className="text-base font-semibold">
                   <span aria-hidden="true">🎂 </span>Cumple de {c}

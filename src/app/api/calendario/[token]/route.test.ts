@@ -1,4 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("@/infraestructura/calendario-escolar", () => ({
+  cargarCursosEscolares: async () => ({ cursos: [], comprobadoEn: null, resultado: null }),
+}));
 import { GET } from "./route";
 
 const TOKEN = "a".repeat(64);

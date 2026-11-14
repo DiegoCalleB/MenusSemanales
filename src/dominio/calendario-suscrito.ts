@@ -4,6 +4,7 @@ import type { EventoCalendario } from "./compartir";
 import { proximaFecha } from "./cumples";
 import { type FechaIso, diaSemanaIso, sumarDias } from "./fechas";
 import { NOMBRE_DIA_LARGO, preparacionesEntre } from "./mochila";
+import { MAX_LARGO_MOTIVO, consultaCole, tramosSinCole } from "./calendario-escolar";
 
 /**
  * Avisos fuera de la app (D-083): el calendario del móvil se suscribe a un enlace y avisa solo.
@@ -70,6 +71,19 @@ export const proyeccionSchema = z.object({
         dias: z.array(z.number().int().min(1).max(7)).catch([]),
         fecha: fecha.nullish().catch(null),
         antes: z.number().int().min(0).max(7).catch(1),
+        /** Solo con cole (D-144). Si falta (documento antiguo), sí: era todo del cole. */
+        soloConCole: z.boolean().catch(true).optional(),
+      }),
+    )
+    .catch([])
+    .optional(),
+  /** Lo que apunta la familia sobre el calendario escolar (D-144). Opcional: la SQL anterior no lo manda. */
+  diasCole: z
+    .array(
+      z.object({
+        fecha,
+        hay: z.boolean(),
+        motivo: z.string().max(MAX_LARGO_MOTIVO).catch(""),
       }),
     )
     .catch([])
@@ -90,6 +104,8 @@ export type ProyeccionCalendario = z.infer<typeof proyeccionSchema>;
 export const HORA_MOCHILA = "20:00";
 /** Cuántos días por delante se ponen los recordatorios de la mochila. */
 const DIAS_MOCHILA = 56;
+/** Cuántos días por delante se ponen los días sin cole (lo que queda de curso y el verano). */
+const DIAS_SIN_COLE = 300;
 
 /** A qué hora salen en el calendario las comidas y cenas (no llevan hora propia en la app). */
 export const HORA_COMIDA = "14:00";
@@ -201,16 +217,20 @@ function todosLosEventos(
   }
 
   for (const c of p.cumples) {
-    const dia = proximaFecha(c, hoy);
     const clave = limpio(c.nombre);
-    eventos.push({
-      uid: `cumple-${clave}`,
-      fecha: dia,
-      titulo: `🎂 Cumple de ${c.nombre}`,
-      descripcion: `Cumpleaños de ${c.nombre}`,
-      anual: true,
-      aviso: true,
-    });
+    // Tres cumpleaños seguidos, cada uno con su fecha: Google no siempre enseña los que se repiten
+    // «cada año» cuando empiezan lejos, y así salen siempre.
+    let dia = proximaFecha(c, hoy);
+    for (let i = 0; i < 3; i++) {
+      eventos.push({
+        uid: `cumple-${clave}-${dia.slice(0, 4)}`,
+        fecha: dia,
+        titulo: `🎂 Cumple de ${c.nombre}`,
+        descripcion: `Cumpleaños de ${c.nombre}`,
+        aviso: true,
+      });
+      dia = proximaFecha(c, sumarDias(dia, 1));
+    }
     // Sin avisos de «pensar» ni «comprar» el regalo (D-143): en el calendario, solo el cumple.
   }
 
@@ -230,14 +250,22 @@ function todosLosEventos(
     });
   }
   // Qué llevar (D-136): el día de dejarlo preparado, a las 20:00 y con alarma.
+  // Las del cole, solo si ese día hay cole (D-144).
+  const ajustesCole = p.diasCole ?? [];
   const cosas = (p.mochila ?? []).map((c, i) => ({
     ...c,
     id: String(i),
     fecha: c.fecha ?? null,
     preparadas: [],
+    soloConCole: c.soloConCole !== false,
   }));
   const nombreDe = (id: string) => p.personas.find((x) => x.id === id)?.nombre ?? "";
-  for (const { dia, cosa, para } of preparacionesEntre(cosas, hoy, DIAS_MOCHILA)) {
+  for (const { dia, cosa, para } of preparacionesEntre(
+    cosas,
+    hoy,
+    DIAS_MOCHILA,
+    consultaCole(ajustesCole),
+  )) {
     const quien = nombreDe(cosa.personaId);
     const cuando =
       para === dia
@@ -253,6 +281,22 @@ function todosLosEventos(
       hora: HORA_MOCHILA,
       aviso: true,
     });
+  }
+
+  // Días sin cole entre semana (D-144), de todo el día y sin alarma: festivos, vacaciones, los del
+  // centro. Solo los de los hogares con algo del cole (mochila o menú del cole) o días propios.
+  const conCole =
+    (p.mochila ?? []).length > 0 || (p.cole ?? []).length > 0 || ajustesCole.length > 0;
+  if (conCole) {
+    for (const t of tramosSinCole(ajustesCole, hoy, DIAS_SIN_COLE)) {
+      eventos.push({
+        uid: `sin-cole-${t.desde}`,
+        fecha: t.desde,
+        hasta: t.hasta === t.desde ? null : t.hasta,
+        titulo: `🏫 Sin cole: ${t.motivo}`,
+        descripcion: `No hay cole: ${t.motivo}.`,
+      });
+    }
   }
   return eventos;
 }

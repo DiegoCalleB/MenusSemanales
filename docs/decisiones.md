@@ -1225,3 +1225,68 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 
 - **Decisión (Diego):** «no quiero que ponga lo de pensar regalo, quiero que ponga cumple de Diego y con una tarta al principio».
 - **Qué cambia:** el calendario suscrito ya no lleva los avisos «🎁 Pensar el regalo» (30 días antes) ni «🎁 Comprar el regalo» (14 días antes). Cada cumpleaños sale **solo el mismo día**, como «🎂 Cumple de Diego», de todo el día, cada año y con alarma a las 9:00. Lo mismo en el `.ics` que se descarga desde «Enviar». Los avisos de regalo siguen dentro de la app (campanita y Cumples).
+- **Actualización:** Google no siempre enseñaba los cumpleaños «cada año» cuyo primer día quedaba lejos. Ahora cada cumple sale con sus **tres próximas fechas**, como eventos sueltos, sin repetición.
+
+## D-144 · Calendario escolar: días sin cole
+
+- **Petición (Diego):** «integrar el calendario escolar de la Comunidad de Madrid para tener en cuenta los días que no hay cole, y no preparar la mochila del cole un día si al día siguiente no hay cole. Que todo sea perfecto y no haya errores posibles».
+- **Datos oficiales, en la app** (`src/dominio/calendario-escolar.ts`), copiados del texto publicado y comprobados día a día en los tests:
+  - Orden 2034/2026 (BOCM núm. 131, 4-6-2026): Infantil (2.º ciclo) y Primaria del **7 de septiembre de 2026 al 18 de junio de 2027**; Navidad del 23 de diciembre al 6 de enero; Semana Santa del 20 al 28 de marzo; festivos 12 de octubre, 2 de noviembre, 7 y 8 de diciembre; días no lectivos 7 y 8 de enero, 12 y 15 de febrero, 19 y 29 de marzo.
+  - Decreto 82/2026 (BOCM núm. 234, 1-10-2026), fiestas de 2027 (San José, Jueves y Viernes Santo…).
+  - Fiestas locales de **Madrid capital** (la Almudena, 9 de noviembre de 2026; San Isidro, 15 de mayo de 2027, sábado).
+  - Un test comprueba además el mínimo legal de 175 días lectivos.
+- **Los días del centro los pone la familia** (Mochila → «Días sin cole»): días de libre disposición del consejo escolar y, al revés, «sí hay cole» (p. ej. un concertado que cambia un día no lectivo por su patrón). Lo de la familia manda sobre lo oficial; el fin de semana nunca tiene cole. Viven en el documento (`diasCole`).
+- **Mochila:** cada cosa semanal tiene «Es para el cole» (marcado por defecto; lo de antes, como la carpeta de piano y los patines, cuenta como del cole). Si el día que se lleva no hay cole, **no se pide prepararla** en ningún sitio: Hoy, campanita, notificación de la noche, plan de la semana, calendario de la app y calendario de Google. En Hoy se explica: «No hace falta preparar Patines de Emma: mañana no hay cole (Día no lectivo)». Las de un día concreto se avisan siempre, porque ese día lo eligió la familia.
+- **Dónde se ve:** «🏫 Sin cole: Vacaciones de Navidad» en el plan de la semana, en el mes y en el día del calendario de la app y, en Google, en el calendario de fechas (de todo el día, sin alarma, las vacaciones en un solo evento). Aviso «Mañana no hay cole» solo el primer día de cada parón (no cada día de las vacaciones) y «Mañana vuelve el cole» la víspera de la vuelta, también en la notificación de la noche. Solo en hogares con algo del cole (mochila, menú del cole o días apuntados).
+- **Ante la duda, avisar:** fuera del curso conocido (desde el 1 de septiembre de 2027) se supone que hay cole de lunes a viernes. Así se avisa de más, nunca de menos, y la pantalla dice que falta el calendario del curso siguiente. Hay que añadirlo cuando se publique (normalmente en mayo o junio).
+- **Base de datos** (`20261114000000_calendario_escolar.sql`): el resumen del calendario añade `diasCole` (fecha, si hay cole y motivo) y `soloConCole` en cada cosa de la mochila. Nada más del documento.
+
+## D-145 · Avisos según el tiempo
+
+- **Petición (Diego):** «avisos según el tiempo, me mola».
+- **Fuente:** Open-Meteo (gratis, sin clave), previsión de **Madrid capital** para hoy, mañana y pasado. El servidor la pide (`/api/tiempo`, guardada media hora); el navegador nunca habla con Open-Meteo, así que la CSP no cambia. Si falla o tarda más de 5 s, no hay avisos del tiempo y todo lo demás sale igual.
+- **Reglas** (`src/dominio/tiempo.ts`; ante la duda, avisar):
+  - **Tormenta** (códigos 95-99) o **nieve**: chubasquero y botas, o abrigo, guantes y botas.
+  - **Lluvia**: probabilidad del 50 % o más, o 1 mm o más. Se lleva chubasquero y botas.
+  - **Frío** con mínima de 4 °C o menos: abrigo, gorro y guantes.
+  - **Calor** con máxima de 30 °C o más: gorra, crema y agua.
+- **Dónde:** el aviso de las 9:00 lleva el tiempo de **hoy**. El de las 20:00 lleva el de **mañana**, detrás de la mochila; un día de lluvia basta para que se mande. En «Hoy» hay una tarjeta con hoy y mañana de un vistazo («🌧️ 10–14 °C») y qué llevar.
+
+## D-146 · El calendario escolar se lee solo cada mes
+
+- **Petición (Diego):** «que sea capaz de leer el calendario cada mes sin tener que hacer nada».
+- **Cómo:**
+  - El **día 1 de cada mes**, la base de datos llama a la app (`pg_cron`, `calendario-escolar-mensual`), con el mismo secreto que los avisos (D-139).
+  - La app busca en la web de la Comunidad de Madrid los PDF del curso siguiente al último conocido: la orden del BOCM y el cuadro resumen. Mira también los cursos leídos que aún no han acabado, por si la Comunidad los actualiza (el cuadro se renueva en octubre con los festivos del año siguiente).
+  - Los **lee dos veces** con IA (Gemini), por separado.
+  - Monta el curso: verano, vacaciones, festivos y las fiestas de Madrid capital. La Almudena y San Isidro en domingo pasan al lunes; en sábado no cuentan.
+- **Antes de usarlo, se comprueba todo:**
+  - Las dos lecturas tienen que dar **exactamente los mismos días**.
+  - Empieza un día de septiembre entre semana y acaba uno de junio.
+  - Tienen que estar la Navidad (25 de diciembre, 1 y 6 de enero), el Jueves y el Viernes Santo (con la fecha de Pascua calculada) y el 12 de octubre y el 8 de diciembre si caen entre semana.
+  - Tiene que haber entre **175 y 190 días lectivos**.
+  - Si algo no cuadra, no se guarda nada, la app sigue avisando de lunes a viernes (lo seguro) y lo vuelve a intentar el mes siguiente.
+- **Los cursos revisados a mano siempre mandan** sobre lo leído para el mismo curso (2026/27).
+- **Dónde se guarda:** `privado.calendario_escolar` (`20261114010000_calendario_escolar_automatico.sql`). Leerlo es público (`calendarios_escolares()`); escribirlo, solo con el secreto. La app lo carga al abrir y lo guarda en el móvil para usarlo sin conexión; el servidor lo usa en el calendario de Google y en los avisos.
+- **Aviso:** cuando se carga o cambia un curso, sale tres días en el aviso de la mañana, solo en hogares con algo del cole. Por ejemplo: «📅 Calendario escolar al día: Curso 2027/2028, empieza el miércoles 8 de septiembre». En Mochila → Días sin cole se ve cuándo se comprobó por última vez y qué pasó.
+- **Para probar la IA antes de necesitarla:** con `{"prueba": 2026}` se lee el curso 2026/27, sin guardar nada, y se compara día a día con el revisado a mano.
+
+## D-148 · Que la lluvia de la mañana no nos pille sin paraguas
+
+- **Petición (Diego):** «que nunca más nos pille lluvia por la mañana por sorpresa y sin paraguas. Vivimos en Las Musas y el cole es el Mariano José de Larra».
+- **Lugar:** la previsión ya no es la de la Puerta del Sol, sino la de **Las Musas (San Blas)**, junto al cole (C/ Longares 11). Las coordenadas van redondeadas a dos decimales (40,43; −3,61): unos cientos de metros de margen, que la previsión no distingue, y no apuntan a ninguna casa.
+- **Hora a hora:** se pide también a Open-Meteo la lluvia por horas. Se miran dos franjas los días de cole:
+  - **Ida:** de 7 a 10.
+  - **Vuelta:** de 13 a 17. Cubre la salida a las 13 (junio y septiembre), a las 14 y a las 16.
+- **Umbral mucho más bajo en esas horas** (ante la duda, avisar). Una hora moja si se cumple una de estas tres:
+  - 30 % de probabilidad o más.
+  - 0,1 mm o más.
+  - Un código de llovizna, lluvia, chubasco, nieve o tormenta.
+
+  Motivo: el 14-11-2026, en Las Musas, había chubascos de 1 mm a las 7 y a las 8 con solo un 25–33 % de probabilidad. Con la regla del día (50 %) no se habría avisado. Si falta alguna hora de la franja, se mira el día entero y se avisa con «puede llover a la hora del cole».
+
+- **Avisos:**
+  - **20:00 (la noche antes):** «🌂 Mañana llueve de camino al cole (de 8 a 9 h, 70 %): paraguas y chubasquero». Sustituye al de «lluvia» del día, que diría lo mismo con menos detalle.
+  - **7:00, nuevo, antes de salir de casa:** un día de cole, se vuelve a leer la previsión sin la copia de media hora. Si va a llover en la ida o en la vuelta, llega «🌂 Coged el paraguas». Si solo llueve a la vuelta, dice «salid con paraguas», porque hay que cogerlo al salir de casa. Si no llueve, o no hay cole, no llega nada. La hora se cambia con `AVISOS_HORA_TEMPRANO`. No hace falta tocar la base de datos: la llamada de cada hora ya existe (D-139).
+  - **En «Hoy»:** la tarjeta «El tiempo en Las Musas» dice a qué horas llueve en la ida y en la vuelta.
+- Los fines de semana y los días sin cole (D-144), el aviso de lluvia es el del día, como antes.

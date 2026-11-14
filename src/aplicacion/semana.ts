@@ -2,6 +2,7 @@ import { proximaVez } from "@/dominio/casa";
 import { proximaFecha } from "@/dominio/cumples";
 import { type FechaIso, diaSemanaIso, sumarDias } from "@/dominio/fechas";
 import { paraLlevar, paraPreparar } from "@/dominio/mochila";
+import { hayColeDe, sinColeEntreSemana } from "./cole";
 import { type EstadoHogar, articulosPendientes, nombreDia } from "./estado";
 
 /**
@@ -18,6 +19,8 @@ export interface DiaDelPlan {
   /** No se cena en casa ese día (saltado) o hay una fecha señalada que lo ocupa. */
   sinCena: boolean;
   evento: { titulo: string; emoji: string } | null;
+  /** Por qué no hay cole ese día entre semana (D-144), o `null`. */
+  sinCole: string | null;
   comida: string[];
   citas: Array<{ titulo: string; hora: string | null }>;
   preparar: Array<{ texto: string; persona: string; hecho: boolean }>;
@@ -48,6 +51,7 @@ export function planDeLaSemana(e: EstadoHogar): PlanDeLaSemana {
   const { desde, hasta } = rangoDeLaSemana(e.hoy);
   const nombre = (id: string) => e.personas.find((p) => p.id === id)?.nombre ?? "";
   const dias: DiaDelPlan[] = [];
+  const hayCole = hayColeDe(e);
   for (let f = desde; f <= hasta; f = sumarDias(f, 1)) {
     const evento = e.eventos[f] ?? null;
     dias.push({
@@ -56,17 +60,18 @@ export function planDeLaSemana(e: EstadoHogar): PlanDeLaSemana {
       cena: e.comidas.filter((c) => c.fecha === f).map((c) => c.plato.nombre),
       sinCena: e.saltados.includes(f) || evento !== null,
       evento,
+      sinCole: sinColeEntreSemana(e, f),
       comida: e.almuerzos.filter((a) => a.fecha === f).map((a) => a.texto),
       citas: e.agenda
         .filter((a) => a.fecha === f || (a.hasta !== null && a.fecha <= f && f <= a.hasta))
         .sort((a, b) => (a.hora ?? "").localeCompare(b.hora ?? ""))
         .map((a) => ({ titulo: a.titulo, hora: a.hora })),
-      preparar: paraPreparar(e.mochila, f).map((p) => ({
+      preparar: paraPreparar(e.mochila, f, hayCole).map((p) => ({
         texto: p.cosa.texto,
         persona: nombre(p.cosa.personaId),
         hecho: p.hecho,
       })),
-      llevar: paraLlevar(e.mochila, f).map((c) => ({
+      llevar: paraLlevar(e.mochila, f, hayCole).map((c) => ({
         texto: c.texto,
         persona: nombre(c.personaId),
       })),
@@ -99,6 +104,7 @@ export function textoDelPlan(plan: PlanDeLaSemana): string {
   for (const d of plan.dias) {
     lineas.push("", `*${mayuscula(d.nombre)}*`);
     if (d.evento) lineas.push(`${d.evento.emoji} ${d.evento.titulo}`);
+    if (d.sinCole) lineas.push(`🏫 Sin cole: ${d.sinCole}`);
     for (const c of d.cumples) lineas.push(`🎂 Cumple de ${c}`);
     for (const c of d.citas) lineas.push(`📌 ${c.hora ? `${c.hora} ` : ""}${c.titulo}`);
     if (d.comida.length > 0) lineas.push(`☀️ Comida: ${d.comida.join(" + ")}`);

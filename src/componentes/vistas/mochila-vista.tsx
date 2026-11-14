@@ -8,6 +8,7 @@ import {
   cuandoSeLleva,
   cuandoSePrepara,
 } from "@/dominio/mochila";
+import { CalendarioCole } from "../calendario-cole";
 import { BotonEditar, Campo, Formulario, useGuardar } from "../editar";
 import { MochilaHoy } from "../mochila-hoy";
 import { useHogar } from "../proveedor-hogar";
@@ -70,6 +71,7 @@ export function MochilaVista() {
                         <strong>{c.texto}</strong>
                         <span className="text-tinta-suave block text-sm">
                           {cuandoSeLleva(c)} · se prepara {cuandoSePrepara(c.antes)}
+                          {!c.fecha && (c.soloConCole ? " · solo con cole" : " · también sin cole")}
                         </span>
                       </p>
                       <span className="flex shrink-0 gap-1">
@@ -99,6 +101,8 @@ export function MochilaVista() {
           </button>
         )}
       </section>
+
+      <CalendarioCole />
     </div>
   );
 }
@@ -117,6 +121,7 @@ function FormularioCosa({ cosa, alCerrar }: { cosa?: CosaQueLlevar; alCerrar: ()
   const [dias, setDias] = useState<number[]>(cosa?.dias ?? []);
   const [fecha, setFecha] = useState(cosa?.fecha ?? "");
   const [antes, setAntes] = useState(cosa?.antes ?? 1);
+  const [soloConCole, setSoloConCole] = useState(cosa?.soloConCole ?? true);
 
   const alternarDia = (d: number) =>
     setDias((v) => (v.includes(d) ? v.filter((x) => x !== d) : [...v, d]));
@@ -135,6 +140,7 @@ function FormularioCosa({ cosa, alCerrar }: { cosa?: CosaQueLlevar; alCerrar: ()
           dias: suelto ? [] : dias,
           fecha: suelto ? fecha : null,
           antes,
+          soloConCole,
         })
       }
     >
@@ -207,6 +213,22 @@ function FormularioCosa({ cosa, alCerrar }: { cosa?: CosaQueLlevar; alCerrar: ()
               </button>
             ))}
           </div>
+        )}
+        {!suelto && (
+          <label className="mt-1 flex min-h-11 items-center gap-3 text-base">
+            <input
+              type="checkbox"
+              className="size-6 shrink-0 accent-[var(--marca)]"
+              checked={soloConCole}
+              onChange={(e) => setSoloConCole(e.target.checked)}
+            />
+            <span>
+              Es para el cole
+              <span className="text-tinta-suave block text-sm">
+                No se avisa en festivos ni vacaciones
+              </span>
+            </span>
+          </label>
         )}
       </fieldset>
       <Campo texto="Dejarlo preparado">

@@ -10,7 +10,9 @@ const m = vi.hoisted(() => ({
   pushActivo: { v: false },
   comprobar: vi.fn(),
   guardarClaves: vi.fn(),
+  tiempo: vi.fn(),
 }));
+vi.mock("@/infraestructura/tiempo", () => ({ leerPrevision: m.tiempo }));
 vi.mock("@/infraestructura/avisos/claves", () => ({
   comprobarSecretoDeAvisos: m.comprobar,
   guardarClavesDeAvisos: m.guardarClaves,
@@ -60,6 +62,8 @@ beforeEach(() => {
   vi.stubEnv("AVISOS_CRON_SECRET", SECRETO);
   vi.stubEnv("AVISOS_CALENDARIO_TOKEN", TOKEN);
   vi.stubEnv("AVISOS_CORREO", "diego@ejemplo.test");
+  // Que el aviso de antes del cole no se cruce con las pruebas si se pasan a las 7.
+  vi.stubEnv("AVISOS_HORA_TEMPRANO", "-1");
   m.enviar.mockReset().mockResolvedValue(undefined);
   m.leer.mockReset().mockResolvedValue(resumen);
   m.pushActivo.v = false;
@@ -68,6 +72,7 @@ beforeEach(() => {
   m.olvidar.mockReset().mockResolvedValue(undefined);
   m.comprobar.mockReset().mockResolvedValue({ valido: false });
   m.guardarClaves.mockReset();
+  m.tiempo.mockReset().mockResolvedValue([]);
 });
 
 describe("POST /api/avisos/diario", () => {
@@ -250,5 +255,101 @@ describe("POST /api/avisos/diario", () => {
       prueba: "https://push.example.test/otra",
     });
     expect(ajena.status).toBe(404);
+  });
+});
+
+describe("el tiempo en el aviso (D-145)", () => {
+  it("va en el resumen de la mañana; si la previsión falla, el aviso sale igual", async () => {
+    m.tiempo.mockResolvedValue([
+      { fecha: "2026-11-03", codigo: 80, max: 14, min: 9, probLluvia: 80, lluviaMm: 4 },
+    ]);
+    const r = await pedir(`Bearer ${SECRETO}`, "?forzar=1");
+    expect(r.status).toBe(200);
+    expect(JSON.stringify(m.enviar.mock.calls[0]?.[0])).toContain("chubasquero");
+
+    m.tiempo.mockResolvedValue([]);
+    m.enviar.mockClear();
+    expect((await pedir(`Bearer ${SECRETO}`, "?forzar=1")).status).toBe(200);
+    expect(JSON.stringify(m.enviar.mock.calls[0]?.[0])).not.toContain("chubasquero");
+  });
+});
+
+describe("el paraguas antes de salir de casa (D-148)", () => {
+  const horaAhora = () =>
+    Number(
+      new Intl.DateTimeFormat("es-ES", {
+        timeZone: "Europe/Madrid",
+        hour: "numeric",
+        hourCycle: "h23",
+      }).format(new Date()),
+    );
+  const lluviaALas9 = Array.from({ length: 24 }, (_, hora) => ({
+    hora,
+    prob: hora === 9 ? 80 : 0,
+    mm: hora === 9 ? 2 : 0,
+    codigo: hora === 9 ? 63 : 2,
+  }));
+  const conCole = {
+    ...resumen,
+    mochila: [{ texto: "Flauta", personaId: "", dias: [2], fecha: null, antes: 1 }],
+  };
+
+  beforeEach(() => {
+    const h = horaAhora();
+    vi.stubEnv("AVISOS_HORA", String((h + 1) % 24));
+    vi.stubEnv("AVISOS_HORA_NOCHE", String((h + 2) % 24));
+    vi.stubEnv("AVISOS_HORA_TEMPRANO", String(h));
+    m.pushActivo.v = true;
+    m.subs.mockResolvedValue([
+      { endpoint: "https://push.example.test/1", p256dh: "p".repeat(30), auth: "a".repeat(12) },
+    ]);
+  });
+
+  it("un día de cole con lluvia a la ida: notificación, con la previsión recién leída", async () => {
+    m.leer.mockResolvedValue(conCole);
+    m.tiempo.mockResolvedValue([
+      {
+        fecha: "2026-11-03",
+        codigo: 63,
+        max: 14,
+        min: 9,
+        probLluvia: 80,
+        lluviaMm: 2,
+        horas: lluviaALas9,
+      },
+    ]);
+    const r = await pedir(`Bearer ${SECRETO}`);
+    expect(r.status).toBe(200);
+    expect(m.tiempo.mock.calls[0]?.[1]).toEqual({ fresco: true });
+    expect(m.push.mock.calls[0]?.[1]).toEqual({
+      titulo: "🌂 Coged el paraguas",
+      cuerpo: "Hoy llueve de camino al cole (de 8 a 9 h, 80 %): paraguas y chubasquero",
+    });
+    expect(m.enviar).not.toHaveBeenCalled();
+  });
+
+  it("si no llueve, o el hogar no tiene cole, no manda nada", async () => {
+    m.leer.mockResolvedValue(conCole);
+    m.tiempo.mockResolvedValue([
+      { fecha: "2026-11-03", codigo: 2, max: 14, min: 9, probLluvia: 0, lluviaMm: 0 },
+    ]);
+    expect(await (await pedir(`Bearer ${SECRETO}`)).json()).toEqual({
+      enviado: false,
+      motivo: "nada-que-avisar",
+    });
+    m.leer.mockResolvedValue(resumen);
+    m.tiempo.mockResolvedValue([
+      {
+        fecha: "2026-11-03",
+        codigo: 63,
+        max: 14,
+        min: 9,
+        probLluvia: 80,
+        lluviaMm: 2,
+        horas: lluviaALas9,
+      },
+    ]);
+    expect((await (await pedir(`Bearer ${SECRETO}`)).json()).motivo).toBe("nada-que-avisar");
+    expect(m.push).not.toHaveBeenCalled();
   });
 });

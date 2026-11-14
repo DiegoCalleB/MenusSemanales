@@ -1,5 +1,6 @@
 import { eventosSuscritos } from "@/dominio/calendario-suscrito";
 import { generarIcs } from "@/dominio/compartir";
+import { cargarCursosEscolares } from "@/infraestructura/calendario-escolar";
 import {
   demasiadasPeticiones,
   hoyEnMadrid,
@@ -44,7 +45,8 @@ export async function GET(request: Request, ctx: { params: Promise<{ token: stri
 
   let resumen;
   try {
-    resumen = await leerResumenDelCalendario(token);
+    // Los cursos del calendario escolar leídos solos (D-146), para los días sin cole.
+    [resumen] = await Promise.all([leerResumenDelCalendario(token), cargarCursosEscolares()]);
   } catch {
     // Sin detalles: un fallo de Supabase no debe contar nada del servidor.
     return new Response("No disponible", {

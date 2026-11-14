@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   type EntradaAvisos,
+  avisosAntesDelCole,
   avisosDeHoy,
   avisosDeLaNoche,
+  notificacionAntesDelCole,
   notificacionDeLaNoche,
   avisosQueImportan,
   direccionesDeAvisos,
@@ -227,5 +229,207 @@ describe("recordatorio de la noche (D-139)", () => {
     ]);
     expect(notificacionDeLaNoche(a).titulo).toBe("🎒 Antes de dormir");
     expect(avisosDeLaNoche({ ...base, hoy: "2026-11-18" })).toEqual([]);
+  });
+});
+
+describe("avisos y calendario escolar (D-144)", () => {
+  const patines = { texto: "Patines", persona: "Emma", dias: [5], fecha: null, antes: 1 };
+
+  it("el jueves antes de un viernes sin cole no pide preparar los patines", () => {
+    // 2027-02-12 (viernes) es día no lectivo.
+    const a = avisosDeHoy({ ...base, hoy: "2027-02-11", mochila: [patines], conCole: true });
+    expect(a.some((x) => x.emoji === "🎒")).toBe(false);
+    expect(a.find((x) => x.id === "cole-no-2027-02-12")?.titulo).toBe(
+      "Mañana no hay cole: Día no lectivo",
+    );
+    // Si son de fuera del cole, sí.
+    const fuera = { ...patines, soloConCole: false };
+    expect(
+      avisosDeHoy({ ...base, hoy: "2027-02-11", mochila: [fuera] }).some((x) => x.emoji === "🎒"),
+    ).toBe(true);
+  });
+
+  it("avisa el primer día de un parón y la víspera de la vuelta, no cada día de vacaciones", () => {
+    const ids2 = (hoy: string) =>
+      ids({ ...base, hoy, conCole: true }).filter((i) => i.startsWith("cole-"));
+    expect(ids2("2026-12-22")).toEqual(["cole-no-2026-12-23"]);
+    expect(ids2("2026-12-27")).toEqual([]); // domingo en mitad de Navidad
+    expect(ids2("2026-12-28")).toEqual([]);
+    // El viernes 8 de enero es no lectivo y el lunes 11 se vuelve: se avisa el domingo 10.
+    expect(ids2("2027-01-10")).toEqual(["cole-vuelve-2027-01-11"]);
+    // Viernes antes del puente de diciembre: el aviso llega el domingo 6.
+    expect(ids2("2026-12-04")).toEqual([]);
+    expect(ids2("2026-12-06")).toEqual(["cole-no-2026-12-07"]);
+    // Un fin de semana normal, nada.
+    expect(ids2("2026-11-15")).toEqual([]);
+  });
+
+  it("sin nada del cole en el hogar, no avisa de días sin cole", () => {
+    expect(ids({ ...base, hoy: "2026-12-22" }).some((i) => i.startsWith("cole-"))).toBe(false);
+  });
+
+  it("el día que apunta la familia también cuenta, y entra en el recordatorio de la noche", () => {
+    const e = {
+      ...base,
+      hoy: "2026-11-23",
+      conCole: true,
+      diasCole: [{ fecha: "2026-11-24", hay: false, motivo: "Libre disposición" }],
+    };
+    expect(avisosDeLaNoche(e).map((a) => a.titulo)).toEqual([
+      "Mañana no hay cole: Libre disposición",
+    ]);
+  });
+});
+
+describe("el tiempo en los avisos (D-145)", () => {
+  const tiempo = [
+    { fecha: "2026-11-19", codigo: 80, max: 14, min: 9, probLluvia: 70, lluviaMm: 3 },
+    { fecha: "2026-11-20", codigo: 1, max: 12, min: 2, probLluvia: 0, lluviaMm: 0 },
+  ];
+
+  it("por la mañana, el de hoy; por la noche, el de mañana después de la mochila", () => {
+    const e = {
+      ...base,
+      hoy: "2026-11-19",
+      tiempo,
+      mochila: [{ texto: "Patines", persona: "Emma", dias: [5], fecha: null, antes: 1 }],
+    };
+    expect(avisosDeHoy(e).find((a) => a.id.startsWith("tiempo-"))).toEqual({
+      id: "tiempo-2026-11-19-lluvia",
+      emoji: "🌧️",
+      titulo: "Hoy, lluvia (70 %): chubasquero y botas",
+      nivel: "ya",
+    });
+    expect(avisosDeLaNoche(e).map((a) => a.titulo)).toEqual([
+      "Deja preparado: Patines de Emma (para mañana)",
+      "Mañana, frío (mín. 2 °C): abrigo, gorro y guantes",
+    ]);
+  });
+
+  it("solo el tiempo ya basta para mandar el aviso de la noche; sin previsión, nada", () => {
+    expect(avisosDeLaNoche({ ...base, hoy: "2026-11-19", tiempo }).length).toBe(1);
+    expect(avisosDeLaNoche({ ...base, hoy: "2026-11-19", tiempo: [] })).toEqual([]);
+  });
+});
+
+describe("el paraguas a la hora del cole (D-148)", () => {
+  const horas = (lluvia: number[]) =>
+    Array.from({ length: 24 }, (_, hora) => ({
+      hora,
+      prob: lluvia.includes(hora) ? 70 : 0,
+      mm: lluvia.includes(hora) ? 1 : 0,
+      codigo: lluvia.includes(hora) ? 61 : 2,
+    }));
+  // Jueves 19 y viernes 20 de noviembre: días de cole.
+  const tiempo = [
+    {
+      fecha: "2026-11-19",
+      codigo: 61,
+      max: 14,
+      min: 9,
+      probLluvia: 70,
+      lluviaMm: 3,
+      horas: horas([9]),
+    },
+    {
+      fecha: "2026-11-20",
+      codigo: 61,
+      max: 14,
+      min: 9,
+      probLluvia: 70,
+      lluviaMm: 3,
+      horas: horas([15, 16]),
+    },
+    {
+      fecha: "2026-11-21",
+      codigo: 61,
+      max: 14,
+      min: 9,
+      probLluvia: 70,
+      lluviaMm: 3,
+      horas: horas([9]),
+    },
+  ];
+  const cole = { ...base, conCole: true, tiempo };
+
+  it("antes de salir de casa, si llueve a la ida: paraguas", () => {
+    expect(avisosAntesDelCole({ ...cole, hoy: "2026-11-19" })).toEqual([
+      {
+        id: "tiempo-2026-11-19-paraguas",
+        emoji: "🌂",
+        titulo: "Hoy llueve de camino al cole (de 8 a 9 h, 70 %): paraguas y chubasquero",
+        nivel: "ya",
+      },
+    ]);
+    expect(notificacionAntesDelCole(avisosAntesDelCole({ ...cole, hoy: "2026-11-19" }))).toEqual({
+      titulo: "🌂 Coged el paraguas",
+      cuerpo: "Hoy llueve de camino al cole (de 8 a 9 h, 70 %): paraguas y chubasquero",
+    });
+  });
+
+  it("sin la previsión hora a hora, ante la duda se avisa por el día", () => {
+    const sinHoras = tiempo.map((t) => ({ ...t, horas: undefined }));
+    expect(
+      avisosAntesDelCole({ ...cole, hoy: "2026-11-19", tiempo: sinHoras }).map((a) => a.titulo),
+    ).toEqual(["Hoy puede llover a la hora del cole (70 % en el día): paraguas y chubasquero"]);
+  });
+
+  it("si solo llueve a la vuelta, el paraguas se coge igual al salir", () => {
+    expect(avisosAntesDelCole({ ...cole, hoy: "2026-11-20" }).map((a) => a.titulo)).toEqual([
+      "Hoy llueve a la salida del cole (de 14 a 16 h, 70 %): salid con paraguas",
+    ]);
+  });
+
+  it("sin cole (fin de semana, día sin cole o un hogar sin cole) o sin lluvia, nada", () => {
+    expect(avisosAntesDelCole({ ...cole, hoy: "2026-11-21" })).toEqual([]);
+    expect(
+      avisosAntesDelCole({
+        ...cole,
+        hoy: "2026-11-19",
+        diasCole: [{ fecha: "2026-11-19", hay: false, motivo: "Huelga" }],
+      }),
+    ).toEqual([]);
+    expect(avisosAntesDelCole({ ...cole, hoy: "2026-11-19", conCole: false })).toEqual([]);
+    expect(avisosAntesDelCole({ ...cole, hoy: "2026-11-19", tiempo: [] })).toEqual([]);
+    const seco = tiempo.map((t) => ({ ...t, horas: horas([20]) }));
+    expect(avisosAntesDelCole({ ...cole, hoy: "2026-11-19", tiempo: seco })).toEqual([]);
+  });
+
+  it("la noche antes dice a qué hora llueve, en vez de la lluvia del día", () => {
+    const titulos = avisosDeLaNoche({ ...cole, hoy: "2026-11-18" }).map((a) => a.titulo);
+    expect(titulos).toContain(
+      "Mañana llueve de camino al cole (de 8 a 9 h, 70 %): paraguas y chubasquero",
+    );
+    expect(titulos.some((t) => t.includes("Mañana, lluvia"))).toBe(false);
+    // El sábado no hay cole: el aviso del día, como siempre.
+    expect(avisosDeLaNoche({ ...cole, hoy: "2026-11-20" }).map((a) => a.titulo)).toContain(
+      "Mañana, lluvia (70 %): chubasquero y botas",
+    );
+  });
+});
+
+describe("calendario escolar nuevo (D-146)", () => {
+  const cursosNuevos = [
+    {
+      nombre: "Curso 2027/2028 · Madrid capital",
+      inicio: "2027-09-08",
+      cambiadoEn: "2027-06-01T07:41:00Z",
+    },
+  ];
+  it("se avisa el día que se carga y los dos siguientes, no después", () => {
+    const titulo = (hoy: string) =>
+      avisosDeHoy({ ...base, hoy, conCole: true, cursosNuevos }).find((a) =>
+        a.id.startsWith("calendario-escolar-"),
+      )?.titulo;
+    expect(titulo("2027-06-01")).toBe(
+      "Calendario escolar al día: Curso 2027/2028, empieza el miércoles 8 de septiembre",
+    );
+    expect(titulo("2027-06-03")).toBeDefined();
+    expect(titulo("2027-06-04")).toBeUndefined();
+    expect(
+      avisosDeHoy({ ...base, hoy: "2027-06-01", cursosNuevos }).some((a) =>
+        a.id.startsWith("calendario-escolar-"),
+      ),
+    ).toBe(false);
   });
 });

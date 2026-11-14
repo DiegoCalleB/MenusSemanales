@@ -19,7 +19,15 @@ export interface CosaQueLlevar {
   antes: number;
   /** Días de uso (no de preparación) ya marcados como preparados. */
   preparadas: FechaIso[];
+  /**
+   * Es para el cole (D-144): las semanales no tocan los días sin cole (festivos, vacaciones). Las de
+   * un día suelto sí tocan siempre: ese día lo eligió la familia a mano.
+   */
+  soloConCole: boolean;
 }
+
+/** «¿Hay cole este día?». Sin ella, se supone que sí (se avisa de más antes que de menos). */
+export type ConsultaCole = (dia: FechaIso) => boolean;
 
 export const NOMBRE_DIA_CORTO = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"] as const;
 export const NOMBRE_DIA_LARGO = [
@@ -35,14 +43,21 @@ export const NOMBRE_DIA_LARGO = [
 /** Máximo de días de antelación (una semana). */
 export const MAX_ANTES = 7;
 
-/** ¿Se lleva ese día? */
-export function tocaLlevar(c: CosaQueLlevar, dia: FechaIso): boolean {
-  return c.fecha ? c.fecha === dia : c.dias.includes(diaSemanaIso(dia));
+/** ¿Se lleva ese día? Las semanales del cole, solo si ese día hay cole. */
+export function tocaLlevar(c: CosaQueLlevar, dia: FechaIso, hayCole?: ConsultaCole): boolean {
+  if (c.fecha) return c.fecha === dia;
+  if (!c.dias.includes(diaSemanaIso(dia))) return false;
+  // `!== false`: un documento antiguo sin el campo cuenta como del cole.
+  return !(c.soloConCole !== false && hayCole && !hayCole(dia));
 }
 
 /** Lo que hay que llevar ese día. */
-export function paraLlevar(cosas: readonly CosaQueLlevar[], dia: FechaIso): CosaQueLlevar[] {
-  return cosas.filter((c) => tocaLlevar(c, dia));
+export function paraLlevar(
+  cosas: readonly CosaQueLlevar[],
+  dia: FechaIso,
+  hayCole?: ConsultaCole,
+): CosaQueLlevar[] {
+  return cosas.filter((c) => tocaLlevar(c, dia, hayCole));
 }
 
 export interface Preparar {
@@ -53,11 +68,16 @@ export interface Preparar {
 }
 
 /** Lo que hay que dejar preparado HOY (para el día que toque según su antelación). */
-export function paraPreparar(cosas: readonly CosaQueLlevar[], hoy: FechaIso): Preparar[] {
+export function paraPreparar(
+  cosas: readonly CosaQueLlevar[],
+  hoy: FechaIso,
+  hayCole?: ConsultaCole,
+): Preparar[] {
   const out: Preparar[] = [];
   for (const c of cosas) {
     const para = sumarDias(hoy, c.antes);
-    if (tocaLlevar(c, para)) out.push({ cosa: c, para, hecho: c.preparadas.includes(para) });
+    if (tocaLlevar(c, para, hayCole))
+      out.push({ cosa: c, para, hecho: c.preparadas.includes(para) });
   }
   return out;
 }
@@ -67,11 +87,13 @@ export function preparacionesEntre(
   cosas: readonly CosaQueLlevar[],
   desde: FechaIso,
   dias: number,
+  hayCole?: ConsultaCole,
 ): Array<{ dia: FechaIso; cosa: CosaQueLlevar; para: FechaIso }> {
   const out: Array<{ dia: FechaIso; cosa: CosaQueLlevar; para: FechaIso }> = [];
   for (let i = 0; i < dias; i++) {
     const dia = sumarDias(desde, i);
-    for (const p of paraPreparar(cosas, dia)) out.push({ dia, cosa: p.cosa, para: p.para });
+    for (const p of paraPreparar(cosas, dia, hayCole))
+      out.push({ dia, cosa: p.cosa, para: p.para });
   }
   return out;
 }

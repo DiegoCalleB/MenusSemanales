@@ -33,6 +33,7 @@ import {
 } from "@/dominio/cumples";
 import { type FrecuenciaTarea, type Tarea, alternarTarea } from "@/dominio/tareas";
 import { type CosaQueLlevar, MAX_ANTES, podarPreparadas } from "@/dominio/mochila";
+import { type AjusteCole, MAX_LARGO_MOTIVO, diaOficial } from "@/dominio/calendario-escolar";
 import {
   type Almuerzo,
   DIAS_ATRAS_COMIDA,
@@ -194,6 +195,11 @@ export interface EstadoHogar {
   tareas: Tarea[];
   /** Qué llevar al cole o a una actividad (D-136). En el documento del hogar. */
   mochila: CosaQueLlevar[];
+  /**
+   * Lo que apunta la familia sobre el calendario escolar (D-144): días sin cole propios del centro
+   * (libre disposición) o «ese día sí hay cole». Manda sobre el calendario oficial. En el documento.
+   */
+  diasCole: AjusteCole[];
   /** Días en que no se planifica cena en casa (salir, comer fuera, no hace falta). */
   saltados: FechaIso[];
   personas: Persona[];
@@ -331,6 +337,8 @@ export type Accion =
       dias: number[];
       fecha: FechaIso | null;
       antes: number;
+      /** Solo los días que hay cole (D-144). Por defecto, sí. */
+      soloConCole?: boolean;
       idBase?: string;
     }
   | {
@@ -341,10 +349,15 @@ export type Accion =
       dias: number[];
       fecha: FechaIso | null;
       antes: number;
+      soloConCole?: boolean;
     }
   | { tipo: "mochila/borrar"; id: string }
   /** Marca (o desmarca) como preparado lo que se lleva el día `para`. */
   | { tipo: "mochila/preparar"; id: string; para: FechaIso }
+  /** Calendario escolar (D-144): ese día no hay cole (y por qué) o sí lo hay, contra lo oficial. */
+  | { tipo: "cole/dia"; fecha: FechaIso; hay: boolean; motivo?: string }
+  /** Vuelve a lo que dice el calendario oficial para ese día. */
+  | { tipo: "cole/oficial"; fecha: FechaIso }
   | { tipo: "menu/anadir"; fecha: FechaIso; platoId: string }
   | { tipo: "menu/quitar"; fecha: FechaIso; platoId?: string }
   | { tipo: "menu/llegoTarde"; fecha: FechaIso }
@@ -762,6 +775,8 @@ export const normalizar = (e: EstadoHogar): EstadoHogar =>
   Array.isArray(e.premios) &&
   Array.isArray(e.canjes) &&
   Array.isArray(e.mochila) &&
+  e.mochila.every((c) => typeof c.soloConCole === "boolean") &&
+  Array.isArray(e.diasCole) &&
   typeof e.ajustesCompra === "object" &&
   e.ajustesCompra !== null
     ? e
@@ -773,7 +788,13 @@ export const normalizar = (e: EstadoHogar): EstadoHogar =>
         registro: Array.isArray(e.registro) ? e.registro : [],
         premios: Array.isArray(e.premios) ? e.premios : [],
         canjes: Array.isArray(e.canjes) ? e.canjes : [],
-        mochila: Array.isArray(e.mochila) ? e.mochila : [],
+        // Lo de antes de D-144 era todo del cole (la carpeta de piano, los patines).
+        mochila: Array.isArray(e.mochila)
+          ? e.mochila.map((c) =>
+              typeof c.soloConCole === "boolean" ? c : { ...c, soloConCole: true },
+            )
+          : [],
+        diasCole: Array.isArray(e.diasCole) ? e.diasCole : [],
         agenda: Array.isArray(e.agenda) ? e.agenda : [],
         casa: Array.isArray(e.casa) ? e.casa : [],
         almuerzos: Array.isArray(e.almuerzos) ? e.almuerzos : [],
@@ -1902,6 +1923,13 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
         dias: fecha ? [] : dias.sort((a, b) => a - b),
         fecha,
         antes,
+        // Si no se dice, lo de antes (al editar) o del cole (al añadir).
+        soloConCole:
+          accion.soloConCole ??
+          (accion.tipo === "mochila/editar"
+            ? e.mochila.find((c) => c.id === accion.id)?.soloConCole
+            : undefined) ??
+          true,
       };
       const clave = (c: { personaId: string; texto: string }) =>
         `${c.personaId}|${claveArticulo(c.texto)}`;
@@ -1951,6 +1979,56 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
         }),
       };
     }
+
+    case "cole/dia": {
+      if (!fechaIsoValida(accion.fecha)) {
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: error(e, "Elige un día que exista."),
+        };
+      }
+      const motivo = (accion.motivo ?? "").replace(/\s+/g, " ").trim();
+      if (!accion.hay && motivo.length > MAX_LARGO_MOTIVO) {
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: error(e, `El motivo, hasta ${MAX_LARGO_MOTIVO} caracteres.`),
+        };
+      }
+      const oficial = diaOficial(accion.fecha);
+      if (oficial.origen === "fin-de-semana") {
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: error(e, "Ese día es fin de semana: nunca hay cole."),
+        };
+      }
+      const resto = e.diasCole.filter((a) => a.fecha !== accion.fecha);
+      // Si coincide con lo oficial (y no cambia el motivo), no hace falta apuntarlo.
+      const igualQueOficial = accion.hay
+        ? oficial.hay
+        : !oficial.hay && (motivo === "" || motivo === oficial.motivo);
+      const diasCole = igualQueOficial
+        ? resto
+        : [
+            ...resto,
+            {
+              fecha: accion.fecha,
+              hay: accion.hay,
+              motivo: accion.hay ? "" : motivo || "No hay cole",
+            },
+          ].sort((a, b) => a.fecha.localeCompare(b.fecha));
+      return {
+        ...e,
+        diasCole,
+        siguienteId: e.siguienteId + 1,
+        aviso: ok(e, accion.hay ? "Apuntado: ese día hay cole." : "Apuntado: ese día no hay cole."),
+      };
+    }
+
+    case "cole/oficial":
+      return { ...e, diasCole: e.diasCole.filter((a) => a.fecha !== accion.fecha) };
 
     case "menu/anadir": {
       const plato = e.platos.find((p) => p.id === accion.platoId);

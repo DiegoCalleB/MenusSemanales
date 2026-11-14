@@ -2084,6 +2084,109 @@ test.describe("mochila, compartir y plan de la semana", () => {
     await contexto.close();
   });
 
+  test("días sin cole (D-144): el calendario de Madrid viene puesto y se apuntan los del cole", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/mochila");
+    const dias = pagina.getByRole("list", { name: "Próximos días sin cole" });
+    await expect(dias).toContainText("Vacaciones de Navidad");
+    await expect(dias).toContainText("del miércoles 23 de diciembre al miércoles 6 de enero");
+    // Lo del ejemplo es del cole.
+    await expect(pagina.getByRole("list", { name: "Qué lleva Emma" })).toContainText(
+      "solo con cole",
+    );
+
+    await pagina.getByRole("button", { name: "＋ Apuntar un día sin cole" }).click();
+    const form = pagina.getByRole("form", { name: "Apuntar un día sin cole" });
+    // Un sábado no vale: nunca hay cole.
+    await form.getByLabel("Día").fill("2026-12-12");
+    await form.getByRole("button", { name: "Guardar" }).click();
+    await expect(form.getByRole("alert")).toContainText("fin de semana");
+    await form.getByLabel("Día").fill("2026-12-11");
+    await form.getByRole("button", { name: "Guardar" }).click();
+    await expect(dias).toContainText("Día de libre disposición");
+    await expect(dias).toContainText("viernes 11 de diciembre · lo apuntasteis vosotros");
+    await dias.getByRole("button", { name: /Quitar Día de libre disposición/ }).click();
+    await expect(dias).not.toContainText("Día de libre disposición");
+
+    // Al apuntar algo nuevo, «Es para el cole» viene marcado.
+    await pagina.getByRole("button", { name: "＋ Apuntar algo que llevar" }).click();
+    await expect(
+      pagina.getByRole("form", { name: "Apuntar algo que llevar" }).getByRole("checkbox", {
+        name: /Es para el cole/,
+      }),
+    ).toBeChecked();
+    await contexto.close();
+  });
+
+  test("el tiempo (D-145): en Hoy sale la previsión y qué llevar", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    // Los datos de ejemplo tienen «hoy» fijo (4 de noviembre de 2026).
+    await pagina.route("**/api/tiempo", (ruta) =>
+      ruta.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          dias: [
+            { fecha: "2026-11-04", codigo: 80, max: 14, min: 9, probLluvia: 70, lluviaMm: 3 },
+            { fecha: "2026-11-05", codigo: 0, max: 12, min: 2, probLluvia: 0, lluviaMm: 0 },
+          ],
+        }),
+      }),
+    );
+    await cargar(pagina, "/");
+    const tiempo = pagina.getByRole("region", { name: "El tiempo en Las Musas" });
+    // Hoy hay cole y no vino la previsión hora a hora: ante la duda, el paraguas (D-148).
+    await expect(tiempo).toContainText(
+      "Puede llover a la hora del cole (70 % en el día): paraguas",
+    );
+    await expect(tiempo).toContainText("Frío (mín. 2 °C): abrigo, gorro y guantes");
+    await contexto.close();
+  });
+
+  test("el tiempo (D-148): a qué hora llueve de camino al cole", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    const horas = Array.from({ length: 24 }, (_, hora) => ({
+      hora,
+      prob: hora === 9 ? 70 : 0,
+      mm: hora === 9 ? 1.5 : 0,
+      codigo: hora === 9 ? 61 : 2,
+    }));
+    await pagina.route("**/api/tiempo", (ruta) =>
+      ruta.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          dias: [
+            {
+              fecha: "2026-11-04",
+              codigo: 61,
+              max: 14,
+              min: 9,
+              probLluvia: 70,
+              lluviaMm: 2,
+              horas,
+            },
+          ],
+        }),
+      }),
+    );
+    await cargar(pagina, "/");
+    const tiempo = pagina.getByRole("region", { name: "El tiempo en Las Musas" });
+    await expect(tiempo).toContainText("Llueve de camino al cole (de 8 a 9 h, 70 %): paraguas");
+    await expect(tiempo).not.toContainText("chubasquero y botas");
+    await contexto.close();
+  });
+
+  test("el tiempo (D-145): si la previsión no llega, la tarjeta no sale", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await pagina.route("**/api/tiempo", (ruta) => ruta.abort());
+    await cargar(pagina, "/");
+    await expect(pagina.getByRole("heading", { name: "El tiempo en Las Musas" })).toHaveCount(0);
+    await contexto.close();
+  });
+
   test("compartir (D-138): un mensaje de WhatsApp se lee con IA y se apunta", async ({
     browser,
   }) => {
