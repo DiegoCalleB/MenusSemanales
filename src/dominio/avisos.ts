@@ -1,4 +1,4 @@
-import { type ProyeccionCalendario } from "./calendario-suscrito";
+import type { ProyeccionCalendario } from "./calendario-suscrito";
 import { type TareaCasa, diasParaCasa } from "./casa";
 import { diasHasta } from "./cumples";
 import { type FechaIso, diaSemanaIso, sumarDias } from "./fechas";
@@ -105,6 +105,34 @@ function avisoDelParaguas(p: Pronostico, cuando: "Hoy" | "Mañana"): Aviso | nul
     titulo: `${cuando} ${textoDeLluviaDelCole(l)}: ${soloVuelta ? "salid con paraguas" : "paraguas y chubasquero"}`,
     nivel: "ya",
   };
+}
+
+/**
+ * El tiempo de un día en líneas, para los calendarios (D-154): «🌂 Paraguas: llueve de camino al
+ * cole (de 8 a 9 h, 70 %)», «🧣 Frío (mín. 2 °C): abrigo, gorro y guantes». Con cole ese día, la
+ * lluvia de la ida y la vuelta sustituye a la del día, como en los avisos.
+ */
+export function lineasDelTiempo(
+  p: Pronostico,
+  conCole: boolean,
+): Array<{ clave: string; emoji: string; texto: string }> {
+  const l = conCole ? lluviaDelCole(p) : [];
+  const paraguas =
+    l.length > 0
+      ? [
+          {
+            clave: "paraguas",
+            emoji: "🌂",
+            texto: `Paraguas: ${textoDeLluviaDelCole(l)}`,
+          },
+        ]
+      : [];
+  return [
+    ...paraguas,
+    ...consejosDelTiempo(p)
+      .filter((c) => !(paraguas.length > 0 && c.clave === "lluvia"))
+      .map((c) => ({ clave: c.clave, emoji: c.emoji, texto: `${c.que}: ${c.llevar}` })),
+  ];
 }
 
 /** ¿Hay cole ese día para el hogar? Solo si tiene algo del cole (D-144) y no es un día sin cole. */

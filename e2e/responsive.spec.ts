@@ -2209,6 +2209,41 @@ test.describe("mochila, compartir y plan de la semana", () => {
     await contexto.close();
   });
 
+  test("el tiempo (D-154): en el calendario, en la casilla y en el detalle del día", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    const horas = Array.from({ length: 24 }, (_, hora) => ({
+      hora,
+      prob: hora === 9 ? 70 : 0,
+      mm: hora === 9 ? 1.5 : 0,
+      codigo: hora === 9 ? 61 : 2,
+    }));
+    await pagina.route("**/api/tiempo", (ruta) =>
+      ruta.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          dias: [
+            {
+              fecha: "2026-11-05",
+              codigo: 61,
+              max: 14,
+              min: 9,
+              probLluvia: 70,
+              lluviaMm: 2,
+              horas,
+            },
+          ],
+        }),
+      }),
+    );
+    await cargar(pagina, "/calendario?dia=2026-11-05");
+    const tiempo = pagina.getByRole("group", { name: "El tiempo" });
+    await expect(tiempo).toContainText("Paraguas: llueve de camino al cole (de 8 a 9 h, 70 %)");
+    await contexto.close();
+  });
+
   test("el tiempo (D-145): si la previsión no llega, la tarjeta no sale", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await pagina.route("**/api/tiempo", (ruta) => ruta.abort());

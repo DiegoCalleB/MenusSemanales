@@ -7,6 +7,10 @@ import { BotonEditar, EditarCita } from "../editar";
 import { NuevaCita } from "../nueva-cita";
 import { useCalendarioFamilia } from "../usar-calendario-familia";
 import { useEffect, useMemo, useState } from "react";
+import { tieneCole } from "@/aplicacion/cole";
+import { lineasDelTiempo } from "@/dominio/avisos";
+import { resumenDelTiempo } from "@/dominio/tiempo";
+import { usePrevision } from "../usar-prevision";
 import {
   MAX_PLATOS_POR_CENA,
   comidasDe,
@@ -65,6 +69,13 @@ export function CalendarioVista() {
   const deGoogle = useCalendarioFamilia(estado.hoy);
   const [mes, setMes] = useState<FechaIso>(`${estado.hoy.slice(0, 7)}-01`);
   const [sel, setSel] = useState<FechaIso>(estado.hoy);
+  // El tiempo de los próximos días (D-154): lo de llevar, en el día y un emoji en la casilla.
+  const prevision = usePrevision();
+  const hayColeEse = hayColeDe(estado);
+  const tiempoDe = (f: FechaIso) => {
+    const p = prevision.find((x) => x.fecha === f);
+    return p ? { p, lineas: lineasDelTiempo(p, tieneCole(estado) && hayColeEse(f)) } : null;
+  };
 
   // «Abrir» un día desde el plan de la semana (D-153): /calendario?dia=2026-11-20.
   useEffect(() => {
@@ -220,6 +231,7 @@ export function CalendarioVista() {
                       {estado.colegio[f] && <span> 🎒</span>}
                       {estado.almuerzos.some((a) => a.fecha === f) && <span> ☀️</span>}
                       {eventos[f] && <span> {eventos[f]?.emoji}</span>}
+                      {tiempoDe(f)?.lineas[0] && <span> {tiempoDe(f)?.lineas[0]?.emoji}</span>}
                     </span>
                     <span className="truncate text-sm font-normal">
                       {cena
@@ -246,7 +258,8 @@ export function CalendarioVista() {
               const esHoy = f === estado.hoy;
               const esSel = f === sel;
               const pasado = f < estado.hoy;
-              const etiqueta = `${largo(f)}${cena ? `: cena ${nombresDe(f)}` : ": sin cena elegida"}${hayCole ? ", hay menú del cole" : ""}${evento ? `, ${evento.titulo}` : ""}${esHoy ? ", hoy" : ""}`;
+              const tiempo = tiempoDe(f)?.lineas[0];
+              const etiqueta = `${largo(f)}${cena ? `: cena ${nombresDe(f)}` : ": sin cena elegida"}${hayCole ? ", hay menú del cole" : ""}${evento ? `, ${evento.titulo}` : ""}${tiempo ? `, ${tiempo.texto}` : ""}${esHoy ? ", hoy" : ""}`;
               return (
                 <div key={f}>
                   <button
@@ -268,10 +281,11 @@ export function CalendarioVista() {
                         ? (EMOJI_GRUPO[(cena.plato as { grupo?: string }).grupo ?? "otro"] ?? "🍽️")
                         : ""}
                     </span>
-                    {(hayCole || evento) && (
+                    {(hayCole || evento || tiempo) && (
                       <span aria-hidden="true" className="text-xs leading-none">
                         {evento ? evento.emoji : ""}
                         {hayCole ? "🎒" : ""}
+                        {tiempo ? tiempo.emoji : ""}
                       </span>
                     )}
                   </button>
@@ -280,8 +294,8 @@ export function CalendarioVista() {
             })}
           </div>
           <p className="text-tinta-suave text-sm">
-            🎒 hay menú del cole · ☀️ hay comida apuntada · el emoji es el tipo de plato de la cena
-            elegida
+            🎒 hay menú del cole · ☀️ hay comida apuntada · 🌂 llueve a la hora del cole · el emoji
+            es el tipo de plato de la cena elegida
           </p>
         </section>
 
@@ -296,6 +310,20 @@ export function CalendarioVista() {
               </p>
             )}
           </div>
+
+          {tiempoDe(sel) && (
+            <div aria-label="El tiempo" role="group" className="bg-suave-1 rounded-2xl p-3">
+              <p className="text-base">
+                <strong>El tiempo:</strong> {resumenDelTiempo(tiempoDe(sel)!.p)}
+              </p>
+              {tiempoDe(sel)!.lineas.map((l) => (
+                <p key={l.clave} className="text-base">
+                  <span aria-hidden="true">{l.emoji} </span>
+                  {l.texto}
+                </p>
+              ))}
+            </div>
+          )}
 
           {fijos[sel] && (
             <p className="bg-suave-1 rounded-2xl p-3 text-base font-bold">

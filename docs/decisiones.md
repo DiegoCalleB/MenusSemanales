@@ -1332,3 +1332,10 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
   - La cena lleva ✏️ para elegirla o cambiarla en el día.
   - Lo de preparar de la mochila se marca y desmarca con un toque (✅).
 - No hay pantallas nuevas: el plan reutiliza lo que ya existe.
+
+## D-154 · El tiempo también en los calendarios
+
+- **Petición (Diego):** «los avisos de paraguas y eso no salen en el calendario».
+- **Calendario de la app:** cada día con previsión (hoy y los dos siguientes) lleva el emoji de lo más importante en su casilla (🌂, 🌧️, 🧣…). En el detalle del día aparece «El tiempo: 🌧️ 9–14 °C» con lo que hay que llevar, igual que en «Hoy».
+- **Calendario suscrito (Google), el de fechas:** un evento de todo el día por cada cosa que llevar: «🌂 Paraguas: llueve de camino al cole (de 8 a 9 h, 70 %)», «🧣 Frío (mín. 2 °C): abrigo, gorro y guantes». Los días de cole, la lluvia de la ida y la vuelta sustituye a la del día, como en los avisos (`lineasDelTiempo`). En el de comidas no sale nada del tiempo.
+- **Límite:** Google refresca los calendarios suscritos cuando quiere (a veces una vez al día), así que la previsión puede tener horas. Por eso la descripción del evento dice que puede cambiar y que el aviso de las 7 la vuelve a mirar. La fuente fiable sigue siendo el aviso.

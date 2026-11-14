@@ -4,7 +4,9 @@ import type { EventoCalendario } from "./compartir";
 import { proximaFecha } from "./cumples";
 import { type FechaIso, diaSemanaIso, sumarDias } from "./fechas";
 import { NOMBRE_DIA_LARGO, preparacionesEntre } from "./mochila";
-import { MAX_LARGO_MOTIVO, consultaCole, tramosSinCole } from "./calendario-escolar";
+import { MAX_LARGO_MOTIVO, consultaCole, diaDeCole, tramosSinCole } from "./calendario-escolar";
+import { lineasDelTiempo } from "./avisos";
+import { LUGAR_TIEMPO, type Pronostico } from "./tiempo";
 
 /**
  * Avisos fuera de la app (D-083): el calendario del móvil se suscribe a un enlace y avisa solo.
@@ -145,7 +147,13 @@ const esComida = (e: EventoCalendario) => /^(cena|comida|cole)-/.test(e.uid ?? "
  */
 export function eventosSuscritos(
   p: ProyeccionCalendario,
-  opciones: { hoy: FechaIso; para: string | null; solo?: CalendarioSuscrito },
+  opciones: {
+    hoy: FechaIso;
+    para: string | null;
+    solo?: CalendarioSuscrito;
+    /** La previsión del tiempo (D-154), si se pudo leer: el paraguas y el abrigo, en «fechas». */
+    tiempo?: readonly Pronostico[];
+  },
 ): EventoCalendario[] {
   const todos = todosLosEventos(p, opciones);
   return opciones.solo === "comidas" ? todos.filter(esComida) : todos.filter((e) => !esComida(e));
@@ -153,7 +161,11 @@ export function eventosSuscritos(
 
 function todosLosEventos(
   p: ProyeccionCalendario,
-  { hoy, para }: { hoy: FechaIso; para: string | null },
+  {
+    hoy,
+    para,
+    tiempo = [],
+  }: { hoy: FechaIso; para: string | null; tiempo?: readonly Pronostico[] },
 ): EventoCalendario[] {
   const eventos: EventoCalendario[] = [];
   const persona = p.personas.find((x) => x.id === para && x.activa) ?? null;
@@ -295,6 +307,21 @@ function todosLosEventos(
         hasta: t.hasta === t.desde ? null : t.hasta,
         titulo: `🏫 Sin cole: ${t.motivo}`,
         descripcion: `No hay cole: ${t.motivo}.`,
+      });
+    }
+  }
+
+  // El tiempo de los próximos días (D-154): qué llevar, de todo el día. Los días de cole, el
+  // paraguas dice a qué hora llueve en la ida y la vuelta. Sin previsión, no sale nada.
+  for (const t of tiempo) {
+    if (t.fecha < hoy) continue;
+    const deCole = conCole && diaDeCole(t.fecha, ajustesCole).hay;
+    for (const l of lineasDelTiempo(t, deCole)) {
+      eventos.push({
+        uid: `tiempo-${t.fecha}-${l.clave}`,
+        fecha: t.fecha,
+        titulo: `${l.emoji} ${l.texto}`,
+        descripcion: `Previsión del tiempo en ${LUGAR_TIEMPO.nombre} (Open-Meteo). Puede cambiar: el aviso de las 7 la vuelve a mirar.`,
       });
     }
   }

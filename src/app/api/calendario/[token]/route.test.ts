@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/infraestructura/calendario-escolar", () => ({
   cargarCursosEscolares: async () => ({ cursos: [], comprobadoEn: null, resultado: null }),
 }));
+const t = vi.hoisted(() => ({ prevision: vi.fn() }));
+vi.mock("@/infraestructura/tiempo", () => ({ leerPrevision: t.prevision }));
 import { GET } from "./route";
 
 const TOKEN = "a".repeat(64);
@@ -27,6 +29,7 @@ const resumen = {
 };
 
 beforeEach(() => {
+  t.prevision.mockReset().mockResolvedValue([]);
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://x.supabase.co");
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "sb_publishable_test");
 });
@@ -92,5 +95,21 @@ describe("GET /api/calendario/[token]", () => {
     for (let i = 0; i < 70; i++) ultimo = (await pedir(TOKEN, "", "6.6.6.6")).status;
     expect(ultimo).toBe(429);
     expect((await pedir(TOKEN, "", "7.7.7.7")).status).toBe(404); // otra dirección: sigue bien
+  });
+
+  it("el tiempo de los próximos días sale en el calendario de fechas, no en el de comidas (D-154)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json(resumen)),
+    );
+    const manana = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+    t.prevision.mockResolvedValue([
+      { fecha: manana, codigo: 63, max: 14, min: 2, probLluvia: 80, lluviaMm: 5 },
+    ]);
+    const fechas = await (await pedir(TOKEN, "", "9.9.9.1")).text();
+    expect(fechas).toContain("Lluvia (80 %): chubasquero y botas");
+    expect(fechas).toContain("Frío (mín. 2 °C)");
+    const comidas = await (await pedir(TOKEN, "?solo=comidas", "9.9.9.2")).text();
+    expect(comidas).not.toContain("Lluvia");
   });
 });
