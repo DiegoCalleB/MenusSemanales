@@ -1240,3 +1240,14 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Dónde se ve:** «🏫 Sin cole: Vacaciones de Navidad» en el plan de la semana, en el mes y en el día del calendario de la app y, en Google, en el calendario de fechas (de todo el día, sin alarma, las vacaciones en un solo evento). Aviso «Mañana no hay cole» solo el primer día de cada parón (no cada día de las vacaciones) y «Mañana vuelve el cole» la víspera de la vuelta, también en la notificación de la noche. Solo en hogares con algo del cole (mochila, menú del cole o días apuntados).
 - **Ante la duda, avisar:** fuera del curso conocido (desde el 1 de septiembre de 2027) se supone que hay cole de lunes a viernes. Así se avisa de más, nunca de menos, y la pantalla dice que falta el calendario del curso siguiente. Hay que añadirlo cuando se publique (normalmente en mayo o junio).
 - **Base de datos** (`20261114000000_calendario_escolar.sql`): el resumen del calendario añade `diasCole` (fecha, si hay cole y motivo) y `soloConCole` en cada cosa de la mochila. Nada más del documento.
+
+## D-145 · Avisos según el tiempo
+
+- **Petición (Diego):** «avisos según el tiempo, me mola».
+- **Fuente:** Open-Meteo (gratis, sin clave), previsión de **Madrid capital** para hoy, mañana y pasado. El servidor la pide (`/api/tiempo`, guardada media hora); el navegador nunca habla con Open-Meteo, así que la CSP no cambia. Si falla o tarda más de 5 s, no hay avisos del tiempo y todo lo demás sale igual.
+- **Reglas** (`src/dominio/tiempo.ts`; ante la duda, avisar):
+  - **Tormenta** (códigos 95-99) o **nieve**: chubasquero y botas, o abrigo, guantes y botas.
+  - **Lluvia**: probabilidad del 50 % o más, o 1 mm o más. Se lleva chubasquero y botas.
+  - **Frío** con mínima de 4 °C o menos: abrigo, gorro y guantes.
+  - **Calor** con máxima de 30 °C o más: gorra, crema y agua.
+- **Dónde:** el aviso de las 9:00 lleva el tiempo de **hoy**. El de las 20:00 lleva el de **mañana**, detrás de la mochila; un día de lluvia basta para que se mande. En «Hoy» hay una tarjeta con hoy y mañana de un vistazo («🌧️ 10–14 °C») y qué llevar.

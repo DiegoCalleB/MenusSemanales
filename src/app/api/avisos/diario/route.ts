@@ -18,6 +18,7 @@ import {
 } from "@/infraestructura/avisos/claves";
 import { CorreoNoConfigurado, enviarCorreo } from "@/infraestructura/avisos/resend";
 import { leerSuscripciones, olvidarSuscripcion } from "@/infraestructura/avisos/suscripciones";
+import { leerPrevision } from "@/infraestructura/tiempo";
 
 const CABECERAS = { "Cache-Control": "no-store", "Content-Type": "application/json" } as const;
 const responder = (cuerpo: unknown, status: number) =>
@@ -147,9 +148,9 @@ export async function POST(request: Request) {
   let avisos: Aviso[];
   try {
     hoy = hoyEnMadrid();
-    const resumen = await leerResumenDelCalendario(token);
+    const [resumen, tiempo] = await Promise.all([leerResumenDelCalendario(token), leerPrevision()]);
     if (!resumen) return responder({ error: "sin-datos" }, 404);
-    const entrada = entradaDeProyeccion(resumen, hoy);
+    const entrada = { ...entradaDeProyeccion(resumen, hoy), tiempo };
     avisos = momento === "manana" ? avisosDeHoy(entrada) : avisosDeLaNoche(entrada);
   } catch (e) {
     console.error("[avisos] lectura", e instanceof Error ? e.message : "desconocido");

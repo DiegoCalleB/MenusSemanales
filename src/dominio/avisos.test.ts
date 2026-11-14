@@ -278,3 +278,34 @@ describe("avisos y calendario escolar (D-144)", () => {
     ]);
   });
 });
+
+describe("el tiempo en los avisos (D-145)", () => {
+  const tiempo = [
+    { fecha: "2026-11-19", codigo: 80, max: 14, min: 9, probLluvia: 70, lluviaMm: 3 },
+    { fecha: "2026-11-20", codigo: 1, max: 12, min: 2, probLluvia: 0, lluviaMm: 0 },
+  ];
+
+  it("por la mañana, el de hoy; por la noche, el de mañana después de la mochila", () => {
+    const e = {
+      ...base,
+      hoy: "2026-11-19",
+      tiempo,
+      mochila: [{ texto: "Patines", persona: "Emma", dias: [5], fecha: null, antes: 1 }],
+    };
+    expect(avisosDeHoy(e).find((a) => a.id.startsWith("tiempo-"))).toEqual({
+      id: "tiempo-2026-11-19-lluvia",
+      emoji: "🌧️",
+      titulo: "Hoy, lluvia (70 %): chubasquero y botas",
+      nivel: "ya",
+    });
+    expect(avisosDeLaNoche(e).map((a) => a.titulo)).toEqual([
+      "Deja preparado: Patines de Emma (para mañana)",
+      "Mañana, frío (mín. 2 °C): abrigo, gorro y guantes",
+    ]);
+  });
+
+  it("solo el tiempo ya basta para mandar el aviso de la noche; sin previsión, nada", () => {
+    expect(avisosDeLaNoche({ ...base, hoy: "2026-11-19", tiempo }).length).toBe(1);
+    expect(avisosDeLaNoche({ ...base, hoy: "2026-11-19", tiempo: [] })).toEqual([]);
+  });
+});

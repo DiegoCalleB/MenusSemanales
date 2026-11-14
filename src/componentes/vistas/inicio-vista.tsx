@@ -21,6 +21,7 @@ import { ComidaDelDia } from "../comida-del-dia";
 import { LoDeHoy } from "../lo-de-hoy";
 import { NuevaCita } from "../nueva-cita";
 import { MochilaHoy } from "../mochila-hoy";
+import { TiempoHoy } from "../tiempo-hoy";
 import { diaSemanaIso } from "@/dominio/fechas";
 
 /** Portada: arriba, la cena y el cole de hoy; después lo pendiente y, plegado, lo demás. */
@@ -154,6 +155,8 @@ export function InicioVista() {
           <TarjetaCole cole={estado.colegio[diaCole] ?? null} fecha={diaCole} />
         </section>
       )}
+
+      <TiempoHoy />
 
       <MochilaHoy />
 

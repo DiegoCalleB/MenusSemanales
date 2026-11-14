@@ -4,6 +4,7 @@ import { diasHasta } from "./cumples";
 import { type FechaIso, diaSemanaIso, sumarDias } from "./fechas";
 import { paraPreparar } from "./mochila";
 import { type AjusteCole, consultaCole, diaDeCole } from "./calendario-escolar";
+import { type Pronostico, consejosDelTiempo } from "./tiempo";
 
 /**
  * Avisos del día (D-114): lo que merece que alguien lo vea hoy. Es el mismo cálculo para la
@@ -44,6 +45,24 @@ export interface EntradaAvisos {
   diasCole?: readonly AjusteCole[];
   /** ¿Avisar de los días sin cole? Solo si el hogar tiene algo del cole (mochila, menú). */
   conCole?: boolean;
+  /** La previsión del tiempo (D-145), si se pudo leer. */
+  tiempo?: readonly Pronostico[];
+}
+
+/** Qué ponerse o llevar ese día según el tiempo (D-145): «Hoy, lluvia (65 %): chubasquero y botas». */
+function avisosDelTiempo(
+  tiempo: readonly Pronostico[] | undefined,
+  fecha: FechaIso,
+  cuando: "Hoy" | "Mañana",
+): Aviso[] {
+  const p = tiempo?.find((x) => x.fecha === fecha);
+  if (!p) return [];
+  return consejosDelTiempo(p).map((c) => ({
+    id: `tiempo-${fecha}-${c.clave}`,
+    emoji: c.emoji,
+    titulo: `${cuando}, ${c.que.charAt(0).toLowerCase()}${c.que.slice(1)}: ${c.llevar}`,
+    nivel: "ya" as const,
+  }));
 }
 
 export interface CosaParaAviso {
@@ -169,6 +188,9 @@ export function avisosDeHoy(e: EntradaAvisos): Aviso[] {
     });
   }
 
+  // El tiempo de hoy (D-145): qué ponerse o llevar.
+  out.push(...avisosDelTiempo(e.tiempo, e.hoy, "Hoy"));
+
   // Calendario escolar (D-144): el aviso de que mañana no hay cole (solo el primer día de cada
   // parón, no cada día de unas vacaciones) y de que mañana vuelve.
   if (e.conCole) {
@@ -238,12 +260,17 @@ export function avisosDeHoy(e: EntradaAvisos): Aviso[] {
  * citas de mañana. Vacío si no hay nada: entonces no se manda.
  */
 export function avisosDeLaNoche(e: EntradaAvisos): Aviso[] {
-  return avisosDeHoy(e).filter(
+  const manana = sumarDias(e.hoy, 1);
+  const delDia = avisosDeHoy(e).filter(
     (a) =>
       a.id.startsWith("mochila-") ||
       a.id.startsWith("cole-") ||
       (a.id.startsWith("cita-") && a.nivel === "pronto"),
   );
+  // Lo de la mochila primero; luego el tiempo de mañana (D-145), que también se deja preparado.
+  const mochila = delDia.filter((a) => a.id.startsWith("mochila-"));
+  const resto = delDia.filter((a) => !a.id.startsWith("mochila-"));
+  return [...mochila, ...avisosDelTiempo(e.tiempo, manana, "Mañana"), ...resto];
 }
 
 export function notificacionDeLaNoche(avisos: readonly Aviso[]) {

@@ -2120,6 +2120,36 @@ test.describe("mochila, compartir y plan de la semana", () => {
     await contexto.close();
   });
 
+  test("el tiempo (D-145): en Hoy sale la previsión y qué llevar", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    // Los datos de ejemplo tienen «hoy» fijo (4 de noviembre de 2026).
+    await pagina.route("**/api/tiempo", (ruta) =>
+      ruta.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          dias: [
+            { fecha: "2026-11-04", codigo: 80, max: 14, min: 9, probLluvia: 70, lluviaMm: 3 },
+            { fecha: "2026-11-05", codigo: 0, max: 12, min: 2, probLluvia: 0, lluviaMm: 0 },
+          ],
+        }),
+      }),
+    );
+    await cargar(pagina, "/");
+    const tiempo = pagina.getByRole("region", { name: "El tiempo en Madrid" });
+    await expect(tiempo).toContainText("Lluvia (70 %): chubasquero y botas");
+    await expect(tiempo).toContainText("Frío (mín. 2 °C): abrigo, gorro y guantes");
+    await contexto.close();
+  });
+
+  test("el tiempo (D-145): si la previsión no llega, la tarjeta no sale", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await pagina.route("**/api/tiempo", (ruta) => ruta.abort());
+    await cargar(pagina, "/");
+    await expect(pagina.getByRole("heading", { name: "El tiempo en Madrid" })).toHaveCount(0);
+    await contexto.close();
+  });
+
   test("compartir (D-138): un mensaje de WhatsApp se lee con IA y se apunta", async ({
     browser,
   }) => {

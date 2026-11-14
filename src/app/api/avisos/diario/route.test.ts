@@ -10,7 +10,9 @@ const m = vi.hoisted(() => ({
   pushActivo: { v: false },
   comprobar: vi.fn(),
   guardarClaves: vi.fn(),
+  tiempo: vi.fn(),
 }));
+vi.mock("@/infraestructura/tiempo", () => ({ leerPrevision: m.tiempo }));
 vi.mock("@/infraestructura/avisos/claves", () => ({
   comprobarSecretoDeAvisos: m.comprobar,
   guardarClavesDeAvisos: m.guardarClaves,
@@ -68,6 +70,7 @@ beforeEach(() => {
   m.olvidar.mockReset().mockResolvedValue(undefined);
   m.comprobar.mockReset().mockResolvedValue({ valido: false });
   m.guardarClaves.mockReset();
+  m.tiempo.mockReset().mockResolvedValue([]);
 });
 
 describe("POST /api/avisos/diario", () => {
@@ -250,5 +253,21 @@ describe("POST /api/avisos/diario", () => {
       prueba: "https://push.example.test/otra",
     });
     expect(ajena.status).toBe(404);
+  });
+});
+
+describe("el tiempo en el aviso (D-145)", () => {
+  it("va en el resumen de la mañana; si la previsión falla, el aviso sale igual", async () => {
+    m.tiempo.mockResolvedValue([
+      { fecha: "2026-11-03", codigo: 80, max: 14, min: 9, probLluvia: 80, lluviaMm: 4 },
+    ]);
+    const r = await pedir(`Bearer ${SECRETO}`, "?forzar=1");
+    expect(r.status).toBe(200);
+    expect(JSON.stringify(m.enviar.mock.calls[0]?.[0])).toContain("chubasquero");
+
+    m.tiempo.mockResolvedValue([]);
+    m.enviar.mockClear();
+    expect((await pedir(`Bearer ${SECRETO}`, "?forzar=1")).status).toBe(200);
+    expect(JSON.stringify(m.enviar.mock.calls[0]?.[0])).not.toContain("chubasquero");
   });
 });
