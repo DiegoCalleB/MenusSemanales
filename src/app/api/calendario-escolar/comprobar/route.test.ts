@@ -69,4 +69,17 @@ describe("POST /api/calendario-escolar/comprobar (D-146)", () => {
     expect(m.anotar).not.toHaveBeenCalled();
     expect((await pedir(`Bearer ${SECRETO}`, { prueba: 2030 })).status).toBe(400);
   });
+
+  it("si la página no se puede leer, la prueba lo dice (no «aún no publicado»), y se pide como un navegador", async () => {
+    const f = vi.fn(async () => new Response("bloqueado", { status: 403 }));
+    vi.stubGlobal("fetch", f);
+    const r = await pedir(`Bearer ${SECRETO}`, { prueba: 2026 });
+    expect(await r.json()).toEqual({
+      prueba: 2026,
+      estado: "sin-descargar",
+      detalle: "pagina-403",
+    });
+    const opciones = (f.mock.calls[0] as unknown[])[1] as { headers: Record<string, string> };
+    expect(opciones.headers["User-Agent"]).toContain("Mozilla");
+  });
 });

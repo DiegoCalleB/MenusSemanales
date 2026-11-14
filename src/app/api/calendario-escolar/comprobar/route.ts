@@ -20,12 +20,27 @@ import { leerCalendarioEscolar } from "@/infraestructura/ia/calendario-escolar";
 export const maxDuration = 300;
 
 const MAX_PDF = 10 * 1024 * 1024;
+
+/**
+ * La web de la Comunidad corta a veces las peticiones que no parecen de un navegador: se piden
+ * como las pediría uno.
+ */
+const CABECERAS_WEB = {
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36",
+  Accept: "text/html,application/xhtml+xml,application/pdf;q=0.9,*/*;q=0.8",
+  "Accept-Language": "es-ES,es;q=0.9",
+} as const;
 const responder = (cuerpo: unknown, status: number) =>
   Response.json(cuerpo, { status, headers: { "Cache-Control": "no-store" } });
 
 async function bajarPdf(url: string): Promise<string | null> {
   try {
-    const r = await fetch(url, { signal: AbortSignal.timeout(30_000), cache: "no-store" });
+    const r = await fetch(url, {
+      headers: CABECERAS_WEB,
+      signal: AbortSignal.timeout(30_000),
+      cache: "no-store",
+    });
     if (!r.ok) return null;
     const datos = Buffer.from(await r.arrayBuffer());
     // Solo PDF de verdad y de un tamaño razonable.
@@ -56,6 +71,7 @@ export async function POST(request: Request) {
     hoy: hoyEnMadrid(),
     pagina: async () => {
       const r = await fetch(PAGINA_CALENDARIO_ESCOLAR, {
+        headers: CABECERAS_WEB,
         signal: AbortSignal.timeout(20_000),
         cache: "no-store",
       });
@@ -74,7 +90,14 @@ export async function POST(request: Request) {
   if (prueba !== null) {
     const revisado = CURSOS.find((c) => c.inicio.startsWith(String(prueba)));
     if (!revisado) return responder({ error: "sin-revisado" }, 400);
-    const html = await deps.pagina().catch(() => "");
+    let html: string;
+    try {
+      html = await deps.pagina();
+    } catch (e) {
+      // Que no se confunda «no se pudo leer la página» con «aún no está publicado».
+      const detalle = e instanceof Error ? e.message.slice(0, 100) : "desconocido";
+      return responder({ prueba, estado: "sin-descargar", detalle }, 200);
+    }
     const r = await comprobarCurso(prueba, html, { ...deps, guardar: async () => "igual" });
     if (!("curso" in r))
       return responder(
