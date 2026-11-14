@@ -345,3 +345,47 @@ describe("el menú del cole en el calendario de comidas (D-141)", () => {
     ).toBe(false);
   });
 });
+
+describe("el tiempo en el calendario suscrito (D-154)", () => {
+  const horas = Array.from({ length: 24 }, (_, hora) => ({
+    hora,
+    prob: hora === 9 ? 70 : 0,
+    mm: hora === 9 ? 1 : 0,
+    codigo: hora === 9 ? 61 : 2,
+  }));
+  // Jueves 19 de noviembre de 2026 (hay cole) y sábado 21.
+  const tiempo = [
+    { fecha: "2026-11-19", codigo: 61, max: 14, min: 9, probLluvia: 70, lluviaMm: 3, horas },
+    { fecha: "2026-11-21", codigo: 61, max: 14, min: 3, probLluvia: 70, lluviaMm: 3, horas },
+  ];
+  const conMochila = base({
+    mochila: [{ personaId: "diego", texto: "Flauta", dias: [1], fecha: null, antes: 1 }],
+  });
+
+  it("los días de cole, el paraguas con la hora; el resto, lo del día; de todo el día", () => {
+    const e = eventosSuscritos(conMochila, { hoy: "2026-11-18", para: null, tiempo }).filter((x) =>
+      x.uid?.startsWith("tiempo-"),
+    );
+    expect(e.map((x) => [x.uid, x.titulo, x.hora ?? null])).toEqual([
+      [
+        "tiempo-2026-11-19-paraguas",
+        "🌂 Paraguas: llueve de camino al cole (de 8 a 9 h, 70 %)",
+        null,
+      ],
+      ["tiempo-2026-11-21-lluvia", "🌧️ Lluvia (70 %): chubasquero y botas", null],
+      ["tiempo-2026-11-21-frio", "🧣 Frío (mín. 3 °C): abrigo, gorro y guantes", null],
+    ]);
+  });
+
+  it("sin previsión, o en el calendario de comidas, nada del tiempo", () => {
+    const sin = eventosSuscritos(conMochila, { hoy: "2026-11-18", para: null });
+    expect(sin.some((x) => x.uid?.startsWith("tiempo-"))).toBe(false);
+    const comidas = eventosSuscritos(conMochila, {
+      hoy: "2026-11-18",
+      para: null,
+      solo: "comidas",
+      tiempo,
+    });
+    expect(comidas.some((x) => x.uid?.startsWith("tiempo-"))).toBe(false);
+  });
+});

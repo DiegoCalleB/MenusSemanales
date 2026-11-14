@@ -1050,30 +1050,51 @@ describe("agenda: apuntes escritos como en una nota", () => {
     expect(error.aviso).toMatchObject({ tipo: "error" });
   });
 
-  it("limpiar la agenda quita lo ya pasado y deja lo de hoy, lo futuro y lo que sigue en curso", () => {
+  it("lo ya pasado se puede puntuar de 1 a 5 (D-152); lo futuro no", () => {
     const base = estadoInicialDemo();
     const hoy = base.hoy;
-    const apunte = (id: string, fecha: string, hasta: string | null = null) => ({
+    const apunte = (id: string, fecha: string) => ({
       id,
       fecha,
-      hasta,
+      hasta: null,
       hora: null,
-      titulo: id,
+      titulo: `Excursión ${id}`,
     });
     const e = {
       ...base,
-      agenda: [
-        apunte("pasado", sumarDias(hoy, -3)),
-        apunte("ayer", sumarDias(hoy, -1)),
-        apunte("hoy", hoy),
-        apunte("futuro", sumarDias(hoy, 5)),
-        apunte("en-curso", sumarDias(hoy, -2), sumarDias(hoy, 2)),
-      ],
+      agenda: [apunte("pasado", sumarDias(hoy, -3)), apunte("futuro", sumarDias(hoy, 5))],
     };
-    const limpio = reducir(e, { tipo: "agenda/limpiar" });
-    expect(limpio.agenda.map((a) => a.id)).toEqual(["hoy", "futuro", "en-curso"]);
-    // Sin nada que quitar, es el mismo estado (no hay nada que guardar).
-    expect(reducir(limpio, { tipo: "agenda/limpiar" })).toBe(limpio);
+    const r = reducir(e, { tipo: "agenda/valorar", id: "pasado", estrellas: 4 });
+    expect(r.puntuacionesCitas).toEqual({ [`${sumarDias(hoy, -3)}|excursion pasado`]: 4 });
+    expect(reducir(e, { tipo: "agenda/valorar", id: "futuro", estrellas: 4 })).toBe(e);
+    expect(reducir(e, { tipo: "agenda/valorar", id: "pasado", estrellas: 9 })).toBe(e);
+    // Cambiar la cita se lleva su puntuación; 0 la quita; borrarla también.
+    const editada = reducir(r, {
+      tipo: "agenda/editar",
+      id: "pasado",
+      titulo: "Granja escuela",
+      fecha: sumarDias(hoy, -3),
+      hasta: "",
+      hora: "",
+    });
+    expect(editada.puntuacionesCitas).toEqual({ [`${sumarDias(hoy, -3)}|granja escuela`]: 4 });
+    expect(
+      reducir(editada, { tipo: "agenda/valorar", id: "pasado", estrellas: 0 }).puntuacionesCitas,
+    ).toEqual({});
+    expect(reducir(editada, { tipo: "agenda/borrar", id: "pasado" }).puntuacionesCitas).toEqual({});
+  });
+
+  it("un estado sin puntuaciones (o con basura) se completa sin perder nada", () => {
+    const viejo = {
+      ...estadoInicialDemo(),
+      puntuacionesCitas: undefined,
+    } as unknown as EstadoHogar;
+    expect(normalizar(viejo).puntuacionesCitas).toEqual({});
+    const raro = {
+      ...estadoInicialDemo(),
+      puntuacionesCitas: null,
+    } as unknown as EstadoHogar;
+    expect(normalizar(raro).puntuacionesCitas).toEqual({});
   });
 
   it("al recibir un estado de antes de la agenda, parte de una lista vacía", () => {

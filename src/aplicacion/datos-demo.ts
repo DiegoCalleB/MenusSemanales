@@ -451,6 +451,7 @@ export function estadoInicialDemo(): EstadoHogar {
       { id: "m-patines", personaId: "emma", texto: "Patines", dias: [5], fecha: null, antes: 1, preparadas: [], soloConCole: true },
     ], // prettier-ignore
     diasCole: [],
+    puntuacionesCitas: {},
     agenda: [],
     notasMenu: {},
     registro: [],

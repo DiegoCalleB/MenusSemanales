@@ -25,9 +25,20 @@ describe("plan de la semana (D-137)", () => {
     const plan = planDeLaSemana(e);
     expect(plan.dias).toHaveLength(7);
     expect(plan.dias[0]!.nombre).toBe("lunes 16");
-    expect(plan.dias[2]!.citas).toEqual([{ titulo: "Reu AMPA", hora: "16:00" }]);
+    expect(plan.dias[2]!.citas).toEqual([
+      { id: expect.any(String), titulo: "Reu AMPA", hora: "16:00" },
+    ]);
     // Los patines de Emma (viernes) se preparan el jueves 19; el piano de Alba (martes), el lunes 16.
-    expect(plan.dias[3]!.preparar).toEqual([{ texto: "Patines", persona: "Emma", hecho: false }]);
+    // Con su id y el día para el que es: así se marca desde el plan (D-153).
+    expect(plan.dias[3]!.preparar).toEqual([
+      {
+        id: expect.any(String),
+        para: "2026-11-20",
+        texto: "Patines",
+        persona: "Emma",
+        hecho: false,
+      },
+    ]);
     expect(plan.dias[0]!.preparar.map((p) => p.texto)).toEqual(["Carpeta de piano"]);
     expect(plan.faltanCenas).toBe(6); // el sábado 21 no se cena en casa
     expect(plan.faltanCenasLaborables).toBe(5);

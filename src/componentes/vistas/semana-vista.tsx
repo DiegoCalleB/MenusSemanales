@@ -1,17 +1,40 @@
 "use client";
 
 import Link from "next/link";
+import { type ReactNode, useState } from "react";
 import { planDeLaSemana, textoDelPlan } from "@/aplicacion/semana";
 import { enlaceWhatsApp } from "@/dominio/compartir";
+import { BotonEditar, EditarCita, EditarComida, EditarCumple, EditarTareaCasa } from "../editar";
 import { useHogar } from "../proveedor-hogar";
+
+/** Una línea del día con su botón de editar (D-153). */
+function Fila({
+  nombre,
+  alEditar,
+  children,
+}: {
+  nombre: string;
+  alEditar: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <p className="text-base">{children}</p>
+      <BotonEditar nombre={nombre} alPulsar={alEditar} />
+    </div>
+  );
+}
 
 /**
  * Planear la semana (D-137): de un vistazo, día a día, y con los botones para dejarla lista:
- * proponer las cenas que faltan, revisar la compra y mandar el plan por WhatsApp.
+ * proponer las cenas que faltan, revisar la compra y mandar el plan por WhatsApp. Cada cosa se
+ * edita ahí mismo y cada día se abre en el calendario, con todo lo de ese día (D-153).
  */
 export function SemanaVista() {
   const { estado, despachar } = useHogar();
   const plan = planDeLaSemana(estado);
+  const [editando, setEditando] = useState<string | null>(null);
+  const cerrar = () => setEditando(null);
 
   return (
     <div className="flex flex-col gap-4">
@@ -80,12 +103,22 @@ export function SemanaVista() {
       <ol aria-label="Días de la semana" className="flex flex-col gap-3">
         {plan.dias.map((d) => {
           const hoy = d.fecha === estado.hoy;
+          const enCalendario = `/calendario?dia=${d.fecha}`;
           return (
             <li key={d.fecha} className="tarjeta flex flex-col gap-1.5">
-              <h2 className="text-lg font-extrabold capitalize">
-                {d.nombre}
-                {hoy && <span className="text-marca-fuerte text-sm font-bold"> · hoy</span>}
-              </h2>
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-lg font-extrabold capitalize">
+                  {d.nombre}
+                  {hoy && <span className="text-marca-fuerte text-sm font-bold"> · hoy</span>}
+                </h2>
+                <Link
+                  href={enCalendario}
+                  className="boton-suave"
+                  aria-label={`Abrir el ${d.nombre}`}
+                >
+                  Abrir
+                </Link>
+              </div>
               {d.evento && (
                 <p className="text-base">
                   <span aria-hidden="true">{d.evento.emoji} </span>
@@ -97,54 +130,103 @@ export function SemanaVista() {
                   <span aria-hidden="true">🏫 </span>Sin cole: {d.sinCole}
                 </p>
               )}
-              {d.cumples.map((c) => (
-                <p key={c} className="text-base font-semibold">
-                  <span aria-hidden="true">🎂 </span>Cumple de {c}
-                </p>
-              ))}
-              {d.citas.map((c, i) => (
-                <p key={i} className="text-base">
-                  <span aria-hidden="true">📌 </span>
-                  {c.hora && <strong>{c.hora} </strong>}
-                  {c.titulo}
-                </p>
-              ))}
-              {d.comida.length > 0 && (
-                <p className="text-base">
-                  <span aria-hidden="true">☀️ </span>Comida: {d.comida.join(" + ")}
-                </p>
+              {d.cumpleanos.map((c) => {
+                const cumple = estado.cumples.find((x) => x.id === c.id);
+                const clave = `cumple:${c.id}`;
+                return editando === clave && cumple ? (
+                  <EditarCumple key={clave} cumple={cumple} alCerrar={cerrar} />
+                ) : (
+                  <Fila
+                    key={clave}
+                    nombre={`cumple de ${c.nombre}`}
+                    alEditar={() => setEditando(clave)}
+                  >
+                    <span aria-hidden="true">🎂 </span>
+                    <strong>Cumple de {c.nombre}</strong>
+                  </Fila>
+                );
+              })}
+              {d.citas.map((c) => {
+                const cita = estado.agenda.find((x) => x.id === c.id);
+                const clave = `cita:${d.fecha}:${c.id}`;
+                return editando === clave && cita ? (
+                  <EditarCita key={clave} cita={cita} alCerrar={cerrar} />
+                ) : (
+                  <Fila key={clave} nombre={c.titulo} alEditar={() => setEditando(clave)}>
+                    <span aria-hidden="true">📌 </span>
+                    {c.hora && <strong>{c.hora} </strong>}
+                    {c.titulo}
+                  </Fila>
+                );
+              })}
+              {d.comidas.map((c) => {
+                const comida = estado.almuerzos.find((x) => x.id === c.id);
+                const clave = `comida:${c.id}`;
+                return editando === clave && comida ? (
+                  <EditarComida key={clave} comida={comida} alCerrar={cerrar} />
+                ) : (
+                  <Fila
+                    key={clave}
+                    nombre={`comida ${c.texto}`}
+                    alEditar={() => setEditando(clave)}
+                  >
+                    <span aria-hidden="true">☀️ </span>Comida: {c.texto}
+                  </Fila>
+                );
+              })}
+              {(d.cena.length > 0 || !d.sinCena) && (
+                <div className="flex items-center justify-between gap-2">
+                  {d.cena.length > 0 ? (
+                    <p className="text-base">
+                      <span aria-hidden="true">🍽️ </span>Cena: {d.cena.join(" + ")}
+                    </p>
+                  ) : (
+                    <p className="text-aviso-texto text-base">
+                      <span aria-hidden="true">🍽️ </span>Cena por decidir
+                    </p>
+                  )}
+                  <Link
+                    href={enCalendario}
+                    className="boton-icono"
+                    aria-label={`${d.cena.length > 0 ? "Cambiar" : "Elegir"} la cena del ${d.nombre}`}
+                    title={d.cena.length > 0 ? "Cambiar la cena" : "Elegir la cena"}
+                  >
+                    <span aria-hidden="true">✏️</span>
+                  </Link>
+                </div>
               )}
-              {d.cena.length > 0 ? (
-                <p className="text-base">
-                  <span aria-hidden="true">🍽️ </span>Cena: {d.cena.join(" + ")}
-                </p>
-              ) : (
-                !d.sinCena && (
-                  <p className="text-aviso-texto text-base">
-                    <span aria-hidden="true">🍽️ </span>Cena por decidir
-                  </p>
-                )
-              )}
-              {d.preparar.map((p, i) => (
-                <p
-                  key={i}
-                  className={`text-base ${p.hecho ? "text-tinta-suave line-through" : ""}`}
+              {d.preparar.map((p) => (
+                <button
+                  key={`${p.id}:${p.para}`}
+                  type="button"
+                  aria-pressed={p.hecho}
+                  className={`flex min-h-11 items-center gap-2 rounded-xl text-left text-base ${p.hecho ? "text-tinta-suave line-through" : ""}`}
+                  onClick={() => despachar({ tipo: "mochila/preparar", id: p.id, para: p.para })}
                 >
-                  <span aria-hidden="true">🎒 </span>Preparar: {p.texto}
-                  {p.persona && ` de ${p.persona}`}
-                </p>
+                  <span aria-hidden="true">{p.hecho ? "✅" : "🎒"}</span>
+                  <span>
+                    Preparar: {p.texto}
+                    {p.persona && ` de ${p.persona}`}
+                  </span>
+                </button>
               ))}
               {d.llevar.length > 0 && (
                 <p className="text-tinta-suave text-sm">
                   Llevan: {d.llevar.map((c) => `${c.texto} (${c.persona})`).join(", ")}
                 </p>
               )}
-              {d.casa.map((c, i) => (
-                <p key={i} className="text-base">
-                  <span aria-hidden="true">{c.emoji} </span>
-                  {c.titulo}
-                </p>
-              ))}
+              {d.casa.map((c) => {
+                const tarea = estado.casa.find((x) => x.id === c.id);
+                const clave = `casa:${d.fecha}:${c.id}`;
+                return editando === clave && tarea ? (
+                  <EditarTareaCasa key={clave} tarea={tarea} alCerrar={cerrar} />
+                ) : (
+                  <Fila key={clave} nombre={c.titulo} alEditar={() => setEditando(clave)}>
+                    <span aria-hidden="true">{c.emoji} </span>
+                    {c.titulo}
+                  </Fila>
+                );
+              })}
             </li>
           );
         })}

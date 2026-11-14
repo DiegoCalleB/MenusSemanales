@@ -1,6 +1,7 @@
 import { eventosSuscritos } from "@/dominio/calendario-suscrito";
 import { generarIcs } from "@/dominio/compartir";
 import { cargarCursosEscolares } from "@/infraestructura/calendario-escolar";
+import { leerPrevision } from "@/infraestructura/tiempo";
 import {
   demasiadasPeticiones,
   hoyEnMadrid,
@@ -44,9 +45,15 @@ export async function GET(request: Request, ctx: { params: Promise<{ token: stri
   const para = paraCrudo && /^[a-z0-9_-]{1,40}$/i.test(paraCrudo) ? paraCrudo : null;
 
   let resumen;
+  let tiempo;
   try {
-    // Los cursos del calendario escolar leídos solos (D-146), para los días sin cole.
-    [resumen] = await Promise.all([leerResumenDelCalendario(token), cargarCursosEscolares()]);
+    // Los cursos del calendario escolar leídos solos (D-146), para los días sin cole, y el tiempo
+    // (D-154), que si no llega no impide nada (devuelve una lista vacía).
+    [resumen, , tiempo] = await Promise.all([
+      leerResumenDelCalendario(token),
+      cargarCursosEscolares(),
+      leerPrevision(),
+    ]);
   } catch {
     // Sin detalles: un fallo de Supabase no debe contar nada del servidor.
     return new Response("No disponible", {
@@ -60,7 +67,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ token: stri
   const solo = new URL(request.url).searchParams.get("solo") === "comidas" ? "comidas" : "fechas";
   const ics = generarIcs(
     solo === "comidas" ? "¡Hecho! · Comidas" : "¡Hecho!",
-    eventosSuscritos(resumen, { hoy: hoyEnMadrid(), para, solo }),
+    eventosSuscritos(resumen, { hoy: hoyEnMadrid(), para, solo, tiempo }),
     new Date(),
     1,
   );

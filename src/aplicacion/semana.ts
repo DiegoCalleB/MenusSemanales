@@ -22,11 +22,16 @@ export interface DiaDelPlan {
   /** Por qué no hay cole ese día entre semana (D-144), o `null`. */
   sinCole: string | null;
   comida: string[];
-  citas: Array<{ titulo: string; hora: string | null }>;
-  preparar: Array<{ texto: string; persona: string; hecho: boolean }>;
+  /** Las comidas apuntadas con su id, para editarlas desde el plan (D-153). */
+  comidas: Array<{ id: string; texto: string }>;
+  citas: Array<{ id: string; titulo: string; hora: string | null }>;
+  /** `id` y `para`: para marcarlo como preparado desde el plan. */
+  preparar: Array<{ id: string; para: FechaIso; texto: string; persona: string; hecho: boolean }>;
   llevar: Array<{ texto: string; persona: string }>;
   cumples: string[];
-  casa: Array<{ emoji: string; titulo: string }>;
+  /** Los cumpleaños con su id (el nombre está también en `cumples`). */
+  cumpleanos: Array<{ id: string; nombre: string }>;
+  casa: Array<{ id: string; emoji: string; titulo: string }>;
 }
 
 export interface PlanDeLaSemana {
@@ -62,11 +67,14 @@ export function planDeLaSemana(e: EstadoHogar): PlanDeLaSemana {
       evento,
       sinCole: sinColeEntreSemana(e, f),
       comida: e.almuerzos.filter((a) => a.fecha === f).map((a) => a.texto),
+      comidas: e.almuerzos.filter((a) => a.fecha === f).map((a) => ({ id: a.id, texto: a.texto })),
       citas: e.agenda
         .filter((a) => a.fecha === f || (a.hasta !== null && a.fecha <= f && f <= a.hasta))
         .sort((a, b) => (a.hora ?? "").localeCompare(b.hora ?? ""))
-        .map((a) => ({ titulo: a.titulo, hora: a.hora })),
+        .map((a) => ({ id: a.id, titulo: a.titulo, hora: a.hora })),
       preparar: paraPreparar(e.mochila, f, hayCole).map((p) => ({
+        id: p.cosa.id,
+        para: p.para,
         texto: p.cosa.texto,
         persona: nombre(p.cosa.personaId),
         hecho: p.hecho,
@@ -76,13 +84,16 @@ export function planDeLaSemana(e: EstadoHogar): PlanDeLaSemana {
         persona: nombre(c.personaId),
       })),
       cumples: e.cumples.filter((c) => proximaFecha(c, e.hoy) === f).map((c) => c.nombre),
+      cumpleanos: e.cumples
+        .filter((c) => proximaFecha(c, e.hoy) === f)
+        .map((c) => ({ id: c.id, nombre: c.nombre })),
       // Lo atrasado de la casa sale el primer día.
       casa: e.casa
         .filter((t) => {
           const toca = proximaVez(t);
           return toca === f || (f === desde && toca < desde);
         })
-        .map((t) => ({ emoji: t.emoji, titulo: t.titulo })),
+        .map((t) => ({ id: t.id, emoji: t.emoji, titulo: t.titulo })),
     });
   }
   const sinElegir = dias.filter((d) => d.cena.length === 0 && !d.sinCena);

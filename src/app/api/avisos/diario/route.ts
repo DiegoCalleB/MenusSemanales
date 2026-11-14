@@ -4,6 +4,7 @@ import {
   avisosAntesDelCole,
   avisosDeHoy,
   avisosDeLaNoche,
+  cosasParaMarcar,
   direccionesDeAvisos,
   entradaDeProyeccion,
   notificacionAntesDelCole,
@@ -16,6 +17,7 @@ import { enviarPush, generarClavesVapid, pushConfigurado } from "@/infraestructu
 import {
   type ClavesVapid,
   comprobarSecretoDeAvisos,
+  crearAccionDeAviso,
   guardarClavesDeAvisos,
 } from "@/infraestructura/avisos/claves";
 import { CorreoNoConfigurado, enviarCorreo } from "@/infraestructura/avisos/resend";
@@ -215,12 +217,19 @@ export async function POST(request: Request) {
   if (quierePush) {
     const cuenta = { enviadas: 0, caducadas: 0, fallos: 0 };
     try {
-      const mensaje =
-        momento === "manana"
+      // Por la noche, si hay algo de la mochila, la notificación lleva el botón «Hecho» (D-151):
+      // un código de un solo uso que da la base de datos. Si no se puede crear, sale sin botón.
+      const marcar = momento === "noche" && porBaseDeDatos ? cosasParaMarcar(avisos) : [];
+      const hecho =
+        marcar.length > 0 ? await crearAccionDeAviso(dado, token, marcar).catch(() => null) : null;
+      const mensaje = {
+        ...(momento === "manana"
           ? notificacionDelDia(hoy, avisos)
           : momento === "noche"
             ? notificacionDeLaNoche(avisos)
-            : notificacionAntesDelCole(avisos);
+            : notificacionAntesDelCole(avisos)),
+        ...(hecho ? { hecho } : {}),
+      };
       for (const s of await leerSuscripciones(token)) {
         const r = await enviarPush(
           { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },

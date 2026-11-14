@@ -75,3 +75,41 @@ export async function clavePublicaDeAvisos(): Promise<string | null> {
     return null;
   }
 }
+
+/** Una cosa de la mochila que se puede marcar desde la notificación (D-151). */
+export interface CosaHecha {
+  texto: string;
+  personaId: string | null;
+  para: string;
+}
+
+const CODIGO = /^[0-9a-f]{64}$/;
+
+/**
+ * El código de un solo uso para el botón «Hecho» de la notificación (D-151), o null si no se pudo
+ * crear (entonces la notificación sale sin botón, como siempre).
+ */
+export async function crearAccionDeAviso(
+  secreto: string,
+  token: string,
+  cosas: readonly CosaHecha[],
+): Promise<string | null> {
+  if (!SECRETO.test(secreto) || cosas.length === 0) return null;
+  try {
+    const v = await rpc("crear_accion_aviso", {
+      p_secreto: secreto,
+      p_token: token,
+      p_cosas: cosas.slice(0, 10),
+    });
+    return typeof v === "string" && CODIGO.test(v) ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Marca lo del código: cuántas cosas ha marcado ahora, o null si el código no vale. */
+export async function marcarHechoDesdeAviso(codigo: string): Promise<number | null> {
+  if (!CODIGO.test(codigo)) return null;
+  const v = await rpc("marcar_hecho_desde_aviso", { p_codigo: codigo });
+  return typeof v === "number" && Number.isInteger(v) && v >= 0 ? v : null;
+}

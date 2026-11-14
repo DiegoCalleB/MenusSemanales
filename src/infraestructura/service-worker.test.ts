@@ -9,6 +9,7 @@ const sw = require("../../public/sw.js") as {
   clavePagina: (url: string) => string;
   esEstatico: (ruta: string) => boolean;
   destinoCompartido: (campos: Record<string, unknown>, hayArchivo: boolean) => string;
+  codigoHecho: (v: unknown) => string | null;
   RUTAS: string[];
   SUELTOS: string[];
 };
@@ -62,5 +63,13 @@ describe("compartir con la app desde otra (D-138)", () => {
 
   it("guarda la pantalla de lo compartido y la del plan de la semana para usarlas sin conexión", () => {
     expect(sw.RUTAS).toEqual(expect.arrayContaining(["/compartido", "/semana", "/mochila"]));
+  });
+
+  it("el botón «Hecho» solo sale con un código de la forma esperada (D-151)", () => {
+    expect(sw.codigoHecho("a".repeat(64))).toBe("a".repeat(64));
+    expect(sw.codigoHecho("A".repeat(64))).toBeNull();
+    expect(sw.codigoHecho("a".repeat(63))).toBeNull();
+    expect(sw.codigoHecho(undefined)).toBeNull();
+    expect(sw.codigoHecho({ codigo: "x" })).toBeNull();
   });
 });

@@ -525,6 +525,36 @@ test.describe("flujos en móvil", () => {
     await contexto.close();
   });
 
+  test("lo que ya pasó (D-152): la cita pasada se queda y se puntúa con estrellas", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/fechas");
+    // «Hoy» en los datos de ejemplo es el 4 de noviembre de 2026.
+    await pagina.getByLabel(/Escribe como en una nota/).fill("31 Octubre 2026 Fiesta de Halloween");
+    await pagina.getByRole("button", { name: "Apuntar", exact: true }).click();
+    const pasadas = pagina.getByRole("list", { name: "Citas pasadas" });
+    await expect(pasadas.getByText("Fiesta de Halloween")).toBeVisible();
+    const estrellas = pasadas.getByRole("group", { name: "Puntuación de Fiesta de Halloween" });
+    await estrellas.getByRole("button", { name: "4 estrellas" }).click();
+    await expect(estrellas.getByRole("button", { name: "4 estrellas" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    // Al volver a entrar sigue ahí, con su puntuación; tocarla otra vez la quita.
+    await pagina.reload();
+    await expect(estrellas.getByRole("button", { name: "4 estrellas" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await estrellas.getByRole("button", { name: "4 estrellas" }).click();
+    await expect(estrellas.getByRole("button", { name: "4 estrellas" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    await contexto.close();
+  });
+
   test("editar: una cita apuntada (título, día y hora), desde «Apuntado» y desde «Próximas fechas»", async ({
     browser,
   }) => {
@@ -2179,6 +2209,41 @@ test.describe("mochila, compartir y plan de la semana", () => {
     await contexto.close();
   });
 
+  test("el tiempo (D-154): en el calendario, en la casilla y en el detalle del día", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    const horas = Array.from({ length: 24 }, (_, hora) => ({
+      hora,
+      prob: hora === 9 ? 70 : 0,
+      mm: hora === 9 ? 1.5 : 0,
+      codigo: hora === 9 ? 61 : 2,
+    }));
+    await pagina.route("**/api/tiempo", (ruta) =>
+      ruta.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          dias: [
+            {
+              fecha: "2026-11-05",
+              codigo: 61,
+              max: 14,
+              min: 9,
+              probLluvia: 70,
+              lluviaMm: 2,
+              horas,
+            },
+          ],
+        }),
+      }),
+    );
+    await cargar(pagina, "/calendario?dia=2026-11-05");
+    const tiempo = pagina.getByRole("group", { name: "El tiempo" });
+    await expect(tiempo).toContainText("Paraguas: llueve de camino al cole (de 8 a 9 h, 70 %)");
+    await contexto.close();
+  });
+
   test("el tiempo (D-145): si la previsión no llega, la tarjeta no sale", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await pagina.route("**/api/tiempo", (ruta) => ruta.abort());
@@ -2248,6 +2313,30 @@ test.describe("mochila, compartir y plan de la semana", () => {
     await expect(
       pagina.getByRole("link", { name: "📤 Mandar el plan por WhatsApp" }),
     ).toHaveAttribute("href", /^https:\/\/wa\.me\/\?text=/);
+    await contexto.close();
+  });
+
+  test("plan de la semana (D-153): cada cosa se edita ahí mismo y cada día se abre", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    // «Hoy» en los datos de ejemplo es el miércoles 4 de noviembre de 2026.
+    await cargar(pagina, "/fechas");
+    await pagina.getByLabel(/Escribe como en una nota/).fill("6 Noviembre 18:00 Dentista");
+    await pagina.getByRole("button", { name: "Apuntar", exact: true }).click();
+    await expect(pagina.getByRole("list", { name: "Apuntes" }).getByText(/Dentista/)).toBeVisible();
+
+    await cargar(pagina, "/semana");
+    const dias = pagina.getByRole("list", { name: "Días de la semana" });
+    await dias.getByRole("button", { name: "Editar Dentista" }).click();
+    const form = pagina.getByRole("form", { name: "Editar Dentista" });
+    await form.getByLabel("Qué es").fill("Dentista de Emma");
+    await form.getByRole("button", { name: "Guardar" }).click();
+    await expect(dias.getByText("Dentista de Emma")).toBeVisible();
+
+    await dias.getByRole("link", { name: /^Abrir el viernes 6/ }).click();
+    await expect(pagina).toHaveURL(/\/calendario\?dia=2026-11-06$/);
+    await expect(pagina.locator("#detalle")).toContainText(/6 de noviembre/i);
     await contexto.close();
   });
 });

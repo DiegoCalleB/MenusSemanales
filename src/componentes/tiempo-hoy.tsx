@@ -1,18 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { lluviaDelCole } from "@/dominio/avisos";
 import { type FechaIso, sumarDias } from "@/dominio/fechas";
 import {
   LUGAR_TIEMPO,
   type Pronostico,
   consejosDelTiempo,
-  pronosticosDe,
   resumenDelTiempo,
   textoDeLluviaDelCole,
 } from "@/dominio/tiempo";
 import { hayColeDe, tieneCole } from "@/aplicacion/cole";
 import { useHogar } from "./proveedor-hogar";
+import { usePrevision } from "./usar-prevision";
 
 /**
  * El tiempo en «Hoy» (D-145): hoy y mañana de un vistazo y, si hace falta, qué ponerse o llevar.
@@ -21,21 +20,7 @@ import { useHogar } from "./proveedor-hogar";
  */
 export function TiempoHoy() {
   const { estado } = useHogar();
-  const [dias, setDias] = useState<Pronostico[]>([]);
-
-  useEffect(() => {
-    let vivo = true;
-    fetch("/api/tiempo")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j: { dias?: unknown } | null) => {
-        // La respuesta viene del servidor, pero se vuelve a validar: lo que no encaje no se pinta.
-        if (vivo && j) setDias(pronosticosDe({ daily: aDaily(j.dias), hourly: aHourly(j.dias) }));
-      })
-      .catch(() => {});
-    return () => {
-      vivo = false;
-    };
-  }, []);
+  const dias = usePrevision();
 
   const hayCole = hayColeDe(estado);
   const deCole = (f: FechaIso) => tieneCole(estado) && hayCole(f);
@@ -82,40 +67,4 @@ export function TiempoHoy() {
   );
 }
 
-/** De la lista de días del servidor al formato de Open-Meteo, para validarla con el mismo esquema. */
-function aDaily(v: unknown) {
-  const l = Array.isArray(v) ? (v as Array<Record<string, unknown>>) : [];
-  return {
-    time: l.map((d) => d.fecha),
-    weather_code: l.map((d) => d.codigo),
-    temperature_2m_max: l.map((d) => d.max),
-    temperature_2m_min: l.map((d) => d.min),
-    precipitation_probability_max: l.map((d) => d.probLluvia),
-    precipitation_sum: l.map((d) => d.lluviaMm),
-  };
-}
-
 const primeraMayuscula = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
-
-/** Las horas de cada día, de vuelta al formato de Open-Meteo (D-148). */
-function aHourly(v: unknown) {
-  const l = Array.isArray(v) ? (v as Array<{ fecha?: unknown; horas?: unknown }>) : [];
-  const horas = l.flatMap((d) =>
-    Array.isArray(d.horas)
-      ? (d.horas as Array<Record<string, unknown>>).map((h): Record<string, unknown> => ({
-          ...h,
-          fecha: d.fecha,
-        }))
-      : [],
-  );
-  return {
-    time: horas.map((h) =>
-      typeof h.fecha === "string" && typeof h.hora === "number"
-        ? `${h.fecha}T${String(h.hora).padStart(2, "0")}:00`
-        : "",
-    ),
-    precipitation_probability: horas.map((h) => h.prob),
-    precipitation: horas.map((h) => h.mm),
-    weather_code: horas.map((h) => h.codigo),
-  };
-}
