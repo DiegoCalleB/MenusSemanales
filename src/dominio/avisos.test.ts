@@ -309,3 +309,29 @@ describe("el tiempo en los avisos (D-145)", () => {
     expect(avisosDeLaNoche({ ...base, hoy: "2026-11-19", tiempo: [] })).toEqual([]);
   });
 });
+
+describe("calendario escolar nuevo (D-146)", () => {
+  const cursosNuevos = [
+    {
+      nombre: "Curso 2027/2028 · Madrid capital",
+      inicio: "2027-09-08",
+      cambiadoEn: "2027-06-01T07:41:00Z",
+    },
+  ];
+  it("se avisa el día que se carga y los dos siguientes, no después", () => {
+    const titulo = (hoy: string) =>
+      avisosDeHoy({ ...base, hoy, conCole: true, cursosNuevos }).find((a) =>
+        a.id.startsWith("calendario-escolar-"),
+      )?.titulo;
+    expect(titulo("2027-06-01")).toBe(
+      "Calendario escolar al día: Curso 2027/2028, empieza el miércoles 8 de septiembre",
+    );
+    expect(titulo("2027-06-03")).toBeDefined();
+    expect(titulo("2027-06-04")).toBeUndefined();
+    expect(
+      avisosDeHoy({ ...base, hoy: "2027-06-01", cursosNuevos }).some((a) =>
+        a.id.startsWith("calendario-escolar-"),
+      ),
+    ).toBe(false);
+  });
+});

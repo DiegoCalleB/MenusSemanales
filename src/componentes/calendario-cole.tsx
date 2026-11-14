@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import {
-  CURSO_MADRID_2026_27,
   MAX_LARGO_MOTIVO,
   calendarioConocidoHasta,
+  cursoDe,
+  cursosConocidos,
   diaOficial,
   tramosSinCole,
 } from "@/dominio/calendario-escolar";
@@ -21,9 +22,11 @@ const CUANTOS = 8;
  * la familia), para apuntar los días de libre disposición del centro o decir «ese día sí hay cole».
  */
 export function CalendarioCole() {
-  const { estado, despachar } = useHogar();
+  const { estado, despachar, calendarioEscolar } = useHogar();
   const [anadiendo, setAnadiendo] = useState(false);
   const hoy = estado.hoy;
+  const conocidos = cursosConocidos();
+  const actual = cursoDe(hoy) ?? conocidos[conocidos.length - 1];
   const proximos = tramosSinCole(estado.diasCole, hoy, 300).slice(0, CUANTOS);
   const siHay = estado.diasCole.filter((a) => a.hay && a.fecha >= hoy);
   const hasta = calendarioConocidoHasta();
@@ -37,13 +40,15 @@ export function CalendarioCole() {
         <span aria-hidden="true">🏫 </span>Días sin cole
       </h2>
       <p className="text-tinta-suave text-sm">
-        {CURSO_MADRID_2026_27.nombre}. Lo del cole no se avisa de preparar si al día siguiente no
-        hay clase. Añade los días que el cole tenga libres por su cuenta.
+        {conocidos.map((c) => c.nombre.replace(" · Madrid capital", "")).join(" y ")} · Madrid
+        capital. Lo del cole no se avisa de preparar si al día siguiente no hay clase. Añade los
+        días que el cole tenga libres por su cuenta.
       </p>
       {faltaCurso && (
         <p role="status" className="bg-aviso-fondo text-aviso-texto rounded-2xl p-2 text-sm">
-          El calendario que conozco llega hasta el {fechaLarga(hasta)}. Después aviso todos los días
-          de lunes a viernes, hasta que esté el del curso siguiente.
+          El calendario que conozco llega hasta el {fechaLarga(hasta)}. En cuanto la Comunidad de
+          Madrid publique el siguiente (suele ser en mayo o junio) lo cargo solo; mientras, aviso
+          todos los días de lunes a viernes.
         </p>
       )}
       <ul aria-label="Próximos días sin cole" className="flex flex-col gap-2">
@@ -122,7 +127,14 @@ export function CalendarioCole() {
           ＋ Apuntar un día sin cole
         </button>
       )}
-      <p className="text-tinta-suave text-xs">Fuente: {CURSO_MADRID_2026_27.fuente}.</p>
+      <p className="text-tinta-suave text-xs">
+        Fuente: {actual?.fuente}. Cada mes miro solo si la Comunidad de Madrid ha publicado el
+        calendario del curso siguiente
+        {calendarioEscolar.comprobadoEn
+          ? ` (última vez: ${fechaLarga(calendarioEscolar.comprobadoEn.slice(0, 10))}${calendarioEscolar.resultado ? `; ${calendarioEscolar.resultado}` : ""})`
+          : ""}
+        .
+      </p>
     </section>
   );
 }

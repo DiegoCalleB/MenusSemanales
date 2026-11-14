@@ -1251,3 +1251,22 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
   - **Frío** con mínima de 4 °C o menos: abrigo, gorro y guantes.
   - **Calor** con máxima de 30 °C o más: gorra, crema y agua.
 - **Dónde:** el aviso de las 9:00 lleva el tiempo de **hoy**. El de las 20:00 lleva el de **mañana**, detrás de la mochila; un día de lluvia basta para que se mande. En «Hoy» hay una tarjeta con hoy y mañana de un vistazo («🌧️ 10–14 °C») y qué llevar.
+
+## D-146 · El calendario escolar se lee solo cada mes
+
+- **Petición (Diego):** «que sea capaz de leer el calendario cada mes sin tener que hacer nada».
+- **Cómo:**
+  - El **día 1 de cada mes**, la base de datos llama a la app (`pg_cron`, `calendario-escolar-mensual`), con el mismo secreto que los avisos (D-139).
+  - La app busca en la web de la Comunidad de Madrid los PDF del curso siguiente al último conocido: la orden del BOCM y el cuadro resumen. Mira también los cursos leídos que aún no han acabado, por si la Comunidad los actualiza (el cuadro se renueva en octubre con los festivos del año siguiente).
+  - Los **lee dos veces** con IA (Gemini), por separado.
+  - Monta el curso: verano, vacaciones, festivos y las fiestas de Madrid capital. La Almudena y San Isidro en domingo pasan al lunes; en sábado no cuentan.
+- **Antes de usarlo, se comprueba todo:**
+  - Las dos lecturas tienen que dar **exactamente los mismos días**.
+  - Empieza un día de septiembre entre semana y acaba uno de junio.
+  - Tienen que estar la Navidad (25 de diciembre, 1 y 6 de enero), el Jueves y el Viernes Santo (con la fecha de Pascua calculada) y el 12 de octubre y el 8 de diciembre si caen entre semana.
+  - Tiene que haber entre **175 y 190 días lectivos**.
+  - Si algo no cuadra, no se guarda nada, la app sigue avisando de lunes a viernes (lo seguro) y lo vuelve a intentar el mes siguiente.
+- **Los cursos revisados a mano siempre mandan** sobre lo leído para el mismo curso (2026/27).
+- **Dónde se guarda:** `privado.calendario_escolar` (`20261114010000_calendario_escolar_automatico.sql`). Leerlo es público (`calendarios_escolares()`); escribirlo, solo con el secreto. La app lo carga al abrir y lo guarda en el móvil para usarlo sin conexión; el servidor lo usa en el calendario de Google y en los avisos.
+- **Aviso:** cuando se carga o cambia un curso, sale tres días en el aviso de la mañana, solo en hogares con algo del cole. Por ejemplo: «📅 Calendario escolar al día: Curso 2027/2028, empieza el miércoles 8 de septiembre». En Mochila → Días sin cole se ve cuándo se comprobó por última vez y qué pasó.
+- **Para probar la IA antes de necesitarla:** con `{"prueba": 2026}` se lee el curso 2026/27, sin guardar nada, y se compara día a día con el revisado a mano.

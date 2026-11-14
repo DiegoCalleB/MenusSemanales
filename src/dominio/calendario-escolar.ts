@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { type FechaIso, diaSemanaIso, sumarDias } from "./fechas";
 
 /**
@@ -70,7 +71,25 @@ export const CURSO_MADRID_2026_27: CursoEscolar = {
     "Orden 2034/2026 (BOCM 4-6-2026), Decreto 82/2026 (BOCM 1-10-2026) y fiestas locales de Madrid capital",
 };
 
+/** Los cursos revisados a mano: mandan sobre lo que se lea automáticamente del mismo curso. */
 export const CURSOS: readonly CursoEscolar[] = [CURSO_MADRID_2026_27];
+
+let leidos: readonly CursoEscolar[] = [];
+
+/**
+ * Los cursos leídos automáticamente (D-146), que guarda la base de datos. Se registran al cargar
+ * (en el navegador) o en cada petición (en el servidor). Los de `CURSOS` siempre mandan.
+ */
+export function registrarCursos(cursos: readonly CursoEscolar[]): void {
+  leidos = cursos.filter(
+    (c) =>
+      validarCurso(c).length === 0 &&
+      !CURSOS.some((x) => x.inicio.slice(0, 4) === c.inicio.slice(0, 4)),
+  );
+}
+
+/** Todos los cursos conocidos: los revisados a mano y los leídos que no chocan con ellos. */
+export const cursosConocidos = (): readonly CursoEscolar[] => [...CURSOS, ...leidos];
 
 /** Lo que apunta la familia para un día: que no hay cole (y por qué) o que sí lo hay. */
 export interface AjusteCole {
@@ -92,7 +111,7 @@ export interface DiaDeCole {
 }
 
 export const cursoDe = (f: FechaIso): CursoEscolar | null =>
-  CURSOS.find((c) => c.cubreDesde <= f && f <= c.cubreHasta) ?? null;
+  cursosConocidos().find((c) => c.cubreDesde <= f && f <= c.cubreHasta) ?? null;
 
 const tramoOficial = (f: FechaIso): TramoSinCole | null =>
   cursoDe(f)?.sinCole.find((t) => t.desde <= f && f <= t.hasta) ?? null;
@@ -165,4 +184,207 @@ export function tramosSinCole(
 
 /** ¿Llega el calendario conocido hasta esa fecha? (Para avisar de que falta el del curso siguiente.) */
 export const calendarioConocidoHasta = (): FechaIso =>
-  CURSOS.reduce((m, c) => (c.cubreHasta > m ? c.cubreHasta : m), "0000-00-00");
+  cursosConocidos().reduce((m, c) => (c.cubreHasta > m ? c.cubreHasta : m), "0000-00-00");
+
+// ---------------------------------------------------------------------------------------------
+// Leer el calendario de cada curso automáticamente (D-146)
+// ---------------------------------------------------------------------------------------------
+
+/** Lo que se saca del calendario oficial (con IA): solo Infantil (2.º ciclo) y Primaria. */
+export interface CalendarioLeido {
+  /** Primer y último día de clase. */
+  inicio: FechaIso;
+  fin: FechaIso;
+  /** Vacaciones (Navidad, Semana Santa), ambos días incluidos. */
+  periodos: ReadonlyArray<{ desde: FechaIso; hasta: FechaIso; motivo: string }>;
+  /** Festivos y días no lectivos sueltos entre el inicio y el fin. */
+  dias: ReadonlyArray<{ fecha: FechaIso; motivo: string }>;
+}
+
+/** Domingo de Pascua (algoritmo de Gauss/Meeus, calendario gregoriano). */
+export function domingoDePascua(anio: number): FechaIso {
+  const a = anio % 19;
+  const b = Math.floor(anio / 100);
+  const c = anio % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const mes = Math.floor((h + l - 7 * m + 114) / 31);
+  const dia = ((h + l - 7 * m + 114) % 31) + 1;
+  return `${anio}-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
+}
+
+/**
+ * Las dos fiestas locales de Madrid capital: la Almudena (9 de noviembre) y San Isidro (15 de
+ * mayo). En domingo pasan al lunes, como ha hecho el Ayuntamiento; en sábado no quitan cole.
+ */
+export function fiestasLocalesMadrid(
+  anioInicio: number,
+): Array<{ fecha: FechaIso; motivo: string }> {
+  const out: Array<{ fecha: FechaIso; motivo: string }> = [];
+  for (const [f, motivo] of [
+    [`${anioInicio}-11-09`, "La Almudena (fiesta local)"],
+    [`${anioInicio + 1}-05-15`, "San Isidro (fiesta local)"],
+  ] as const) {
+    const d = diaSemanaIso(f);
+    if (d === 7) out.push({ fecha: sumarDias(f, 1), motivo });
+    else if (d !== 6) out.push({ fecha: f, motivo });
+  }
+  return out;
+}
+
+const FECHA = /^\d{4}-\d{2}-\d{2}$/;
+const fechaValida = (f: string) =>
+  FECHA.test(f) && new Date(`${f}T12:00:00Z`).toISOString().slice(0, 10) === f;
+const recorta = (t: string) => t.replace(/\s+/g, " ").trim().slice(0, MAX_LARGO_MOTIVO);
+
+/**
+ * Monta el curso a partir de lo leído: verano antes y después, vacaciones, días sueltos y las
+ * fiestas locales de Madrid. Los días que caen dentro de unas vacaciones no se repiten.
+ */
+export function cursoDesdeLeido(l: CalendarioLeido, fuente: string): CursoEscolar {
+  const y = Number(l.inicio.slice(0, 4));
+  const cubreDesde = `${y}-07-01`;
+  const cubreHasta = `${y + 1}-08-31`;
+  // Con el inicio o el fin mal escritos no se monta nada: `validarCurso` lo rechazará.
+  if (!fechaValida(l.inicio) || !fechaValida(l.fin)) {
+    const nombre = `Curso ${l.inicio}`;
+    return { nombre, inicio: l.inicio, fin: l.fin, cubreDesde, cubreHasta, sinCole: [], fuente };
+  }
+  const periodos = l.periodos
+    .filter((p) => fechaValida(p.desde) && fechaValida(p.hasta) && p.desde <= p.hasta)
+    .map((p) => ({ desde: p.desde, hasta: p.hasta, motivo: recorta(p.motivo) || "Vacaciones" }));
+  const dentro = (f: FechaIso) => periodos.some((p) => p.desde <= f && f <= p.hasta);
+  const sueltos = new Map<FechaIso, string>();
+  for (const d of [...l.dias, ...fiestasLocalesMadrid(y)]) {
+    if (!fechaValida(d.fecha) || dentro(d.fecha) || sueltos.has(d.fecha)) continue;
+    sueltos.set(d.fecha, recorta(d.motivo) || "Día no lectivo");
+  }
+  const tramos: TramoSinCole[] = [
+    { desde: cubreDesde, hasta: sumarDias(l.inicio, -1), motivo: "Vacaciones de verano" },
+    ...periodos,
+    ...[...sueltos].map(([f, motivo]) => dia(f, motivo)),
+    { desde: sumarDias(l.fin, 1), hasta: cubreHasta, motivo: "Vacaciones de verano" },
+  ]
+    .filter((t) => t.desde <= t.hasta)
+    .sort((a, b) => a.desde.localeCompare(b.desde));
+  return {
+    nombre: `Curso ${y}/${y + 1} · Madrid capital`,
+    inicio: l.inicio,
+    fin: l.fin,
+    cubreDesde,
+    cubreHasta,
+    sinCole: tramos,
+    fuente,
+  };
+}
+
+/** Los días lectivos del curso (de lunes a viernes, sin vacaciones ni festivos). */
+export function diasLectivos(c: CursoEscolar): FechaIso[] {
+  const out: FechaIso[] = [];
+  for (let f = c.inicio; f <= c.fin; f = sumarDias(f, 1)) {
+    if (diaSemanaIso(f) <= 5 && !c.sinCole.some((t) => t.desde <= f && f <= t.hasta)) out.push(f);
+  }
+  return out;
+}
+
+/**
+ * Todo lo que tiene que cumplir un calendario escolar para darlo por bueno. Vacío si vale; si
+ * no, por qué. Un calendario que no pasa esto no se usa (la app sigue avisando de más).
+ */
+export function validarCurso(c: CursoEscolar): string[] {
+  const errores: string[] = [];
+  if (!fechaValida(c.inicio) || !fechaValida(c.fin))
+    return ["Fechas de inicio o fin mal escritas."];
+  const y = Number(c.inicio.slice(0, 4));
+  if (c.inicio.slice(5, 7) !== "09" || diaSemanaIso(c.inicio) > 5)
+    errores.push("El curso no empieza un día de septiembre entre semana.");
+  if (c.fin.slice(0, 7) !== `${y + 1}-06` || diaSemanaIso(c.fin) > 5)
+    errores.push("El curso no acaba un día de junio entre semana del año siguiente.");
+  if (c.cubreDesde !== `${y}-07-01` || c.cubreHasta !== `${y + 1}-08-31`)
+    errores.push("No cubre del 1 de julio al 31 de agosto.");
+  let antes = "0000-00-00";
+  for (const t of c.sinCole) {
+    if (!fechaValida(t.desde) || !fechaValida(t.hasta) || t.desde > t.hasta) {
+      errores.push(`Tramo mal escrito: ${t.desde}–${t.hasta}.`);
+      continue;
+    }
+    if (t.desde <= antes) errores.push(`Tramos solapados o desordenados en ${t.desde}.`);
+    if (t.desde < c.cubreDesde || t.hasta > c.cubreHasta)
+      errores.push(`Tramo fuera del curso: ${t.desde}.`);
+    if (!t.motivo || t.motivo.length > MAX_LARGO_MOTIVO)
+      errores.push(`Motivo vacío en ${t.desde}.`);
+    antes = t.hasta;
+  }
+  const libre = (f: FechaIso) => c.sinCole.some((t) => t.desde <= f && f <= t.hasta);
+  if (!libre(`${y}-12-25`) || !libre(`${y + 1}-01-01`) || !libre(`${y + 1}-01-06`))
+    errores.push("Falta la Navidad (25 de diciembre, 1 y 6 de enero).");
+  const pascua = domingoDePascua(y + 1);
+  if (!libre(sumarDias(pascua, -2)) || !libre(sumarDias(pascua, -3)))
+    errores.push("Falta la Semana Santa (Jueves y Viernes Santo).");
+  for (const fijo of [`${y}-10-12`, `${y}-12-08`]) {
+    if (diaSemanaIso(fijo) <= 5 && !libre(fijo)) errores.push(`Falta el festivo del ${fijo}.`);
+  }
+  const n = errores.length === 0 ? diasLectivos(c).length : 0;
+  if (errores.length === 0 && (n < 175 || n > 190))
+    errores.push(`Salen ${n} días lectivos: lo normal es entre 175 y 190.`);
+  return errores;
+}
+
+/** Un curso guardado en la base de datos (lo que se lee de ella se vuelve a comprobar). */
+export const cursoEscolarSchema = z.object({
+  nombre: z.string().max(80),
+  inicio: z.string(),
+  fin: z.string(),
+  cubreDesde: z.string(),
+  cubreHasta: z.string(),
+  sinCole: z
+    .array(z.object({ desde: z.string(), hasta: z.string(), motivo: z.string().max(80) }))
+    .max(80),
+  fuente: z.string().max(300),
+});
+
+/** Lo que devuelve `calendarios_escolares()`: los cursos que valen y la última comprobación. */
+export const calendariosEscolaresSchema = z.object({
+  cursos: z
+    .array(
+      z.object({
+        anio: z.number().int(),
+        curso: z.unknown(),
+        cambiadoEn: z.string().nullish(),
+      }),
+    )
+    .catch([]),
+  comprobadoEn: z.string().nullish(),
+  resultado: z.string().nullish(),
+});
+
+export interface CalendariosEscolares {
+  cursos: Array<CursoEscolar & { cambiadoEn: string | null }>;
+  comprobadoEn: string | null;
+  resultado: string | null;
+}
+
+/** Interpreta la respuesta; los cursos mal formados o que no pasan `validarCurso` se descartan. */
+export function calendariosEscolaresDe(json: unknown): CalendariosEscolares {
+  const r = calendariosEscolaresSchema.safeParse(json);
+  if (!r.success) return { cursos: [], comprobadoEn: null, resultado: null };
+  const cursos: CalendariosEscolares["cursos"] = [];
+  for (const c of r.data.cursos) {
+    const v = cursoEscolarSchema.safeParse(c.curso);
+    if (v.success && validarCurso(v.data).length === 0) {
+      cursos.push({ ...v.data, cambiadoEn: c.cambiadoEn ?? null });
+    }
+  }
+  return {
+    cursos,
+    comprobadoEn: r.data.comprobadoEn ?? null,
+    resultado: r.data.resultado ?? null,
+  };
+}

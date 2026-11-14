@@ -19,6 +19,7 @@ import {
 import { CorreoNoConfigurado, enviarCorreo } from "@/infraestructura/avisos/resend";
 import { leerSuscripciones, olvidarSuscripcion } from "@/infraestructura/avisos/suscripciones";
 import { leerPrevision } from "@/infraestructura/tiempo";
+import { cargarCursosEscolares } from "@/infraestructura/calendario-escolar";
 
 const CABECERAS = { "Cache-Control": "no-store", "Content-Type": "application/json" } as const;
 const responder = (cuerpo: unknown, status: number) =>
@@ -148,9 +149,21 @@ export async function POST(request: Request) {
   let avisos: Aviso[];
   try {
     hoy = hoyEnMadrid();
-    const [resumen, tiempo] = await Promise.all([leerResumenDelCalendario(token), leerPrevision()]);
+    const [resumen, tiempo, escolar] = await Promise.all([
+      leerResumenDelCalendario(token),
+      leerPrevision(),
+      cargarCursosEscolares(),
+    ]);
     if (!resumen) return responder({ error: "sin-datos" }, 404);
-    const entrada = { ...entradaDeProyeccion(resumen, hoy), tiempo };
+    const entrada = {
+      ...entradaDeProyeccion(resumen, hoy),
+      tiempo,
+      cursosNuevos: escolar.cursos.map((c) => ({
+        nombre: c.nombre,
+        inicio: c.inicio,
+        cambiadoEn: c.cambiadoEn,
+      })),
+    };
     avisos = momento === "manana" ? avisosDeHoy(entrada) : avisosDeLaNoche(entrada);
   } catch (e) {
     console.error("[avisos] lectura", e instanceof Error ? e.message : "desconocido");

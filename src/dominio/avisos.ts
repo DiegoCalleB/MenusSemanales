@@ -47,6 +47,8 @@ export interface EntradaAvisos {
   conCole?: boolean;
   /** La previsión del tiempo (D-145), si se pudo leer. */
   tiempo?: readonly Pronostico[];
+  /** Los cursos del calendario escolar leídos solos (D-146): se avisa los días después de cargarlos. */
+  cursosNuevos?: ReadonlyArray<{ nombre: string; inicio: FechaIso; cambiadoEn: string | null }>;
 }
 
 /** Qué ponerse o llevar ese día según el tiempo (D-145): «Hoy, lluvia (65 %): chubasquero y botas». */
@@ -215,6 +217,22 @@ export function avisosDeHoy(e: EntradaAvisos): Aviso[] {
           nivel: "pronto",
         });
       }
+    }
+  }
+
+  // Calendario escolar nuevo o actualizado (D-146): se avisa tres días, para que se vea.
+  if (e.conCole) {
+    for (const c of e.cursosNuevos ?? []) {
+      const dia = c.cambiadoEn?.slice(0, 10);
+      if (!dia || dia > e.hoy || dia < sumarDias(e.hoy, -2)) continue;
+      out.push({
+        id: `calendario-escolar-${c.inicio}-${dia}`,
+        emoji: "📅",
+        titulo: `Calendario escolar al día: ${c.nombre.replace(/ · .*/, "")}, empieza el ${fechaLarga(c.inicio)}`,
+        detalle:
+          "Lo he leído de la web de la Comunidad de Madrid. Míralo en Mochila → Días sin cole.",
+        nivel: "pronto",
+      });
     }
   }
 

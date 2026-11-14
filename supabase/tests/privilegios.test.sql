@@ -49,7 +49,10 @@ select pg_temp.igual('anon solo puede ejecutar las funciones con token del calen
   (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public' and has_function_privilege('anon', p.oid, 'EXECUTE')
       and p.proname not in ('estado_para_calendario', 'suscripciones_para_avisos', 'olvidar_suscripcion_push',
-                            'claves_de_avisos', 'guardar_claves_de_avisos', 'clave_publica_de_avisos')), 0);
+                            'claves_de_avisos', 'guardar_claves_de_avisos', 'clave_publica_de_avisos',
+                            -- Calendario escolar (D-146): leerlo es público; escribir, solo con el secreto.
+                            'calendarios_escolares', 'guardar_calendario_escolar',
+                            'anotar_comprobacion_calendario')), 0);
 select pg_temp.igual('anon sí puede ejecutar estado_para_calendario (y nada más del calendario)',
   (has_function_privilege('anon', 'public.estado_para_calendario(text)', 'EXECUTE')
    and not has_function_privilege('anon', 'public.enlace_calendario(uuid, boolean)', 'EXECUTE'))::int, 1);

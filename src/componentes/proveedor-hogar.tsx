@@ -19,6 +19,7 @@ import { type Accion, type EstadoHogar, conIdBase, reducir } from "@/aplicacion/
 import { AVISO_CAMBIO, riesgoDeGuardado } from "@/aplicacion/guardado";
 import { esAccionSincronizable } from "@/aplicacion/sincronizacion";
 import { crearAlmacenLocal } from "@/infraestructura/almacen-local";
+import { calendariosEscolaresDe, registrarCursos } from "@/dominio/calendario-escolar";
 import { type CuentaContexto, NUBE_DISPONIBLE, olvidarPendientes, useNube } from "./usar-nube";
 
 /**
@@ -42,7 +43,11 @@ interface ContextoHogar {
   despachar: Dispatch<Accion>;
   /** Modo prueba: vuelve a los datos de ejemplo y olvida lo guardado. */
   restablecer: () => void;
+  /** La última comprobación del calendario escolar (D-146), si se sabe. */
+  calendarioEscolar: { comprobadoEn: string | null; resultado: string | null; cursos: string[] };
 }
+
+const CLAVE_ESCOLAR = "menus-semanales:calendario-escolar";
 
 const Contexto = createContext<ContextoHogar | null>(null);
 const ContextoCuenta = createContext<CuentaContexto | null>(null);
@@ -114,6 +119,47 @@ export function ProveedorHogar({
     fijarCargado(true);
   }, [almacen]);
 
+  // El calendario escolar de los cursos leídos solos (D-146): primero lo guardado en el móvil (sin
+  // conexión también vale), luego lo de la base de datos. Al registrarlo, se repinta todo.
+  const [escolar, fijarEscolar] = useState<ContextoHogar["calendarioEscolar"]>({
+    comprobadoEn: null,
+    resultado: null,
+    cursos: [],
+  });
+  useEffect(() => {
+    let vivo = true;
+    const aplicar = (json: unknown) => {
+      const c = calendariosEscolaresDe(json);
+      registrarCursos(c.cursos);
+      fijarEscolar({
+        comprobadoEn: c.comprobadoEn,
+        resultado: c.resultado,
+        cursos: c.cursos.map((x) => x.nombre),
+      });
+    };
+    try {
+      const guardado = window.localStorage.getItem(CLAVE_ESCOLAR);
+      if (guardado) aplicar(JSON.parse(guardado));
+    } catch {
+      // Sin almacenamiento: se usa solo lo de la red.
+    }
+    fetch("/api/calendario-escolar")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: unknown) => {
+        if (!vivo || !j) return;
+        aplicar(j);
+        try {
+          window.localStorage.setItem(CLAVE_ESCOLAR, JSON.stringify(j));
+        } catch {
+          // Sin almacenamiento no pasa nada.
+        }
+      })
+      .catch(() => {});
+    return () => {
+      vivo = false;
+    };
+  }, []);
+
   useEffect(() => {
     // El primer estado es el de ejemplo: no debe pisar lo guardado antes de haberlo cargado.
     if (primera.current) {
@@ -134,8 +180,9 @@ export function ProveedorHogar({
         despacharLocal({ tipo: "hogar/sustituir", estado: estadoInicial() });
         if (MODO_DATOS === "diego") despacharLocal({ tipo: "hogar/hoy", fecha: hoyLocal() });
       },
+      calendarioEscolar: escolar,
     }),
-    [estado, cargado, despachar],
+    [estado, cargado, despachar, escolar],
   );
 
   return (
