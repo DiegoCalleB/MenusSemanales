@@ -6,7 +6,7 @@ import { ComidaDelDia } from "../comida-del-dia";
 import { BotonEditar, EditarCita } from "../editar";
 import { NuevaCita } from "../nueva-cita";
 import { useCalendarioFamilia } from "../usar-calendario-familia";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   MAX_PLATOS_POR_CENA,
   comidasDe,
@@ -65,6 +65,18 @@ export function CalendarioVista() {
   const deGoogle = useCalendarioFamilia(estado.hoy);
   const [mes, setMes] = useState<FechaIso>(`${estado.hoy.slice(0, 7)}-01`);
   const [sel, setSel] = useState<FechaIso>(estado.hoy);
+
+  // «Abrir» un día desde el plan de la semana (D-153): /calendario?dia=2026-11-20.
+  useEffect(() => {
+    const dia = new URLSearchParams(window.location.search).get("dia");
+    if (!dia || !/^\d{4}-\d{2}-\d{2}$/.test(dia)) return;
+    if (new Date(`${dia}T12:00:00Z`).toISOString().slice(0, 10) !== dia) return;
+    void Promise.resolve().then(() => {
+      setSel(dia);
+      setMes(`${dia.slice(0, 7)}-01`);
+      requestAnimationFrame(() => document.getElementById("detalle")?.scrollIntoView());
+    });
+  }, []);
 
   const [anio, nMes] = mes.split("-").map(Number);
   // Fechas señaladas y cumpleaños del año que se está viendo.

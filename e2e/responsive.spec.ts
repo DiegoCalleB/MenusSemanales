@@ -2280,6 +2280,30 @@ test.describe("mochila, compartir y plan de la semana", () => {
     ).toHaveAttribute("href", /^https:\/\/wa\.me\/\?text=/);
     await contexto.close();
   });
+
+  test("plan de la semana (D-153): cada cosa se edita ahí mismo y cada día se abre", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    // «Hoy» en los datos de ejemplo es el miércoles 4 de noviembre de 2026.
+    await cargar(pagina, "/fechas");
+    await pagina.getByLabel(/Escribe como en una nota/).fill("6 Noviembre 18:00 Dentista");
+    await pagina.getByRole("button", { name: "Apuntar", exact: true }).click();
+    await expect(pagina.getByRole("list", { name: "Apuntes" }).getByText(/Dentista/)).toBeVisible();
+
+    await cargar(pagina, "/semana");
+    const dias = pagina.getByRole("list", { name: "Días de la semana" });
+    await dias.getByRole("button", { name: "Editar Dentista" }).click();
+    const form = pagina.getByRole("form", { name: "Editar Dentista" });
+    await form.getByLabel("Qué es").fill("Dentista de Emma");
+    await form.getByRole("button", { name: "Guardar" }).click();
+    await expect(dias.getByText("Dentista de Emma")).toBeVisible();
+
+    await dias.getByRole("link", { name: /^Abrir el viernes 6/ }).click();
+    await expect(pagina).toHaveURL(/\/calendario\?dia=2026-11-06$/);
+    await expect(pagina.locator("#detalle")).toContainText(/6 de noviembre/i);
+    await contexto.close();
+  });
 });
 
 test.describe("barra lateral con apartados (D-142)", () => {

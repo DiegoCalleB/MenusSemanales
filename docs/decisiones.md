@@ -1322,3 +1322,13 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Petición (Diego):** «poner puntuaciones a los eventos una vez ocurridos y poder ver eventos pasados».
 - **Cambia D-123:** las citas pasadas **ya no se borran**. «Próximas fechas» sigue enseñando solo lo que viene. Debajo, **«Lo que ya pasó»** lista las citas terminadas, de la más reciente a la más antigua (de 10 en 10, con «Ver más»). Cada una tiene **de 1 a 5 estrellas**; tocar la que ya está puesta la quita. También vuelven a verse en el calendario.
 - **Dónde se guarda:** en el documento del hogar (`puntuacionesCitas`), por «fecha|título» sin mayúsculas ni tildes. Así no se pierde aunque la cita cambie de identificador al guardarse en las tablas. Editar la cita se lleva su puntuación, y borrarla la quita. Solo se puede puntuar lo que ya ha empezado.
+
+## D-153 · Editar desde el plan de la semana
+
+- **Petición (Diego):** «en el plan de la semana, poder entrar a editar cada día o cada tarjeta y elemento».
+- **Cada día** tiene **«Abrir»**: lleva al detalle de ese día en el calendario (`/calendario?dia=2026-11-20`), donde ya está todo lo de ese día (elegir o cambiar la cena, añadir y editar citas…).
+- **Cada cosa se edita ahí mismo**, con los mismos editores de siempre:
+  - Las citas, los cumpleaños, las comidas y las tareas de casa llevan su ✏️.
+  - La cena lleva ✏️ para elegirla o cambiarla en el día.
+  - Lo de preparar de la mochila se marca y desmarca con un toque (✅).
+- No hay pantallas nuevas: el plan reutiliza lo que ya existe.
