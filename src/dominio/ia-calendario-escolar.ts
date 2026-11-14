@@ -23,13 +23,18 @@ export const mensajeCalendarioEscolar = (anio: number) =>
   `Curso ${anio}/${anio + 1}. Devuelve el JSON pedido.`;
 
 const fecha = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
-const motivo = z.string().trim().min(1).max(80);
+// El motivo solo se enseña: si viene largo se recorta (luego se deja en 60), no se rechaza todo.
+const motivo = z
+  .string()
+  .trim()
+  .min(1)
+  .transform((t) => t.slice(0, 120));
 
 export const respuestaCalendarioEscolarSchema = z.object({
   inicio: fecha,
   fin: fecha,
-  periodos: z.array(z.object({ desde: fecha, hasta: fecha, motivo })).max(6),
-  dias: z.array(z.object({ fecha, motivo })).max(40),
+  periodos: z.array(z.object({ desde: fecha, hasta: fecha, motivo })).max(12),
+  dias: z.array(z.object({ fecha, motivo })).max(60),
 });
 
 export type RespuestaCalendarioEscolar = z.infer<typeof respuestaCalendarioEscolarSchema>;
