@@ -53,17 +53,22 @@ export function cuerpoCalendarioEscolar(anio: number, pdfs: readonly string[], c
       responseMimeType: "application/json",
       responseSchema: ESQUEMA,
       temperature: 0,
-      maxOutputTokens: 6000,
+      // Con «pensar mucho», lo que piensa cuenta en este límite: con poco, la respuesta sale cortada.
+      maxOutputTokens: 32_000,
       ...(conAjustes ? { thinkingConfig: { thinkingLevel: "high" } } : {}),
     },
   };
 }
 
-/** Lee el calendario de los PDF (en base64). `null` si la IA no devuelve algo con la forma pedida. */
+/**
+ * Lee el calendario de los PDF (en base64). `null` si la IA no devuelve algo con la forma pedida;
+ * entonces `porQue` recibe el motivo (para la prueba: «cortada», «json», «esquema: …»).
+ */
 export async function leerCalendarioEscolar(
   anio: number,
   pdfs: readonly string[],
   llamar: typeof fetch = fetch,
+  porQue: (motivo: string) => void = () => {},
 ): Promise<CalendarioLeido | null> {
   const clave = process.env.GEMINI_API_KEY;
   if (!clave) throw new IaNoConfigurada();
@@ -73,12 +78,29 @@ export async function leerCalendarioEscolar(
     porIntentoMs: 90_000,
     llamar,
   });
-  const texto = textoDeRespuestaGemini(await r.json());
-  if (texto === null) return null;
-  try {
-    const v = respuestaCalendarioEscolarSchema.safeParse(JSON.parse(texto));
-    return v.success ? v.data : null;
-  } catch {
+  const cuerpo = (await r.json()) as { candidates?: Array<{ finishReason?: string }> } | null;
+  const fin = cuerpo?.candidates?.[0]?.finishReason ?? "sin-candidatos";
+  const texto = textoDeRespuestaGemini(cuerpo);
+  if (texto === null) {
+    porQue(`sin-texto (${fin})`);
     return null;
   }
+  let json: unknown;
+  try {
+    json = JSON.parse(texto);
+  } catch {
+    porQue(`json (${fin}, ${texto.length} caracteres)`);
+    return null;
+  }
+  const v = respuestaCalendarioEscolarSchema.safeParse(json);
+  if (!v.success) {
+    porQue(
+      `esquema: ${v.error.issues
+        .slice(0, 3)
+        .map((i) => `${i.path.join(".")} ${i.message}`)
+        .join("; ")}`.slice(0, 200),
+    );
+    return null;
+  }
+  return v.data;
 }

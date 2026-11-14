@@ -67,6 +67,8 @@ export async function POST(request: Request) {
   }
 
   registrarCursos((await leerCalendariosEscolares(true)).cursos);
+  // Por qué no se pudo leer (sin datos del hogar: solo «cortada», «json», «esquema: …»).
+  const motivos: string[] = [];
   const deps: Dependencias = {
     hoy: hoyEnMadrid(),
     pagina: async () => {
@@ -79,7 +81,7 @@ export async function POST(request: Request) {
       return r.text();
     },
     pdf: bajarPdf,
-    leer: (anio, pdfs) => leerCalendarioEscolar(anio, pdfs),
+    leer: (anio, pdfs) => leerCalendarioEscolar(anio, pdfs, fetch, (m) => motivos.push(m)),
     guardar: (anio, curso, huella) => guardarCalendarioEscolar(secreto, anio, curso, huella),
     huella: (t) => createHash("sha256").update(t).digest("hex"),
   };
@@ -101,7 +103,12 @@ export async function POST(request: Request) {
     const r = await comprobarCurso(prueba, html, { ...deps, guardar: async () => "igual" });
     if (!("curso" in r))
       return responder(
-        { prueba, estado: r.estado, ...("errores" in r ? { errores: r.errores } : {}) },
+        {
+          prueba,
+          estado: r.estado,
+          ...("errores" in r ? { errores: r.errores } : {}),
+          ...(motivos.length > 0 ? { motivos } : {}),
+        },
         200,
       );
     const leidos = diasLectivos(r.curso);
@@ -125,7 +132,7 @@ export async function POST(request: Request) {
   } catch {
     // Que no se pueda apuntar no cambia lo que se ha hecho.
   }
-  console.info("[calendario-escolar]", resumen);
+  console.info("[calendario-escolar]", resumen, motivos.join(" | "));
   return responder(
     { resultado: resultado.map((r) => ({ anio: r.anio, estado: r.estado })), resumen },
     200,
