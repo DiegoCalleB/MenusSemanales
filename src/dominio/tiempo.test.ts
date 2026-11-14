@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { type Pronostico, consejosDelTiempo, pronosticosDe, resumenDelTiempo } from "./tiempo";
+import {
+  type Pronostico,
+  consejosDelTiempo,
+  lluviaEnFranja,
+  pronosticosDe,
+  resumenDelTiempo,
+  textoDeLluvia,
+  textoDeLluviaDelCole,
+} from "./tiempo";
 
 /** El tiempo (D-145). La respuesta de ejemplo es una real de Open-Meteo (14-11-2026, Madrid). */
 const REAL = {
@@ -71,5 +79,94 @@ describe("el tiempo (D-145)", () => {
   it("el resumen de un vistazo", () => {
     expect(resumenDelTiempo(dia({ codigo: 0, min: 9.4, max: 18.6 }))).toBe("☀️ 9–19 °C");
     expect(resumenDelTiempo(dia({ codigo: 80 }))).toBe("🌧️ 9–18 °C");
+  });
+});
+
+/**
+ * La lluvia hora a hora junto al cole (D-148). Las horas son las reales de Open-Meteo del
+ * 14-11-2026 en Las Musas: chubascos al amanecer con solo un 25-33 % de probabilidad.
+ */
+const HORAS_REALES = {
+  time: Array.from({ length: 24 }, (_, h) => `2026-11-14T${String(h).padStart(2, "0")}:00`),
+  precipitation_probability: [
+    10, 5, 8, 5, 3, 3, 23, 25, 33, 30, 25, 63, 83, 83, 60, 45, 28, 5, 0, 3, 0, 0, 0, 0,
+  ],
+  precipitation: [
+    0, 0, 0, 0, 0, 0, 1.1, 1.2, 0.6, 0, 0, 0.2, 0.3, 0.1, 0.6, 0.3, 0.2, 0, 0, 0, 0, 0, 0, 0,
+  ],
+  weather_code: [3, 3, 3, 3, 3, 3, 95, 80, 80, 3, 3, 3, 80, 3, 80, 80, 2, 3, 3, 3, 2, 2, 3, 2],
+};
+
+describe("la lluvia a la hora del cole (D-148)", () => {
+  const conHoras = pronosticosDe({ ...REAL, hourly: HORAS_REALES });
+  const sab = conHoras[0]!;
+
+  it("lee las horas de cada día; sin horas, el día queda como antes", () => {
+    expect(sab.horas).toHaveLength(24);
+    expect(sab.horas?.[8]).toEqual({ hora: 8, prob: 33, mm: 0.6, codigo: 80 });
+    expect(conHoras[1]!.horas).toBeUndefined();
+    expect(pronosticosDe(REAL)[0]!.horas).toBeUndefined();
+    // Unas horas rotas no tiran el día: se descartan solo ellas.
+    expect(pronosticosDe({ ...REAL, hourly: { time: "x" } })).toHaveLength(3);
+  });
+
+  it("un chubasco con poca probabilidad también cuenta: ida de 7 a 9 y vuelta de 13 a 16", () => {
+    const ida = lluviaEnFranja(sab, "ida");
+    expect(ida).toEqual({
+      franja: "ida",
+      desde: 7,
+      hasta: 9,
+      prob: 33,
+      mm: 0.6,
+      sinDetalle: false,
+    });
+    expect(textoDeLluvia(ida!)).toBe("de camino al cole (de 7 a 9 h, 33 %)");
+    expect(textoDeLluvia(lluviaEnFranja(sab, "vuelta")!)).toBe(
+      "a la salida del cole (de 13 a 16 h, 60 %)",
+    );
+  });
+
+  it("si no moja en la franja, nada, aunque llueva otro rato del día", () => {
+    const horas = Array.from({ length: 24 }, (_, hora) => ({
+      hora,
+      prob: hora >= 20 ? 90 : 5,
+      mm: hora >= 20 ? 3 : 0,
+      codigo: hora >= 20 ? 63 : 2,
+    }));
+    const p = dia({ probLluvia: 90, lluviaMm: 9, codigo: 63, horas });
+    expect(lluviaEnFranja(p, "ida")).toBeNull();
+    expect(lluviaEnFranja(p, "vuelta")).toBeNull();
+  });
+
+  it("por cada una de las tres señales basta: 30 %, 0,1 mm o el código de lluvia", () => {
+    const una = (h: Partial<{ prob: number; mm: number; codigo: number }>) =>
+      lluviaEnFranja(
+        dia({
+          horas: [8, 9, 10].map((hora) => ({
+            hora,
+            prob: 0,
+            mm: 0,
+            codigo: 1,
+            ...(hora === 9 ? h : {}),
+          })),
+        }),
+        "ida",
+      );
+    expect(una({})).toBeNull();
+    expect(una({ prob: 29 })).toBeNull();
+    expect(una({ prob: 30 })?.desde).toBe(8);
+    expect(una({ mm: 0.1 })?.hasta).toBe(9);
+    expect(una({ codigo: 51 })).not.toBeNull();
+  });
+
+  it("si faltan horas de la franja, ante la duda se mira el día entero", () => {
+    const sinHoras = dia({ probLluvia: 60, lluviaMm: 2 });
+    expect(lluviaEnFranja(sinHoras, "ida")).toMatchObject({ sinDetalle: true, prob: 60 });
+    expect(
+      textoDeLluviaDelCole([lluviaEnFranja(sinHoras, "ida")!, lluviaEnFranja(sinHoras, "vuelta")!]),
+    ).toBe("puede llover a la hora del cole (60 % en el día)");
+    expect(
+      lluviaEnFranja(dia({ horas: [{ hora: 8, prob: 0, mm: 0, codigo: 1 }] }), "ida"),
+    ).toBeNull();
   });
 });

@@ -1270,3 +1270,22 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Dónde se guarda:** `privado.calendario_escolar` (`20261114010000_calendario_escolar_automatico.sql`). Leerlo es público (`calendarios_escolares()`); escribirlo, solo con el secreto. La app lo carga al abrir y lo guarda en el móvil para usarlo sin conexión; el servidor lo usa en el calendario de Google y en los avisos.
 - **Aviso:** cuando se carga o cambia un curso, sale tres días en el aviso de la mañana, solo en hogares con algo del cole. Por ejemplo: «📅 Calendario escolar al día: Curso 2027/2028, empieza el miércoles 8 de septiembre». En Mochila → Días sin cole se ve cuándo se comprobó por última vez y qué pasó.
 - **Para probar la IA antes de necesitarla:** con `{"prueba": 2026}` se lee el curso 2026/27, sin guardar nada, y se compara día a día con el revisado a mano.
+
+## D-148 · Que la lluvia de la mañana no nos pille sin paraguas
+
+- **Petición (Diego):** «que nunca más nos pille lluvia por la mañana por sorpresa y sin paraguas. Vivimos en Las Musas y el cole es el Mariano José de Larra».
+- **Lugar:** la previsión ya no es la de la Puerta del Sol, sino la de **Las Musas (San Blas)**, junto al cole (C/ Longares 11). Las coordenadas van redondeadas a dos decimales (40,43; −3,61): unos cientos de metros de margen, que la previsión no distingue, y no apuntan a ninguna casa.
+- **Hora a hora:** se pide también a Open-Meteo la lluvia por horas. Se miran dos franjas los días de cole:
+  - **Ida:** de 7 a 10.
+  - **Vuelta:** de 13 a 17. Cubre la salida a las 13 (junio y septiembre), a las 14 y a las 16.
+- **Umbral mucho más bajo en esas horas** (ante la duda, avisar). Una hora moja si se cumple una de estas tres:
+  - 30 % de probabilidad o más.
+  - 0,1 mm o más.
+  - Un código de llovizna, lluvia, chubasco, nieve o tormenta.
+
+  Motivo: el 14-11-2026, en Las Musas, había chubascos de 1 mm a las 7 y a las 8 con solo un 25–33 % de probabilidad. Con la regla del día (50 %) no se habría avisado. Si falta alguna hora de la franja, se mira el día entero y se avisa con «puede llover a la hora del cole».
+- **Avisos:**
+  - **20:00 (la noche antes):** «🌂 Mañana llueve de camino al cole (de 8 a 9 h, 70 %): paraguas y chubasquero». Sustituye al de «lluvia» del día, que diría lo mismo con menos detalle.
+  - **7:00, nuevo, antes de salir de casa:** un día de cole, se vuelve a leer la previsión sin la copia de media hora. Si va a llover en la ida o en la vuelta, llega «🌂 Coged el paraguas». Si solo llueve a la vuelta, dice «salid con paraguas», porque hay que cogerlo al salir de casa. Si no llueve, o no hay cole, no llega nada. La hora se cambia con `AVISOS_HORA_TEMPRANO`. No hace falta tocar la base de datos: la llamada de cada hora ya existe (D-139).
+  - **En «Hoy»:** la tarjeta «El tiempo en Las Musas» dice a qué horas llueve en la ida y en la vuelta.
+- Los fines de semana y los días sin cole (D-144), el aviso de lluvia es el del día, como antes.

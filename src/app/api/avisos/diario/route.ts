@@ -1,10 +1,12 @@
 import { timingSafeEqual } from "node:crypto";
 import {
   type Aviso,
+  avisosAntesDelCole,
   avisosDeHoy,
   avisosDeLaNoche,
   direccionesDeAvisos,
   entradaDeProyeccion,
+  notificacionAntesDelCole,
   notificacionDeLaNoche,
   notificacionDelDia,
   resumenDelDia,
@@ -70,6 +72,9 @@ async function leerCuerpo(
  * defecto las 9 de Madrid) manda el resumen del día; a la de la noche (`AVISOS_HORA_NOCHE`, por
  * defecto las 20) solo si hay algo que dejar preparado o una cita mañana. A otras horas no hace
  * nada. `?forzar=1` manda el de la mañana aunque no sea la hora, para probar.
+ *
+ * Antes de salir de casa (`AVISOS_HORA_TEMPRANO`, por defecto las 7), un día de cole, vuelve a
+ * leer la previsión y, si va a llover en la ida o en la vuelta, avisa de coger el paraguas (D-148).
  *
  * Con el secreto de la base de datos, la primera llamada crea las claves de las notificaciones y
  * las guarda allí: no hay que configurar nada a mano.
@@ -142,7 +147,15 @@ export async function POST(request: Request) {
   const hora = horaEnMadrid();
   const horaManana = Number(process.env.AVISOS_HORA ?? "9");
   const horaNoche = Number(process.env.AVISOS_HORA_NOCHE ?? "20");
-  const momento = forzar || hora === horaManana ? "manana" : hora === horaNoche ? "noche" : null;
+  const horaTemprano = Number(process.env.AVISOS_HORA_TEMPRANO ?? "7");
+  const momento =
+    forzar || hora === horaManana
+      ? "manana"
+      : hora === horaNoche
+        ? "noche"
+        : hora === horaTemprano
+          ? "temprano"
+          : null;
   if (!momento) return responder({ enviado: false, motivo: "no-es-la-hora" }, 200);
 
   let hoy: string;
@@ -151,7 +164,7 @@ export async function POST(request: Request) {
     hoy = hoyEnMadrid();
     const [resumen, tiempo, escolar] = await Promise.all([
       leerResumenDelCalendario(token),
-      leerPrevision(),
+      leerPrevision(fetch, { fresco: momento === "temprano" }),
       cargarCursosEscolares(),
     ]);
     if (!resumen) return responder({ error: "sin-datos" }, 404);
@@ -164,12 +177,17 @@ export async function POST(request: Request) {
         cambiadoEn: c.cambiadoEn,
       })),
     };
-    avisos = momento === "manana" ? avisosDeHoy(entrada) : avisosDeLaNoche(entrada);
+    avisos =
+      momento === "manana"
+        ? avisosDeHoy(entrada)
+        : momento === "noche"
+          ? avisosDeLaNoche(entrada)
+          : avisosAntesDelCole(entrada);
   } catch (e) {
     console.error("[avisos] lectura", e instanceof Error ? e.message : "desconocido");
     return responder({ error: "no-disponible" }, 502);
   }
-  if (momento === "noche" && avisos.length === 0) {
+  if (momento !== "manana" && avisos.length === 0) {
     return responder({ enviado: false, motivo: "nada-que-avisar" }, 200);
   }
 
@@ -198,7 +216,11 @@ export async function POST(request: Request) {
     const cuenta = { enviadas: 0, caducadas: 0, fallos: 0 };
     try {
       const mensaje =
-        momento === "manana" ? notificacionDelDia(hoy, avisos) : notificacionDeLaNoche(avisos);
+        momento === "manana"
+          ? notificacionDelDia(hoy, avisos)
+          : momento === "noche"
+            ? notificacionDeLaNoche(avisos)
+            : notificacionAntesDelCole(avisos);
       for (const s of await leerSuscripciones(token)) {
         const r = await enviarPush(
           { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },

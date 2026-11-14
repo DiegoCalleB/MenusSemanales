@@ -2136,9 +2136,46 @@ test.describe("mochila, compartir y plan de la semana", () => {
       }),
     );
     await cargar(pagina, "/");
-    const tiempo = pagina.getByRole("region", { name: "El tiempo en Madrid" });
-    await expect(tiempo).toContainText("Lluvia (70 %): chubasquero y botas");
+    const tiempo = pagina.getByRole("region", { name: "El tiempo en Las Musas" });
+    // Hoy hay cole y no vino la previsión hora a hora: ante la duda, el paraguas (D-148).
+    await expect(tiempo).toContainText(
+      "Puede llover a la hora del cole (70 % en el día): paraguas",
+    );
     await expect(tiempo).toContainText("Frío (mín. 2 °C): abrigo, gorro y guantes");
+    await contexto.close();
+  });
+
+  test("el tiempo (D-148): a qué hora llueve de camino al cole", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    const horas = Array.from({ length: 24 }, (_, hora) => ({
+      hora,
+      prob: hora === 9 ? 70 : 0,
+      mm: hora === 9 ? 1.5 : 0,
+      codigo: hora === 9 ? 61 : 2,
+    }));
+    await pagina.route("**/api/tiempo", (ruta) =>
+      ruta.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          dias: [
+            {
+              fecha: "2026-11-04",
+              codigo: 61,
+              max: 14,
+              min: 9,
+              probLluvia: 70,
+              lluviaMm: 2,
+              horas,
+            },
+          ],
+        }),
+      }),
+    );
+    await cargar(pagina, "/");
+    const tiempo = pagina.getByRole("region", { name: "El tiempo en Las Musas" });
+    await expect(tiempo).toContainText("Llueve de camino al cole (de 8 a 9 h, 70 %): paraguas");
+    await expect(tiempo).not.toContainText("chubasquero y botas");
     await contexto.close();
   });
 
@@ -2146,7 +2183,7 @@ test.describe("mochila, compartir y plan de la semana", () => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await pagina.route("**/api/tiempo", (ruta) => ruta.abort());
     await cargar(pagina, "/");
-    await expect(pagina.getByRole("heading", { name: "El tiempo en Madrid" })).toHaveCount(0);
+    await expect(pagina.getByRole("heading", { name: "El tiempo en Las Musas" })).toHaveCount(0);
     await contexto.close();
   });
 

@@ -4,7 +4,13 @@ import { diasHasta } from "./cumples";
 import { type FechaIso, diaSemanaIso, sumarDias } from "./fechas";
 import { paraPreparar } from "./mochila";
 import { type AjusteCole, consultaCole, diaDeCole } from "./calendario-escolar";
-import { type Pronostico, consejosDelTiempo } from "./tiempo";
+import {
+  type LluviaEnFranja,
+  type Pronostico,
+  consejosDelTiempo,
+  lluviaEnFranja,
+  textoDeLluviaDelCole,
+} from "./tiempo";
 
 /**
  * Avisos del día (D-114): lo que merece que alguien lo vea hoy. Es el mismo cálculo para la
@@ -51,20 +57,77 @@ export interface EntradaAvisos {
   cursosNuevos?: ReadonlyArray<{ nombre: string; inicio: FechaIso; cambiadoEn: string | null }>;
 }
 
-/** Qué ponerse o llevar ese día según el tiempo (D-145): «Hoy, lluvia (65 %): chubasquero y botas». */
+/**
+ * Qué ponerse o llevar ese día según el tiempo (D-145): «Hoy, lluvia (65 %): chubasquero y botas».
+ * Los días de cole, la lluvia se mira hora a hora en la ida y la vuelta (D-148): «Mañana llueve de
+ * camino al cole (de 8 a 9 h, 70 %): paraguas y chubasquero». Ese aviso sustituye al de lluvia del
+ * día (que diría lo mismo con menos detalle); el resto (tormenta, frío…) sigue.
+ */
 function avisosDelTiempo(
   tiempo: readonly Pronostico[] | undefined,
   fecha: FechaIso,
   cuando: "Hoy" | "Mañana",
+  conCole = false,
 ): Aviso[] {
   const p = tiempo?.find((x) => x.fecha === fecha);
   if (!p) return [];
-  return consejosDelTiempo(p).map((c) => ({
-    id: `tiempo-${fecha}-${c.clave}`,
-    emoji: c.emoji,
-    titulo: `${cuando}, ${c.que.charAt(0).toLowerCase()}${c.que.slice(1)}: ${c.llevar}`,
-    nivel: "ya" as const,
-  }));
+  const paraguas = conCole ? avisoDelParaguas(p, cuando) : null;
+  return [
+    ...(paraguas ? [paraguas] : []),
+    ...consejosDelTiempo(p)
+      .filter((c) => !(paraguas && c.clave === "lluvia"))
+      .map((c) => ({
+        id: `tiempo-${fecha}-${c.clave}`,
+        emoji: c.emoji,
+        titulo: `${cuando}, ${c.que.charAt(0).toLowerCase()}${c.que.slice(1)}: ${c.llevar}`,
+        nivel: "ya" as const,
+      })),
+  ];
+}
+
+/** La lluvia en la ida y la vuelta del cole de ese día (D-148), o nada si no moja. */
+export function lluviaDelCole(p: Pronostico): LluviaEnFranja[] {
+  return [lluviaEnFranja(p, "ida"), lluviaEnFranja(p, "vuelta")].filter(
+    (l): l is LluviaEnFranja => l !== null,
+  );
+}
+
+function avisoDelParaguas(p: Pronostico, cuando: "Hoy" | "Mañana"): Aviso | null {
+  const l = lluviaDelCole(p);
+  if (l.length === 0) return null;
+  // Si moja a la vuelta y no a la ida, el paraguas hay que cogerlo igual al salir de casa.
+  const soloVuelta = l.length === 1 && l[0]!.franja === "vuelta";
+  return {
+    id: `tiempo-${p.fecha}-paraguas`,
+    emoji: "🌂",
+    titulo: `${cuando} ${textoDeLluviaDelCole(l)}: ${soloVuelta ? "salid con paraguas" : "paraguas y chubasquero"}`,
+    nivel: "ya",
+  };
+}
+
+/** ¿Hay cole ese día para el hogar? Solo si tiene algo del cole (D-144) y no es un día sin cole. */
+const hayColeEse = (e: EntradaAvisos, f: FechaIso) =>
+  !!e.conCole && diaDeCole(f, e.diasCole ?? []).hay;
+
+/**
+ * El aviso de antes de salir (D-148): a primera hora de un día de cole, con la previsión recién
+ * leída, si va a llover en la ida o en la vuelta. Vacío si no: entonces no se manda nada.
+ */
+export function avisosAntesDelCole(e: EntradaAvisos): Aviso[] {
+  if (!hayColeEse(e, e.hoy)) return [];
+  const p = e.tiempo?.find((x) => x.fecha === e.hoy);
+  const a = p ? avisoDelParaguas(p, "Hoy") : null;
+  return a ? [a] : [];
+}
+
+export function notificacionAntesDelCole(avisos: readonly Aviso[]) {
+  return {
+    titulo: "🌂 Coged el paraguas",
+    cuerpo: avisos
+      .map((a) => a.titulo)
+      .join("\n")
+      .slice(0, 240),
+  };
 }
 
 export interface CosaParaAviso {
@@ -191,7 +254,7 @@ export function avisosDeHoy(e: EntradaAvisos): Aviso[] {
   }
 
   // El tiempo de hoy (D-145): qué ponerse o llevar.
-  out.push(...avisosDelTiempo(e.tiempo, e.hoy, "Hoy"));
+  out.push(...avisosDelTiempo(e.tiempo, e.hoy, "Hoy", hayColeEse(e, e.hoy)));
 
   // Calendario escolar (D-144): el aviso de que mañana no hay cole (solo el primer día de cada
   // parón, no cada día de unas vacaciones) y de que mañana vuelve.
@@ -288,7 +351,11 @@ export function avisosDeLaNoche(e: EntradaAvisos): Aviso[] {
   // Lo de la mochila primero; luego el tiempo de mañana (D-145), que también se deja preparado.
   const mochila = delDia.filter((a) => a.id.startsWith("mochila-"));
   const resto = delDia.filter((a) => !a.id.startsWith("mochila-"));
-  return [...mochila, ...avisosDelTiempo(e.tiempo, manana, "Mañana"), ...resto];
+  return [
+    ...mochila,
+    ...avisosDelTiempo(e.tiempo, manana, "Mañana", hayColeEse(e, manana)),
+    ...resto,
+  ];
 }
 
 export function notificacionDeLaNoche(avisos: readonly Aviso[]) {
