@@ -3,6 +3,7 @@ import {
   eventosDeTicketmaster,
   juntarEventos,
   partidosEnCasa,
+  planesDelDia,
   textoDelEvento,
   tituloCortoDelEvento,
 } from "./metropolitano";
@@ -197,5 +198,24 @@ describe("el Metropolitano (D-159)", () => {
         titulo: "Bad Bunny",
       }),
     ).toBe("🎤 Bad Bunny");
+  });
+
+  it("lo demás que se hace ese día: citas (también de varios días), fiestas y cumpleaños", () => {
+    const planes = {
+      agenda: [
+        { fecha: "2026-12-05", hasta: "2026-12-07", titulo: "Puente en la sierra" },
+        { fecha: "2026-12-06", titulo: "Comida en casa" },
+        { fecha: "2026-12-09", titulo: "Otro día" },
+      ],
+      eventos: { "2026-12-06": { titulo: "Fiesta del barrio" } },
+      cumples: [{ nombre: "Leo", dia: 6, mes: 12 }],
+    };
+    expect(planesDelDia("2026-12-06", planes)).toEqual([
+      "Puente en la sierra",
+      "Comida en casa",
+      "Fiesta del barrio",
+      "Cumple de Leo",
+    ]);
+    expect(planesDelDia("2026-12-20", planes)).toEqual([]);
   });
 });

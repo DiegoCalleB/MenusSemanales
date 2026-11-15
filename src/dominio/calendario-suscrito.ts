@@ -7,7 +7,13 @@ import { NOMBRE_DIA_LARGO, preparacionesEntre } from "./mochila";
 import { MAX_LARGO_MOTIVO, consultaCole, diaDeCole, tramosSinCole } from "./calendario-escolar";
 import { fechaLarga, lineasDelTiempo } from "./avisos";
 import { LUGAR_TIEMPO, type Pronostico } from "./tiempo";
-import { type EventoEstadio, textoDelEvento, tituloCortoDelEvento } from "./metropolitano";
+import {
+  type EventoEstadio,
+  planesDelDia,
+  queEs,
+  textoDelEvento,
+  tituloCortoDelEvento,
+} from "./metropolitano";
 
 /**
  * Avisos fuera de la app (D-083): el calendario del móvil se suscribe a un enlace y avisa solo.
@@ -109,6 +115,7 @@ export const HORA_MOCHILA = "20:00";
 const DIAS_MOCHILA = 56;
 /** Cuántos días por delante se ponen los días sin cole (lo que queda de curso y el verano). */
 const DIAS_SIN_COLE = 300;
+const minuscula = (t: string) => `${t.charAt(0).toLowerCase()}${t.slice(1)}`;
 /** Desde estos días seguidos sin cole, un periodo es «largo»: solo se marcan su inicio y su fin. */
 const DIAS_PERIODO_LARGO = 5;
 
@@ -152,9 +159,11 @@ const limpio = (t: string) =>
  * «pensar» ni «comprar» el regalo (D-143; siguen en la app).
  */
 /** Qué calendario se pide (D-140): las fechas (lo de no olvidar) o solo las comidas y cenas. */
-export type CalendarioSuscrito = "fechas" | "comidas";
+export type CalendarioSuscrito = "fechas" | "comidas" | "metropolitano";
 
 const esComida = (e: EventoCalendario) => /^(cena|comida|cole)-/.test(e.uid ?? "");
+/** Los partidos y conciertos del estadio (D-163): su propio calendario. Los avisos de choque no. */
+const esEstadio = (e: EventoCalendario) => /^estadio-/.test(e.uid ?? "");
 
 /**
  * Los eventos de uno de los dos calendarios suscritos (D-140): «fechas» (citas, fechas señaladas,
@@ -174,7 +183,9 @@ export function eventosSuscritos(
   },
 ): EventoCalendario[] {
   const todos = todosLosEventos(p, opciones);
-  return opciones.solo === "comidas" ? todos.filter(esComida) : todos.filter((e) => !esComida(e));
+  if (opciones.solo === "comidas") return todos.filter(esComida);
+  if (opciones.solo === "metropolitano") return todos.filter(esEstadio);
+  return todos.filter((e) => !esComida(e) && !esEstadio(e));
 }
 
 function todosLosEventos(
@@ -374,9 +385,20 @@ function todosLosEventos(
     }
   }
 
-  // El estadio de al lado (D-159): partidos y conciertos, con aviso el mismo día.
+  // El estadio de al lado (D-159): partidos y conciertos, en su propio calendario (D-163). Si ese
+  // día hay algo más apuntado, un aviso aparte en el de fechas, con alarma: ⚠️ Partido y Cumple de Leo.
   for (const ev of estadio) {
     if (ev.fecha < hoy) continue;
+    const planes = planesDelDia(ev.fecha, p);
+    if (planes.length > 0) {
+      eventos.push({
+        uid: `choque-${ev.id}`,
+        fecha: ev.fecha,
+        titulo: `⚠️ ${queEs(ev)} y ${planes.slice(0, 2).join(" + ")}`,
+        descripcion: `Ese día hay ${minuscula(textoDelEvento(ev).replace(/^\S+ /, ""))} y también: ${planes.join(", ")}. Más tráfico, calles cortadas y el metro lleno unas dos horas antes y una después: sal con tiempo.`,
+        aviso: true,
+      });
+    }
     eventos.push({
       uid: `estadio-${ev.id}`,
       fecha: ev.fecha,

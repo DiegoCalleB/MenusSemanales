@@ -2317,10 +2317,16 @@ test.describe("mochila, compartir y plan de la semana", () => {
         }),
       }),
     );
+    // Un día con otra cosa apuntada: el partido avisa de que coincide (D-163).
+    await cargar(pagina, "/fechas");
+    await pagina.getByLabel(/Escribe como en una nota/).fill("5 Noviembre 18:00 Comida en casa");
+    await pagina.getByRole("button", { name: "Apuntar", exact: true }).click();
     await cargar(pagina, "/calendario?dia=2026-11-05");
-    await expect(pagina.locator("section", { has: pagina.locator("#detalle") })).toContainText(
+    const dia = pagina.locator("section", { has: pagina.locator("#detalle") });
+    await expect(dia).toContainText(
       "⚽ Partido en el Metropolitano a las 21:00: Atlético – Viking FK (Champions)",
     );
+    await expect(dia).toContainText("⚠️ Coincide con: Comida en casa");
     await contexto.close();
   });
 

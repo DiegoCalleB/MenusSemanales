@@ -543,4 +543,18 @@ describe("el estadio de al lado (D-159)", () => {
       "domingo 21:00 partido en el Metropolitano (Atlético – Real Betis (Liga))",
     );
   });
+
+  it("si ese día hay otra cosa apuntada, el aviso dice que coincide (D-163)", () => {
+    const e = {
+      ...base,
+      hoy: "2026-12-05",
+      estadio,
+      citas: [{ fecha: "2026-12-06", titulo: "Comida en casa de la abuela", hora: "14:00" }],
+    };
+    expect(avisosDeLaNoche(e).find((a) => a.id.startsWith("estadio-"))).toMatchObject({
+      emoji: "⚠️",
+      titulo:
+        "Mañana partido en el Metropolitano a las 21:00: Atlético – Real Betis (Liga) · coincide con Comida en casa de la abuela",
+    });
+  });
 });

@@ -411,16 +411,49 @@ describe("el estadio en el calendario suscrito (D-159)", () => {
     },
   ];
 
-  it("cada partido, con su hora si está confirmada (y de todo el día si no), solo en «fechas»", () => {
-    const e = eventosSuscritos(base(), { hoy: HOY, para: null, estadio }).filter((x) =>
-      x.uid?.startsWith("estadio-"),
-    );
+  it("los partidos van en su propio calendario, con su hora si está confirmada (D-163)", () => {
+    const e = eventosSuscritos(base(), { hoy: HOY, para: null, solo: "metropolitano", estadio });
     expect(e.map((x) => [x.uid, x.titulo, x.hora])).toEqual([
       ["estadio-partido-2", "⚽ Atlético – Real Betis", "21:00"],
       ["estadio-partido-3", "⚽ Atlético – Valencia", null],
     ]);
-    const comidas = eventosSuscritos(base(), { hoy: HOY, para: null, solo: "comidas", estadio });
-    expect(comidas.some((x) => x.uid?.startsWith("estadio-"))).toBe(false);
+    // Ni en el de fechas ni en el de comidas.
+    for (const solo of ["fechas", "comidas"] as const) {
+      expect(
+        eventosSuscritos(base(), { hoy: HOY, para: null, solo, estadio }).some((x) =>
+          x.uid?.startsWith("estadio-"),
+        ),
+      ).toBe(false);
+    }
+  });
+
+  it("si ese día hay algo más apuntado, un aviso ⚠️ con alarma en el calendario de fechas", () => {
+    const p = base({
+      agenda: [
+        { fecha: "2026-12-06", hasta: null, hora: "18:00", titulo: "Comida en casa de la abuela" },
+      ],
+      cumples: [{ nombre: "Leo", dia: 13, mes: 12, anio: null, personaId: null }],
+    });
+    const choques = eventosSuscritos(p, { hoy: HOY, para: null, estadio }).filter((x) =>
+      x.uid?.startsWith("choque-"),
+    );
+    expect(choques.map((x) => [x.uid, x.fecha, x.titulo, x.aviso])).toEqual([
+      ["choque-partido-2", "2026-12-06", "⚠️ Partido y Comida en casa de la abuela", true],
+      ["choque-partido-3", "2026-12-13", "⚠️ Partido y Cumple de Leo", true],
+    ]);
+    expect(choques[0]?.descripcion).toContain("también: Comida en casa de la abuela");
+    // El aviso de choque no va en el calendario del estadio.
+    expect(
+      eventosSuscritos(p, { hoy: HOY, para: null, solo: "metropolitano", estadio }).some((x) =>
+        x.uid?.startsWith("choque-"),
+      ),
+    ).toBe(false);
+    // Sin nada más ese día, no hay aviso.
+    expect(
+      eventosSuscritos(base(), { hoy: HOY, para: null, estadio }).some((x) =>
+        x.uid?.startsWith("choque-"),
+      ),
+    ).toBe(false);
   });
 });
 

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { proximaFecha } from "./cumples";
 import type { FechaIso } from "./fechas";
 
 /**
@@ -238,3 +239,28 @@ export function tituloCortoDelEvento(e: EventoEstadio): string {
   const que = e.tipo === "partido" ? e.titulo.replace(/\s*\([^)]*\)\s*$/, "") : e.titulo;
   return `${emoji} ${que}`;
 }
+
+/** Lo que el hogar tiene apuntado, para ver si choca con algo del estadio (D-163). */
+export interface PlanesDelHogar {
+  agenda: ReadonlyArray<{ fecha: FechaIso; hasta?: FechaIso | null; titulo: string }>;
+  /** Fechas señaladas (fiestas…): fecha → título. */
+  eventos: Readonly<Record<string, { titulo: string }>>;
+  cumples: ReadonlyArray<{ nombre: string; dia: number; mes: number }>;
+}
+
+/**
+ * Lo demás que se hace ese día (citas, fiestas señaladas y cumpleaños): si hay algo, el partido o el
+ * concierto del estadio de al lado puede liar el tráfico, el aparcamiento y la llegada (D-163).
+ */
+export function planesDelDia(f: FechaIso, p: PlanesDelHogar): string[] {
+  const out: string[] = [];
+  for (const a of p.agenda) if (a.fecha <= f && f <= (a.hasta ?? a.fecha)) out.push(a.titulo);
+  const ev = p.eventos[f];
+  if (ev) out.push(ev.titulo);
+  for (const c of p.cumples) if (proximaFecha(c, f) === f) out.push(`Cumple de ${c.nombre}`);
+  return out;
+}
+
+/** «Partido», «Concierto» o «Evento», con mayúscula, para los títulos cortos. */
+export const queEs = (e: EventoEstadio) =>
+  e.tipo === "partido" ? "Partido" : e.tipo === "concierto" ? "Concierto" : "Evento";
