@@ -11,8 +11,6 @@ export const ESTADIO = {
   nombre: "Metropolitano",
   /** Id del Atlético de Madrid en ESPN. */
   equipoEspn: "1068",
-  /** Id de la selección española en ESPN: también juega aquí (Nations League, amistosos…). */
-  seleccionEspn: "164",
   latitud: 40.4362,
   longitud: -3.5995,
 } as const;
@@ -57,6 +55,8 @@ const COMPETICION: Record<string, string> = {
   "fifa.friendly": "amistoso",
   "fifa.worldq.uefa": "clasificación para el Mundial",
   "uefa.euroq": "clasificación para la Eurocopa",
+  "esp.w.1": "Liga F",
+  "uefa.wchampions": "Champions femenina",
 };
 
 /** Los nombres de ESPN (en inglés) que más pueden jugar aquí, en español. */
@@ -119,9 +119,9 @@ const espnSchema = z.object({
 const corto = (n: string) => NOMBRES[n] ?? n;
 
 /**
- * Los partidos en el Metropolitano de un calendario de ESPN (el del Atlético o el de la
- * selección): los que ESPN sitúa en el estadio, sea quien sea el local. Si ESPN no dice el estadio,
- * cuenta si el Atlético juega en casa.
+ * Los partidos en el Metropolitano de una lista de ESPN (los de una competición en un mes): los que
+ * ESPN sitúa en el estadio, sea quien sea el local. Si ESPN no dice el estadio, cuenta si el
+ * Atlético juega en casa.
  */
 export function partidosEnCasa(json: unknown, liga: string): EventoEstadio[] {
   const r = espnSchema.safeParse(json);
