@@ -4,6 +4,7 @@ import {
   juntarEventos,
   partidosEnCasa,
   textoDelEvento,
+  tituloCortoDelEvento,
 } from "./metropolitano";
 
 /** Recortes de respuestas reales de ESPN (15-11-2026). */
@@ -182,5 +183,19 @@ describe("el Metropolitano (D-159)", () => {
     expect(textoDelEvento(v!)).toBe(
       "⚽ Partido en el Metropolitano (hora por confirmar): Atlético – Valencia (Liga)",
     );
+  });
+
+  it("el título corto del calendario: solo quién juega, sin estadio ni competición (D-161)", () => {
+    const [b] = partidosEnCasa(ESPN, "esp.1");
+    expect(tituloCortoDelEvento(b!)).toBe("⚽ Atlético – Real Betis");
+    expect(
+      tituloCortoDelEvento({
+        id: "e",
+        fecha: "2027-06-02",
+        hora: null,
+        tipo: "concierto",
+        titulo: "Bad Bunny",
+      }),
+    ).toBe("🎤 Bad Bunny");
   });
 });

@@ -51,7 +51,7 @@ describe("GET /api/calendario/[token]", () => {
     const ics = await r.text();
     expect(ics).toContain("BEGIN:VCALENDAR");
     expect(ics).toContain("SUMMARY:📌 Psicotécnico");
-    expect(ics).toContain("SUMMARY:🎂 Cumple de Ana");
+    expect(ics).toContain("SUMMARY:🎂 Ana");
     // Sin avisos de regalo (D-143); el token no se cuela en el calendario.
     expect(ics).not.toContain("regalo");
     expect(ics).not.toContain(TOKEN);
@@ -108,7 +108,7 @@ describe("GET /api/calendario/[token]", () => {
       { fecha: manana, codigo: 63, max: 14, min: 2, probLluvia: 80, lluviaMm: 5 },
     ]);
     const fechas = await (await pedir(TOKEN, "", "9.9.9.1")).text();
-    expect(fechas).toContain("Lluvia (80 %): chubasquero y botas");
+    expect(fechas).toContain("Lluvia (80 %): chubasquero y botas"); // en la descripción;
     expect(fechas).toContain("Frío (mín. 2 °C)");
     const comidas = await (await pedir(TOKEN, "?solo=comidas", "9.9.9.2")).text();
     expect(comidas).not.toContain("Lluvia");
