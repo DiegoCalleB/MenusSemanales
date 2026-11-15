@@ -1385,3 +1385,8 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
   - `CORREO_CIRCULARES_DOMINIO` con el dominio de recepción de Resend.
   - Un webhook de Resend con el evento `email.received` a `https://…/api/circulares/correo`.
 - Migración: `20261116000000_circulares_por_correo.sql`.
+
+## D-158 · El tiempo, una semana por delante
+
+- **Problema (Diego):** el miércoles se esperaba un día de lluvia (unos 10 mm) y no salía en el calendario. La app solo pedía 3 días de previsión (hoy, mañana y pasado).
+- **Ahora:** se piden **7 días** a Open-Meteo. En el calendario suscrito y en el de la app sale el paraguas, el abrigo o la gorra de toda la semana. Los avisos siguen mirando solo hoy y mañana. Más allá de dos o tres días la previsión es menos fiable: el aviso de las 7 la vuelve a mirar justo antes de salir.

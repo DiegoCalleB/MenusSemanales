@@ -6,10 +6,10 @@ const URL_PREVISION =
   `?latitude=${LUGAR_TIEMPO.latitud}&longitude=${LUGAR_TIEMPO.longitud}` +
   "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum" +
   "&hourly=precipitation_probability,precipitation,weather_code" +
-  "&timezone=Europe%2FMadrid&forecast_days=3";
+  "&timezone=Europe%2FMadrid&forecast_days=7";
 
 /**
- * La previsión de hoy, mañana y pasado junto al cole (D-145, D-148), con la lluvia hora a hora. Se
+ * La previsión de los próximos 7 días junto al cole (D-145, D-148, D-158), con la lluvia hora a hora. Se
  * guarda media hora (la previsión no cambia más a menudo), salvo con `fresco` (el aviso de antes
  * de salir de casa la quiere recién leída). Si Open-Meteo falla o tarda más de 5 s, devuelve `[]`:
  * sin tiempo, pero sin romper el aviso.
