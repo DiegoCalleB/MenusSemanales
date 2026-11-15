@@ -22,14 +22,23 @@ const fechaCorta = (f: string) =>
 export function LeerCircular({
   inicial,
   leidos,
+  etiqueta = "✨ Leer una circular del cole",
+  automatico = false,
   alTerminar,
 }: {
+  /** El texto del botón que lo abre. */
+  etiqueta?: string;
+  /**
+   * Apuntar lo leído sin preguntar (D-160): para lo compartido desde otra app, como el cartel de un
+   * evento. Quien lo usa enseña lo apuntado con la opción de quitarlo.
+   */
+  automatico?: boolean;
   /** Lo que llega compartido desde otra app (D-138): se lee nada más abrir. */
   inicial?: { texto?: string; archivo?: File };
   /** Lo ya leído de una circular llegada por correo (D-147): se abre directamente para elegir. */
   leidos?: readonly ItemCircular[];
-  /** Tras apuntar (o descartar) lo leído. */
-  alTerminar?: (apuntadas: number) => void;
+  /** Tras apuntar (o descartar) lo leído, con lo que se ha apuntado. */
+  alTerminar?: (apuntadas: number, cosas: readonly ItemCircular[]) => void;
 } = {}) {
   const { despachar } = useHogar();
   const [yo] = useYo();
@@ -68,7 +77,8 @@ export function LeerCircular({
         );
         return;
       }
-      setFilas(lista);
+      if (automatico) apuntar(lista);
+      else setFilas(lista);
     } catch {
       setProblema("Sin conexión. Inténtalo de nuevo.");
     } finally {
@@ -86,6 +96,8 @@ export function LeerCircular({
     else return;
     leido.current = true;
     void Promise.resolve().then(() => leer(d));
+    // Se lee una sola vez (lo protege `leido`): `leer` cambia en cada pintado y no debe relanzarlo.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inicial]);
 
   function subir(archivo: File | undefined) {
@@ -103,9 +115,11 @@ export function LeerCircular({
     setFilas((f) => f?.map((x, n) => (n === i ? { ...x, ...cambio } : x)) ?? f);
   }
 
-  function apuntar() {
-    if (!filas) return;
-    const elegidas = filas.filter((f) => f.elegido && f.titulo.trim() !== "");
+  function apuntar(lista: Fila[] | null = filas) {
+    if (!lista) return;
+    const elegidas = lista.filter(
+      (f) => f.elegido && f.titulo.trim() !== "" && (f.fecha !== null || yo !== null),
+    );
     for (const f of elegidas) {
       if (f.fecha) {
         despachar({
@@ -122,7 +136,16 @@ export function LeerCircular({
     setFilas(null);
     setTexto("");
     setAbierto(false);
-    alTerminar?.(elegidas.length);
+    alTerminar?.(
+      elegidas.length,
+      elegidas.map((f) => ({
+        tipo: f.tipo,
+        titulo: f.titulo,
+        fecha: f.fecha,
+        hasta: f.hasta,
+        hora: f.hora,
+      })),
+    );
   }
 
   const total = filas?.filter((f) => f.elegido).length ?? 0;
@@ -130,7 +153,7 @@ export function LeerCircular({
   if (!abierto) {
     return (
       <button type="button" className="boton-suave w-fit" onClick={() => setAbierto(true)}>
-        ✨ Leer una circular del cole
+        {etiqueta}
       </button>
     );
   }
@@ -250,7 +273,12 @@ export function LeerCircular({
             </p>
           )}
           <div className="flex flex-wrap gap-2">
-            <button type="button" className="boton" disabled={total === 0} onClick={apuntar}>
+            <button
+              type="button"
+              className="boton"
+              disabled={total === 0}
+              onClick={() => apuntar()}
+            >
               Apuntar {total} {total === 1 ? "cosa" : "cosas"}
             </button>
             <button
@@ -258,7 +286,7 @@ export function LeerCircular({
               className="boton-suave"
               onClick={() => {
                 setFilas(null);
-                if (leidos) alTerminar?.(0);
+                if (leidos) alTerminar?.(0, []);
               }}
             >
               Descartar

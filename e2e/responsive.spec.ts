@@ -1727,8 +1727,8 @@ test.describe("flujos en móvil", () => {
   test("botón flotante: apuntar a la compra desde cualquier pantalla", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/menu");
-    await pagina.getByRole("button", { name: "Apuntar a la lista de la compra" }).click();
-    const dialogo = pagina.getByRole("dialog", { name: "Apuntar a la lista de la compra" });
+    await pagina.getByRole("button", { name: "Apuntar algo" }).click();
+    const dialogo = pagina.getByRole("dialog", { name: "Apuntar" });
     await dialogo.getByLabel("Añadir algo a la lista").fill("crema solar y pilas");
     await dialogo.getByRole("button", { name: "Añadir", exact: true }).click();
     await expect(
@@ -1738,9 +1738,27 @@ test.describe("flujos en móvil", () => {
     await expect(dialogo).toHaveCount(0);
     await pagina.getByRole("link", { name: "Compra" }).click();
     await expect(pagina.getByRole("checkbox", { name: /Crema solar/ })).toBeVisible();
-    await expect(
-      pagina.getByRole("button", { name: "Apuntar a la lista de la compra" }),
-    ).toHaveCount(0);
+    await contexto.close();
+  });
+
+  test("botón flotante (D-160): apuntar un evento desde cualquier pantalla", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/compra");
+    await pagina.getByRole("button", { name: "Apuntar algo" }).click();
+    const dialogo = pagina.getByRole("dialog", { name: "Apuntar" });
+    // En «Compra» se abre directamente en «Evento».
+    await expect(dialogo.getByRole("button", { name: "📌 Evento" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await dialogo.getByLabel(/Qué y cuándo/).fill("21 Noviembre 17:00 Cumple de Leo");
+    await expect(dialogo.getByRole("status")).toContainText("Cumple de Leo");
+    await dialogo.getByRole("button", { name: "Apuntar", exact: true }).click();
+    await expect(dialogo).toHaveCount(0);
+    await cargar(pagina, "/fechas");
+    await expect(pagina.getByText("Cumple de Leo").first()).toBeVisible();
     await contexto.close();
   });
 
@@ -2339,11 +2357,13 @@ test.describe("mochila, compartir y plan de la semana", () => {
       }),
     );
     await cargar(pagina, "/compartido?text=Reuni%C3%B3n%20del%20AMPA%20el%202%20a%20las%2016h");
-    await expect(pagina.getByText("Reunión del AMPA el 2 a las 16h")).toBeVisible();
-    const circular = pagina.getByRole("region", { name: "Leer una circular del cole" });
-    await expect(circular.getByText(/Revísalo/)).toBeVisible();
-    await circular.getByRole("button", { name: "Apuntar 1 cosa" }).click();
+    // Se apunta solo (D-160) y se enseña con «Quitar», por si no es.
     await expect(pagina.getByText("✅ Apuntada 1 cosa.")).toBeVisible();
+    const apuntado = pagina.getByRole("list", { name: "Apuntado" });
+    await expect(apuntado).toContainText("Reunión AMPA de prueba");
+    await expect(
+      apuntado.getByRole("button", { name: "Quitar Reunión AMPA de prueba" }),
+    ).toBeVisible();
     await pagina.getByRole("link", { name: "Ver las fechas" }).click();
     await expect(pagina.getByText("Reunión AMPA de prueba").first()).toBeVisible();
     await contexto.close();

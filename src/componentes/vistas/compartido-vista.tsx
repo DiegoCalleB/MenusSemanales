@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import type { ItemCircular } from "@/dominio/ia-circular";
 import { LeerCircular } from "../leer-circular";
 import { useHogar } from "../proveedor-hogar";
 
@@ -35,13 +36,23 @@ async function sacarArchivo(): Promise<File | null> {
   return new File([blob], nombre, { type: blob.type || r.headers.get("Content-Type") || "" });
 }
 
+const fechaCorta = (f: string) =>
+  new Intl.DateTimeFormat("es-ES", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  }).format(new Date(`${f}T12:00:00Z`));
+
 /**
- * Lo que se comparte con la app desde otra (D-138): un mensaje del grupo del cole, una foto de una
- * circular… La IA propone las fechas y tú decides qué se apunta. También se puede mandar a la
- * lista de la compra.
+ * Lo que se comparte con la app desde otra (D-138): un mensaje del grupo del cole, la foto de una
+ * circular o el cartel de un evento… La IA lo lee y lo apunta solo (D-160), y se enseña lo apuntado
+ * con «Quitar» por si algo no es. También se puede mandar a la lista de la compra.
  */
 export function CompartidoVista() {
-  const { despachar } = useHogar();
+  const { estado, despachar } = useHogar();
+  const [apuntadas, setApuntadas] = useState<readonly ItemCircular[]>([]);
+  const [quitadas, setQuitadas] = useState<ReadonlySet<number>>(new Set());
   const params = useSearchParams();
   const texto = textoCompartido({
     title: params.get("title"),
@@ -79,7 +90,7 @@ export function CompartidoVista() {
         </h1>
         {!nada && (
           <p className="text-tinta-suave text-base">
-            Busco las fechas y lo que hay que hacer. Tú revisas antes de apuntar.
+            Busco las fechas y lo que hay que hacer, y lo apunto. Si algo no es, lo quitas.
           </p>
         )}
       </header>
@@ -87,6 +98,45 @@ export function CompartidoVista() {
       {hecho ? (
         <section className="tarjeta flex flex-col gap-3" aria-live="polite">
           <p className="text-lg font-bold">✅ {hecho}</p>
+          {apuntadas.length > 0 && (
+            <ul aria-label="Apuntado" className="flex flex-col gap-2">
+              {apuntadas.map((c, i) => {
+                const cita = c.fecha
+                  ? estado.agenda.find(
+                      (a) =>
+                        a.fecha === c.fecha && a.titulo.toLowerCase() === c.titulo.toLowerCase(),
+                    )
+                  : undefined;
+                const quitada = quitadas.has(i);
+                return (
+                  <li
+                    key={`${c.fecha ?? ""}-${c.titulo}`}
+                    className="bg-suave-1 flex items-center justify-between gap-2 rounded-2xl p-3"
+                  >
+                    <span className={`text-base ${quitada ? "line-through opacity-60" : ""}`}>
+                      {c.fecha
+                        ? `📌 ${fechaCorta(c.fecha)}${c.hora ? ` · ${c.hora}` : ""} · `
+                        : "✅ "}
+                      {c.titulo}
+                    </span>
+                    {cita && !quitada && (
+                      <button
+                        type="button"
+                        className="boton-suave shrink-0"
+                        aria-label={`Quitar ${c.titulo}`}
+                        onClick={() => {
+                          despachar({ tipo: "agenda/borrar", id: cita.id });
+                          setQuitadas((q) => new Set(q).add(i));
+                        }}
+                      >
+                        Quitar
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
           <div className="flex flex-wrap gap-2">
             <Link href="/fechas" className="boton">
               Ver las fechas
@@ -114,13 +164,15 @@ export function CompartidoVista() {
             <LeerCircular
               key={archivo ? "archivo" : "texto"}
               inicial={inicial}
-              alTerminar={(n) =>
+              automatico
+              alTerminar={(n, cosas) => {
+                setApuntadas(cosas);
                 setHecho(
                   n === 0
                     ? "No se ha apuntado nada."
                     : `${n === 1 ? "Apuntada 1 cosa" : `Apuntadas ${n} cosas`}.`,
-                )
-              }
+                );
+              }}
             />
           )}
 

@@ -33,10 +33,10 @@ export interface ItemCircular {
   hora: string | null;
 }
 
-export const INSTRUCCIONES_CIRCULAR = `Eres el ayudante de una familia española. Recibes una circular, nota o calendario de un colegio (como foto, PDF o texto) y debes sacar lo que la familia tiene que recordar.
+export const INSTRUCCIONES_CIRCULAR = `Eres el ayudante de una familia española. Recibes una circular, nota o calendario de un colegio, o el cartel o la entrada de un evento (concierto, obra, partido, fiesta, cumpleaños…), como foto, PDF o texto, y debes sacar lo que la familia tiene que recordar.
 Devuelve una lista de elementos:
 - "tipo": "cita" si tiene un día concreto (excursión, reunión, festival, día sin cole, vacaciones, fotos, vacunas, entrega de notas…); "tarea" si es algo que hacer sin día concreto (firmar una autorización, traer una foto, pagar una cuota).
-- "titulo": corto y claro, en español, con lo necesario para entenderlo sin el documento (por ejemplo «Excursión al zoo: traer almuerzo y mochila»).
+- "titulo": corto y claro, en español, con lo necesario para entenderlo sin el documento (por ejemplo «Excursión al zoo: traer almuerzo y mochila» o «Concierto de Estopa en el Metropolitano»). En un cartel, di qué es y dónde.
 - "fecha": el día en formato AAAA-MM-DD, o cadena vacía si es una tarea sin día. Resuelve «el jueves 14» o «17 de marzo» con la fecha de hoy que se te da: el curso va de septiembre a junio y las fechas son siempre futuras o de hoy.
 - "hasta": el último día si dura varios (vacaciones, puente), si no cadena vacía.
 - "hora": HH:MM si se dice una hora, si no cadena vacía.

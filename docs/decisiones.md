@@ -1402,3 +1402,13 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
   - **El viernes**, en «La semana que viene»: «domingo 21:00 partido en el Metropolitano (…)».
   - En el **calendario suscrito** de fechas (con su hora si está confirmada) y en el **calendario de la app** (⚽ o 🎤 en la casilla y el detalle en el día).
 - Los datos se miran cada seis horas, los próximos 4 meses. Si ESPN o Ticketmaster fallan, no sale nada del estadio y el resto sigue igual.
+
+## D-160 · Apuntar eventos desde el ＋ y compartir un cartel
+
+- **Petición (Diego):** «desde el ＋ de abajo a la derecha poder agregar algo a la lista de la compra o añadir eventos» y «compartir un cartel de algún evento y que se registre solo».
+- **El ＋** abre un panel con dos pestañas:
+  - **🛒 Compra**, como hasta ahora.
+  - **📌 Evento:** se escribe como en una nota («21 Noviembre 17:00 Cumple de Leo»), con la vista previa de lo que se va a apuntar. También está «📷 Leer un cartel o una foto», con la IA de las circulares.
+  - El botón sale ahora también en «Compra», donde se abre directamente en «Evento».
+- **Compartir con la app** (D-138) **apunta solo**: el texto, la foto o el cartel se leen con IA y se apuntan. Después se enseña lo apuntado, cada cosa con «Quitar» por si la IA se ha equivocado. La revisión previa sigue en «Leer una circular» y en las circulares por correo (D-147).
+- **La IA** lee también carteles y entradas (concierto, obra, partido, fiesta…), no solo circulares, y en el título dice qué es y dónde.
