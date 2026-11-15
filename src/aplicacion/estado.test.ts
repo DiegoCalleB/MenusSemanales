@@ -8,6 +8,7 @@ import {
   type Accion,
   type EstadoHogar,
   articulosPendientes,
+  articulosPropuestos,
   articulosQuitados,
   catalogoOrdenado,
   cenaDeEmergenciaHoy,
@@ -31,8 +32,21 @@ import {
 const aplicar = (e: EstadoHogar, ...acciones: Accion[]) => acciones.reduce(reducir, e);
 const cantidad = (e: EstadoHogar, id: string, ubi: string) =>
   e.despensa.find((i) => i.ingredienteId === id && i.ubicacion === ubi)?.cantidad;
+/** Lo que pide el menú: lo que ya está en la lista y lo propuesto por revisar (D-157). */
 const pendientes = (e: EstadoHogar) =>
-  Object.fromEntries(articulosPendientes(e).map((a) => [a.ingredienteId, a.cantidad]));
+  Object.fromEntries(
+    [...articulosPendientes(e), ...articulosPropuestos(e)].map((a) => [
+      a.ingredienteId,
+      a.cantidad,
+    ]),
+  );
+/** Acepta todo lo que propone el menú, como al pulsar «Añadir» sin desmarcar nada. */
+const aceptarTodo = (e: EstadoHogar) =>
+  reducir(e, {
+    tipo: "compra/revisar",
+    anadir: articulosPropuestos(e).map((a) => a.ingredienteId),
+    descartar: [],
+  });
 const conStock = (e: EstadoHogar) =>
   e.despensa
     .filter((i) => i.cantidad > 0)
@@ -94,13 +108,15 @@ describe("comprar y deshacer", () => {
     };
     // La leche caducada no cuenta: hace falta toda (mínimo 1000 ml).
     expect(pendientes(inicial)).toHaveProperty("leche", 1000);
-    const comprada = aplicar(inicial, { tipo: "comprar", ingredienteId: "leche" });
+    const comprada = aplicar(aceptarTodo(inicial), { tipo: "comprar", ingredienteId: "leche" });
     expect(cantidad(comprada, "leche", "nevera")).toBe(1000);
     expect(comprada.despensa.find((i) => i.ingredienteId === "leche")?.caducaEn).toBeNull();
 
     const operacionId = comprada.compras[0]?.operacionId ?? "";
     const deshecha = reducir(comprada, { tipo: "deshacer", operacionId });
     expect(conStock(deshecha)).toEqual(conStock(inicial)); // vuelve la leche caducada, CON su caducidad
+    // Y vuelve a la lista, no a las propuestas.
+    expect(articulosPendientes(deshecha).map((a) => a.ingredienteId)).toContain("leche");
   });
 
   it("no se puede deshacer una compra cuyo contenido ya se ha consumido", () => {
@@ -1275,16 +1291,13 @@ describe("comida del mediodía (D-079)", () => {
   });
 
   it("los ingredientes de un plato de la comida entran en la lista de la compra", () => {
-    const antes = articulosPendientes(con());
-    const despues = articulosPendientes(
-      con({ tipo: "almuerzo/anadir", fecha: hoy, platoId: plato.id }),
-    );
+    const todo = (e: EstadoHogar) => [...articulosPendientes(e), ...articulosPropuestos(e)];
+    const antes = todo(con());
+    const despues = todo(con({ tipo: "almuerzo/anadir", fecha: hoy, platoId: plato.id }));
     const suma = (l: typeof antes) => l.reduce((x, a) => x + a.cantidad, 0);
     expect(despues.length + suma(despues)).toBeGreaterThan(antes.length + suma(antes));
     // Un texto libre no cambia la compra, y un día ya pasado tampoco.
-    expect(
-      articulosPendientes(con({ tipo: "almuerzo/anadir", fecha: hoy, texto: "Restaurante" })),
-    ).toEqual(antes);
+    expect(todo(con({ tipo: "almuerzo/anadir", fecha: hoy, texto: "Restaurante" }))).toEqual(antes);
   });
 
   it("sale en el archivo de calendario y un estado antiguo se completa", async () => {
@@ -1895,5 +1908,53 @@ describe("la comida de casa cuenta para la cena (D-128)", () => {
     const e = aplicarA({ tipo: "almuerzo/anadir", fecha: sabado, platoId: carne.id });
     const despues = contarSemana(sabado, mediodiaPorDia(e), {});
     expect(despues.carne ?? 0).toBe((antes.carne ?? 0) + 1);
+  });
+});
+
+describe("lo que propone el menú para la compra (D-157)", () => {
+  const base = estadoInicialDemo();
+  const salmon = base.platos.find((p) => p.ingredientes.some((i) => i.ingredienteId === "salmon"));
+  const conCena = () =>
+    reducir(base, { tipo: "menu/elegir", fecha: base.hoy, platoId: salmon!.id });
+
+  it("una cena nueva no mete nada solo en la lista: lo propone", () => {
+    const e = conCena();
+    expect(articulosPropuestos(e).map((a) => a.ingredienteId)).toContain("salmon");
+    expect(articulosPendientes(e).map((a) => a.ingredienteId)).not.toContain("salmon");
+  });
+
+  it("lo marcado entra en la lista; lo desmarcado va a «No hace falta», de donde se recupera", () => {
+    const e = conCena();
+    const anadido = reducir(e, { tipo: "compra/revisar", anadir: ["salmon"], descartar: [] });
+    expect(articulosPendientes(anadido).map((a) => a.ingredienteId)).toContain("salmon");
+    expect(anadido.aviso?.texto).toMatch(/^Añadido a la lista: 1 cosa/);
+
+    const descartado = reducir(e, { tipo: "compra/revisar", anadir: [], descartar: ["salmon"] });
+    expect(articulosPropuestos(descartado).map((a) => a.ingredienteId)).not.toContain("salmon");
+    expect(articulosPendientes(descartado).map((a) => a.ingredienteId)).not.toContain("salmon");
+    expect(articulosQuitados(descartado).map((a) => a.ingredienteId)).toContain("salmon");
+    const devuelto = reducir(descartado, { tipo: "compra/restablecer", ingredienteId: "salmon" });
+    expect(articulosPendientes(devuelto).map((a) => a.ingredienteId)).toContain("salmon");
+  });
+
+  it("si el menú pide más de lo revisado, se vuelve a proponer; al comprarlo, también la próxima vez", () => {
+    const r = aceptarTodo(conCena());
+    const antes = articulosPendientes(r).find((a) => a.ingredienteId === "salmon")!.cantidad;
+    const mas = reducir(r, { tipo: "compra/revisar", anadir: [], descartar: [] });
+    expect(mas).toBe(r); // nada que revisar, nada cambia
+    const masSalmon = {
+      ...r,
+      compraRevisada: { ...r.compraRevisada, salmon: antes - 1 },
+    };
+    expect(articulosPropuestos(masSalmon).map((a) => a.ingredienteId)).toContain("salmon");
+    const comprado = reducir(r, { tipo: "comprar", ingredienteId: "salmon" });
+    expect(comprado.compraRevisada).not.toHaveProperty("salmon");
+  });
+
+  it("un estado de antes da por revisado lo que ya estaba en su lista", () => {
+    const viejo = { ...conCena(), compraRevisada: undefined } as unknown as EstadoHogar;
+    const n = normalizar(viejo);
+    expect(articulosPropuestos(n)).toEqual([]);
+    expect(articulosPendientes(n).map((a) => a.ingredienteId)).toContain("salmon");
   });
 });

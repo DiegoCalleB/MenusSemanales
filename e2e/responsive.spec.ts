@@ -239,9 +239,43 @@ test.describe("flujos en móvil", () => {
       .getByRole("button", { name: /^Elegir / })
       .first()
       .click();
-    await expect(pagina.getByRole("status")).toContainText("La compra se ha actualizado");
+    await expect(pagina.getByRole("status")).toContainText("Mira en la compra lo que pide");
     await pagina.getByRole("link", { name: "Compra" }).click();
     await expect(pagina.getByRole("heading", { level: 1, name: /compra/i })).toBeVisible();
+    await contexto.close();
+  });
+
+  test("compra (D-157): lo que pide el menú se propone y se elige qué añadir", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/menu");
+    await pagina
+      .getByRole("button", { name: /^Elegir / })
+      .first()
+      .click();
+    await cargar(pagina, "/compra");
+    const aviso = pagina.getByRole("region", { name: /^El menú pide/ });
+    await expect(aviso).toBeVisible();
+    await aviso.getByRole("button", { name: "Revisar" }).click();
+    const ventana = pagina.getByRole("dialog", { name: "Lo que pide el menú" });
+    await expect(ventana).toBeVisible();
+    const casillas = ventana
+      .getByRole("list", { name: "Propuestas para la compra" })
+      .getByRole("checkbox");
+    const n = await casillas.count();
+    expect(n).toBeGreaterThan(0);
+    // La primera ya la tenemos en casa: se desmarca. El resto, a la lista.
+    const primera = (await casillas.first().locator("xpath=..").innerText())
+      .split(" · ")[0]!
+      .trim();
+    await casillas.first().uncheck();
+    await ventana.getByRole("button", { name: /^(Añadir \d+ a la lista|No añadir nada)$/ }).click();
+    await expect(ventana).toBeHidden();
+    await expect(aviso).toHaveCount(0);
+    await expect(pagina.getByRole("status")).toContainText(/Añadido a la lista|Nada añadido/);
+    // Lo desmarcado no está en la lista.
+    await expect(pagina.getByRole("checkbox", { name: new RegExp(`^${primera}`) })).toHaveCount(0);
     await contexto.close();
   });
 

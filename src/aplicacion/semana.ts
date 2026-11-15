@@ -3,7 +3,7 @@ import { proximaFecha } from "@/dominio/cumples";
 import { type FechaIso, diaSemanaIso, sumarDias } from "@/dominio/fechas";
 import { paraLlevar, paraPreparar } from "@/dominio/mochila";
 import { hayColeDe, repiteConElCole, sinColeEntreSemana } from "./cole";
-import { type EstadoHogar, articulosPendientes, nombreDia } from "./estado";
+import { type EstadoHogar, articulosPendientes, articulosPropuestos, nombreDia } from "./estado";
 
 /**
  * Plan de la semana (D-137): todo lo de los próximos días en una sola pantalla para mirarlo una
@@ -45,6 +45,8 @@ export interface PlanDeLaSemana {
   /** Lo mismo, solo de lunes a viernes (lo que sabe rellenar «Proponer cenas»). */
   faltanCenasLaborables: number;
   porComprar: number;
+  /** Lo que pide el menú y falta revisar (D-157). */
+  propuestasCompra: number;
 }
 
 /** El sábado y el domingo se planea la semana siguiente; el resto de días, lo que queda de esta. */
@@ -107,6 +109,7 @@ export function planDeLaSemana(e: EstadoHogar): PlanDeLaSemana {
     faltanCenas: sinElegir.length,
     faltanCenasLaborables: sinElegir.filter((d) => diaSemanaIso(d.fecha) <= 5).length,
     porComprar: articulosPendientes(e).length + e.manuales.filter((m) => !m.comprado).length,
+    propuestasCompra: articulosPropuestos(e).length,
   };
 }
 

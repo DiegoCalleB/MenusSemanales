@@ -1339,3 +1339,33 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Calendario de la app:** cada día con previsión (hoy y los dos siguientes) lleva el emoji de lo más importante en su casilla (🌂, 🌧️, 🧣…). En el detalle del día aparece «El tiempo: 🌧️ 9–14 °C» con lo que hay que llevar, igual que en «Hoy».
 - **Calendario suscrito (Google), el de fechas:** un evento de todo el día por cada cosa que llevar: «🌂 Paraguas: llueve de camino al cole (de 8 a 9 h, 70 %)», «🧣 Frío (mín. 2 °C): abrigo, gorro y guantes». Los días de cole, la lluvia de la ida y la vuelta sustituye a la del día, como en los avisos (`lineasDelTiempo`). En el de comidas no sale nada del tiempo.
 - **Límite:** Google refresca los calendarios suscritos cuando quiere (a veces una vez al día), así que la previsión puede tener horas. Por eso la descripción del evento dice que puede cambiar y que el aviso de las 7 la vuelve a mirar. La fuente fiable sigue siendo el aviso.
+
+## D-155 · La cena que repite lo del comedor
+
+- **Petición (Diego):** que la cena no repita lo del cole sin tener que mirarlo.
+- **Lo que ya había:** las cenas propuestas ya complementan el menú del cole (D-054, `recomendadosParaCenar`).
+- **Lo nuevo:** si una cena **elegida a mano** repite el pescado, la carne, la legumbre o el huevo del comedor ese día, se avisa:
+  - En la campanita (hoy y mañana): «🍽️ La cena de hoy (Merluza) repite pescado con el comedor».
+  - En el plan de la semana: «⚠️ … repite pescado con el comedor», al lado de la cena, con su ✏️ para cambiarla.
+- La verdura, la pasta o el arroz no cuentan como «repetir». Si lo del mediodía se comió en casa (D-128), tampoco.
+- **Límite:** la notificación del móvil no lo lleva, porque el servidor solo ve los nombres de los platos, no su tipo.
+
+## D-156 · Puentes y vacaciones, con una semana de margen
+
+- **Petición (Diego):** que avise unos días antes de unas vacaciones o un puente, para organizarse.
+- **Qué:** justo una semana antes del primer día sin cole entre semana (si el día anterior sí lo había), llega «🏫 En una semana no hay cole: lunes 7 y martes 8 (Día de la Constitución, La Inmaculada)», con «¿Quién se queda con los niños? Mejor organizarlo ya.».
+- Si son más de cinco días, dice de qué día a qué día. Junta los días seguidos aunque tengan motivos distintos o haya un fin de semana en medio.
+- Va en el aviso de la mañana y en la campanita, solo en hogares con algo del cole. Se suma al aviso del viernes y al del día antes (D-149).
+
+## D-157 · La compra se propone, no se rellena sola
+
+- **Petición (Diego):** «la app no sabe lo que tenemos en casa bien: debería sugerir y el usuario aceptar o descartar, en una ventana con todo lo que propone».
+- **Cambia:** lo que pide el menú (cenas y comidas con plato) **ya no entra solo en la lista**. Arriba de la compra sale «✨ El menú pide N cosas» con el botón «Revisar». Este abre una ventana con todo lo propuesto, marcado, y su cantidad y para qué es. Se desmarca lo que ya hay en casa y se pulsa «Añadir N a la lista»; «Ahora no» lo deja para luego.
+- **Lo desmarcado** va a «No hace falta», de donde se puede volver a poner.
+- **Cómo se recuerda** (`compraRevisada` en el documento del hogar, ingrediente → cantidad revisada):
+  - Si luego el menú pide **más** de lo revisado, se vuelve a proponer.
+  - Al comprarlo, se olvida: la próxima vez que haga falta, se propone de nuevo.
+  - Deshacer una compra la devuelve a la lista, no a las propuestas.
+  - Cambiar la cantidad a mano o «volver a poner» cuentan como revisado.
+- **Sin sustos:** en los hogares de antes, lo que ya estaba en la lista se da por revisado. Solo lo nuevo se propone.
+- El plan de la semana enseña «Revisar lo que pide el menú (N)» en vez de «Hacer la compra» mientras haya propuestas.

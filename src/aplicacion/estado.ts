@@ -183,6 +183,12 @@ export interface EstadoHogar {
   almuerzos: Almuerzo[];
   /** Cantidades de la compra cambiadas a mano (ingrediente → cantidad; 0 = no hace falta). */
   ajustesCompra: Record<string, number>;
+  /**
+   * Lo que pide el menú y ya se ha revisado (D-157): ingrediente → cantidad revisada. La app no
+   * sabe bien lo que hay en casa, así que lo del menú no entra solo en la lista: se propone y se
+   * elige. Si luego el menú pide más de lo revisado, se vuelve a proponer.
+   */
+  compraRevisada: Record<string, number>;
   /** Nota corta de la cena de un día: «o igual lomo, depende» (D-096). */
   notasMenu: Record<FechaIso, string>;
   /** Quién ha hecho qué cada día (D-108). En tablas (`registro_hogar`); aquí, los últimos días. */
@@ -231,6 +237,8 @@ export type Accion =
   | { tipo: "manual/editar"; id: string; nombre?: string; cantidad?: string }
   | { tipo: "compra/cantidad"; ingredienteId: string; cantidad: number }
   | { tipo: "compra/restablecer"; ingredienteId: string }
+  /** Lo que propone el menú (D-157): qué se añade a la lista y qué no hace falta. */
+  | { tipo: "compra/revisar"; anadir: string[]; descartar: string[] }
   | { tipo: "manual/borrar"; id: string }
   | { tipo: "cocinar"; platoId: string; raciones: number }
   | { tipo: "ajustar"; ingredienteId: string; ubicacion: Ubicacion; delta: number }
@@ -464,9 +472,14 @@ function pendientesCalculados(e: EstadoHogar): ArticuloCompra[] {
   });
 }
 
-/** Lo que falta por comprar, con las cantidades que se hayan cambiado a mano. */
+/** ¿Se ha revisado ya esta cantidad de lo que pide el menú? (D-157) */
+const revisado = (e: EstadoHogar, a: ArticuloCompra) =>
+  (e.compraRevisada[a.ingredienteId] ?? -1) >= a.cantidad;
+
+/** Lo que falta por comprar (lo revisado y aceptado), con las cantidades cambiadas a mano. */
 export function articulosPendientes(e: EstadoHogar): ArticuloCompra[] {
   return pendientesCalculados(e).flatMap((a) => {
+    if (!revisado(e, a)) return [];
     const ajuste = e.ajustesCompra[a.ingredienteId];
     if (ajuste === undefined) return [a];
     if (ajuste <= 0) return [];
@@ -476,7 +489,19 @@ export function articulosPendientes(e: EstadoHogar): ArticuloCompra[] {
 
 /** Lo que se ha quitado de la lista a mano («no hace falta»), por si se quiere volver a poner. */
 export function articulosQuitados(e: EstadoHogar): ArticuloCompra[] {
-  return pendientesCalculados(e).filter((a) => e.ajustesCompra[a.ingredienteId] === 0);
+  return pendientesCalculados(e).filter(
+    (a) => revisado(e, a) && e.ajustesCompra[a.ingredienteId] === 0,
+  );
+}
+
+/** Lo que pide el menú y aún no se ha revisado (D-157): se propone, no entra solo en la lista. */
+export function articulosPropuestos(e: EstadoHogar): ArticuloCompra[] {
+  return pendientesCalculados(e).filter((a) => !revisado(e, a));
+}
+
+/** Todo lo que pide ahora el menú, como ya revisado (los estados de antes de D-157). */
+export function todoRevisado(e: EstadoHogar): Record<string, number> {
+  return Object.fromEntries(pendientesCalculados(e).map((a) => [a.ingredienteId, a.cantidad]));
 }
 
 /** Las comidas del mediodía con plato del catálogo, para que sus ingredientes entren en la compra. */
@@ -789,7 +814,20 @@ function puntuacionesValidas(v: unknown): Record<string, number> {
 }
 
 /** Completa lo que un estado guardado por una versión anterior no trae (agenda, casa y almuerzos, D-075, D-078 y D-079). */
-export const normalizar = (e: EstadoHogar): EstadoHogar =>
+/**
+ * Un estado de antes de D-157 no sabe qué se ha revisado: lo que ya estaba en su lista se da por
+ * revisado, para que nadie vea su lista vacía de golpe. Lo que pida el menú a partir de ahí, se propone.
+ */
+export const normalizar = (e: EstadoHogar): EstadoHogar => {
+  const n = normalizarCampos(e);
+  return typeof n.compraRevisada === "object" &&
+    n.compraRevisada !== null &&
+    !Array.isArray(n.compraRevisada)
+    ? n
+    : { ...n, compraRevisada: todoRevisado(n) };
+};
+
+const normalizarCampos = (e: EstadoHogar): EstadoHogar =>
   Array.isArray(e.agenda) &&
   Array.isArray(e.casa) &&
   Array.isArray(e.almuerzos) &&
@@ -907,8 +945,43 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
             },
           ],
           ajustesCompra: sinClave(e.ajustesCompra, ingrediente.id),
+          // Comprado: si el menú vuelve a pedirlo, se propondrá otra vez (D-157).
+          compraRevisada: sinClave(e.compraRevisada, ingrediente.id),
         }),
       );
+    }
+
+    case "compra/revisar": {
+      const propuestos = new Map(articulosPropuestos(e).map((a) => [a.ingredienteId, a]));
+      let compraRevisada = e.compraRevisada;
+      let ajustesCompra = e.ajustesCompra;
+      let anadidos = 0;
+      for (const id of new Set(accion.anadir)) {
+        const a = propuestos.get(id);
+        if (!a) continue;
+        compraRevisada = { ...compraRevisada, [id]: a.cantidad };
+        ajustesCompra = sinClave(ajustesCompra, id);
+        anadidos += 1;
+      }
+      for (const id of new Set(accion.descartar)) {
+        const a = propuestos.get(id);
+        if (!a || accion.anadir.includes(id)) continue;
+        compraRevisada = { ...compraRevisada, [id]: a.cantidad };
+        ajustesCompra = { ...ajustesCompra, [id]: 0 };
+      }
+      if (compraRevisada === e.compraRevisada) return e;
+      return {
+        ...e,
+        compraRevisada,
+        ajustesCompra,
+        siguienteId: e.siguienteId + 1,
+        aviso: ok(
+          e,
+          anadidos === 0
+            ? "Nada añadido: lo descartado está en «No hace falta»."
+            : `Añadido a la lista: ${anadidos} ${anadidos === 1 ? "cosa" : "cosas"}.`,
+        ),
+      };
     }
 
     case "compra/cantidad": {
@@ -921,11 +994,28 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
           cantidad === bruto.cantidad
             ? sinClave(e.ajustesCompra, accion.ingredienteId)
             : { ...e.ajustesCompra, [accion.ingredienteId]: cantidad },
+        // Cambiar la cantidad (o quitarlo) es haberlo revisado.
+        compraRevisada: {
+          ...e.compraRevisada,
+          [accion.ingredienteId]: Math.max(
+            e.compraRevisada[accion.ingredienteId] ?? 0,
+            bruto.cantidad,
+          ),
+        },
       };
     }
 
-    case "compra/restablecer":
-      return { ...e, ajustesCompra: sinClave(e.ajustesCompra, accion.ingredienteId) };
+    case "compra/restablecer": {
+      // Volver a poner algo quitado lo da por revisado con la cantidad de ahora.
+      const bruto = pendientesCalculados(e).find((a) => a.ingredienteId === accion.ingredienteId);
+      return {
+        ...e,
+        ajustesCompra: sinClave(e.ajustesCompra, accion.ingredienteId),
+        compraRevisada: bruto
+          ? { ...e.compraRevisada, [accion.ingredienteId]: bruto.cantidad }
+          : e.compraRevisada,
+      };
+    }
 
     case "manual/importar": {
       // Artículos propuestos (p. ej. por la IA) y ya revisados por la persona: se validan igual.
@@ -1128,6 +1218,15 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
             o.id === operacion.id ? { ...o, deshecha: true } : o,
           ),
           compras: e.compras.filter((c) => c.operacionId !== operacion.id),
+          // Deshacer una compra la devuelve a la lista, no a las propuestas (D-157).
+          compraRevisada: {
+            ...e.compraRevisada,
+            ...Object.fromEntries(
+              e.compras
+                .filter((c) => c.operacionId === operacion.id)
+                .map((c) => [c.ingredienteId, c.cantidad]),
+            ),
+          },
           siguienteId: e.siguienteId + 1,
           aviso: ok(e, "Deshecho."),
         };
@@ -1160,7 +1259,7 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
         siguienteId: e.siguienteId + 1,
         aviso: ok(
           e,
-          `Elegido para el ${nombreDia(accion.fecha)}: ${plato.nombre}. La compra se ha actualizado.`,
+          `Elegido para el ${nombreDia(accion.fecha)}: ${plato.nombre}. Mira en la compra lo que pide.`,
         ),
       };
     }
@@ -1407,7 +1506,7 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
         siguienteId: e.siguienteId + 1,
         aviso: ok(
           e,
-          `Comida del ${nombreDia(accion.fecha)}: ${texto}.${plato ? " La compra se ha actualizado." : ""}`,
+          `Comida del ${nombreDia(accion.fecha)}: ${texto}.${plato ? " Mira en la compra lo que pide." : ""}`,
         ),
       };
     }
@@ -2094,7 +2193,7 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
         siguienteId: e.siguienteId + 1,
         aviso: ok(
           e,
-          `Añadido al ${nombreDia(accion.fecha)}: ${plato.nombre}. La compra se ha actualizado.`,
+          `Añadido al ${nombreDia(accion.fecha)}: ${plato.nombre}. Mira en la compra lo que pide.`,
         ),
       };
     }
