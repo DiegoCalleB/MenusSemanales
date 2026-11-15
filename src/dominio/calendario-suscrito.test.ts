@@ -287,9 +287,9 @@ describe("días sin cole en el calendario (D-144)", () => {
     diasCole: [{ fecha: "2026-11-24", hay: false, motivo: "Libre disposición" }],
   });
 
-  it("salen de todo el día, sin alarma, juntando las vacaciones, solo en el de fechas", () => {
-    const e = eventosSuscritos(conMochila, { hoy: HOY, para: "diego" }).filter((x) =>
-      x.titulo.startsWith("🏫 Sin cole"),
+  it("salen de todo el día, sin alarma, y los periodos largos solo con inicio y fin (D-162)", () => {
+    const e = eventosSuscritos(conMochila, { hoy: HOY, para: "diego" }).filter(
+      (x) => x.titulo.startsWith("🏫 Sin cole") || /^🏫 (Inicio|Fin) /.test(x.titulo),
     );
     expect(e.slice(0, 6)).toEqual([
       expect.objectContaining({ fecha: "2026-11-02", titulo: "🏫 Sin cole: Todos los Santos" }),
@@ -297,8 +297,15 @@ describe("días sin cole en el calendario (D-144)", () => {
       expect.objectContaining({ fecha: "2026-11-24", titulo: "🏫 Sin cole: Libre disposición" }),
       expect.objectContaining({ fecha: "2026-12-07", hasta: null }),
       expect.objectContaining({ fecha: "2026-12-08", hasta: null }),
-      expect.objectContaining({ fecha: "2026-12-23", hasta: "2027-01-06", titulo: "🏫 Sin cole: Navidad" }),
+      expect.objectContaining({ uid: "sin-cole-inicio-2026-12-23", fecha: "2026-12-23", titulo: "🏫 Inicio vacaciones de Navidad" }),
     ]); // prettier-ignore
+    // Navidad no es un evento de quince días: el fin va aparte, el último día sin cole.
+    expect(e.find((x) => x.uid === "sin-cole-fin-2027-01-06")).toMatchObject({
+      fecha: "2027-01-06",
+      titulo: "🏫 Fin vacaciones de Navidad",
+      descripcion: "Último día sin cole. El cole vuelve el lunes 11 de enero.",
+    });
+    expect(e.some((x) => x.hasta && x.titulo.includes("Navidad"))).toBe(false);
     expect(e.every((x) => !x.aviso && !x.hora)).toBe(true);
     expect(
       eventosSuscritos(conMochila, { hoy: HOY, para: "diego", solo: "comidas" }).some((x) =>
@@ -457,13 +464,25 @@ describe("títulos cortos en el calendario (D-161)", () => {
     expect(e?.descripcion).toContain("llueve de camino al cole (de 8 a 9 h, 70 %)");
   });
 
-  it("las vacaciones de verano no llenan el calendario día a día", () => {
-    const e = eventosSuscritos(
+  it("el verano es un inicio y un fin, no un evento por día; sin curso conocido, sin fin", () => {
+    const conCole = base({
+      mochila: [{ personaId: "diego", texto: "Flauta", dias: [1], fecha: null, antes: 1 }],
+    });
+    const verano = (hoy: string) =>
+      eventosSuscritos(conCole, { hoy, para: null })
+        .filter((x) => /verano/i.test(x.titulo))
+        .map((x) => [x.fecha, x.titulo]);
+    // Si hoy ya estamos de vacaciones, el inicio no se inventa para hoy.
+    expect(verano("2026-07-15").map((x) => x[1])).toEqual(["🏫 Fin vacaciones de verano"]);
+    // El verano de 2027 empieza (se conoce) pero aún no se sabe cuándo acaba: sin «fin».
+    expect(verano("2027-06-01")).toEqual([["2027-06-21", "🏫 Inicio vacaciones de verano"]]);
+    // Y entonces tampoco se da una fecha de fin inventada en la descripción.
+    const inicio2027 = eventosSuscritos(
       base({
         mochila: [{ personaId: "diego", texto: "Flauta", dias: [1], fecha: null, antes: 1 }],
       }),
       { hoy: "2027-06-01", para: null },
-    ).filter((x) => x.uid?.startsWith("sin-cole-"));
-    expect(e.some((x) => /verano/i.test(x.titulo))).toBe(false);
+    ).find((x) => x.uid === "sin-cole-inicio-2027-06-21");
+    expect(inicio2027?.descripcion).toBe("Empieza vacaciones de verano.");
   });
 });

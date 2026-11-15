@@ -5,7 +5,7 @@ import { proximaFecha } from "./cumples";
 import { type FechaIso, diaSemanaIso, sumarDias } from "./fechas";
 import { NOMBRE_DIA_LARGO, preparacionesEntre } from "./mochila";
 import { MAX_LARGO_MOTIVO, consultaCole, diaDeCole, tramosSinCole } from "./calendario-escolar";
-import { lineasDelTiempo } from "./avisos";
+import { fechaLarga, lineasDelTiempo } from "./avisos";
 import { LUGAR_TIEMPO, type Pronostico } from "./tiempo";
 import { type EventoEstadio, textoDelEvento, tituloCortoDelEvento } from "./metropolitano";
 
@@ -109,6 +109,8 @@ export const HORA_MOCHILA = "20:00";
 const DIAS_MOCHILA = 56;
 /** Cuántos días por delante se ponen los días sin cole (lo que queda de curso y el verano). */
 const DIAS_SIN_COLE = 300;
+/** Desde estos días seguidos sin cole, un periodo es «largo»: solo se marcan su inicio y su fin. */
+const DIAS_PERIODO_LARGO = 5;
 
 /**
  * El motivo de un día sin cole, corto para el título (D-161): «: Navidad», «: Constitución». Los
@@ -323,15 +325,52 @@ function todosLosEventos(
     (p.mochila ?? []).length > 0 || (p.cole ?? []).length > 0 || ajustesCole.length > 0;
   if (conCole) {
     for (const t of tramosSinCole(ajustesCole, hoy, DIAS_SIN_COLE)) {
-      // El verano son meses seguidos y Google los repite cada día en la lista: puro ruido (D-161).
-      if (/verano/i.test(t.motivo)) continue;
-      eventos.push({
-        uid: `sin-cole-${t.desde}`,
-        fecha: t.desde,
-        hasta: t.hasta === t.desde ? null : t.hasta,
-        titulo: `🏫 Sin cole${motivoCorto(t.motivo)}`,
-        descripcion: `No hay cole: ${t.motivo}.`,
-      });
+      const dias =
+        (Date.parse(`${t.hasta}T00:00:00Z`) - Date.parse(`${t.desde}T00:00:00Z`)) / 864e5 + 1;
+      if (dias < DIAS_PERIODO_LARGO) {
+        eventos.push({
+          uid: `sin-cole-${t.desde}`,
+          fecha: t.desde,
+          hasta: t.hasta === t.desde ? null : t.hasta,
+          titulo: `🏫 Sin cole${motivoCorto(t.motivo)}`,
+          descripcion: `No hay cole: ${t.motivo}.`,
+        });
+        continue;
+      }
+      // Un periodo largo (verano, Navidad, Semana Santa) son dos eventos, el inicio y el fin, y no
+      // uno por día en la lista de Google (D-162).
+      const nombre = /^vacaciones/i.test(t.motivo)
+        ? `${t.motivo.charAt(0).toLowerCase()}${t.motivo.slice(1)}`
+        : t.motivo;
+      // El día en que vuelve el cole; si aún no se conoce el curso, tampoco el fin.
+      let vuelta = sumarDias(t.hasta, 1);
+      for (let i = 0; i < 10; i++) {
+        if (diaSemanaIso(vuelta) < 6 && diaDeCole(vuelta, ajustesCole).hay) break;
+        vuelta = sumarDias(vuelta, 1);
+      }
+      const finConocido = diaDeCole(vuelta, ajustesCole).origen !== "sin-datos";
+      // Si ya empezó antes de hoy, el «inicio» no es hoy: no se pone.
+      let antes = sumarDias(t.desde, -1);
+      while (diaSemanaIso(antes) >= 6) antes = sumarDias(antes, -1);
+      const empezoAntes = t.desde === hoy && !diaDeCole(antes, ajustesCole).hay;
+      if (!empezoAntes) {
+        eventos.push({
+          uid: `sin-cole-inicio-${t.desde}`,
+          fecha: t.desde,
+          titulo: `🏫 Inicio ${nombre}`,
+          descripcion: finConocido
+            ? `Empieza ${nombre}: sin cole hasta el ${fechaLarga(t.hasta)}.`
+            : `Empieza ${nombre}.`,
+        });
+      }
+      if (finConocido) {
+        eventos.push({
+          uid: `sin-cole-fin-${t.hasta}`,
+          fecha: t.hasta,
+          titulo: `🏫 Fin ${nombre}`,
+          descripcion: `Último día sin cole. El cole vuelve el ${fechaLarga(vuelta)}.`,
+        });
+      }
     }
   }
 
