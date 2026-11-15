@@ -2,7 +2,7 @@ import { proximaVez } from "@/dominio/casa";
 import { proximaFecha } from "@/dominio/cumples";
 import { type FechaIso, diaSemanaIso, sumarDias } from "@/dominio/fechas";
 import { paraLlevar, paraPreparar } from "@/dominio/mochila";
-import { hayColeDe, sinColeEntreSemana } from "./cole";
+import { hayColeDe, repiteConElCole, sinColeEntreSemana } from "./cole";
 import { type EstadoHogar, articulosPendientes, nombreDia } from "./estado";
 
 /**
@@ -21,6 +21,8 @@ export interface DiaDelPlan {
   evento: { titulo: string; emoji: string } | null;
   /** Por qué no hay cole ese día entre semana (D-144), o `null`. */
   sinCole: string | null;
+  /** La cena repite lo del comedor (D-155), o `null`. */
+  repiteCole: { plato: string; grupo: string } | null;
   comida: string[];
   /** Las comidas apuntadas con su id, para editarlas desde el plan (D-153). */
   comidas: Array<{ id: string; texto: string }>;
@@ -66,6 +68,7 @@ export function planDeLaSemana(e: EstadoHogar): PlanDeLaSemana {
       sinCena: e.saltados.includes(f) || evento !== null,
       evento,
       sinCole: sinColeEntreSemana(e, f),
+      repiteCole: repiteConElCole(e, f),
       comida: e.almuerzos.filter((a) => a.fecha === f).map((a) => a.texto),
       comidas: e.almuerzos.filter((a) => a.fecha === f).map((a) => ({ id: a.id, texto: a.texto })),
       citas: e.agenda

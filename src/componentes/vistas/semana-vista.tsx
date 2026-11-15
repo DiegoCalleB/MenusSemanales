@@ -195,6 +195,12 @@ export function SemanaVista() {
                   </Link>
                 </div>
               )}
+              {d.repiteCole && (
+                <p className="text-aviso-texto text-sm">
+                  <span aria-hidden="true">⚠️ </span>
+                  {d.repiteCole.plato} repite {d.repiteCole.grupo} con el comedor
+                </p>
+              )}
               {d.preparar.map((p) => (
                 <button
                   key={`${p.id}:${p.para}`}

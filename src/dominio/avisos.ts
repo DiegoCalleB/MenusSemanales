@@ -55,6 +55,8 @@ export interface EntradaAvisos {
   conCole?: boolean;
   /** La previsión del tiempo (D-145), si se pudo leer. */
   tiempo?: readonly Pronostico[];
+  /** La cena que repite lo del comedor (D-155), hoy o mañana. Solo en la app (el servidor no lo sabe). */
+  repiteCole?: ReadonlyArray<{ fecha: FechaIso; plato: string; grupo: string }>;
   /** Los cursos del calendario escolar leídos solos (D-146): se avisa los días después de cargarlos. */
   cursosNuevos?: ReadonlyArray<{ nombre: string; inicio: FechaIso; cambiadoEn: string | null }>;
 }
@@ -186,6 +188,43 @@ export function fechaLarga(f: FechaIso): string {
 }
 
 const MAX_TAREAS = 5;
+
+/**
+ * «🏫 En una semana no hay cole: lunes 7 y martes 8 (Día de la Constitución, La Inmaculada)», o, si
+ * son más de cinco días, «del miércoles 23 de diciembre al miércoles 6 de enero». Solo el día que
+ * falta justo una semana para el primer día sin cole (y el de antes sí había).
+ */
+function paronDentroDeUnaSemana(hoy: FechaIso, ajustes: readonly AjusteCole[]): Aviso | null {
+  const inicio = sumarDias(hoy, 7);
+  if (diaSemanaIso(inicio) >= 6 || diaDeCole(inicio, ajustes).hay) return null;
+  let anterior = sumarDias(inicio, -1);
+  while (diaSemanaIso(anterior) >= 6) anterior = sumarDias(anterior, -1);
+  if (!diaDeCole(anterior, ajustes).hay) return null;
+  // Los días entre semana sin cole seguidos (el fin de semana de en medio no corta).
+  const dias: FechaIso[] = [];
+  const motivos: string[] = [];
+  for (let f = inicio, i = 0; i < 120; f = sumarDias(f, 1), i++) {
+    if (diaSemanaIso(f) >= 6) continue;
+    const d = diaDeCole(f, ajustes);
+    if (d.hay) break;
+    dias.push(f);
+    if (d.motivo && !motivos.includes(d.motivo)) motivos.push(d.motivo);
+  }
+  const nombre = (f: FechaIso) => fechaLarga(f).replace(/ de \S+$/, "");
+  const cuando =
+    dias.length === 1
+      ? `el ${nombre(dias[0]!)}`
+      : dias.length <= 5
+        ? `${dias.slice(0, -1).map(nombre).join(", ")} y ${nombre(dias.at(-1)!)}`
+        : `del ${fechaLarga(dias[0]!)} al ${fechaLarga(dias.at(-1)!)}`;
+  return {
+    id: `cole-semana-${inicio}`,
+    emoji: "🏫",
+    titulo: `En una semana no hay cole: ${cuando} (${motivos.slice(0, 3).join(", ")})`,
+    detalle: "¿Quién se queda con los niños? Mejor organizarlo ya.",
+    nivel: "pronto",
+  };
+}
 
 /** «La semana que viene: lunes sin cole (San José), miércoles flauta de Emma, jueves 17:00 dentista». */
 function semanaQueViene(
@@ -356,6 +395,24 @@ export function avisosDeHoy(e: EntradaAvisos): Aviso[] {
         });
       }
     }
+  }
+
+  // La cena que repite lo del comedor (D-155): mejor cambiarla.
+  for (const r of e.repiteCole ?? []) {
+    if (r.fecha !== e.hoy && r.fecha !== manana) continue;
+    out.push({
+      id: `cole-repite-${r.fecha}`,
+      emoji: "🍽️",
+      titulo: `La cena de ${r.fecha === e.hoy ? "hoy" : "mañana"} (${r.plato}) repite ${r.grupo} con el comedor`,
+      detalle: "Cámbiala en el menú: hay propuestas que no lo repiten.",
+      nivel: "pronto",
+    });
+  }
+
+  // Una semana antes de un puente o unas vacaciones (D-156): para organizarse con tiempo.
+  if (e.conCole) {
+    const paron = paronDentroDeUnaSemana(e.hoy, ajustes);
+    if (paron) out.push(paron);
   }
 
   // El viernes, lo que trae la semana que viene (D-149): días sin cole, lo que hay que llevar un

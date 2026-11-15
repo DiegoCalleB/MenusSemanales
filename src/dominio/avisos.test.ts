@@ -484,3 +484,29 @@ describe("calendario escolar nuevo (D-146)", () => {
     ).toBe(false);
   });
 });
+
+describe("una semana antes de un puente o unas vacaciones (D-156)", () => {
+  const titulo = (hoy: string) =>
+    avisosDeHoy({ ...base, hoy, conCole: true }).find((a) => a.id.startsWith("cole-semana-"))
+      ?.titulo;
+
+  it("el puente de diciembre se avisa el lunes de antes, con los dos días y sus motivos", () => {
+    expect(titulo("2026-11-30")).toBe(
+      "En una semana no hay cole: lunes 7 y martes 8 (Día de la Constitución, La Inmaculada)",
+    );
+    expect(titulo("2026-11-29")).toBeUndefined();
+    expect(titulo("2026-12-01")).toBeUndefined();
+  });
+
+  it("unas vacaciones largas, de qué día a qué día", () => {
+    expect(titulo("2026-12-16")).toMatch(
+      /^En una semana no hay cole: del miércoles 23 de diciembre al /,
+    );
+  });
+
+  it("sin nada del cole en el hogar, no avisa", () => {
+    expect(
+      avisosDeHoy({ ...base, hoy: "2026-11-30" }).some((a) => a.id.startsWith("cole-semana-")),
+    ).toBe(false);
+  });
+});
