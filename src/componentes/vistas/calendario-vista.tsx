@@ -11,6 +11,8 @@ import { tieneCole } from "@/aplicacion/cole";
 import { lineasDelTiempo } from "@/dominio/avisos";
 import { resumenDelTiempo } from "@/dominio/tiempo";
 import { usePrevision } from "../usar-prevision";
+import { useEstadio } from "../usar-estadio";
+import { textoDelEvento } from "@/dominio/metropolitano";
 import {
   MAX_PLATOS_POR_CENA,
   comidasDe,
@@ -71,6 +73,13 @@ export function CalendarioVista() {
   const [sel, setSel] = useState<FechaIso>(estado.hoy);
   // El tiempo de los próximos días (D-154): lo de llevar, en el día y un emoji en la casilla.
   const prevision = usePrevision();
+  // Partidos y conciertos en el estadio de al lado (D-159).
+  const estadio = useEstadio();
+  const estadioDe = (f: FechaIso) => estadio.filter((e) => e.fecha === f);
+  const emojiEstadio = (f: FechaIso) => {
+    const e = estadioDe(f)[0];
+    return e ? (e.tipo === "partido" ? "⚽" : e.tipo === "concierto" ? "🎤" : "🏟️") : "";
+  };
   const hayColeEse = hayColeDe(estado);
   const tiempoDe = (f: FechaIso) => {
     const p = prevision.find((x) => x.fecha === f);
@@ -232,6 +241,7 @@ export function CalendarioVista() {
                       {estado.almuerzos.some((a) => a.fecha === f) && <span> ☀️</span>}
                       {eventos[f] && <span> {eventos[f]?.emoji}</span>}
                       {tiempoDe(f)?.lineas[0] && <span> {tiempoDe(f)?.lineas[0]?.emoji}</span>}
+                      {emojiEstadio(f) && <span> {emojiEstadio(f)}</span>}
                     </span>
                     <span className="truncate text-sm font-normal">
                       {cena
@@ -259,7 +269,8 @@ export function CalendarioVista() {
               const esSel = f === sel;
               const pasado = f < estado.hoy;
               const tiempo = tiempoDe(f)?.lineas[0];
-              const etiqueta = `${largo(f)}${cena ? `: cena ${nombresDe(f)}` : ": sin cena elegida"}${hayCole ? ", hay menú del cole" : ""}${evento ? `, ${evento.titulo}` : ""}${tiempo ? `, ${tiempo.texto}` : ""}${esHoy ? ", hoy" : ""}`;
+              const delEstadio = estadioDe(f)[0];
+              const etiqueta = `${largo(f)}${cena ? `: cena ${nombresDe(f)}` : ": sin cena elegida"}${hayCole ? ", hay menú del cole" : ""}${evento ? `, ${evento.titulo}` : ""}${tiempo ? `, ${tiempo.texto}` : ""}${delEstadio ? `, ${delEstadio.tipo} en el Metropolitano` : ""}${esHoy ? ", hoy" : ""}`;
               return (
                 <div key={f}>
                   <button
@@ -281,11 +292,12 @@ export function CalendarioVista() {
                         ? (EMOJI_GRUPO[(cena.plato as { grupo?: string }).grupo ?? "otro"] ?? "🍽️")
                         : ""}
                     </span>
-                    {(hayCole || evento || tiempo) && (
+                    {(hayCole || evento || tiempo || delEstadio) && (
                       <span aria-hidden="true" className="text-xs leading-none">
                         {evento ? evento.emoji : ""}
                         {hayCole ? "🎒" : ""}
                         {tiempo ? tiempo.emoji : ""}
+                        {emojiEstadio(f)}
                       </span>
                     )}
                   </button>
@@ -294,8 +306,9 @@ export function CalendarioVista() {
             })}
           </div>
           <p className="text-tinta-suave text-sm">
-            🎒 hay menú del cole · ☀️ hay comida apuntada · 🌂 llueve a la hora del cole · el emoji
-            es el tipo de plato de la cena elegida
+            🎒 hay menú del cole · ☀️ hay comida apuntada · 🌂 llueve a la hora del cole · ⚽🎤
+            partido o concierto en el Metropolitano · el emoji es el tipo de plato de la cena
+            elegida
           </p>
         </section>
 
@@ -310,6 +323,15 @@ export function CalendarioVista() {
               </p>
             )}
           </div>
+
+          {estadioDe(sel).map((e) => (
+            <p key={e.id} className="bg-suave-1 rounded-2xl p-3 text-base">
+              {textoDelEvento(e)}
+              <span className="text-tinta-suave block text-sm">
+                Más tráfico, calles cortadas y el metro lleno unas dos horas antes y una después.
+              </span>
+            </p>
+          ))}
 
           {tiempoDe(sel) && (
             <div aria-label="El tiempo" role="group" className="bg-suave-1 rounded-2xl p-3">

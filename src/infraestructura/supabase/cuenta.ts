@@ -129,3 +129,13 @@ export const quitarSuscripcionPush = (cliente: Cliente, endpoint: string) =>
 /** Pide a la base de datos que mande una notificación de prueba a este móvil (D-139). */
 export const pedirPruebaPush = (cliente: Cliente, hogarId: string, endpoint: string) =>
   cliente.rpc("pedir_prueba_push", { p_hogar_id: hogarId, p_endpoint: endpoint });
+
+/** La dirección de correo del hogar para las circulares (D-147): el código; con `nueva`, otro. */
+export const codigoCirculares = (cliente: Cliente, hogarId: string, nueva = false) =>
+  cliente.rpc("codigo_circulares", { p_hogar_id: hogarId, p_nueva: nueva });
+/** Las circulares llegadas por correo que faltan por revisar. */
+export const circularesPendientes = (cliente: Cliente, hogarId: string) =>
+  cliente.rpc("circulares_pendientes", { p_hogar_id: hogarId });
+/** Una circular ya revisada (apuntada o descartada). */
+export const revisarCircular = (cliente: Cliente, id: string) =>
+  cliente.rpc("revisar_circular_correo", { p_id: id });

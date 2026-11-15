@@ -18,6 +18,7 @@ import { ComprarOnline } from "../comprar-online";
 import { CintaAnimal } from "../cinta-animal";
 import { EntradaCompra } from "../entrada-compra";
 import { OrdenarConIa } from "../ordenar-con-ia";
+import { PropuestasCompra } from "../propuestas-compra";
 import { formatearCantidad } from "../formato";
 import { useHogar } from "../proveedor-hogar";
 
@@ -195,6 +196,8 @@ export function CompraVista() {
         </div>
       </header>
 
+      {!modoTienda && <PropuestasCompra />}
+
       {!modoTienda && (
         <EntradaCompra yaEnLista={new Set(pendientes.map((i) => claveArticulo(i.nombre)))} />
       )}
@@ -227,7 +230,7 @@ export function CompraVista() {
           <p className="text-tinta-suave max-w-xs text-base">
             {total > 0
               ? "Ya está todo en la cesta. Buen trabajo."
-              : "Cuando elijáis una cena, lo que haga falta aparecerá aquí solo. También puedes apuntar algo arriba, o tocar «Lo de siempre»."}
+              : "Cuando elijáis una cena, la app os propondrá lo que haga falta para que elijáis qué añadir. También puedes apuntar algo arriba, o tocar «Lo de siempre»."}
           </p>
         </section>
       ) : (

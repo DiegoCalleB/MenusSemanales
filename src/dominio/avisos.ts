@@ -4,6 +4,7 @@ import { diasHasta } from "./cumples";
 import { type FechaIso, diaSemanaIso, sumarDias } from "./fechas";
 import { paraPreparar } from "./mochila";
 import { type AjusteCole, consultaCole, diaDeCole } from "./calendario-escolar";
+import { type EventoEstadio, ESTADIO } from "./metropolitano";
 import {
   type LluviaEnFranja,
   type Pronostico,
@@ -55,6 +56,10 @@ export interface EntradaAvisos {
   conCole?: boolean;
   /** La previsión del tiempo (D-145), si se pudo leer. */
   tiempo?: readonly Pronostico[];
+  /** Partidos y conciertos en el estadio de al lado (D-159). */
+  estadio?: readonly EventoEstadio[];
+  /** La cena que repite lo del comedor (D-155), hoy o mañana. Solo en la app (el servidor no lo sabe). */
+  repiteCole?: ReadonlyArray<{ fecha: FechaIso; plato: string; grupo: string }>;
   /** Los cursos del calendario escolar leídos solos (D-146): se avisa los días después de cargarlos. */
   cursosNuevos?: ReadonlyArray<{ nombre: string; inicio: FechaIso; cambiadoEn: string | null }>;
 }
@@ -187,6 +192,55 @@ export function fechaLarga(f: FechaIso): string {
 
 const MAX_TAREAS = 5;
 
+/** «⚽ Hoy partido en el Metropolitano a las 21:00: Atlético – Real Betis (Liga)». */
+function avisoDelEstadio(ev: EventoEstadio, cuando: "Hoy" | "Mañana"): Aviso {
+  const que = ev.tipo === "partido" ? "partido" : ev.tipo === "concierto" ? "concierto" : "evento";
+  return {
+    id: `estadio-${ev.id}-${cuando === "Hoy" ? "hoy" : "manana"}`,
+    emoji: ev.tipo === "partido" ? "⚽" : ev.tipo === "concierto" ? "🎤" : "🏟️",
+    titulo: `${cuando} ${que} en el ${ESTADIO.nombre}${ev.hora ? ` a las ${ev.hora}` : ""}: ${ev.titulo}`,
+    detalle: "Más tráfico, calles cortadas y el metro lleno unas dos horas antes y una después.",
+    nivel: cuando === "Hoy" ? "ya" : "pronto",
+  };
+}
+
+/**
+ * «🏫 En una semana no hay cole: lunes 7 y martes 8 (Día de la Constitución, La Inmaculada)», o, si
+ * son más de cinco días, «del miércoles 23 de diciembre al miércoles 6 de enero». Solo el día que
+ * falta justo una semana para el primer día sin cole (y el de antes sí había).
+ */
+function paronDentroDeUnaSemana(hoy: FechaIso, ajustes: readonly AjusteCole[]): Aviso | null {
+  const inicio = sumarDias(hoy, 7);
+  if (diaSemanaIso(inicio) >= 6 || diaDeCole(inicio, ajustes).hay) return null;
+  let anterior = sumarDias(inicio, -1);
+  while (diaSemanaIso(anterior) >= 6) anterior = sumarDias(anterior, -1);
+  if (!diaDeCole(anterior, ajustes).hay) return null;
+  // Los días entre semana sin cole seguidos (el fin de semana de en medio no corta).
+  const dias: FechaIso[] = [];
+  const motivos: string[] = [];
+  for (let f = inicio, i = 0; i < 120; f = sumarDias(f, 1), i++) {
+    if (diaSemanaIso(f) >= 6) continue;
+    const d = diaDeCole(f, ajustes);
+    if (d.hay) break;
+    dias.push(f);
+    if (d.motivo && !motivos.includes(d.motivo)) motivos.push(d.motivo);
+  }
+  const nombre = (f: FechaIso) => fechaLarga(f).replace(/ de \S+$/, "");
+  const cuando =
+    dias.length === 1
+      ? `el ${nombre(dias[0]!)}`
+      : dias.length <= 5
+        ? `${dias.slice(0, -1).map(nombre).join(", ")} y ${nombre(dias.at(-1)!)}`
+        : `del ${fechaLarga(dias[0]!)} al ${fechaLarga(dias.at(-1)!)}`;
+  return {
+    id: `cole-semana-${inicio}`,
+    emoji: "🏫",
+    titulo: `En una semana no hay cole: ${cuando} (${motivos.slice(0, 3).join(", ")})`,
+    detalle: "¿Quién se queda con los niños? Mejor organizarlo ya.",
+    nivel: "pronto",
+  };
+}
+
 /** «La semana que viene: lunes sin cole (San José), miércoles flauta de Emma, jueves 17:00 dentista». */
 function semanaQueViene(
   e: EntradaAvisos,
@@ -205,6 +259,11 @@ function semanaQueViene(
     if (c && !c.hay && !todaSinCole) del.push(`sin cole (${c.motivo})`);
     for (const x of cosas) {
       if (x.fecha === f) del.push(`${x.texto}${x.personaId ? ` de ${x.personaId}` : ""}`);
+    }
+    for (const x of (e.estadio ?? []).filter((x) => x.fecha === f)) {
+      const que =
+        x.tipo === "partido" ? "partido" : x.tipo === "concierto" ? "concierto" : "evento";
+      del.push(`${x.hora ? `${x.hora} ` : ""}${que} en el ${ESTADIO.nombre} (${x.titulo})`);
     }
     for (const x of e.citas
       .filter((x) => x.fecha === f)
@@ -358,6 +417,30 @@ export function avisosDeHoy(e: EntradaAvisos): Aviso[] {
     }
   }
 
+  // El estadio de al lado (D-159): hoy y mañana, para estar prevenidos.
+  for (const ev of e.estadio ?? []) {
+    if (ev.fecha !== e.hoy && ev.fecha !== manana) continue;
+    out.push(avisoDelEstadio(ev, ev.fecha === e.hoy ? "Hoy" : "Mañana"));
+  }
+
+  // La cena que repite lo del comedor (D-155): mejor cambiarla.
+  for (const r of e.repiteCole ?? []) {
+    if (r.fecha !== e.hoy && r.fecha !== manana) continue;
+    out.push({
+      id: `cole-repite-${r.fecha}`,
+      emoji: "🍽️",
+      titulo: `La cena de ${r.fecha === e.hoy ? "hoy" : "mañana"} (${r.plato}) repite ${r.grupo} con el comedor`,
+      detalle: "Cámbiala en el menú: hay propuestas que no lo repiten.",
+      nivel: "pronto",
+    });
+  }
+
+  // Una semana antes de un puente o unas vacaciones (D-156): para organizarse con tiempo.
+  if (e.conCole) {
+    const paron = paronDentroDeUnaSemana(e.hoy, ajustes);
+    if (paron) out.push(paron);
+  }
+
   // El viernes, lo que trae la semana que viene (D-149): días sin cole, lo que hay que llevar un
   // día concreto y las citas. Solo lo que no es de todas las semanas.
   if (diaSemanaIso(e.hoy) === 5) {
@@ -429,6 +512,7 @@ export function avisosDeLaNoche(e: EntradaAvisos): Aviso[] {
       a.id.startsWith("mochila-") ||
       a.id.startsWith("cole-") ||
       a.id.startsWith("semana-que-viene-") ||
+      (a.id.startsWith("estadio-") && a.nivel === "pronto") ||
       (a.id.startsWith("cita-") && a.nivel === "pronto"),
   );
   // Lo de la mochila primero; luego el tiempo de mañana (D-145), que también se deja preparado.
@@ -550,4 +634,17 @@ export function direccionesDeAvisos(valor: string | undefined): string[] {
     .split(/[\s,;]+/)
     .filter((d) => /^[^\s@]+@[^\s@]+$/.test(d))
     .slice(0, 10);
+}
+
+/** La notificación de una circular recibida por correo (D-147). */
+export function notificacionDeCircular(c: { asunto: string; cosas: number }) {
+  const que =
+    c.cosas === 0
+      ? "no he encontrado fechas: échale un vistazo"
+      : `${c.cosas} ${c.cosas === 1 ? "cosa" : "cosas"} para apuntar`;
+  return {
+    titulo: "📬 Circular del cole",
+    cuerpo: `${c.asunto ? `${c.asunto}: ` : ""}${que}. Tócala para revisarla.`.slice(0, 240),
+    url: "/fechas",
+  };
 }

@@ -86,8 +86,10 @@ export function SemanaVista() {
               </>
             )}
           </p>
-          <Link href="/compra" className="boton-suave">
-            Hacer la compra
+          <Link href="/compra" className={plan.propuestasCompra > 0 ? "boton" : "boton-suave"}>
+            {plan.propuestasCompra > 0
+              ? `Revisar lo que pide el menú (${plan.propuestasCompra})`
+              : "Hacer la compra"}
           </Link>
         </div>
         <a
@@ -194,6 +196,12 @@ export function SemanaVista() {
                     <span aria-hidden="true">✏️</span>
                   </Link>
                 </div>
+              )}
+              {d.repiteCole && (
+                <p className="text-aviso-texto text-sm">
+                  <span aria-hidden="true">⚠️ </span>
+                  {d.repiteCole.plato} repite {d.repiteCole.grupo} con el comedor
+                </p>
               )}
               {d.preparar.map((p) => (
                 <button

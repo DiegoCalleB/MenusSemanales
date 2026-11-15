@@ -1339,3 +1339,76 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Calendario de la app:** cada día con previsión (hoy y los dos siguientes) lleva el emoji de lo más importante en su casilla (🌂, 🌧️, 🧣…). En el detalle del día aparece «El tiempo: 🌧️ 9–14 °C» con lo que hay que llevar, igual que en «Hoy».
 - **Calendario suscrito (Google), el de fechas:** un evento de todo el día por cada cosa que llevar: «🌂 Paraguas: llueve de camino al cole (de 8 a 9 h, 70 %)», «🧣 Frío (mín. 2 °C): abrigo, gorro y guantes». Los días de cole, la lluvia de la ida y la vuelta sustituye a la del día, como en los avisos (`lineasDelTiempo`). En el de comidas no sale nada del tiempo.
 - **Límite:** Google refresca los calendarios suscritos cuando quiere (a veces una vez al día), así que la previsión puede tener horas. Por eso la descripción del evento dice que puede cambiar y que el aviso de las 7 la vuelve a mirar. La fuente fiable sigue siendo el aviso.
+
+## D-155 · La cena que repite lo del comedor
+
+- **Petición (Diego):** que la cena no repita lo del cole sin tener que mirarlo.
+- **Lo que ya había:** las cenas propuestas ya complementan el menú del cole (D-054, `recomendadosParaCenar`).
+- **Lo nuevo:** si una cena **elegida a mano** repite el pescado, la carne, la legumbre o el huevo del comedor ese día, se avisa:
+  - En la campanita (hoy y mañana): «🍽️ La cena de hoy (Merluza) repite pescado con el comedor».
+  - En el plan de la semana: «⚠️ … repite pescado con el comedor», al lado de la cena, con su ✏️ para cambiarla.
+- La verdura, la pasta o el arroz no cuentan como «repetir». Si lo del mediodía se comió en casa (D-128), tampoco.
+- **Límite:** la notificación del móvil no lo lleva, porque el servidor solo ve los nombres de los platos, no su tipo.
+
+## D-156 · Puentes y vacaciones, con una semana de margen
+
+- **Petición (Diego):** que avise unos días antes de unas vacaciones o un puente, para organizarse.
+- **Qué:** justo una semana antes del primer día sin cole entre semana (si el día anterior sí lo había), llega «🏫 En una semana no hay cole: lunes 7 y martes 8 (Día de la Constitución, La Inmaculada)», con «¿Quién se queda con los niños? Mejor organizarlo ya.».
+- Si son más de cinco días, dice de qué día a qué día. Junta los días seguidos aunque tengan motivos distintos o haya un fin de semana en medio.
+- Va en el aviso de la mañana y en la campanita, solo en hogares con algo del cole. Se suma al aviso del viernes y al del día antes (D-149).
+
+## D-157 · La compra se propone, no se rellena sola
+
+- **Petición (Diego):** «la app no sabe lo que tenemos en casa bien: debería sugerir y el usuario aceptar o descartar, en una ventana con todo lo que propone».
+- **Cambia:** lo que pide el menú (cenas y comidas con plato) **ya no entra solo en la lista**. Arriba de la compra sale «✨ El menú pide N cosas» con el botón «Revisar». Este abre una ventana con todo lo propuesto, marcado, y su cantidad y para qué es. Se desmarca lo que ya hay en casa y se pulsa «Añadir N a la lista»; «Ahora no» lo deja para luego.
+- **Lo desmarcado** va a «No hace falta», de donde se puede volver a poner.
+- **Cómo se recuerda** (`compraRevisada` en el documento del hogar, ingrediente → cantidad revisada):
+  - Si luego el menú pide **más** de lo revisado, se vuelve a proponer.
+  - Al comprarlo, se olvida: la próxima vez que haga falta, se propone de nuevo.
+  - Deshacer una compra la devuelve a la lista, no a las propuestas.
+  - Cambiar la cantidad a mano o «volver a poner» cuentan como revisado.
+- **Sin sustos:** en los hogares de antes, lo que ya estaba en la lista se da por revisado. Solo lo nuevo se propone.
+- El plan de la semana enseña «Revisar lo que pide el menú (N)» en vez de «Hacer la compra» mientras haya propuestas.
+
+## D-147 · Circulares del cole por correo
+
+- **Petición (Diego):** «compartir con la app fechas»: reenviar los correos del cole y que se apunten, con aviso y revisión antes («Notificar y apuntar al tocar»). Se usa la cuenta de Resend que ya existe, sin tocar su dominio: su dirección de recepción gratuita (`*.resend.app`).
+- **La dirección del hogar:** `hecho-<código>@<dominio de recepción>`. El código tiene 16 caracteres aleatorios y es la llave: sin él no se puede dejar nada en el hogar. Se ve en Fechas → «📬 Circulares por correo», con «Copiar la dirección» y «Cambiarla» (la vieja deja de valer).
+- **Cómo llega:**
+  1. Resend avisa a `/api/circulares/correo` de cada correo recibido. El aviso solo trae el identificador; el contenido se pide a Resend con la clave del servidor, así que un aviso falso no puede colar nada.
+  2. Si va a la dirección de un hogar, se lee con IA (D-116) el primer PDF o foto adjunto o, si no hay, el texto del correo.
+  3. Lo leído se guarda **pendiente de revisar** (`public.circular_correo`). El mismo correo no se duplica y hay un máximo de 20 al día por hogar.
+  4. La base de datos pide a la app que mande la notificación «📬 Circular del cole: Excursión al zoo: 2 cosas para apuntar». Al tocarla se abre Fechas.
+- **Nada se apunta solo:** en Fechas, cada circular llegada abre la misma lista de «Leer una circular», todo marcado. Se desmarca lo que no interese y se pulsa «Apuntar», o «Descartar».
+- **Configuración** (una vez):
+  - `RESEND_API_KEY` en Railway, con permiso para leer los correos recibidos.
+  - `CORREO_CIRCULARES_DOMINIO` con el dominio de recepción de Resend.
+  - Un webhook de Resend con el evento `email.received` a `https://…/api/circulares/correo`.
+- Migración: `20261116000000_circulares_por_correo.sql`.
+
+## D-158 · El tiempo, una semana por delante
+
+- **Problema (Diego):** el miércoles se esperaba un día de lluvia (unos 10 mm) y no salía en el calendario. La app solo pedía 3 días de previsión (hoy, mañana y pasado).
+- **Ahora:** se piden **7 días** a Open-Meteo. En el calendario suscrito y en el de la app sale el paraguas, el abrigo o la gorra de toda la semana. Los avisos siguen mirando solo hoy y mañana. Más allá de dos o tres días la previsión es menos fiable: el aviso de las 7 la vuelve a mirar justo antes de salir.
+
+## D-159 · Partidos y conciertos en el Metropolitano
+
+- **Petición (Diego):** «vivimos al lado del Metropolitano: que avise cuando haya algún partido, concierto o evento importante, para estar prevenidos».
+- **Partidos:** todos los que se juegan **en el Metropolitano**, de ESPN (sin clave). Se piden, mes a mes y para los próximos cuatro meses, todos los partidos de cada competición (Liga, Champions, Europa League, Copa, Supercopa, Nations League, amistosos, clasificaciones, Liga F, Champions femenina), y se quedan los que ESPN sitúa en el estadio, sea quien sea el local. El primero que se coló fue el España–Inglaterra del 15-11-2026, de la selección. Cuenta el estadio que da ESPN, no quién juega: los de fuera y las finales en otro campo no salen. Los nombres van en español («España – Inglaterra»). Si ESPN marca la hora como no confirmada (`timeValid: false`, habitual en la Liga hasta unas semanas antes), sale sin hora: «hora por confirmar».
+- **Conciertos y otros eventos:** de Ticketmaster (Discovery API), los del recinto en un radio de 1 km del estadio. Se quitan los partidos, los cancelados y los repetidos (VIP, paquetes). Solo si está `TICKETMASTER_API_KEY` en Railway (gratis en developer.ticketmaster.com): sin ella, solo partidos.
+- **Dónde sale:**
+  - **Por la mañana**, el mismo día: «⚽ Hoy partido en el Metropolitano a las 21:00: Atlético – Real Betis (Liga)», con «Más tráfico, calles cortadas y el metro lleno unas dos horas antes y una después».
+  - **La víspera por la noche:** «Mañana partido…».
+  - **El viernes**, en «La semana que viene»: «domingo 21:00 partido en el Metropolitano (…)».
+  - En el **calendario suscrito** de fechas (con su hora si está confirmada) y en el **calendario de la app** (⚽ o 🎤 en la casilla y el detalle en el día).
+- Los datos se miran cada seis horas, los próximos 4 meses. Si ESPN o Ticketmaster fallan, no sale nada del estadio y el resto sigue igual.
+
+## D-160 · Apuntar eventos desde el ＋ y compartir un cartel
+
+- **Petición (Diego):** «desde el ＋ de abajo a la derecha poder agregar algo a la lista de la compra o añadir eventos» y «compartir un cartel de algún evento y que se registre solo».
+- **El ＋** abre un panel con dos pestañas:
+  - **🛒 Compra**, como hasta ahora.
+  - **📌 Evento:** se escribe como en una nota («21 Noviembre 17:00 Cumple de Leo»), con la vista previa de lo que se va a apuntar. También está «📷 Leer un cartel o una foto», con la IA de las circulares.
+  - El botón sale ahora también en «Compra», donde se abre directamente en «Evento».
+- **Compartir con la app** (D-138) **apunta solo**: el texto, la foto o el cartel se leen con IA y se apuntan. Después se enseña lo apuntado, cada cosa con «Quitar» por si la IA se ha equivocado. La revisión previa sigue en «Leer una circular» y en las circulares por correo (D-147).
+- **La IA** lee también carteles y entradas (concierto, obra, partido, fiesta…), no solo circulares, y en el título dice qué es y dónde.

@@ -4,6 +4,7 @@ vi.mock("@/infraestructura/calendario-escolar", () => ({
 }));
 const t = vi.hoisted(() => ({ prevision: vi.fn() }));
 vi.mock("@/infraestructura/tiempo", () => ({ leerPrevision: t.prevision }));
+vi.mock("@/infraestructura/metropolitano", () => ({ leerEventosEstadio: async () => [] }));
 import { GET } from "./route";
 
 const TOKEN = "a".repeat(64);

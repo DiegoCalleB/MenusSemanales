@@ -2,8 +2,8 @@ import { proximaVez } from "@/dominio/casa";
 import { proximaFecha } from "@/dominio/cumples";
 import { type FechaIso, diaSemanaIso, sumarDias } from "@/dominio/fechas";
 import { paraLlevar, paraPreparar } from "@/dominio/mochila";
-import { hayColeDe, sinColeEntreSemana } from "./cole";
-import { type EstadoHogar, articulosPendientes, nombreDia } from "./estado";
+import { hayColeDe, repiteConElCole, sinColeEntreSemana } from "./cole";
+import { type EstadoHogar, articulosPendientes, articulosPropuestos, nombreDia } from "./estado";
 
 /**
  * Plan de la semana (D-137): todo lo de los próximos días en una sola pantalla para mirarlo una
@@ -21,6 +21,8 @@ export interface DiaDelPlan {
   evento: { titulo: string; emoji: string } | null;
   /** Por qué no hay cole ese día entre semana (D-144), o `null`. */
   sinCole: string | null;
+  /** La cena repite lo del comedor (D-155), o `null`. */
+  repiteCole: { plato: string; grupo: string } | null;
   comida: string[];
   /** Las comidas apuntadas con su id, para editarlas desde el plan (D-153). */
   comidas: Array<{ id: string; texto: string }>;
@@ -43,6 +45,8 @@ export interface PlanDeLaSemana {
   /** Lo mismo, solo de lunes a viernes (lo que sabe rellenar «Proponer cenas»). */
   faltanCenasLaborables: number;
   porComprar: number;
+  /** Lo que pide el menú y falta revisar (D-157). */
+  propuestasCompra: number;
 }
 
 /** El sábado y el domingo se planea la semana siguiente; el resto de días, lo que queda de esta. */
@@ -66,6 +70,7 @@ export function planDeLaSemana(e: EstadoHogar): PlanDeLaSemana {
       sinCena: e.saltados.includes(f) || evento !== null,
       evento,
       sinCole: sinColeEntreSemana(e, f),
+      repiteCole: repiteConElCole(e, f),
       comida: e.almuerzos.filter((a) => a.fecha === f).map((a) => a.texto),
       comidas: e.almuerzos.filter((a) => a.fecha === f).map((a) => ({ id: a.id, texto: a.texto })),
       citas: e.agenda
@@ -104,6 +109,7 @@ export function planDeLaSemana(e: EstadoHogar): PlanDeLaSemana {
     faltanCenas: sinElegir.length,
     faltanCenasLaborables: sinElegir.filter((d) => diaSemanaIso(d.fecha) <= 5).length,
     porComprar: articulosPendientes(e).length + e.manuales.filter((m) => !m.comprado).length,
+    propuestasCompra: articulosPropuestos(e).length,
   };
 }
 

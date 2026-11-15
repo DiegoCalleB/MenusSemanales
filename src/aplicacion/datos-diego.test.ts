@@ -3,7 +3,7 @@ import { validarPlato } from "@/dominio/catalogo";
 import { calcularCompra } from "@/dominio/compra";
 import { catalogoOrdenado, cumplesProximos, explicacionDe } from "./estado";
 import { opcionesParaFecha } from "./estado";
-import { type Accion, type EstadoHogar, articulosPendientes, diasDelMenu, reducir } from "./estado";
+import { type Accion, type EstadoHogar, articulosPropuestos, diasDelMenu, reducir } from "./estado";
 import { estadoModoDiego, FECHA_CUMPLE_ANA } from "./datos-diego";
 
 const aplicar = (e: EstadoHogar, ...a: Accion[]) => a.reduce(reducir, e);
@@ -74,7 +74,8 @@ describe("modo Diego: datos reales de la familia", () => {
       expect(plato?.minutosActivos).toBeLessThanOrEqual(30);
     }
     // Con las 4 cenas hay lista de la compra (la despensa de ejemplo está vacía).
-    expect(articulosPendientes(p).length).toBeGreaterThan(2);
+    // Lo que piden las cenas propuestas se propone para la compra (D-157), no entra solo.
+    expect(articulosPropuestos(p).length).toBeGreaterThan(2);
   });
 
   it("repetir «proponer» no cambia lo ya elegido y avisa si no queda nada por rellenar", () => {

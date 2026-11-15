@@ -389,3 +389,38 @@ describe("el tiempo en el calendario suscrito (D-154)", () => {
     expect(comidas.some((x) => x.uid?.startsWith("tiempo-"))).toBe(false);
   });
 });
+
+describe("el estadio en el calendario suscrito (D-159)", () => {
+  const estadio = [
+    {
+      id: "partido-2",
+      fecha: "2026-12-06",
+      hora: "21:00",
+      tipo: "partido" as const,
+      titulo: "Atlético – Real Betis (Liga)",
+    },
+    {
+      id: "partido-3",
+      fecha: "2026-12-13",
+      hora: null,
+      tipo: "partido" as const,
+      titulo: "Atlético – Valencia (Liga)",
+    },
+  ];
+
+  it("cada partido, con su hora si está confirmada (y de todo el día si no), solo en «fechas»", () => {
+    const e = eventosSuscritos(base(), { hoy: HOY, para: null, estadio }).filter((x) =>
+      x.uid?.startsWith("estadio-"),
+    );
+    expect(e.map((x) => [x.uid, x.titulo, x.hora])).toEqual([
+      [
+        "estadio-partido-2",
+        "⚽ Partido en el Metropolitano: Atlético – Real Betis (Liga)",
+        "21:00",
+      ],
+      ["estadio-partido-3", "⚽ Partido en el Metropolitano: Atlético – Valencia (Liga)", null],
+    ]);
+    const comidas = eventosSuscritos(base(), { hoy: HOY, para: null, solo: "comidas", estadio });
+    expect(comidas.some((x) => x.uid?.startsWith("estadio-"))).toBe(false);
+  });
+});

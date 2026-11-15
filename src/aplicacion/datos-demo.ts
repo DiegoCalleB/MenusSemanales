@@ -11,7 +11,7 @@ import type { PlatoMenu } from "@/dominio/menu";
 import { aMenuCole, leerMenuCole } from "@/dominio/menu-cole";
 import { TEXTO_MENU_COLE_NOVIEMBRE_2026 } from "@/dominio/menu-cole-ejemplo";
 import type { Ocurrencia } from "@/dominio/reparto";
-import type { EstadoHogar } from "./estado";
+import { type EstadoHogar, todoRevisado } from "./estado";
 
 /**
  * Datos de demostración de una familia de cuatro (dos adultos y dos niñas). Sirven para que las
@@ -435,7 +435,7 @@ const turnos: Turno[] = [
 ];
 
 export function estadoInicialDemo(): EstadoHogar {
-  return {
+  const e: EstadoHogar = {
     hoy: HOY,
     ingredientes,
     platos,
@@ -452,6 +452,7 @@ export function estadoInicialDemo(): EstadoHogar {
     ], // prettier-ignore
     diasCole: [],
     puntuacionesCitas: {},
+    compraRevisada: {},
     agenda: [],
     notasMenu: {},
     registro: [],
@@ -475,4 +476,6 @@ export function estadoInicialDemo(): EstadoHogar {
     siguienteId: 1,
     aviso: null,
   };
+  // Lo de la lista de ejemplo ya está revisado; lo que pida el menú a partir de aquí, se propone (D-157).
+  return { ...e, compraRevisada: todoRevisado(e) };
 }

@@ -14,6 +14,7 @@ const m = vi.hoisted(() => ({
   accion: vi.fn(),
 }));
 vi.mock("@/infraestructura/tiempo", () => ({ leerPrevision: m.tiempo }));
+vi.mock("@/infraestructura/metropolitano", () => ({ leerEventosEstadio: async () => [] }));
 vi.mock("@/infraestructura/avisos/claves", () => ({
   comprobarSecretoDeAvisos: m.comprobar,
   guardarClavesDeAvisos: m.guardarClaves,
@@ -66,6 +67,8 @@ beforeEach(() => {
   vi.stubEnv("AVISOS_CORREO", "diego@ejemplo.test");
   // Que el aviso de antes del cole no se cruce con las pruebas si se pasan a las 7.
   vi.stubEnv("AVISOS_HORA_TEMPRANO", "-1");
+  // Ni el de la noche, si las pruebas se pasan a las 20.
+  vi.stubEnv("AVISOS_HORA_NOCHE", "-1");
   m.enviar.mockReset().mockResolvedValue(undefined);
   m.leer.mockReset().mockResolvedValue(resumen);
   m.pushActivo.v = false;
@@ -267,6 +270,27 @@ describe("POST /api/avisos/diario", () => {
       m.push.mockClear();
       await pedir(`Bearer ${SECRETO_BD}`, "", { token: OTRO_TOKEN });
       expect(m.push.mock.calls[0]?.[1]).not.toHaveProperty("hecho");
+    });
+
+    it("una circular recibida por correo avisa a los móviles del hogar, a cualquier hora (D-147)", async () => {
+      m.comprobar.mockResolvedValue({ valido: true, claves: CLAVES });
+      m.subs.mockResolvedValue([
+        { endpoint: "https://push.example.test/1", p256dh: "p".repeat(30), auth: "a".repeat(12) },
+      ]);
+      const r = await pedir(`Bearer ${SECRETO_BD}`, "", {
+        token: OTRO_TOKEN,
+        circular: { asunto: "Excursión al zoo", cosas: 2 },
+      });
+      expect(await r.json()).toEqual({
+        circular: true,
+        push: { enviadas: 1, caducadas: 0, fallos: 0 },
+      });
+      expect(m.push.mock.calls[0]?.[1]).toEqual({
+        titulo: "📬 Circular del cole",
+        cuerpo: "Excursión al zoo: 2 cosas para apuntar. Tócala para revisarla.",
+        url: "/fechas",
+      });
+      expect(m.leer).not.toHaveBeenCalled();
     });
 
     it("sin token en el cuerpo ni en las variables, no hace nada", async () => {

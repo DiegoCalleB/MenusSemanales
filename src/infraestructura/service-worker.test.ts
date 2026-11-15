@@ -10,6 +10,7 @@ const sw = require("../../public/sw.js") as {
   esEstatico: (ruta: string) => boolean;
   destinoCompartido: (campos: Record<string, unknown>, hayArchivo: boolean) => string;
   codigoHecho: (v: unknown) => string | null;
+  rutaDeLaApp: (v: unknown) => string;
   RUTAS: string[];
   SUELTOS: string[];
 };
@@ -71,5 +72,12 @@ describe("compartir con la app desde otra (D-138)", () => {
     expect(sw.codigoHecho("a".repeat(63))).toBeNull();
     expect(sw.codigoHecho(undefined)).toBeNull();
     expect(sw.codigoHecho({ codigo: "x" })).toBeNull();
+  });
+
+  it("tocar la notificación lleva a una pantalla de la app, nunca fuera (D-147)", () => {
+    expect(sw.rutaDeLaApp("/fechas")).toBe("/fechas");
+    expect(sw.rutaDeLaApp("//malo.example")).toBe("/");
+    expect(sw.rutaDeLaApp("https://malo.example")).toBe("/");
+    expect(sw.rutaDeLaApp(undefined)).toBe("/");
   });
 });

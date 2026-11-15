@@ -1,6 +1,6 @@
 import { type EntradaAvisos, avisosDeHoy } from "@/dominio/avisos";
 import { sumarDias } from "@/dominio/fechas";
-import { tieneCole } from "./cole";
+import { repiteConElCole, tieneCole } from "./cole";
 import { comidasDe, type EstadoHogar } from "./estado";
 
 /** La entrada de los avisos a partir del estado de la app (la campanita). */
@@ -30,6 +30,10 @@ export function entradaDeEstado(e: EstadoHogar): EntradaAvisos {
     diasSinCena: e.saltados,
     diasCole: e.diasCole,
     conCole: tieneCole(e),
+    repiteCole: [e.hoy, manana].flatMap((fecha) => {
+      const r = repiteConElCole(e, fecha);
+      return r ? [{ fecha, ...r }] : [];
+    }),
   };
 }
 
