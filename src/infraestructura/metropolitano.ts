@@ -8,8 +8,17 @@ import {
   partidosEnCasa,
 } from "@/dominio/metropolitano";
 
-/** Las competiciones del Atlético en ESPN: Liga, Champions, Copa y, por si acaso, Europa League. */
-const LIGAS = ["esp.1", "uefa.champions", "esp.copa_del_rey", "uefa.europa"] as const;
+/** Los calendarios de ESPN que se miran: el del Atlético y el de la selección, en cada competición. */
+const CALENDARIOS: ReadonlyArray<readonly [liga: string, equipo: string]> = [
+  ["esp.1", ESTADIO.equipoEspn],
+  ["uefa.champions", ESTADIO.equipoEspn],
+  ["esp.copa_del_rey", ESTADIO.equipoEspn],
+  ["uefa.europa", ESTADIO.equipoEspn],
+  ["uefa.nations", ESTADIO.seleccionEspn],
+  ["fifa.friendly", ESTADIO.seleccionEspn],
+  ["fifa.worldq.uefa", ESTADIO.seleccionEspn],
+  ["uefa.euroq", ESTADIO.seleccionEspn],
+];
 const DIAS = 120;
 
 async function json(url: string, pedir: typeof fetch): Promise<unknown> {
@@ -23,8 +32,8 @@ async function json(url: string, pedir: typeof fetch): Promise<unknown> {
 }
 
 /**
- * Lo que hay en el Metropolitano en los próximos cuatro meses (D-159): los partidos del Atlético en
- * casa (ESPN, sin clave) y, si hay `TICKETMASTER_API_KEY`, los conciertos y otros eventos. Lo que
+ * Lo que hay en el Metropolitano en los próximos cuatro meses (D-159): los partidos que se juegan
+ * allí, del Atlético o de la selección (ESPN, sin clave) y, si hay `TICKETMASTER_API_KEY`, los conciertos y otros eventos. Lo que
  * falle se queda fuera sin romper nada (sin datos, sin avisos del estadio).
  */
 export async function leerEventosEstadio(
@@ -32,9 +41,9 @@ export async function leerEventosEstadio(
   pedir: typeof fetch = fetch,
 ): Promise<EventoEstadio[]> {
   const partidos = await Promise.all(
-    LIGAS.map((liga) =>
+    CALENDARIOS.map(([liga, equipo]) =>
       json(
-        `https://site.api.espn.com/apis/site/v2/sports/soccer/${liga}/teams/${ESTADIO.equipoEspn}/schedule?fixture=true`,
+        `https://site.api.espn.com/apis/site/v2/sports/soccer/${liga}/teams/${equipo}/schedule?fixture=true`,
         pedir,
       )
         .then((j) => partidosEnCasa(j, liga))

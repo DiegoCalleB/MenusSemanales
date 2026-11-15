@@ -11,6 +11,8 @@ export const ESTADIO = {
   nombre: "Metropolitano",
   /** Id del Atlético de Madrid en ESPN. */
   equipoEspn: "1068",
+  /** Id de la selección española en ESPN: también juega aquí (Nations League, amistosos…). */
+  seleccionEspn: "164",
   latitud: 40.4362,
   longitud: -3.5995,
 } as const;
@@ -51,6 +53,41 @@ const COMPETICION: Record<string, string> = {
   "esp.copa_del_rey": "Copa",
   "uefa.europa": "Europa League",
   "esp.super_cup": "Supercopa",
+  "uefa.nations": "Nations League",
+  "fifa.friendly": "amistoso",
+  "fifa.worldq.uefa": "clasificación para el Mundial",
+  "uefa.euroq": "clasificación para la Eurocopa",
+};
+
+/** Los nombres de ESPN (en inglés) que más pueden jugar aquí, en español. */
+const NOMBRES: Record<string, string> = {
+  "Atlético Madrid": "Atlético",
+  Spain: "España",
+  England: "Inglaterra",
+  France: "Francia",
+  Germany: "Alemania",
+  Italy: "Italia",
+  Portugal: "Portugal",
+  Netherlands: "Países Bajos",
+  Belgium: "Bélgica",
+  Croatia: "Croacia",
+  Czechia: "Chequia",
+  "Czech Republic": "Chequia",
+  Switzerland: "Suiza",
+  Denmark: "Dinamarca",
+  Scotland: "Escocia",
+  Wales: "Gales",
+  "Northern Ireland": "Irlanda del Norte",
+  "Republic of Ireland": "Irlanda",
+  Norway: "Noruega",
+  Sweden: "Suecia",
+  Poland: "Polonia",
+  Turkey: "Turquía",
+  Türkiye: "Turquía",
+  Greece: "Grecia",
+  Serbia: "Serbia",
+  Argentina: "Argentina",
+  Brazil: "Brasil",
 };
 
 const espnSchema = z.object({
@@ -79,9 +116,13 @@ const espnSchema = z.object({
     .catch([]),
 });
 
-const corto = (n: string) => (n === "Atlético Madrid" ? "Atlético" : n);
+const corto = (n: string) => NOMBRES[n] ?? n;
 
-/** Los partidos del Atlético en casa (en el Metropolitano) de un calendario de ESPN. */
+/**
+ * Los partidos en el Metropolitano de un calendario de ESPN (el del Atlético o el de la
+ * selección): los que ESPN sitúa en el estadio, sea quien sea el local. Si ESPN no dice el estadio,
+ * cuenta si el Atlético juega en casa.
+ */
 export function partidosEnCasa(json: unknown, liga: string): EventoEstadio[] {
   const r = espnSchema.safeParse(json);
   if (!r.success) return [];
@@ -91,9 +132,8 @@ export function partidosEnCasa(json: unknown, liga: string): EventoEstadio[] {
     const local = c.competitors.find((t) => t.homeAway === "home");
     const visitante = c.competitors.find((t) => t.homeAway === "away");
     const estadio = c.venue?.fullName ?? "";
-    // En casa: el Atlético es el local y no se juega en otro campo (una final, por ejemplo).
-    if (local?.team.id !== ESTADIO.equipoEspn) continue;
-    if (estadio && !/metropolitano/i.test(estadio)) continue;
+    const aqui = estadio ? /metropolitano/i.test(estadio) : local?.team.id === ESTADIO.equipoEspn;
+    if (!aqui) continue;
     const cuando = enMadrid(e.date);
     if (!cuando) continue;
     const comp = COMPETICION[e.league?.slug ?? liga] ?? COMPETICION[liga] ?? "";
@@ -102,7 +142,7 @@ export function partidosEnCasa(json: unknown, liga: string): EventoEstadio[] {
       fecha: cuando.fecha,
       hora: e.timeValid === false ? null : cuando.hora,
       tipo: "partido",
-      titulo: `Atlético – ${corto(visitante?.team.displayName ?? "?")}${comp ? ` (${comp})` : ""}`,
+      titulo: `${corto(local?.team.displayName ?? "?")} – ${corto(visitante?.team.displayName ?? "?")}${comp ? ` (${comp})` : ""}`,
     });
   }
   return out;

@@ -75,6 +75,40 @@ describe("el Metropolitano (D-159)", () => {
     ]);
   });
 
+  it("la selección en el Metropolitano también cuenta, con los nombres en español", () => {
+    const seleccion = {
+      events: [
+        partido(
+          "7",
+          "2026-11-15T19:45Z",
+          ["164", "Spain"],
+          ["448", "England"],
+          "Riyadh Air Metropolitano",
+          true,
+          "uefa.nations",
+        ),
+        partido(
+          "8",
+          "2026-10-12T18:45Z",
+          ["164", "Spain"],
+          ["477", "Croatia"],
+          "Estadio de La Cartuja",
+          true,
+          "uefa.nations",
+        ),
+      ],
+    };
+    expect(partidosEnCasa(seleccion, "uefa.nations")).toEqual([
+      {
+        id: "partido-7",
+        fecha: "2026-11-15",
+        hora: "20:45",
+        tipo: "partido",
+        titulo: "España – Inglaterra (Nations League)",
+      },
+    ]);
+  });
+
   it("una final en otro estadio no cuenta; una respuesta rota no inventa nada", () => {
     const final = {
       events: [partido("9", "2027-04-25T19:30Z", ATM, ["83", "Barcelona"], "La Cartuja")],
