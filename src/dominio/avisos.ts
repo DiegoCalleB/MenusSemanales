@@ -608,3 +608,16 @@ export function direccionesDeAvisos(valor: string | undefined): string[] {
     .filter((d) => /^[^\s@]+@[^\s@]+$/.test(d))
     .slice(0, 10);
 }
+
+/** La notificación de una circular recibida por correo (D-147). */
+export function notificacionDeCircular(c: { asunto: string; cosas: number }) {
+  const que =
+    c.cosas === 0
+      ? "no he encontrado fechas: échale un vistazo"
+      : `${c.cosas} ${c.cosas === 1 ? "cosa" : "cosas"} para apuntar`;
+  return {
+    titulo: "📬 Circular del cole",
+    cuerpo: `${c.asunto ? `${c.asunto}: ` : ""}${que}. Tócala para revisarla.`.slice(0, 240),
+    url: "/fechas",
+  };
+}

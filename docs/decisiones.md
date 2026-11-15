@@ -1369,3 +1369,19 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
   - Cambiar la cantidad a mano o «volver a poner» cuentan como revisado.
 - **Sin sustos:** en los hogares de antes, lo que ya estaba en la lista se da por revisado. Solo lo nuevo se propone.
 - El plan de la semana enseña «Revisar lo que pide el menú (N)» en vez de «Hacer la compra» mientras haya propuestas.
+
+## D-147 · Circulares del cole por correo
+
+- **Petición (Diego):** «compartir con la app fechas»: reenviar los correos del cole y que se apunten, con aviso y revisión antes («Notificar y apuntar al tocar»). Se usa la cuenta de Resend que ya existe, sin tocar su dominio: su dirección de recepción gratuita (`*.resend.app`).
+- **La dirección del hogar:** `hecho-<código>@<dominio de recepción>`. El código tiene 16 caracteres aleatorios y es la llave: sin él no se puede dejar nada en el hogar. Se ve en Fechas → «📬 Circulares por correo», con «Copiar la dirección» y «Cambiarla» (la vieja deja de valer).
+- **Cómo llega:**
+  1. Resend avisa a `/api/circulares/correo` de cada correo recibido. El aviso solo trae el identificador; el contenido se pide a Resend con la clave del servidor, así que un aviso falso no puede colar nada.
+  2. Si va a la dirección de un hogar, se lee con IA (D-116) el primer PDF o foto adjunto o, si no hay, el texto del correo.
+  3. Lo leído se guarda **pendiente de revisar** (`public.circular_correo`). El mismo correo no se duplica y hay un máximo de 20 al día por hogar.
+  4. La base de datos pide a la app que mande la notificación «📬 Circular del cole: Excursión al zoo: 2 cosas para apuntar». Al tocarla se abre Fechas.
+- **Nada se apunta solo:** en Fechas, cada circular llegada abre la misma lista de «Leer una circular», todo marcado. Se desmarca lo que no interese y se pulsa «Apuntar», o «Descartar».
+- **Configuración** (una vez):
+  - `RESEND_API_KEY` en Railway, con permiso para leer los correos recibidos.
+  - `CORREO_CIRCULARES_DOMINIO` con el dominio de recepción de Resend.
+  - Un webhook de Resend con el evento `email.received` a `https://…/api/circulares/correo`.
+- Migración: `20261116000000_circulares_por_correo.sql`.

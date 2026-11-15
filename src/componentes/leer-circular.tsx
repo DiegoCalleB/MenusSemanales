@@ -21,10 +21,13 @@ const fechaCorta = (f: string) =>
  */
 export function LeerCircular({
   inicial,
+  leidos,
   alTerminar,
 }: {
   /** Lo que llega compartido desde otra app (D-138): se lee nada más abrir. */
   inicial?: { texto?: string; archivo?: File };
+  /** Lo ya leído de una circular llegada por correo (D-147): se abre directamente para elegir. */
+  leidos?: readonly ItemCircular[];
   /** Tras apuntar (o descartar) lo leído. */
   alTerminar?: (apuntadas: number) => void;
 } = {}) {
@@ -32,11 +35,13 @@ export function LeerCircular({
   const [yo] = useYo();
   const idArchivo = useId();
   const idTexto = useId();
-  const [abierto, setAbierto] = useState(Boolean(inicial));
+  const [abierto, setAbierto] = useState(Boolean(inicial) || Boolean(leidos));
   const [texto, setTexto] = useState(inicial?.texto ?? "");
   const [leyendo, setLeyendo] = useState(false);
   const [problema, setProblema] = useState("");
-  const [filas, setFilas] = useState<Fila[] | null>(null);
+  const [filas, setFilas] = useState<Fila[] | null>(
+    leidos ? leidos.map((i) => ({ ...i, elegido: true })) : null,
+  );
   const [pasados, setPasados] = useState(0);
 
   async function leer(cuerpo: FormData) {
@@ -248,7 +253,14 @@ export function LeerCircular({
             <button type="button" className="boton" disabled={total === 0} onClick={apuntar}>
               Apuntar {total} {total === 1 ? "cosa" : "cosas"}
             </button>
-            <button type="button" className="boton-suave" onClick={() => setFilas(null)}>
+            <button
+              type="button"
+              className="boton-suave"
+              onClick={() => {
+                setFilas(null);
+                if (leidos) alTerminar?.(0);
+              }}
+            >
               Descartar
             </button>
           </div>

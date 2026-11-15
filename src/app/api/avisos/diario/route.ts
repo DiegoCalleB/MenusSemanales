@@ -8,6 +8,7 @@ import {
   direccionesDeAvisos,
   entradaDeProyeccion,
   notificacionAntesDelCole,
+  notificacionDeCircular,
   notificacionDeLaNoche,
   notificacionDelDia,
   resumenDelDia,
@@ -50,20 +51,36 @@ const TOKEN = /^[0-9a-f]{64}$/;
  * Lo que manda la llamada programada en el cuerpo: el token del calendario del hogar y, para
  * «Enviarme una prueba», el móvil al que mandarla (`{ "token": "…", "prueba": "https://…" }`).
  */
-async function leerCuerpo(
-  request: Request,
-): Promise<{ token: string | null; prueba: string | null }> {
+type Cuerpo = {
+  token: string | null;
+  prueba: string | null;
+  /** Ha llegado una circular por correo (D-147): se avisa a los móviles del hogar. */
+  circular: { asunto: string; cosas: number } | null;
+};
+
+async function leerCuerpo(request: Request): Promise<Cuerpo> {
   try {
-    const c = (await request.json()) as { token?: unknown; prueba?: unknown };
+    const c = (await request.json()) as { token?: unknown; prueba?: unknown; circular?: unknown };
+    const circ = c?.circular as { asunto?: unknown; cosas?: unknown } | undefined;
     return {
       token: typeof c?.token === "string" && TOKEN.test(c.token) ? c.token : null,
       prueba:
         typeof c?.prueba === "string" && c.prueba.startsWith("https://") && c.prueba.length <= 1000
           ? c.prueba
           : null,
+      circular:
+        circ && typeof circ === "object"
+          ? {
+              asunto: typeof circ.asunto === "string" ? circ.asunto.slice(0, 120) : "",
+              cosas:
+                typeof circ.cosas === "number" && Number.isInteger(circ.cosas)
+                  ? Math.max(0, Math.min(circ.cosas, 30))
+                  : 0,
+            }
+          : null,
     };
   } catch {
-    return { token: null, prueba: null };
+    return { token: null, prueba: null, circular: null };
   }
 }
 
@@ -117,7 +134,9 @@ export async function POST(request: Request) {
       : responder({ error: "no-configurado" }, 503);
   }
 
-  const cuerpo = porBaseDeDatos ? await leerCuerpo(request) : { token: null, prueba: null };
+  const cuerpo: Cuerpo = porBaseDeDatos
+    ? await leerCuerpo(request)
+    : { token: null, prueba: null, circular: null };
   const token = cuerpo.token ?? process.env.AVISOS_CALENDARIO_TOKEN ?? "";
 
   // «Enviarme una prueba»: solo a ese móvil, y solo si es una suscripción de ese hogar.
@@ -137,6 +156,29 @@ export async function POST(request: Request) {
       return responder({ error: "no-disponible" }, 502);
     }
   }
+  // Ha llegado una circular por correo (D-147): a todos los móviles del hogar, ya.
+  if (cuerpo.circular && cuerpo.token) {
+    const cuenta = { enviadas: 0, caducadas: 0, fallos: 0 };
+    try {
+      for (const s of await leerSuscripciones(cuerpo.token)) {
+        const r = await enviarPush(
+          { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
+          notificacionDeCircular(cuerpo.circular),
+          undefined,
+          claves,
+        );
+        if (r === "ok") cuenta.enviadas += 1;
+        else if (r === "caducada") {
+          cuenta.caducadas += 1;
+          await olvidarSuscripcion(cuerpo.token, s.endpoint);
+        } else cuenta.fallos += 1;
+      }
+    } catch {
+      return responder({ error: "no-disponible" }, 502);
+    }
+    return responder({ circular: true, push: cuenta }, 200);
+  }
+
   // El correo es de la configuración antigua (con su token); la llamada de la base de datos, push.
   const para = porBaseDeDatos ? [] : direccionesDeAvisos(process.env.AVISOS_CORREO);
   const quiereCorreo = para.length > 0;

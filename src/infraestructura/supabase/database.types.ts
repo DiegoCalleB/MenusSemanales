@@ -1119,6 +1119,18 @@ export type Database = {
         Args: { p_hogar_id: string; p_endpoint: string }
         Returns: boolean
       }
+      codigo_circulares: {
+        Args: { p_hogar_id: string; p_nueva?: boolean }
+        Returns: string
+      }
+      circulares_pendientes: {
+        Args: { p_hogar_id: string }
+        Returns: Json
+      }
+      revisar_circular_correo: {
+        Args: { p_id: string }
+        Returns: boolean
+      }
       aplicar_cambios_registro: {
         Args: { p_hogar_id: string; p_cambios: Json }
         Returns: undefined

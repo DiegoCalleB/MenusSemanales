@@ -269,6 +269,27 @@ describe("POST /api/avisos/diario", () => {
       expect(m.push.mock.calls[0]?.[1]).not.toHaveProperty("hecho");
     });
 
+    it("una circular recibida por correo avisa a los móviles del hogar, a cualquier hora (D-147)", async () => {
+      m.comprobar.mockResolvedValue({ valido: true, claves: CLAVES });
+      m.subs.mockResolvedValue([
+        { endpoint: "https://push.example.test/1", p256dh: "p".repeat(30), auth: "a".repeat(12) },
+      ]);
+      const r = await pedir(`Bearer ${SECRETO_BD}`, "", {
+        token: OTRO_TOKEN,
+        circular: { asunto: "Excursión al zoo", cosas: 2 },
+      });
+      expect(await r.json()).toEqual({
+        circular: true,
+        push: { enviadas: 1, caducadas: 0, fallos: 0 },
+      });
+      expect(m.push.mock.calls[0]?.[1]).toEqual({
+        titulo: "📬 Circular del cole",
+        cuerpo: "Excursión al zoo: 2 cosas para apuntar. Tócala para revisarla.",
+        url: "/fechas",
+      });
+      expect(m.leer).not.toHaveBeenCalled();
+    });
+
     it("sin token en el cuerpo ni en las variables, no hace nada", async () => {
       m.comprobar.mockResolvedValue({ valido: true, claves: CLAVES });
       expect((await pedir(`Bearer ${SECRETO_BD}`, "?forzar=1", {})).status).toBe(503);
