@@ -1390,3 +1390,15 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 
 - **Problema (Diego):** el miércoles se esperaba un día de lluvia (unos 10 mm) y no salía en el calendario. La app solo pedía 3 días de previsión (hoy, mañana y pasado).
 - **Ahora:** se piden **7 días** a Open-Meteo. En el calendario suscrito y en el de la app sale el paraguas, el abrigo o la gorra de toda la semana. Los avisos siguen mirando solo hoy y mañana. Más allá de dos o tres días la previsión es menos fiable: el aviso de las 7 la vuelve a mirar justo antes de salir.
+
+## D-159 · Partidos y conciertos en el Metropolitano
+
+- **Petición (Diego):** «vivimos al lado del Metropolitano: que avise cuando haya algún partido, concierto o evento importante, para estar prevenidos».
+- **Partidos:** los del Atlético **en casa** en Liga, Champions, Copa y Europa League, del calendario público de ESPN (sin clave). Se descartan los de fuera y los que se juegan en otro estadio, como una final. Si ESPN marca la hora como no confirmada (`timeValid: false`, habitual en la Liga hasta unas semanas antes), sale sin hora: «hora por confirmar».
+- **Conciertos y otros eventos:** de Ticketmaster (Discovery API), los del recinto en un radio de 1 km del estadio. Se quitan los partidos, los cancelados y los repetidos (VIP, paquetes). Solo si está `TICKETMASTER_API_KEY` en Railway (gratis en developer.ticketmaster.com): sin ella, solo partidos.
+- **Dónde sale:**
+  - **Por la mañana**, el mismo día: «⚽ Hoy partido en el Metropolitano a las 21:00: Atlético – Real Betis (Liga)», con «Más tráfico, calles cortadas y el metro lleno unas dos horas antes y una después».
+  - **La víspera por la noche:** «Mañana partido…».
+  - **El viernes**, en «La semana que viene»: «domingo 21:00 partido en el Metropolitano (…)».
+  - En el **calendario suscrito** de fechas (con su hora si está confirmada) y en el **calendario de la app** (⚽ o 🎤 en la casilla y el detalle en el día).
+- Los datos se miran cada seis horas, los próximos 4 meses. Si ESPN o Ticketmaster fallan, no sale nada del estadio y el resto sigue igual.

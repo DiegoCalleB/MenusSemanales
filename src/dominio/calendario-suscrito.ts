@@ -7,6 +7,7 @@ import { NOMBRE_DIA_LARGO, preparacionesEntre } from "./mochila";
 import { MAX_LARGO_MOTIVO, consultaCole, diaDeCole, tramosSinCole } from "./calendario-escolar";
 import { lineasDelTiempo } from "./avisos";
 import { LUGAR_TIEMPO, type Pronostico } from "./tiempo";
+import { type EventoEstadio, textoDelEvento } from "./metropolitano";
 
 /**
  * Avisos fuera de la app (D-083): el calendario del móvil se suscribe a un enlace y avisa solo.
@@ -153,6 +154,8 @@ export function eventosSuscritos(
     solo?: CalendarioSuscrito;
     /** La previsión del tiempo (D-154), si se pudo leer: el paraguas y el abrigo, en «fechas». */
     tiempo?: readonly Pronostico[];
+    /** Partidos y conciertos en el estadio de al lado (D-159), en «fechas». */
+    estadio?: readonly EventoEstadio[];
   },
 ): EventoCalendario[] {
   const todos = todosLosEventos(p, opciones);
@@ -165,7 +168,13 @@ function todosLosEventos(
     hoy,
     para,
     tiempo = [],
-  }: { hoy: FechaIso; para: string | null; tiempo?: readonly Pronostico[] },
+    estadio = [],
+  }: {
+    hoy: FechaIso;
+    para: string | null;
+    tiempo?: readonly Pronostico[];
+    estadio?: readonly EventoEstadio[];
+  },
 ): EventoCalendario[] {
   const eventos: EventoCalendario[] = [];
   const persona = p.personas.find((x) => x.id === para && x.activa) ?? null;
@@ -309,6 +318,18 @@ function todosLosEventos(
         descripcion: `No hay cole: ${t.motivo}.`,
       });
     }
+  }
+
+  // El estadio de al lado (D-159): partidos y conciertos, con aviso el mismo día.
+  for (const ev of estadio) {
+    if (ev.fecha < hoy) continue;
+    eventos.push({
+      uid: `estadio-${ev.id}`,
+      fecha: ev.fecha,
+      titulo: textoDelEvento(ev).replace(/ (a las \d{2}:\d{2}|\(hora por confirmar\)):/, ":"),
+      descripcion: `${textoDelEvento(ev)}. Más tráfico, calles cortadas y el metro lleno unas dos horas antes y una después.`,
+      hora: ev.hora,
+    });
   }
 
   // El tiempo de los próximos días (D-154): qué llevar, de todo el día. Los días de cole, el

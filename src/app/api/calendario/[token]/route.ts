@@ -2,6 +2,7 @@ import { eventosSuscritos } from "@/dominio/calendario-suscrito";
 import { generarIcs } from "@/dominio/compartir";
 import { cargarCursosEscolares } from "@/infraestructura/calendario-escolar";
 import { leerPrevision } from "@/infraestructura/tiempo";
+import { leerEventosEstadio } from "@/infraestructura/metropolitano";
 import {
   demasiadasPeticiones,
   hoyEnMadrid,
@@ -46,13 +47,15 @@ export async function GET(request: Request, ctx: { params: Promise<{ token: stri
 
   let resumen;
   let tiempo;
+  let estadio;
   try {
     // Los cursos del calendario escolar leídos solos (D-146), para los días sin cole, y el tiempo
     // (D-154), que si no llega no impide nada (devuelve una lista vacía).
-    [resumen, , tiempo] = await Promise.all([
+    [resumen, , tiempo, estadio] = await Promise.all([
       leerResumenDelCalendario(token),
       cargarCursosEscolares(),
       leerPrevision(),
+      leerEventosEstadio(hoyEnMadrid()).catch(() => []),
     ]);
   } catch {
     // Sin detalles: un fallo de Supabase no debe contar nada del servidor.
@@ -67,7 +70,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ token: stri
   const solo = new URL(request.url).searchParams.get("solo") === "comidas" ? "comidas" : "fechas";
   const ics = generarIcs(
     solo === "comidas" ? "¡Hecho! · Comidas" : "¡Hecho!",
-    eventosSuscritos(resumen, { hoy: hoyEnMadrid(), para, solo, tiempo }),
+    eventosSuscritos(resumen, { hoy: hoyEnMadrid(), para, solo, tiempo, estadio }),
     new Date(),
     1,
   );

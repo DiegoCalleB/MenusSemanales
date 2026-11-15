@@ -14,6 +14,7 @@ const m = vi.hoisted(() => ({
   accion: vi.fn(),
 }));
 vi.mock("@/infraestructura/tiempo", () => ({ leerPrevision: m.tiempo }));
+vi.mock("@/infraestructura/metropolitano", () => ({ leerEventosEstadio: async () => [] }));
 vi.mock("@/infraestructura/avisos/claves", () => ({
   comprobarSecretoDeAvisos: m.comprobar,
   guardarClavesDeAvisos: m.guardarClaves,
@@ -66,6 +67,8 @@ beforeEach(() => {
   vi.stubEnv("AVISOS_CORREO", "diego@ejemplo.test");
   // Que el aviso de antes del cole no se cruce con las pruebas si se pasan a las 7.
   vi.stubEnv("AVISOS_HORA_TEMPRANO", "-1");
+  // Ni el de la noche, si las pruebas se pasan a las 20.
+  vi.stubEnv("AVISOS_HORA_NOCHE", "-1");
   m.enviar.mockReset().mockResolvedValue(undefined);
   m.leer.mockReset().mockResolvedValue(resumen);
   m.pushActivo.v = false;

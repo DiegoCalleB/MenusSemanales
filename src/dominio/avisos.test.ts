@@ -510,3 +510,37 @@ describe("una semana antes de un puente o unas vacaciones (D-156)", () => {
     ).toBe(false);
   });
 });
+
+describe("el estadio de al lado (D-159)", () => {
+  const estadio = [
+    {
+      id: "partido-2",
+      fecha: "2026-12-06",
+      hora: "21:00",
+      tipo: "partido" as const,
+      titulo: "Atlético – Real Betis (Liga)",
+    },
+  ];
+
+  it("el mismo día por la mañana y la víspera por la noche", () => {
+    expect(
+      avisosDeHoy({ ...base, hoy: "2026-12-06", estadio }).find((a) => a.id.startsWith("estadio-")),
+    ).toMatchObject({
+      titulo: "Hoy partido en el Metropolitano a las 21:00: Atlético – Real Betis (Liga)",
+      nivel: "ya",
+    });
+    expect(avisosDeLaNoche({ ...base, hoy: "2026-12-05", estadio }).map((a) => a.titulo)).toContain(
+      "Mañana partido en el Metropolitano a las 21:00: Atlético – Real Betis (Liga)",
+    );
+  });
+
+  it("y en el resumen del viernes", () => {
+    // Viernes 27 de noviembre: la semana que viene va del lunes 30 al domingo 6.
+    const semana = avisosDeLaNoche({ ...base, hoy: "2026-11-27", estadio }).find((a) =>
+      a.id.startsWith("semana-que-viene-"),
+    );
+    expect(semana?.titulo).toContain(
+      "domingo 21:00 partido en el Metropolitano (Atlético – Real Betis (Liga))",
+    );
+  });
+});

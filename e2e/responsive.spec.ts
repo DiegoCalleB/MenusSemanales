@@ -2278,6 +2278,34 @@ test.describe("mochila, compartir y plan de la semana", () => {
     await contexto.close();
   });
 
+  test("el Metropolitano (D-159): el partido sale en el calendario, en la casilla y en el día", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await pagina.route("**/api/metropolitano", (ruta) =>
+      ruta.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          eventos: [
+            {
+              id: "partido-4",
+              fecha: "2026-11-05",
+              hora: "21:00",
+              tipo: "partido",
+              titulo: "Atlético – Viking FK (Champions)",
+            },
+          ],
+        }),
+      }),
+    );
+    await cargar(pagina, "/calendario?dia=2026-11-05");
+    await expect(pagina.locator("section", { has: pagina.locator("#detalle") })).toContainText(
+      "⚽ Partido en el Metropolitano a las 21:00: Atlético – Viking FK (Champions)",
+    );
+    await contexto.close();
+  });
+
   test("el tiempo (D-145): si la previsión no llega, la tarjeta no sale", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await pagina.route("**/api/tiempo", (ruta) => ruta.abort());

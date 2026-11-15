@@ -4,6 +4,7 @@ import { diasHasta } from "./cumples";
 import { type FechaIso, diaSemanaIso, sumarDias } from "./fechas";
 import { paraPreparar } from "./mochila";
 import { type AjusteCole, consultaCole, diaDeCole } from "./calendario-escolar";
+import { type EventoEstadio, ESTADIO } from "./metropolitano";
 import {
   type LluviaEnFranja,
   type Pronostico,
@@ -55,6 +56,8 @@ export interface EntradaAvisos {
   conCole?: boolean;
   /** La previsión del tiempo (D-145), si se pudo leer. */
   tiempo?: readonly Pronostico[];
+  /** Partidos y conciertos en el estadio de al lado (D-159). */
+  estadio?: readonly EventoEstadio[];
   /** La cena que repite lo del comedor (D-155), hoy o mañana. Solo en la app (el servidor no lo sabe). */
   repiteCole?: ReadonlyArray<{ fecha: FechaIso; plato: string; grupo: string }>;
   /** Los cursos del calendario escolar leídos solos (D-146): se avisa los días después de cargarlos. */
@@ -189,6 +192,18 @@ export function fechaLarga(f: FechaIso): string {
 
 const MAX_TAREAS = 5;
 
+/** «⚽ Hoy partido en el Metropolitano a las 21:00: Atlético – Real Betis (Liga)». */
+function avisoDelEstadio(ev: EventoEstadio, cuando: "Hoy" | "Mañana"): Aviso {
+  const que = ev.tipo === "partido" ? "partido" : ev.tipo === "concierto" ? "concierto" : "evento";
+  return {
+    id: `estadio-${ev.id}-${cuando === "Hoy" ? "hoy" : "manana"}`,
+    emoji: ev.tipo === "partido" ? "⚽" : ev.tipo === "concierto" ? "🎤" : "🏟️",
+    titulo: `${cuando} ${que} en el ${ESTADIO.nombre}${ev.hora ? ` a las ${ev.hora}` : ""}: ${ev.titulo}`,
+    detalle: "Más tráfico, calles cortadas y el metro lleno unas dos horas antes y una después.",
+    nivel: cuando === "Hoy" ? "ya" : "pronto",
+  };
+}
+
 /**
  * «🏫 En una semana no hay cole: lunes 7 y martes 8 (Día de la Constitución, La Inmaculada)», o, si
  * son más de cinco días, «del miércoles 23 de diciembre al miércoles 6 de enero». Solo el día que
@@ -244,6 +259,11 @@ function semanaQueViene(
     if (c && !c.hay && !todaSinCole) del.push(`sin cole (${c.motivo})`);
     for (const x of cosas) {
       if (x.fecha === f) del.push(`${x.texto}${x.personaId ? ` de ${x.personaId}` : ""}`);
+    }
+    for (const x of (e.estadio ?? []).filter((x) => x.fecha === f)) {
+      const que =
+        x.tipo === "partido" ? "partido" : x.tipo === "concierto" ? "concierto" : "evento";
+      del.push(`${x.hora ? `${x.hora} ` : ""}${que} en el ${ESTADIO.nombre} (${x.titulo})`);
     }
     for (const x of e.citas
       .filter((x) => x.fecha === f)
@@ -397,6 +417,12 @@ export function avisosDeHoy(e: EntradaAvisos): Aviso[] {
     }
   }
 
+  // El estadio de al lado (D-159): hoy y mañana, para estar prevenidos.
+  for (const ev of e.estadio ?? []) {
+    if (ev.fecha !== e.hoy && ev.fecha !== manana) continue;
+    out.push(avisoDelEstadio(ev, ev.fecha === e.hoy ? "Hoy" : "Mañana"));
+  }
+
   // La cena que repite lo del comedor (D-155): mejor cambiarla.
   for (const r of e.repiteCole ?? []) {
     if (r.fecha !== e.hoy && r.fecha !== manana) continue;
@@ -486,6 +512,7 @@ export function avisosDeLaNoche(e: EntradaAvisos): Aviso[] {
       a.id.startsWith("mochila-") ||
       a.id.startsWith("cole-") ||
       a.id.startsWith("semana-que-viene-") ||
+      (a.id.startsWith("estadio-") && a.nivel === "pronto") ||
       (a.id.startsWith("cita-") && a.nivel === "pronto"),
   );
   // Lo de la mochila primero; luego el tiempo de mañana (D-145), que también se deja preparado.

@@ -24,6 +24,7 @@ import {
 import { CorreoNoConfigurado, enviarCorreo } from "@/infraestructura/avisos/resend";
 import { leerSuscripciones, olvidarSuscripcion } from "@/infraestructura/avisos/suscripciones";
 import { leerPrevision } from "@/infraestructura/tiempo";
+import { leerEventosEstadio } from "@/infraestructura/metropolitano";
 import { cargarCursosEscolares } from "@/infraestructura/calendario-escolar";
 
 const CABECERAS = { "Cache-Control": "no-store", "Content-Type": "application/json" } as const;
@@ -206,15 +207,17 @@ export async function POST(request: Request) {
   let avisos: Aviso[];
   try {
     hoy = hoyEnMadrid();
-    const [resumen, tiempo, escolar] = await Promise.all([
+    const [resumen, tiempo, escolar, estadio] = await Promise.all([
       leerResumenDelCalendario(token),
       leerPrevision(fetch, { fresco: momento === "temprano" }),
       cargarCursosEscolares(),
+      leerEventosEstadio(hoy).catch(() => []),
     ]);
     if (!resumen) return responder({ error: "sin-datos" }, 404);
     const entrada = {
       ...entradaDeProyeccion(resumen, hoy),
       tiempo,
+      estadio,
       cursosNuevos: escolar.cursos.map((c) => ({
         nombre: c.nombre,
         inicio: c.inicio,
