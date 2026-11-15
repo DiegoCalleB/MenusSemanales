@@ -228,3 +228,13 @@ export function textoDelEvento(e: EventoEstadio): string {
   const cuando = e.hora ? `a las ${e.hora}` : "(hora por confirmar)";
   return `${emoji} ${que} en el ${ESTADIO.nombre} ${cuando}: ${e.titulo}`;
 }
+
+/**
+ * El título corto del calendario (D-161): el emoji ya dice que es un partido o un concierto y el
+ * sitio es el de siempre, así que solo queda quién: «⚽ España – Inglaterra», «🎤 Bad Bunny».
+ */
+export function tituloCortoDelEvento(e: EventoEstadio): string {
+  const emoji = e.tipo === "partido" ? "⚽" : e.tipo === "concierto" ? "🎤" : "🏟️";
+  const que = e.tipo === "partido" ? e.titulo.replace(/\s*\([^)]*\)\s*$/, "") : e.titulo;
+  return `${emoji} ${que}`;
+}

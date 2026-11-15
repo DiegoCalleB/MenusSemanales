@@ -63,16 +63,16 @@ describe("calendario suscrito", () => {
       }),
       { hoy: HOY, para: "diego", solo: "comidas" },
     );
-    expect(titulos(comidas)).toEqual(["🍽️ Cena: Sopa + Pan", "☀️ Comida: Paella"]);
+    expect(titulos(comidas)).toEqual(["🍽️ Sopa + Pan", "☀️ Paella"]);
     expect(e.find((x) => x.titulo === "📌 Psicotécnico")).toMatchObject({
       hora: "18:15",
       aviso: true,
     });
-    expect(comidas.find((x) => x.titulo === "🍽️ Cena: Sopa + Pan")?.aviso).toBeUndefined();
+    expect(comidas.find((x) => x.titulo === "🍽️ Sopa + Pan")?.aviso).toBeUndefined();
     // Las comidas y cenas salen a su hora (D-135), sin alarma.
     // El 9 de noviembre de 2026 es lunes: se cena a las 20:00.
-    expect(comidas.find((x) => x.titulo === "🍽️ Cena: Sopa + Pan")?.hora).toBe("20:00");
-    expect(comidas.find((x) => x.titulo === "☀️ Comida: Paella")?.hora).toBe("14:00");
+    expect(comidas.find((x) => x.titulo === "🍽️ Sopa + Pan")?.hora).toBe("20:00");
+    expect(comidas.find((x) => x.titulo === "☀️ Paella")?.hora).toBe("14:00");
   });
 
   it("la cena es a las 21:00 en fin de semana y a las 20:00 entre semana", () => {
@@ -86,7 +86,7 @@ describe("calendario suscrito", () => {
       }),
       { hoy: HOY, para: "diego", solo: "comidas" },
     );
-    const hora = (n: string) => e.find((x) => x.titulo === `🍽️ Cena: ${n}`)?.hora;
+    const hora = (n: string) => e.find((x) => x.titulo === `🍽️ ${n}`)?.hora;
     expect([hora("Viernes"), hora("Sábado"), hora("Domingo")]).toEqual(["20:00", "21:00", "21:00"]);
   });
 
@@ -94,14 +94,14 @@ describe("calendario suscrito", () => {
     const c = base({ cumples });
     for (const para of ["diego", "ana", null]) {
       const t = titulos(eventosSuscritos(c, { hoy: HOY, para }));
-      expect(t).toEqual(expect.arrayContaining(["🎂 Cumple de Ana", "🎂 Cumple de Alba"]));
+      expect(t).toEqual(expect.arrayContaining(["🎂 Ana", "🎂 Alba"]));
       expect(
         t.some((x) => x.startsWith("🎁")),
         String(para),
       ).toBe(false);
     }
     expect(
-      eventosSuscritos(c, { hoy: HOY, para: "diego" }).find((x) => x.titulo === "🎂 Cumple de Ana"),
+      eventosSuscritos(c, { hoy: HOY, para: "diego" }).find((x) => x.titulo === "🎂 Ana"),
     ).toMatchObject({ fecha: "2026-11-07", aviso: true });
   });
 
@@ -242,13 +242,13 @@ describe("qué llevar en el calendario (D-136)", () => {
     expect(e.slice(0, 2)).toEqual([
       expect.objectContaining({
         fecha: "2026-11-02",
-        titulo: "🎒 Preparar: Carpeta de piano de Alba (para mañana)",
+        titulo: "🎒 Carpeta de piano · Alba",
         hora: "20:00",
         aviso: true,
       }),
       expect.objectContaining({
         fecha: "2026-11-05",
-        titulo: "🎒 Preparar: Patines de Emma (para mañana)",
+        titulo: "🎒 Patines · Emma",
       }),
     ]);
     // 8 semanas × 2, menos las vísperas sin cole al día siguiente (D-144): el martes 8 de diciembre
@@ -287,18 +287,25 @@ describe("días sin cole en el calendario (D-144)", () => {
     diasCole: [{ fecha: "2026-11-24", hay: false, motivo: "Libre disposición" }],
   });
 
-  it("salen de todo el día, sin alarma, juntando las vacaciones, solo en el de fechas", () => {
-    const e = eventosSuscritos(conMochila, { hoy: HOY, para: "diego" }).filter((x) =>
-      x.titulo.startsWith("🏫 Sin cole"),
+  it("salen de todo el día, sin alarma, y los periodos largos solo con inicio y fin (D-162)", () => {
+    const e = eventosSuscritos(conMochila, { hoy: HOY, para: "diego" }).filter(
+      (x) => x.titulo.startsWith("🏫 Sin cole") || /^🏫 (Inicio|Fin) /.test(x.titulo),
     );
     expect(e.slice(0, 6)).toEqual([
       expect.objectContaining({ fecha: "2026-11-02", titulo: "🏫 Sin cole: Todos los Santos" }),
-      { uid: "sin-cole-2026-11-09", fecha: "2026-11-09", hasta: null, titulo: "🏫 Sin cole: La Almudena (fiesta local)", descripcion: "No hay cole: La Almudena (fiesta local)." },
+      { uid: "sin-cole-2026-11-09", fecha: "2026-11-09", hasta: null, titulo: "🏫 Sin cole: La Almudena", descripcion: "No hay cole: La Almudena (fiesta local)." },
       expect.objectContaining({ fecha: "2026-11-24", titulo: "🏫 Sin cole: Libre disposición" }),
       expect.objectContaining({ fecha: "2026-12-07", hasta: null }),
       expect.objectContaining({ fecha: "2026-12-08", hasta: null }),
-      expect.objectContaining({ fecha: "2026-12-23", hasta: "2027-01-06", titulo: "🏫 Sin cole: Vacaciones de Navidad" }),
+      expect.objectContaining({ uid: "sin-cole-inicio-2026-12-23", fecha: "2026-12-23", titulo: "🏫 Inicio vacaciones de Navidad" }),
     ]); // prettier-ignore
+    // Navidad no es un evento de quince días: el fin va aparte, el último día sin cole.
+    expect(e.find((x) => x.uid === "sin-cole-fin-2027-01-06")).toMatchObject({
+      fecha: "2027-01-06",
+      titulo: "🏫 Fin vacaciones de Navidad",
+      descripcion: "Último día sin cole. El cole vuelve el lunes 11 de enero.",
+    });
+    expect(e.some((x) => x.hasta && x.titulo.includes("Navidad"))).toBe(false);
     expect(e.every((x) => !x.aviso && !x.hora)).toBe(true);
     expect(
       eventosSuscritos(conMochila, { hoy: HOY, para: "diego", solo: "comidas" }).some((x) =>
@@ -335,7 +342,7 @@ describe("el menú del cole en el calendario de comidas (D-141)", () => {
     expect(comidas).toEqual([
       expect.objectContaining({
         uid: "cole-2026-11-03",
-        titulo: "🏫 Cole: Lentejas · Merluza",
+        titulo: "🏫 Lentejas · Merluza",
         descripcion: "Comida del cole: Lentejas, Merluza. Postre: Fruta",
         hora: "13:00",
       }),
@@ -367,13 +374,9 @@ describe("el tiempo en el calendario suscrito (D-154)", () => {
       x.uid?.startsWith("tiempo-"),
     );
     expect(e.map((x) => [x.uid, x.titulo, x.hora ?? null])).toEqual([
-      [
-        "tiempo-2026-11-19-paraguas",
-        "🌂 Paraguas: llueve de camino al cole (de 8 a 9 h, 70 %)",
-        null,
-      ],
-      ["tiempo-2026-11-21-lluvia", "🌧️ Lluvia (70 %): chubasquero y botas", null],
-      ["tiempo-2026-11-21-frio", "🧣 Frío (mín. 3 °C): abrigo, gorro y guantes", null],
+      ["tiempo-2026-11-19-paraguas", "🌂 Paraguas 8–9 h", null],
+      ["tiempo-2026-11-21-lluvia", "🌧️ Lluvia (70 %)", null],
+      ["tiempo-2026-11-21-frio", "🧣 Frío (mín. 3 °C)", null],
     ]);
   });
 
@@ -413,14 +416,73 @@ describe("el estadio en el calendario suscrito (D-159)", () => {
       x.uid?.startsWith("estadio-"),
     );
     expect(e.map((x) => [x.uid, x.titulo, x.hora])).toEqual([
-      [
-        "estadio-partido-2",
-        "⚽ Partido en el Metropolitano: Atlético – Real Betis (Liga)",
-        "21:00",
-      ],
-      ["estadio-partido-3", "⚽ Partido en el Metropolitano: Atlético – Valencia (Liga)", null],
+      ["estadio-partido-2", "⚽ Atlético – Real Betis", "21:00"],
+      ["estadio-partido-3", "⚽ Atlético – Valencia", null],
     ]);
     const comidas = eventosSuscritos(base(), { hoy: HOY, para: null, solo: "comidas", estadio });
     expect(comidas.some((x) => x.uid?.startsWith("estadio-"))).toBe(false);
+  });
+});
+
+describe("títulos cortos en el calendario (D-161)", () => {
+  it("«Sin cole» a secas si el motivo no dice nada, y el motivo sin relleno si lo dice", () => {
+    const e = eventosSuscritos(
+      base({
+        mochila: [{ personaId: "diego", texto: "Flauta", dias: [1], fecha: null, antes: 1 }],
+        diasCole: [
+          { fecha: "2026-11-04", hay: false, motivo: "Día no lectivo" },
+          { fecha: "2026-11-05", hay: false, motivo: "Día de la Constitución" },
+        ],
+      }),
+      { hoy: HOY, para: null },
+    ).filter((x) => x.uid?.startsWith("sin-cole-"));
+    expect(e.map((x) => x.titulo)).toEqual(
+      expect.arrayContaining(["🏫 Sin cole", "🏫 Sin cole: Constitución"]),
+    );
+  });
+
+  it("el paraguas de ida y vuelta, en un título corto; el detalle, en la descripción", () => {
+    const horas = Array.from({ length: 24 }, (_, hora) => ({
+      hora,
+      prob: [9, 15].includes(hora) ? 70 : 0,
+      mm: [9, 15].includes(hora) ? 1 : 0,
+      codigo: [9, 15].includes(hora) ? 61 : 2,
+    }));
+    const e = eventosSuscritos(
+      base({
+        mochila: [{ personaId: "diego", texto: "Flauta", dias: [1], fecha: null, antes: 1 }],
+      }),
+      {
+        hoy: "2026-11-18",
+        para: null,
+        tiempo: [
+          { fecha: "2026-11-19", codigo: 61, max: 14, min: 9, probLluvia: 70, lluviaMm: 3, horas },
+        ],
+      },
+    ).find((x) => x.uid === "tiempo-2026-11-19-paraguas");
+    expect(e?.titulo).toBe("🌂 Paraguas 8–9 y 14–15 h");
+    expect(e?.descripcion).toContain("llueve de camino al cole (de 8 a 9 h, 70 %)");
+  });
+
+  it("el verano es un inicio y un fin, no un evento por día; sin curso conocido, sin fin", () => {
+    const conCole = base({
+      mochila: [{ personaId: "diego", texto: "Flauta", dias: [1], fecha: null, antes: 1 }],
+    });
+    const verano = (hoy: string) =>
+      eventosSuscritos(conCole, { hoy, para: null })
+        .filter((x) => /verano/i.test(x.titulo))
+        .map((x) => [x.fecha, x.titulo]);
+    // Si hoy ya estamos de vacaciones, el inicio no se inventa para hoy.
+    expect(verano("2026-07-15").map((x) => x[1])).toEqual(["🏫 Fin vacaciones de verano"]);
+    // El verano de 2027 empieza (se conoce) pero aún no se sabe cuándo acaba: sin «fin».
+    expect(verano("2027-06-01")).toEqual([["2027-06-21", "🏫 Inicio vacaciones de verano"]]);
+    // Y entonces tampoco se da una fecha de fin inventada en la descripción.
+    const inicio2027 = eventosSuscritos(
+      base({
+        mochila: [{ personaId: "diego", texto: "Flauta", dias: [1], fecha: null, antes: 1 }],
+      }),
+      { hoy: "2027-06-01", para: null },
+    ).find((x) => x.uid === "sin-cole-inicio-2027-06-21");
+    expect(inicio2027?.descripcion).toBe("Empieza vacaciones de verano.");
   });
 });

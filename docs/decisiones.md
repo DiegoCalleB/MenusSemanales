@@ -1412,3 +1412,32 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
   - El botón sale ahora también en «Compra», donde se abre directamente en «Evento».
 - **Compartir con la app** (D-138) **apunta solo**: el texto, la foto o el cartel se leen con IA y se apuntan. Después se enseña lo apuntado, cada cosa con «Quitar» por si la IA se ha equivocado. La revisión previa sigue en «Leer una circular» y en las circulares por correo (D-147).
 - **La IA** lee también carteles y entradas (concierto, obra, partido, fiesta…), no solo circulares, y en el título dice qué es y dónde.
+
+## D-161 · Títulos cortos en el calendario suscrito
+
+- **Petición (Diego):** «mejorar la visibilidad de los eventos reduciendo información innecesaria: en lugar de "Partido en el Metropolitano", con decir "partido" y la pelota me sobra». Con la captura del móvil: Google corta los títulos a unas 25 letras y lo importante quedaba fuera.
+- **Regla:** el título lleva solo lo esencial, con el emoji que ya dice qué es; el detalle pasa a la **descripción** del evento.
+
+| Antes                                                                | Ahora                              |
+| -------------------------------------------------------------------- | ---------------------------------- |
+| ⚽ Partido en el Metropolitano: España – Inglaterra (Nations League) | ⚽ España – Inglaterra             |
+| 🌂 Paraguas: llueve de camino al cole (de 8 a 9 h, 70 %)             | 🌂 Paraguas 8–9 h                  |
+| 🎒 Preparar: Carpeta de piano de Alba (para mañana)                  | 🎒 Carpeta de piano · Alba         |
+| 🍽️ Cena: Pollo + arroz · ☀️ Comida: Paella                           | 🍽️ Pollo + arroz · ☀️ Paella       |
+| 🏫 Cole: Lentejas · Merluza                                          | 🏫 Lentejas · Merluza              |
+| 🎂 Cumple de Ana                                                     | 🎂 Ana                             |
+| 🏫 Sin cole: Día no lectivo / Vacaciones de Navidad                  | 🏫 Sin cole / 🏫 Sin cole: Navidad |
+
+- **Sin eventos de varios días para las vacaciones largas:** Google repite un evento de varios días en cada día de la lista, así que julio y agosto quedaban llenos de «Sin cole». Ver D-162.
+- No cambia nada de los avisos al móvil ni de la app, solo del calendario de Google.
+
+## D-162 · Las vacaciones largas, solo inicio y fin
+
+- **Petición (Diego):** «cuando es un periodo largo, que sea inicio vacaciones de verano y fin vacaciones de verano, inicio vacaciones de Navidad y fin, y así».
+- **Regla:** un periodo sin cole de **5 días seguidos o más** (verano, Navidad, Semana Santa) deja de ser un evento de varios días y pasa a ser **dos** de un día:
+  - **🏫 Inicio vacaciones de Navidad**, el primer día sin cole.
+  - **🏫 Fin vacaciones de Navidad**, el último día sin cole. En la descripción: «El cole vuelve el lunes 11 de enero».
+- Los puentes y los festivos sueltos (de 1 a 4 días) siguen como un solo evento: «🏫 Sin cole: Constitución».
+- **Casos raros:**
+  - Si hoy ya estamos de vacaciones, no se pone un «inicio» falso para hoy.
+  - Si aún no se conoce el calendario del curso siguiente (el verano de 2027 en noviembre de 2026), solo sale el inicio: el fin se pondrá cuando la lectura mensual (D-146) cargue el curso.

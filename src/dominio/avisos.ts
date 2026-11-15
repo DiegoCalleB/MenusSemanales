@@ -120,7 +120,7 @@ function avisoDelParaguas(p: Pronostico, cuando: "Hoy" | "Mañana"): Aviso | nul
 export function lineasDelTiempo(
   p: Pronostico,
   conCole: boolean,
-): Array<{ clave: string; emoji: string; texto: string }> {
+): Array<{ clave: string; emoji: string; texto: string; corto: string }> {
   const l = conCole ? lluviaDelCole(p) : [];
   const paraguas =
     l.length > 0
@@ -129,6 +129,10 @@ export function lineasDelTiempo(
             clave: "paraguas",
             emoji: "🌂",
             texto: `Paraguas: ${textoDeLluviaDelCole(l)}`,
+            // Para el título del calendario (D-161): «Paraguas 8–9 h», o solo «Paraguas».
+            corto: l.some((x) => x.sinDetalle)
+              ? "Paraguas"
+              : `Paraguas ${l.map((x) => `${x.desde}–${x.hasta}`).join(" y ")} h`,
           },
         ]
       : [];
@@ -136,7 +140,12 @@ export function lineasDelTiempo(
     ...paraguas,
     ...consejosDelTiempo(p)
       .filter((c) => !(paraguas.length > 0 && c.clave === "lluvia"))
-      .map((c) => ({ clave: c.clave, emoji: c.emoji, texto: `${c.que}: ${c.llevar}` })),
+      .map((c) => ({
+        clave: c.clave,
+        emoji: c.emoji,
+        texto: `${c.que}: ${c.llevar}`,
+        corto: c.que,
+      })),
   ];
 }
 

@@ -5,9 +5,9 @@ import { proximaFecha } from "./cumples";
 import { type FechaIso, diaSemanaIso, sumarDias } from "./fechas";
 import { NOMBRE_DIA_LARGO, preparacionesEntre } from "./mochila";
 import { MAX_LARGO_MOTIVO, consultaCole, diaDeCole, tramosSinCole } from "./calendario-escolar";
-import { lineasDelTiempo } from "./avisos";
+import { fechaLarga, lineasDelTiempo } from "./avisos";
 import { LUGAR_TIEMPO, type Pronostico } from "./tiempo";
-import { type EventoEstadio, textoDelEvento } from "./metropolitano";
+import { type EventoEstadio, textoDelEvento, tituloCortoDelEvento } from "./metropolitano";
 
 /**
  * Avisos fuera de la app (D-083): el calendario del móvil se suscribe a un enlace y avisa solo.
@@ -109,6 +109,21 @@ export const HORA_MOCHILA = "20:00";
 const DIAS_MOCHILA = 56;
 /** Cuántos días por delante se ponen los días sin cole (lo que queda de curso y el verano). */
 const DIAS_SIN_COLE = 300;
+/** Desde estos días seguidos sin cole, un periodo es «largo»: solo se marcan su inicio y su fin. */
+const DIAS_PERIODO_LARGO = 5;
+
+/**
+ * El motivo de un día sin cole, corto para el título (D-161): «: Navidad», «: Constitución». Los
+ * genéricos («Día no lectivo») no dicen nada y se quedan en la descripción.
+ */
+function motivoCorto(motivo: string): string {
+  const m = motivo
+    .replace(/^(vacaciones de |día de la |día del |día de )/i, "")
+    .replace(/\s*\(fiesta local\)$/i, "")
+    .trim();
+  if (m === "" || /^(día no lectivo|no lectivo|no hay cole)$/i.test(m)) return "";
+  return `: ${m.charAt(0).toUpperCase()}${m.slice(1)}`;
+}
 
 /** A qué hora salen en el calendario las comidas y cenas (no llevan hora propia en la app). */
 export const HORA_COMIDA = "14:00";
@@ -188,7 +203,7 @@ function todosLosEventos(
     eventos.push({
       uid: `cena-${f}`,
       fecha: f,
-      titulo: `🍽️ Cena: ${platos.join(" + ")}`,
+      titulo: `🍽️ ${platos.join(" + ")}`,
       descripcion: `Platos: ${platos.join(", ")}`,
       hora: esFinDeSemana(f) ? HORA_CENA : HORA_CENA_SEMANA,
     });
@@ -197,7 +212,7 @@ function todosLosEventos(
     eventos.push({
       uid: `comida-${f}`,
       fecha: f,
-      titulo: `☀️ Comida: ${textos.join(" + ")}`,
+      titulo: `☀️ ${textos.join(" + ")}`,
       descripcion: `Comida: ${textos.join(", ")}`,
       hora: HORA_COMIDA,
     });
@@ -210,7 +225,7 @@ function todosLosEventos(
     eventos.push({
       uid: `cole-${c.fecha}`,
       fecha: c.fecha,
-      titulo: `🏫 Cole: ${platos.join(" · ")}`,
+      titulo: `🏫 ${platos.join(" · ")}`,
       descripcion: `Comida del cole: ${platos.join(", ")}${c.postre ? `. Postre: ${c.postre}` : ""}`,
       hora: HORA_COLE,
     });
@@ -246,7 +261,7 @@ function todosLosEventos(
       eventos.push({
         uid: `cumple-${clave}-${dia.slice(0, 4)}`,
         fecha: dia,
-        titulo: `🎂 Cumple de ${c.nombre}`,
+        titulo: `🎂 ${c.nombre}`,
         descripcion: `Cumpleaños de ${c.nombre}`,
         aviso: true,
       });
@@ -297,7 +312,7 @@ function todosLosEventos(
     eventos.push({
       uid: `mochila-${dia}-${limpio(cosa.texto)}-${limpio(quien)}`,
       fecha: dia,
-      titulo: `🎒 Preparar: ${cosa.texto}${quien ? ` de ${quien}` : ""} (${cuando})`,
+      titulo: `🎒 ${cosa.texto}${quien ? ` · ${quien}` : ""}`,
       descripcion: `Dejar preparado ${cosa.texto}${quien ? ` de ${quien}` : ""} ${cuando}.`,
       hora: HORA_MOCHILA,
       aviso: true,
@@ -310,13 +325,52 @@ function todosLosEventos(
     (p.mochila ?? []).length > 0 || (p.cole ?? []).length > 0 || ajustesCole.length > 0;
   if (conCole) {
     for (const t of tramosSinCole(ajustesCole, hoy, DIAS_SIN_COLE)) {
-      eventos.push({
-        uid: `sin-cole-${t.desde}`,
-        fecha: t.desde,
-        hasta: t.hasta === t.desde ? null : t.hasta,
-        titulo: `🏫 Sin cole: ${t.motivo}`,
-        descripcion: `No hay cole: ${t.motivo}.`,
-      });
+      const dias =
+        (Date.parse(`${t.hasta}T00:00:00Z`) - Date.parse(`${t.desde}T00:00:00Z`)) / 864e5 + 1;
+      if (dias < DIAS_PERIODO_LARGO) {
+        eventos.push({
+          uid: `sin-cole-${t.desde}`,
+          fecha: t.desde,
+          hasta: t.hasta === t.desde ? null : t.hasta,
+          titulo: `🏫 Sin cole${motivoCorto(t.motivo)}`,
+          descripcion: `No hay cole: ${t.motivo}.`,
+        });
+        continue;
+      }
+      // Un periodo largo (verano, Navidad, Semana Santa) son dos eventos, el inicio y el fin, y no
+      // uno por día en la lista de Google (D-162).
+      const nombre = /^vacaciones/i.test(t.motivo)
+        ? `${t.motivo.charAt(0).toLowerCase()}${t.motivo.slice(1)}`
+        : t.motivo;
+      // El día en que vuelve el cole; si aún no se conoce el curso, tampoco el fin.
+      let vuelta = sumarDias(t.hasta, 1);
+      for (let i = 0; i < 10; i++) {
+        if (diaSemanaIso(vuelta) < 6 && diaDeCole(vuelta, ajustesCole).hay) break;
+        vuelta = sumarDias(vuelta, 1);
+      }
+      const finConocido = diaDeCole(vuelta, ajustesCole).origen !== "sin-datos";
+      // Si ya empezó antes de hoy, el «inicio» no es hoy: no se pone.
+      let antes = sumarDias(t.desde, -1);
+      while (diaSemanaIso(antes) >= 6) antes = sumarDias(antes, -1);
+      const empezoAntes = t.desde === hoy && !diaDeCole(antes, ajustesCole).hay;
+      if (!empezoAntes) {
+        eventos.push({
+          uid: `sin-cole-inicio-${t.desde}`,
+          fecha: t.desde,
+          titulo: `🏫 Inicio ${nombre}`,
+          descripcion: finConocido
+            ? `Empieza ${nombre}: sin cole hasta el ${fechaLarga(t.hasta)}.`
+            : `Empieza ${nombre}.`,
+        });
+      }
+      if (finConocido) {
+        eventos.push({
+          uid: `sin-cole-fin-${t.hasta}`,
+          fecha: t.hasta,
+          titulo: `🏫 Fin ${nombre}`,
+          descripcion: `Último día sin cole. El cole vuelve el ${fechaLarga(vuelta)}.`,
+        });
+      }
     }
   }
 
@@ -326,7 +380,7 @@ function todosLosEventos(
     eventos.push({
       uid: `estadio-${ev.id}`,
       fecha: ev.fecha,
-      titulo: textoDelEvento(ev).replace(/ (a las \d{2}:\d{2}|\(hora por confirmar\)):/, ":"),
+      titulo: tituloCortoDelEvento(ev),
       descripcion: `${textoDelEvento(ev)}. Más tráfico, calles cortadas y el metro lleno unas dos horas antes y una después.`,
       hora: ev.hora,
     });
@@ -341,8 +395,8 @@ function todosLosEventos(
       eventos.push({
         uid: `tiempo-${t.fecha}-${l.clave}`,
         fecha: t.fecha,
-        titulo: `${l.emoji} ${l.texto}`,
-        descripcion: `Previsión del tiempo en ${LUGAR_TIEMPO.nombre} (Open-Meteo). Puede cambiar: el aviso de las 7 la vuelve a mirar.`,
+        titulo: `${l.emoji} ${l.corto}`,
+        descripcion: `${l.texto}. Previsión del tiempo en ${LUGAR_TIEMPO.nombre} (Open-Meteo). Puede cambiar: el aviso de las 7 la vuelve a mirar.`,
       });
     }
   }
