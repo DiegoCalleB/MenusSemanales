@@ -1524,3 +1524,17 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Comprobación:** lo que devuelve la IA se valida con un esquema; solo valen días de hoy a 150 días y a menos de 150 días de la publicación, de entradas que existen. Se guarda 12 horas para no gastar IA de más. Si falla la web, la IA o la validación, simplemente no salen eventos del centro y lo demás sigue igual (`/api/barrio` lo dice en `centro`).
 - **Dónde sale:** mezclado con los demás planes del barrio, con su filtro **🛍️ Las Rosas**, el 👍/👎, «Apuntar» y el aviso del viernes (los de familia). El enlace lleva a la entrada de su web.
 - **Límites:** los eventos solo salen cuando el centro publica la entrada; la hora a veces no se puede saber (varios pases) y entonces no se pone. En la prueba con las entradas de otoño leyó bien «Cuéntame un cuento» (9-18 de octubre) y «Misterio en Las Rosas» (6-8 de noviembre, aplazado).
+
+## D-173 · El menú del cole se lee solo del blog
+
+- **Petición (Diego):** que la app lea sola el menú cuando el cole lo sube, a finales del mes anterior (el de diciembre, a finales de noviembre).
+- **De dónde sale:** el blog del colegio, etiqueta COMEDOR (`ceipmarianojosedelarra.blogspot.com`). Cada mes publican una entrada («MENÚ NOVIEMBRE»…) con un enlace a una carpeta de su nube (educaMadrid) donde están los PDF: el menú normal (`Menu_Basal.pdf`) y las dietas especiales (sin gluten, sin lactosa…). La app lee **solo el menú normal**.
+- **Cómo:**
+  - Cada colegio (`centro`) puede tener la dirección de su blog (`centro.fuente_menu`, solo blogspot). Se pone una vez por base de datos; ahora no hay pantalla para ello.
+  - Cada día a las 6:23 UTC la base de datos llama a la app (`pg_cron`, `menu-cole-diario`, con el secreto de los avisos). La app mira las entradas de las últimas 3 semanas con pinta de menú (no los precios), y la primera sin cargar la baja (el PDF suelto y, si no, el ZIP de la carpeta), la lee con IA (la misma lectura de D-105) y la pasa por el lector de siempre.
+  - **Antes de cargar se comprueba:** un mes cercano, entre 10 y 23 días de entre semana del propio mes, sin repetidos y con primero y segundo plato casi siempre. Si algo no cuadra, no se carga y se anota el motivo.
+  - **Lo apuntado a mano manda:** solo se rellenan los días que faltan; nunca se pisa un día que ya existe. Cada cambio queda en el historial del menú.
+  - **Reintentos:** un fallo se reintenta al día siguiente, hasta tres veces.
+  - **Aviso:** al cargar un mes sale una notificación «🍽️ Ya está el menú de diciembre» a los móviles de los hogares del colegio.
+- **Probado con el blog real:** el menú de noviembre salió con 19 días, con sus kcal, guarnición y grupos (legumbre, carne…).
+- **Límites:** (1) solo el menú normal, no las dietas especiales; (2) si el colegio cambia el nombre del archivo o deja de usar educaMadrid, no se podrá leer y se anotará el fallo; (3) la IA puede equivocarse en algún plato, igual que al subir el PDF a mano: se puede corregir en Comer → Cole.

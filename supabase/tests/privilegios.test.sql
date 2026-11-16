@@ -56,7 +56,10 @@ select pg_temp.igual('anon solo puede ejecutar las funciones con token del calen
                             -- «Hecho» desde la notificación (D-151): crear, con el secreto; usar, con el código.
                             'crear_accion_aviso', 'marcar_hecho_desde_aviso',
                             -- Circulares por correo (D-147): con el código de la dirección del hogar.
-                            'guardar_circular_correo')), 0);
+                            'guardar_circular_correo',
+                            -- Menú del cole automático (D-173): solo con el secreto de los avisos.
+                            'centros_con_menu_automatico', 'fuentes_menu_vistas',
+                            'registrar_menu_cole_automatico')), 0);
 select pg_temp.igual('anon sí puede ejecutar estado_para_calendario (y nada más del calendario)',
   (has_function_privilege('anon', 'public.estado_para_calendario(text)', 'EXECUTE')
    and not has_function_privilege('anon', 'public.enlace_calendario(uuid, boolean)', 'EXECUTE'))::int, 1);
