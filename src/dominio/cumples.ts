@@ -162,6 +162,29 @@ export function parsearFecha(
   return { dia, mes, anio };
 }
 
+/**
+ * Ayuda al escribir una fecha con el teclado numérico, que no tiene «/» (D-168): al teclear dos
+ * cifras de día o de mes pone la barra sola, y «.», «-», «,» o espacio también la ponen. Al borrar
+ * no toca nada. Solo números y barras, con el año de hasta cuatro cifras.
+ */
+export function escribirFecha(nuevo: string, anterior: string): string {
+  if (nuevo.length < anterior.length) return nuevo;
+  const partes = [""];
+  for (const c of nuevo) {
+    const ultima = partes.length - 1;
+    const actual = partes[ultima] ?? "";
+    const tope = ultima === 2 ? 4 : 2;
+    if (/\d/.test(c)) {
+      if (actual.length < tope) partes[ultima] = actual + c;
+      else if (ultima < 2) partes.push(c);
+    } else if (/[/.\-,\s]/.test(c) && actual !== "" && ultima < 2) partes.push("");
+  }
+  const ultima = partes.length - 1;
+  const r = partes.join("/");
+  // Día o mes completo (dos cifras): la barra sola.
+  return ultima < 2 && (partes[ultima] ?? "").length === 2 ? `${r}/` : r;
+}
+
 /** «Alba 12/3/2017» → { nombre: «Alba», dia: 12, mes: 3, anio: 2017 }. Una persona por línea o separada por coma o «;». */
 export function parsearCumples(texto: string): {
   validos: Array<{ nombre: string; dia: number; mes: number; anio: number | null }>;

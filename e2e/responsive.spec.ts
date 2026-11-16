@@ -1935,6 +1935,12 @@ test.describe("flujos en móvil", () => {
     await pagina.getByRole("button", { name: "Guardar todos" }).click();
     await expect(pagina.getByRole("heading", { level: 2, name: /Lucas/ })).toBeVisible();
 
+    // Con el teclado numérico (sin «/»), las barras se ponen solas (D-168).
+    const fecha = pagina.getByRole("textbox", { name: /Fecha/ });
+    await fecha.pressSequentially("15032017");
+    await expect(fecha).toHaveValue("15/03/2017");
+    await fecha.fill("");
+
     // Fecha mal escrita: lo dice.
     await pagina.getByLabel("Nombre").fill("Error");
     await pagina.getByRole("textbox", { name: /Fecha/ }).fill("31/2");

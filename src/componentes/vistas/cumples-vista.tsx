@@ -9,6 +9,7 @@ import {
   diasHasta,
   edadQueCumple,
   estadoVigente,
+  escribirFecha,
   parsearFecha,
   proximaFecha,
   urgenciaDe,
@@ -260,7 +261,7 @@ function Alta({ sinFecha }: { sinFecha: string[] }) {
 
   function guardar(e: FormEvent) {
     e.preventDefault();
-    const f = parsearFecha(fecha);
+    const f = parsearFecha(fecha.replace(/\/$/, ""));
     if (!f) {
       setProblema("No entiendo la fecha. Escríbela así: 12/3/2017 (o 12/3 si no sabes el año).");
       return;
@@ -310,7 +311,19 @@ function Alta({ sinFecha }: { sinFecha: string[] }) {
             inputMode="numeric"
             placeholder="12/3/2017"
             value={fecha}
-            onChange={(e) => setFecha(e.target.value)}
+            onChange={(e) => setFecha(escribirFecha(e.target.value, fecha))}
+          />
+        </label>
+        <label className="text-tinta-suave flex flex-col gap-1 text-sm font-semibold">
+          …o elígela en el calendario
+          <input
+            className="campo"
+            type="date"
+            aria-label="Elegir la fecha en el calendario"
+            onChange={(e) => {
+              const [a, m, d] = e.target.value.split("-");
+              if (a && m && d) setFecha(`${Number(d)}/${Number(m)}/${a}`);
+            }}
           />
         </label>
         <label className="flex flex-col gap-1 text-base font-semibold">

@@ -1489,3 +1489,8 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Qué:** nueva pestaña **Fechas → Barrio** (`/barrio`) con todos los planes de la agenda cultural de San Blas-Canillejas agrupados por día, con filtros (Todos, Familia, Gratis, Este finde) y «Ver más».
 - **Apuntar:** cada plan lleva «＋ Apuntar», que lo mete en la agenda de la familia (título con el lugar, fecha, hora y último día si dura varios). Si ya está, sale «✓ Apuntado»; apuntarlo dos veces no lo duplica.
 - **Fechas:** la tarjeta plegable se cambia por una sola línea «🏘️ Planes del barrio · N (M para la familia)» que lleva a la pantalla, para que «Próximas fechas» no se sature. Sigue el bloque «En el barrio» del detalle de cada día del calendario y el aviso del viernes.
+
+## D-168 · Fechas de cumpleaños sin teclear «/»
+
+- **Problema (Diego):** el teclado numérico del móvil no tiene la tecla «/», así que no se podía escribir una fecha como 15/03/2017.
+- **Qué:** al escribir el día o el mes (dos cifras) la barra se pone sola, y «.», «-», coma o espacio también valen como barra (para días de una cifra: «5.3»). Debajo del campo hay un selector «…o elígela en el calendario». El año sigue siendo opcional.
