@@ -100,6 +100,20 @@ export const proyeccionSchema = z.object({
     )
     .catch([])
     .optional(),
+  /** Papeles y vencimientos (D-174). Opcional: la SQL anterior no los manda. */
+  vencimientos: z
+    .array(
+      z.object({
+        titulo: z.string().trim().min(1).max(80),
+        categoria: z.string().catch("otro"),
+        personaId: z.string().nullable().catch(null),
+        fecha,
+        avisos: z.array(z.number().int().min(0).max(120)).catch([]),
+        hechoEn: fecha.nullable().catch(null),
+      }),
+    )
+    .catch([])
+    .optional(),
   /** Lo que apunta la familia sobre el calendario escolar (D-144). Opcional: la SQL anterior no lo manda. */
   diasCole: z
     .array(
@@ -280,6 +294,20 @@ function todosLosEventos(
       descripcion: a.titulo,
       hora: a.hora,
       hasta: a.hasta,
+      aviso: true,
+    });
+  }
+
+  // Papeles y vencimientos (D-174): el día en que vence, de todo el día. Lo hecho no sale, y lo ya
+  // vencido solo hasta un mes después (para que no se quede ahí para siempre).
+  for (const v of p.vencimientos ?? []) {
+    if (v.hechoEn !== null || v.fecha < sumarDias(hoy, -30)) continue;
+    const de = v.personaId ? p.personas.find((x) => x.id === v.personaId)?.nombre : undefined;
+    eventos.push({
+      uid: `papel-${limpio(v.titulo)}-${v.fecha}`,
+      fecha: v.fecha,
+      titulo: `📄 ${v.titulo}${de ? ` · ${de}` : ""}`,
+      descripcion: `Vence: ${v.titulo}${de ? ` de ${de}` : ""}`,
       aviso: true,
     });
   }

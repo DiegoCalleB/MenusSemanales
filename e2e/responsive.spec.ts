@@ -2657,3 +2657,22 @@ test.describe("papeles y vencimientos (D-174)", () => {
     await contexto.close();
   });
 });
+
+test.describe("papeles en el calendario (D-174)", () => {
+  test("el día en que vence sale en el calendario de la app", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/papeles");
+    await pagina.getByRole("button", { name: /Seguro del hogar/ }).click();
+    const form = pagina.getByRole("form", { name: "Apuntar un papel" });
+    await form.getByLabel("Cuándo vence").fill("2026-11-12");
+    await form.getByRole("button", { name: "Guardar" }).click();
+    await expect(pagina.getByRole("region", { name: "Próximos 30 días" })).toContainText(
+      "Seguro del hogar",
+    );
+    await cargar(pagina, "/calendario?dia=2026-11-12");
+    await expect(pagina.getByRole("group", { name: "Papeles que vencen" })).toContainText(
+      "Seguro del hogar",
+    );
+    await contexto.close();
+  });
+});

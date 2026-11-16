@@ -1538,3 +1538,17 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
   - **Aviso:** al cargar un mes sale una notificación «🍽️ Ya está el menú de diciembre» a los móviles de los hogares del colegio.
 - **Probado con el blog real:** el menú de noviembre salió con 19 días, con sus kcal, guarnición y grupos (legumbre, carne…).
 - **Límites:** (1) solo el menú normal, no las dietas especiales; (2) si el colegio cambia el nombre del archivo o deja de usar educaMadrid, no se podrá leer y se anotará el fallo; (3) la IA puede equivocarse en algún plato, igual que al subir el PDF a mano: se puede corregir en Comer → Cole.
+
+## D-174 · Papeles y vencimientos
+
+- **Petición (Diego):** una sección de papeles y vencimientos, muy bien hecha.
+- **Qué es:** lo que caduca o hay que renovar y se olvida: la ITV, el seguro del coche y del hogar, el DNI y el pasaporte de cada uno, la revisión de la caldera, el IBI, la renta, las revisiones del dentista y del pediatra… Cada uno tiene su fecha de vencimiento, de quién es (o «toda la familia»), si se repite (cada 6 meses, cada año, cada 10 años…), con cuántos días de margen avisar y unas notas.
+- **Dónde:** Fechas → **Papeles** (`/papeles`). La lista va por urgencia: **Vencidos** (en rojo), **Próximos 30 días** (en ámbar si faltan 7 o menos), **Más adelante** y **Hechos**.
+- **Apuntar sin esfuerzo:** al pulsar «＋ Apuntar un papel» salen los habituales (ITV, seguros, carné, DNI, pasaporte, certificado digital, caldera, IBI, dentista, pediatra, vista, renta, abono…) con la repetición y los avisos ya puestos y una pista de qué fecha pedir; o «Otro…» en blanco. La fecha se elige con el calendario del móvil.
+- **Renovar:** «✓ Renovado» pregunta la nueva fecha (con la siguiente que toca ya puesta, saltando las que ya pasaron si se renueva tarde) y pasa el papel a ella, guardando la anterior («renovado 2 veces»). Lo que no se repite se da por hecho con «✓ Hecho» y se puede reabrir. Quitar pide confirmación.
+- **Avisos:**
+  - En el aviso de la mañana (móvil, calendario de la app y campanita): a cada uno de sus días de margen (por defecto 30, 7 y 1 días, o 90, 30 y 7 en los documentos). Ya vencido, al día siguiente, a la semana, a las dos y al mes: no cada día.
+  - En **Hoy**, una tarjeta con lo vencido y lo de las próximas dos semanas (como mucho tres, con enlace a todos).
+  - En el **calendario suscrito** (el principal) y en el de la app, el día en que vence, de todo el día y con aviso. Lo hecho no sale y lo vencido hace más de un mes tampoco.
+- **Privacidad:** solo se guarda nombre, fecha y notas (la pantalla pide no apuntar números de documento ni contraseñas). El servidor solo recibe nombre, tipo, de quién es, fecha, días de aviso y si está hecho; las notas no salen de la app (`20261119000000_papeles.sql`).
+- **Pendiente:** adjuntar la foto del documento y leer la fecha con IA (como las circulares); aún no.

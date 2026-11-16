@@ -6,6 +6,7 @@ import { paraPreparar } from "./mochila";
 import { type AjusteCole, consultaCole, diaDeCole } from "./calendario-escolar";
 import { type PlanBarrio, lineaDelPlan, planesDelFinde } from "./barrio";
 import type { Medicamento } from "./medicacion";
+import { type Vencimiento, avisosDeVencimientos } from "./vencimientos";
 import { type EventoEstadio, ESTADIO, planesDelDia } from "./metropolitano";
 import {
   type LluviaEnFranja,
@@ -70,6 +71,8 @@ export interface EntradaAvisos {
   barrio?: readonly PlanBarrio[];
   /** Medicación (D-166): el servidor avisa a la hora, a esa persona. */
   medicacion?: readonly Medicamento[];
+  /** Papeles y vencimientos (D-174): se avisa con el margen que tiene cada uno. */
+  vencimientos?: readonly Vencimiento[];
   /** Las personas del hogar (id y nombre), para poner el nombre en el aviso de la medicación. */
   personas?: ReadonlyArray<{ id: string; nombre: string }>;
   /** La cena que repite lo del comedor (D-155), hoy o mañana. Solo en la app (el servidor no lo sabe). */
@@ -374,6 +377,17 @@ export function avisosDeHoy(e: EntradaAvisos): Aviso[] {
       emoji: "📌",
       titulo: `${hoyEs ? "Hoy" : "Mañana"}${c.hora ? ` ${c.hora}` : ""}: ${c.titulo}`,
       nivel: hoyEs ? "ya" : "pronto",
+    });
+  }
+
+  // Papeles y vencimientos (D-174): con el margen de cada uno y, ya vencidos, al día siguiente, a la
+  // semana, a las dos y al mes.
+  for (const a of avisosDeVencimientos(e.vencimientos ?? [], e.hoy, e.personas ?? [])) {
+    out.push({
+      id: a.id,
+      emoji: "📄",
+      titulo: a.texto.charAt(0).toUpperCase() + a.texto.slice(1),
+      nivel: a.nivel,
     });
   }
 
@@ -688,6 +702,21 @@ export function entradaDeProyeccion(p: ProyeccionCalendario, hoy: FechaIso): Ent
     })),
     diasConCena: [...new Set(p.cenas.map((c) => c.fecha))],
     medicacion: (p.medicacion ?? []).map((m, i) => ({ id: `med-${i}`, ...m })),
+    vencimientos: (p.vencimientos ?? []).map((v, i) => ({
+      id: `ven-${i}`,
+      titulo: v.titulo,
+      categoria:
+        (["coche", "casa", "documentos", "salud", "dinero"] as const).find(
+          (c) => c === v.categoria,
+        ) ?? "otro",
+      personaId: v.personaId,
+      fecha: v.fecha,
+      repiteMeses: null,
+      avisos: v.avisos,
+      notas: "",
+      hechoEn: v.hechoEn,
+      renovado: [],
+    })),
     personas: p.personas.map((x) => ({ id: x.id, nombre: x.nombre })),
     diasCole: p.diasCole ?? [],
     conCole:

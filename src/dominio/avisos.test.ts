@@ -614,3 +614,44 @@ describe("el barrio el fin de semana (D-165)", () => {
     ).toBe(true);
   });
 });
+
+describe("avisos de papeles y vencimientos (D-174)", () => {
+  const venc = (o: object = {}) => ({
+    id: "v1",
+    titulo: "ITV del coche",
+    categoria: "coche" as const,
+    personaId: null,
+    fecha: "2026-11-27",
+    repiteMeses: 12,
+    avisos: [30, 7, 1],
+    notas: "",
+    hechoEn: null,
+    renovado: [],
+    ...o,
+  });
+  const papel = (hoy: string, vencimientos: ReturnType<typeof venc>[]) =>
+    avisosDeHoy({ ...base, hoy, vencimientos, personas: [{ id: "alba", nombre: "Alba" }] }).filter(
+      (a) => a.id.startsWith("papel-"),
+    );
+  it("avisa a los siete días con el nivel «pronto» y empieza con mayúscula", () => {
+    const a = papel("2026-11-20", [venc()]);
+    expect(a).toEqual([
+      { id: "papel-v1-7", emoji: "📄", titulo: "ITV del coche vence en 7 días", nivel: "pronto" },
+    ]);
+  });
+  it("el día antes y el mismo día piden hacer algo ya; entre medias, nada", () => {
+    expect(papel("2026-11-26", [venc()])[0]?.nivel).toBe("ya");
+    expect(papel("2026-11-23", [venc()])).toEqual([]);
+  });
+  it("ya vencido, avisa al día siguiente y a la semana", () => {
+    expect(papel("2026-11-28", [venc()])[0]?.titulo).toBe("ITV del coche venció ayer");
+    expect(papel("2026-12-04", [venc()])[0]?.titulo).toBe("ITV del coche venció hace 7 días");
+    expect(papel("2026-11-30", [venc()])).toEqual([]);
+  });
+  it("pone de quién es y no avisa de lo hecho", () => {
+    expect(papel("2026-11-20", [venc({ titulo: "Pasaporte", personaId: "alba" })])[0]?.titulo).toBe(
+      "Pasaporte de Alba vence en 7 días",
+    );
+    expect(papel("2026-11-20", [venc({ hechoEn: "2026-11-01" })])).toEqual([]);
+  });
+});
