@@ -2406,6 +2406,10 @@ test.describe("mochila, compartir y plan de la semana", () => {
     await expect(pagina.getByRole("heading", { name: /Planes del barrio/ })).toBeVisible();
     await expect(pagina.getByText("El sueño de Lucía")).toBeVisible();
     await expect(pagina.getByText("Concierto de jazz")).toBeVisible();
+    // La Quinta de los Molinos tiene su filtro.
+    await pagina.getByRole("button", { name: /Quinta de los Molinos/ }).click();
+    await expect(pagina.getByText("El sueño de Lucía")).toHaveCount(0);
+    await pagina.getByRole("button", { name: "Todos" }).click();
     await pagina.getByRole("button", { name: /Familia/ }).click();
     await expect(pagina.getByText("Concierto de jazz")).toHaveCount(0);
     await pagina.getByRole("button", { name: "Todos" }).click();

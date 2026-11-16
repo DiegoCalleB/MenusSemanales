@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { PlanBarrio } from "@/dominio/barrio";
+import { type PlanBarrio, esQuinta } from "@/dominio/barrio";
 import { diaSemanaIso, sumarDias } from "@/dominio/fechas";
 import { claveArticulo } from "@/dominio/habituales";
 import { useHogar } from "../proveedor-hogar";
@@ -19,10 +19,11 @@ const fechaCorta = (f: string) =>
     new Date(`${f}T12:00:00Z`),
   );
 
-type Filtro = "todos" | "familia" | "gratis" | "finde";
+type Filtro = "todos" | "familia" | "quinta" | "gratis" | "finde";
 const FILTROS: ReadonlyArray<[Filtro, string]> = [
   ["todos", "Todos"],
   ["familia", "👨‍👩‍👧 Familia"],
+  ["quinta", "🌳 Quinta de los Molinos"],
   ["gratis", "Gratis"],
   ["finde", "Este finde"],
 ];
@@ -50,7 +51,13 @@ export function BarrioVista() {
   const dow = diaSemanaIso(estado.hoy);
   const viernes = dow >= 6 ? sumarDias(estado.hoy, -(dow - 5)) : sumarDias(estado.hoy, 5 - dow);
   const lista = vigentes.filter((p) =>
-    filtro === "familia" ? p.familiar : filtro === "gratis" ? p.gratis : true,
+    filtro === "familia"
+      ? p.familiar
+      : filtro === "quinta"
+        ? esQuinta(p.lugar)
+        : filtro === "gratis"
+          ? p.gratis
+          : true,
   );
   // «Este finde» enseña también lo que no es de familia: se calcula aparte.
   const finde =
@@ -59,7 +66,10 @@ export function BarrioVista() {
           (p) => p.fecha <= sumarDias(viernes, 2) && (p.hasta ?? p.fecha) >= sumarDias(viernes, 1),
         )
       : lista;
-  const visibles = finde.slice(0, cuantos);
+  // Los ciclos y talleres de meses van aparte: no son un plan de un día.
+  const series = finde.filter((p) => p.serie);
+  const sueltos = finde.filter((p) => !p.serie);
+  const visibles = sueltos.slice(0, cuantos);
   const dias = [...new Set(visibles.map((p) => p.fecha))];
   const yaApuntado = (p: PlanBarrio) =>
     estado.agenda.some(
@@ -171,13 +181,49 @@ export function BarrioVista() {
         ))
       )}
 
-      {finde.length > cuantos && (
+      {series.length > 0 && (
+        <section aria-labelledby="barrio-series" className="flex flex-col gap-2">
+          <h2 id="barrio-series" className="text-lg font-bold">
+            Ciclos y talleres de varios meses
+          </h2>
+          <ul className="flex flex-col gap-2">
+            {series.map((p) => (
+              <li key={`${p.id}-${p.fecha}`} className="tarjeta flex flex-col gap-0.5">
+                <p className="text-base font-semibold">
+                  <span aria-hidden="true">{p.emoji} </span>
+                  {p.enlace ? (
+                    <a
+                      href={p.enlace}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex min-h-11 items-center underline"
+                      title="Buscar más información"
+                    >
+                      {p.titulo}
+                    </a>
+                  ) : (
+                    p.titulo
+                  )}
+                </p>
+                <p className="text-tinta-suave text-sm">
+                  hasta el {fechaCorta(p.hasta ?? p.fecha)} ·{" "}
+                  {p.lugar.replace(/^(Centro Cultural|Biblioteca Pública Municipal) /, "")}
+                  {` · ${p.gratis ? "gratis" : (p.precio ?? "de pago")}`}
+                  {p.familiar ? " · 👨‍👩‍👧 familia" : ""}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {sueltos.length > cuantos && (
         <button
           type="button"
           className="boton-suave w-fit"
           onClick={() => setCuantos((n) => n + DE_UNA_VEZ)}
         >
-          Ver más ({finde.length - cuantos})
+          Ver más ({sueltos.length - cuantos})
         </button>
       )}
       <p className="text-tinta-suave text-sm">

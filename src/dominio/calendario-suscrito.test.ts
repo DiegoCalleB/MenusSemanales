@@ -534,6 +534,7 @@ describe("los planes del barrio en el calendario suscrito (D-165)", () => {
       precio: null,
       enlace: "http://www.madrid.es/cuentos",
       familiar: true,
+      serie: false,
       emoji: "🧸",
     },
     {
@@ -548,6 +549,7 @@ describe("los planes del barrio en el calendario suscrito (D-165)", () => {
       precio: null,
       enlace: null,
       familiar: false,
+      serie: false,
       emoji: "💃",
     },
   ];

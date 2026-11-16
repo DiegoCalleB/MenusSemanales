@@ -1499,3 +1499,12 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 
 - **Medicación:** estaba al final de «Qué llevar» y no se encontraba. Ahora tiene su pestaña: **Casa → Medicación** (`/medicacion`).
 - **Enlaces de los planes del barrio:** el `link` que trae la agenda del Ayuntamiento lleva a madrid.es con «Contenido no disponible» (las 48 entradas de San Blas-Canillejas). Se ha cambiado por una búsqueda del plan (título, lugar y Madrid), que siempre abre algo útil. En el calendario suscrito, la descripción lleva ese mismo enlace.
+
+## D-170 · Quinta de los Molinos en los planes del barrio
+
+- **Petición (Diego):** tener los planes del Espacio Abierto de la Quinta de los Molinos (muchos talleres, les encanta ir).
+- **Qué:** sus actividades ya venían en la agenda del Ayuntamiento, pero los ciclos de meses se descartaban y los talleres no contaban como «para la familia». Ahora:
+  - Todo lo del Espacio Abierto y el parque de la **Quinta de los Molinos** cuenta como plan **para la familia** (así entra en el aviso del viernes).
+  - Tiene su filtro **🌳 Quinta de los Molinos** en Fechas → Barrio.
+  - Los **ciclos y talleres de varios meses** (más de 20 días, hasta 250) se enseñan aparte, en «Ciclos y talleres de varios meses». No salen en el calendario del móvil, en el detalle de cada día ni en el aviso del viernes, para no taparlo todo.
+  - En el resto de centros, lo que dura más de 20 días sigue sin ser un plan.

@@ -432,6 +432,7 @@ function todosLosEventos(
   // Los planes del barrio (D-165), en su propio calendario: con su hora si se dice y, si no, de todo
   // el día. El lugar, el barrio, el precio y el enlace van en la descripción.
   for (const b of barrio) {
+    if (b.serie) continue; // un ciclo de meses taparía el calendario
     if ((b.hasta ?? b.fecha) < hoy) continue;
     eventos.push({
       uid: `barrio-${b.id}-${b.fecha}`,

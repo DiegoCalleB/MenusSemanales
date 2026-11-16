@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { lineaDelPlan, planesDelBarrio, planesDelFinde } from "./barrio";
+import { esQuinta, lineaDelPlan, planesDelBarrio, planesDelFinde } from "./barrio";
 
 /** Recortes de la agenda real del Ayuntamiento (15-11-2026). */
 const D = (barrio: string, distrito = "SanBlas-Canillejas") => ({
@@ -104,6 +104,7 @@ describe("planes del barrio (D-165)", () => {
       precio: null,
       enlace: expect.stringContaining("https://www.google.com/search?q="),
       familiar: true,
+      serie: false,
       emoji: "🧸",
     });
     expect(p[1]).toMatchObject({
@@ -134,10 +135,65 @@ describe("planes del barrio (D-165)", () => {
       [
         ...p,
         { ...p[0]!, id: "9", fecha: "2026-11-21", hora: "11:00" },
-        { ...p[2]!, id: "10", fecha: "2026-11-21" },
+        { ...p[0]!, id: "10", fecha: "2026-11-21", familiar: false },
       ],
       "2026-11-20",
     );
     expect(finde.map((x) => x.id)).toEqual(["9"]);
+  });
+});
+
+describe("Quinta de los Molinos (D-170)", () => {
+  const evento = (id: string, titulo: string, ini: string, fin: string, lugar: string) => ({
+    id,
+    title: titulo,
+    free: 0,
+    price: "5 euros",
+    dtstart: `${ini} 11:00:00.0`,
+    dtend: `${fin} 23:59:00.0`,
+    time: "11:00",
+    link: "http://www.madrid.es/x",
+    "event-location": lugar,
+    address: {
+      district: {
+        "@id":
+          "https://datos.madrid.es/egob/kos/Provincia/Madrid/Municipio/Madrid/Distrito/SanBlas-Canillejas",
+      },
+    },
+  });
+  const json = {
+    "@graph": [
+      evento(
+        "1",
+        "Taller de cajas mágicas",
+        "2026-12-20",
+        "2026-12-20",
+        "Espacio Abierto Quinta de los Molinos",
+      ),
+      evento(
+        "2",
+        "Taller de creación musical",
+        "2027-02-06",
+        "2027-04-17",
+        "Espacio Abierto Quinta de los Molinos",
+      ),
+      evento("3", "Curso de pintura", "2026-11-10", "2027-05-10", "Centro Cultural Buero Vallejo"),
+    ],
+  };
+  it("reconoce el lugar", () => {
+    expect(esQuinta("Espacio Abierto Quinta de los Molinos")).toBe(true);
+    expect(esQuinta("Parque Quinta de los Molinos")).toBe(true);
+    expect(esQuinta("Biblioteca Canillejas")).toBe(false);
+  });
+  it("sus talleres cuentan como de familia y los ciclos de meses se guardan como serie", () => {
+    const p = planesDelBarrio(json, "2026-11-16");
+    expect(p.find((x) => x.id === "1")).toMatchObject({ familiar: true, serie: false });
+    expect(p.find((x) => x.id === "2")).toMatchObject({ familiar: true, serie: true });
+    // Un curso de meses de otro centro sigue sin ser un plan.
+    expect(p.find((x) => x.id === "3")).toBeUndefined();
+  });
+  it("las series no salen en el aviso del fin de semana", () => {
+    const p = planesDelBarrio(json, "2027-02-08");
+    expect(planesDelFinde(p, "2027-02-12")).toEqual([]);
   });
 });

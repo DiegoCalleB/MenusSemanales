@@ -78,7 +78,8 @@ export function CalendarioVista() {
   const estadio = useEstadio();
   // Los planes del barrio (D-165): en el detalle del día.
   const barrio = usePlanesDelBarrio();
-  const barrioDe = (f: FechaIso) => barrio.filter((p) => p.fecha <= f && f <= (p.hasta ?? p.fecha));
+  const barrioDe = (f: FechaIso) =>
+    barrio.filter((p) => !p.serie && p.fecha <= f && f <= (p.hasta ?? p.fecha));
   const estadioDe = (f: FechaIso) => estadio.filter((e) => e.fecha === f);
   // Lo demás que se hace ese día: si choca con un partido o un concierto, se avisa (D-163).
   const planesDe = (f: FechaIso) =>

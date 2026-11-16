@@ -578,6 +578,7 @@ describe("el barrio el fin de semana (D-165)", () => {
     precio: null,
     enlace: null,
     familiar,
+    serie: false,
     emoji: "🧸",
   });
   const barrio = [
