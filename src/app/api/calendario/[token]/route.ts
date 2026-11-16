@@ -66,10 +66,16 @@ export async function GET(request: Request, ctx: { params: Promise<{ token: stri
   }
   if (!resumen) return noEncontrado();
 
-  // Dos calendarios con el mismo token (D-140): las fechas, o con `solo=comidas` las comidas y cenas.
-  const solo = new URL(request.url).searchParams.get("solo") === "comidas" ? "comidas" : "fechas";
+  // Tres calendarios con el mismo token (D-140, D-163): las fechas, o con `solo=comidas` las comidas
+  // y cenas, o con `solo=metropolitano` los partidos y conciertos del estadio.
+  const pedido = new URL(request.url).searchParams.get("solo");
+  const solo = pedido === "comidas" || pedido === "metropolitano" ? pedido : "fechas";
   const ics = generarIcs(
-    solo === "comidas" ? "¡Hecho! · Comidas" : "¡Hecho!",
+    solo === "comidas"
+      ? "¡Hecho! · Comidas"
+      : solo === "metropolitano"
+        ? "¡Hecho! · Metropolitano"
+        : "¡Hecho!",
     eventosSuscritos(resumen, { hoy: hoyEnMadrid(), para, solo, tiempo, estadio }),
     new Date(),
     1,

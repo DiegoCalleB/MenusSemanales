@@ -30,7 +30,7 @@ const DIAS = 120;
 
 async function json(url: string, pedir: typeof fetch): Promise<unknown> {
   const r = await pedir(url, {
-    signal: AbortSignal.timeout(6000),
+    signal: AbortSignal.timeout(4000),
     // Los partidos y conciertos cambian poco: se miran cada seis horas.
     next: { revalidate: 6 * 3600 },
   } as RequestInit);

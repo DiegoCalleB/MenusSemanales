@@ -1441,3 +1441,14 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Casos raros:**
   - Si hoy ya estamos de vacaciones, no se pone un «inicio» falso para hoy.
   - Si aún no se conoce el calendario del curso siguiente (el verano de 2027 en noviembre de 2026), solo sale el inicio: el fin se pondrá cuando la lectura mensual (D-146) cargue el curso.
+
+## D-163 · El Metropolitano en su calendario, y aviso si coincide con otra cosa
+
+- **Petición (Diego):** los partidos y conciertos del Metropolitano, **en un calendario aparte**, y que **avise en el calendario principal y en la app si coincide con algún otro evento que se vaya a hacer en casa o por el barrio**.
+- **Tres calendarios con el mismo enlace** (D-140): el de fechas (sin añadidos), `&solo=comidas` y ahora `&solo=metropolitano` («¡Hecho! · Metropolitano»), solo con partidos y conciertos, con el título corto de D-161. En Google, cada uno tiene su color y se oculta con un toque. Los partidos **ya no salen** en el de fechas. El enlace nuevo está en Cuenta → «Avisos en el calendario del móvil».
+- **La coincidencia:** si el día de un partido o concierto hay **otra cosa apuntada** (una cita, una fecha señalada o un cumpleaños), se avisa. La app no sabe dónde es cada plan, así que cuenta cualquier cosa del mismo día, y vale más un aviso de más que ir con prisas:
+  - **Calendario de fechas:** un evento de todo el día con alarma: «⚠️ Partido y Comida en casa de la abuela». En la descripción, qué es y cuándo y la recomendación de salir con tiempo.
+  - **Campanita de la app y notificaciones del móvil:** el aviso de la víspera y del día dicen «… · coincide con Comida en casa».
+  - **Calendario de la app:** ⚠️ en la casilla del día y, en el detalle, «⚠️ Coincide con: …. Sal con tiempo.».
+- **Límite:** no distingue entre lo que es en casa, por el barrio o lejos, ni sabe qué horas se pisan. Para eso habría que apuntar el lugar de cada cosa.
+- **Rendimiento:** la campanita está en todas las pantallas, así que no pregunta por los partidos hasta pasados 4 segundos, y solo una vez por sesión y hora. Si no, cada pantalla esperaba a una petición lenta (se notó en las pruebas, sin internet).

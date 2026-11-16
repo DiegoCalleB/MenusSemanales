@@ -5,6 +5,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { avisosDelEstado } from "@/aplicacion/avisos";
 import { type Aviso, avisosQueImportan } from "@/dominio/avisos";
 import { useHogar } from "./proveedor-hogar";
+import { useEstadio } from "./usar-estadio";
 
 const CLAVE = "menus-semanales:avisos-vistos";
 
@@ -31,7 +32,8 @@ export function BotonAvisos() {
   const id = useId();
   const raiz = useRef<HTMLDivElement>(null);
 
-  const avisos = useMemo(() => avisosDelEstado(estado), [estado]);
+  const estadio = useEstadio(4000);
+  const avisos = useMemo(() => avisosDelEstado(estado, estadio), [estado, estadio]);
   const importantes = useMemo(() => avisosQueImportan(avisos), [avisos]);
   const nuevos = importantes.filter((a) => !vistos.includes(a.id)).length;
 

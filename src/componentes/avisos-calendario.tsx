@@ -30,6 +30,9 @@ export function AvisosCalendario() {
   // Las comidas y cenas van en un calendario aparte (D-140).
   const enlaceComidas = enlace ? `${enlace}&solo=comidas` : null;
   const webcalComidas = enlaceComidas?.replace(/^https?:/, "webcal:") ?? null;
+  // Los partidos y conciertos del Metropolitano, en otro más (D-163).
+  const enlaceEstadio = enlace ? `${enlace}&solo=metropolitano` : null;
+  const webcalEstadio = enlaceEstadio?.replace(/^https?:/, "webcal:") ?? null;
 
   async function pedir(renovar: boolean) {
     if (!hogar) return;
@@ -114,6 +117,26 @@ export function AvisosCalendario() {
                 onClick={() => void copiar(enlaceComidas)}
               >
                 Copiar el enlace de comidas y cenas
+              </button>
+            </div>
+          </div>
+          <div className="border-borde flex flex-col gap-2 rounded-2xl border p-3">
+            <p className="text-base">
+              <span aria-hidden="true">⚽ </span>
+              <strong>Los partidos y conciertos del Metropolitano, en otro calendario</strong>, para
+              ocultarlo cuando no interese. Si ese día hay algo más apuntado (una comida, un
+              cumple…), el calendario de fechas avisa con un ⚠️.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <a className="boton-suave" href={webcalEstadio ?? undefined}>
+                Suscribir el Metropolitano en el iPhone
+              </a>
+              <button
+                type="button"
+                className="boton-suave"
+                onClick={() => void copiar(enlaceEstadio)}
+              >
+                Copiar el enlace del Metropolitano
               </button>
             </div>
           </div>

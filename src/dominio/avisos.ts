@@ -4,7 +4,7 @@ import { diasHasta } from "./cumples";
 import { type FechaIso, diaSemanaIso, sumarDias } from "./fechas";
 import { paraPreparar } from "./mochila";
 import { type AjusteCole, consultaCole, diaDeCole } from "./calendario-escolar";
-import { type EventoEstadio, ESTADIO } from "./metropolitano";
+import { type EventoEstadio, ESTADIO, planesDelDia } from "./metropolitano";
 import {
   type LluviaEnFranja,
   type Pronostico,
@@ -41,7 +41,13 @@ export interface EntradaAvisos {
   /** Mañana no se cena en casa (no hace falta elegir cena). */
   mananaSinCena?: boolean;
   comidaHoy: readonly string[];
-  citas: ReadonlyArray<{ fecha: FechaIso; titulo: string; hora: string | null }>;
+  citas: ReadonlyArray<{
+    fecha: FechaIso;
+    /** Último día, si dura varios. */
+    hasta?: FechaIso | null;
+    titulo: string;
+    hora: string | null;
+  }>;
   tareas: readonly TareaCasa[];
   cumples: ReadonlyArray<{ nombre: string; dia: number; mes: number }>;
   /** Qué llevar (D-136), con el nombre de la persona ya puesto. */
@@ -201,14 +207,31 @@ export function fechaLarga(f: FechaIso): string {
 
 const MAX_TAREAS = 5;
 
-/** «⚽ Hoy partido en el Metropolitano a las 21:00: Atlético – Real Betis (Liga)». */
-function avisoDelEstadio(ev: EventoEstadio, cuando: "Hoy" | "Mañana"): Aviso {
+/**
+ * «⚽ Hoy partido en el Metropolitano a las 21:00: Atlético – Real Betis (Liga)». Si ese día hay algo
+ * más apuntado, lo dice (⚠️): hay que salir con tiempo (D-163).
+ */
+function avisoDelEstadio(
+  ev: EventoEstadio,
+  cuando: "Hoy" | "Mañana",
+  coincide: readonly string[] = [],
+): Aviso {
   const que = ev.tipo === "partido" ? "partido" : ev.tipo === "concierto" ? "concierto" : "evento";
   return {
     id: `estadio-${ev.id}-${cuando === "Hoy" ? "hoy" : "manana"}`,
-    emoji: ev.tipo === "partido" ? "⚽" : ev.tipo === "concierto" ? "🎤" : "🏟️",
-    titulo: `${cuando} ${que} en el ${ESTADIO.nombre}${ev.hora ? ` a las ${ev.hora}` : ""}: ${ev.titulo}`,
-    detalle: "Más tráfico, calles cortadas y el metro lleno unas dos horas antes y una después.",
+    emoji:
+      coincide.length > 0
+        ? "⚠️"
+        : ev.tipo === "partido"
+          ? "⚽"
+          : ev.tipo === "concierto"
+            ? "🎤"
+            : "🏟️",
+    titulo: `${cuando} ${que} en el ${ESTADIO.nombre}${ev.hora ? ` a las ${ev.hora}` : ""}: ${ev.titulo}${coincide.length > 0 ? ` · coincide con ${coincide.slice(0, 2).join(" y ")}` : ""}`,
+    detalle:
+      coincide.length > 0
+        ? "Sal con tiempo: más tráfico, calles cortadas y el metro lleno unas dos horas antes y una después."
+        : "Más tráfico, calles cortadas y el metro lleno unas dos horas antes y una después.",
     nivel: cuando === "Hoy" ? "ya" : "pronto",
   };
 }
@@ -429,7 +452,13 @@ export function avisosDeHoy(e: EntradaAvisos): Aviso[] {
   // El estadio de al lado (D-159): hoy y mañana, para estar prevenidos.
   for (const ev of e.estadio ?? []) {
     if (ev.fecha !== e.hoy && ev.fecha !== manana) continue;
-    out.push(avisoDelEstadio(ev, ev.fecha === e.hoy ? "Hoy" : "Mañana"));
+    // Lo demás que se hace ese día (citas y cumples): si hay algo, avisa de que coincide (D-163).
+    const coincide = planesDelDia(ev.fecha, {
+      agenda: e.citas,
+      eventos: {},
+      cumples: e.cumples,
+    });
+    out.push(avisoDelEstadio(ev, ev.fecha === e.hoy ? "Hoy" : "Mañana", coincide));
   }
 
   // La cena que repite lo del comedor (D-155): mejor cambiarla.
@@ -609,7 +638,12 @@ export function entradaDeProyeccion(p: ProyeccionCalendario, hoy: FechaIso): Ent
     cenaHoy: platos(hoy),
     cenaManana: platos(manana),
     comidaHoy: p.almuerzos.filter((a) => a.fecha === hoy).map((a) => a.texto),
-    citas: p.agenda.map((a) => ({ fecha: a.fecha, titulo: a.titulo, hora: a.hora })),
+    citas: p.agenda.map((a) => ({
+      fecha: a.fecha,
+      hasta: a.hasta,
+      titulo: a.titulo,
+      hora: a.hora,
+    })),
     tareas: p.casa.map((t, i) => ({
       id: `t${i}`,
       titulo: t.titulo,

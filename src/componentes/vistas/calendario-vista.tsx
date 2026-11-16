@@ -12,7 +12,7 @@ import { lineasDelTiempo } from "@/dominio/avisos";
 import { resumenDelTiempo } from "@/dominio/tiempo";
 import { usePrevision } from "../usar-prevision";
 import { useEstadio } from "../usar-estadio";
-import { textoDelEvento } from "@/dominio/metropolitano";
+import { planesDelDia, textoDelEvento } from "@/dominio/metropolitano";
 import {
   MAX_PLATOS_POR_CENA,
   comidasDe,
@@ -76,9 +76,15 @@ export function CalendarioVista() {
   // Partidos y conciertos en el estadio de al lado (D-159).
   const estadio = useEstadio();
   const estadioDe = (f: FechaIso) => estadio.filter((e) => e.fecha === f);
+  // Lo demás que se hace ese día: si choca con un partido o un concierto, se avisa (D-163).
+  const planesDe = (f: FechaIso) =>
+    planesDelDia(f, { agenda: estado.agenda, eventos: estado.eventos, cumples: estado.cumples });
+  const choqueDe = (f: FechaIso) => (estadioDe(f).length > 0 ? planesDe(f) : []);
   const emojiEstadio = (f: FechaIso) => {
     const e = estadioDe(f)[0];
-    return e ? (e.tipo === "partido" ? "⚽" : e.tipo === "concierto" ? "🎤" : "🏟️") : "";
+    if (!e) return "";
+    if (choqueDe(f).length > 0) return "⚠️";
+    return e.tipo === "partido" ? "⚽" : e.tipo === "concierto" ? "🎤" : "🏟️";
   };
   const hayColeEse = hayColeDe(estado);
   const tiempoDe = (f: FechaIso) => {
@@ -328,6 +334,11 @@ export function CalendarioVista() {
             <p key={e.id} className="bg-suave-1 rounded-2xl p-3 text-base">
               {textoDelEvento(e)}
               <span className="text-tinta-suave block text-sm">
+                {choqueDe(sel).length > 0 && (
+                  <strong className="text-aviso-texto block">
+                    ⚠️ Coincide con: {choqueDe(sel).join(", ")}. Sal con tiempo.
+                  </strong>
+                )}
                 Más tráfico, calles cortadas y el metro lleno unas dos horas antes y una después.
               </span>
             </p>

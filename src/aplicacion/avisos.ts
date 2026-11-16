@@ -1,10 +1,15 @@
 import { type EntradaAvisos, avisosDeHoy } from "@/dominio/avisos";
 import { sumarDias } from "@/dominio/fechas";
+import type { EventoEstadio } from "@/dominio/metropolitano";
 import { repiteConElCole, tieneCole } from "./cole";
 import { comidasDe, type EstadoHogar } from "./estado";
 
 /** La entrada de los avisos a partir del estado de la app (la campanita). */
-export function entradaDeEstado(e: EstadoHogar): EntradaAvisos {
+export function entradaDeEstado(
+  e: EstadoHogar,
+  /** Partidos y conciertos del estadio de al lado (D-159), que pide la pantalla al servidor. */
+  estadio: readonly EventoEstadio[] = [],
+): EntradaAvisos {
   const manana = sumarDias(e.hoy, 1);
   const platos = (f: string) => comidasDe(e, f).map((c) => c.plato.nombre);
   return {
@@ -13,7 +18,13 @@ export function entradaDeEstado(e: EstadoHogar): EntradaAvisos {
     cenaManana: platos(manana),
     mananaSinCena: e.saltados.includes(manana),
     comidaHoy: e.almuerzos.filter((a) => a.fecha === e.hoy).map((a) => a.texto),
-    citas: e.agenda.map((a) => ({ fecha: a.fecha, titulo: a.titulo, hora: a.hora })),
+    citas: e.agenda.map((a) => ({
+      fecha: a.fecha,
+      hasta: a.hasta,
+      titulo: a.titulo,
+      hora: a.hora,
+    })),
+    estadio,
     tareas: e.casa,
     cumples: e.cumples.map((c) => ({ nombre: c.nombre, dia: c.dia, mes: c.mes })),
     mochila: e.mochila.map((c) => ({
@@ -37,4 +48,5 @@ export function entradaDeEstado(e: EstadoHogar): EntradaAvisos {
   };
 }
 
-export const avisosDelEstado = (e: EstadoHogar) => avisosDeHoy(entradaDeEstado(e));
+export const avisosDelEstado = (e: EstadoHogar, estadio: readonly EventoEstadio[] = []) =>
+  avisosDeHoy(entradaDeEstado(e, estadio));
