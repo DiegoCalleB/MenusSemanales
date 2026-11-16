@@ -1460,3 +1460,16 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Hora:** la web no da hora de los conciertos, así que salen de todo el día. La final sale como «evento».
 - **Si la web cambia o no responde:** `/api/metropolitano` lo dice en `fuentes.web` (`ok: N eventos` o `error: …`) y el resto sigue igual.
 - **Horizonte:** los conciertos se miran hasta 450 días por delante.
+
+## D-165 · Planes del barrio (San Blas-Canillejas)
+
+- **Petición (Diego):** «planes del barrio, de programas culturales de San Blas, Las Rejas y demás».
+- **Fuente:** la agenda cultural abierta del Ayuntamiento de Madrid (`datos.madrid.es`, «Agenda de eventos culturales»), sin clave. De sus actividades se queda con las del distrito **San Blas-Canillejas** (Rejas, Rosas, Arcos, Canillejas, El Salvador…): bibliotecas, centros culturales (Antonio Machado, Buero Vallejo, López Vázquez), Quinta de los Molinos… Se lee cada 12 horas y, si falla, no hay planes del barrio y lo demás sigue igual.
+- **Qué se pone:** de hoy en adelante, con lugar, barrio, hora si la dice, precio o «gratis», enlace y un emoji por categoría (🧸 cuentacuentos, 🎬 cine, 💃 flamenco…). Los cursos y tertulias semanales que duran meses no son un plan y se dejan fuera. Los campamentos de Navidad, que duran 16 días, sí entran.
+- **Para la familia:** lo marca la categoría de la agenda (cuentacuentos, títeres, circo y magia, fiestas de Navidad, actividades escolares) o palabras del título (infantil, familiar, niños, campamento…).
+- **Dónde sale:**
+  - **Calendario aparte «¡Hecho! · Barrio»** (`&solo=barrio`, como el de comidas y el del Metropolitano). El enlace está en Cuenta → «Avisos en el calendario del móvil».
+  - **Tarjeta «Planes del barrio» en Fechas**, con «Solo para la familia» y «Ver más».
+  - **Detalle de cada día** en el calendario de la app: «En el barrio».
+  - **El viernes**, el aviso «🧸 Este finde en el barrio: sáb 21 12:00 El sueño de Lucía (Canillejas), …» con lo de familia del sábado y el domingo.
+- **Límite:** la agenda del Ayuntamiento solo cubre actividades municipales (no los colegios, las asociaciones de vecinos ni las fiestas de la parroquia), y avisa de lo que está publicado a unos 100 días vista.

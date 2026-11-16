@@ -3,6 +3,7 @@ import { generarIcs } from "@/dominio/compartir";
 import { cargarCursosEscolares } from "@/infraestructura/calendario-escolar";
 import { leerPrevision } from "@/infraestructura/tiempo";
 import { leerEventosEstadio } from "@/infraestructura/metropolitano";
+import { leerPlanesDelBarrio } from "@/infraestructura/barrio";
 import {
   demasiadasPeticiones,
   hoyEnMadrid,
@@ -48,14 +49,16 @@ export async function GET(request: Request, ctx: { params: Promise<{ token: stri
   let resumen;
   let tiempo;
   let estadio;
+  let barrio;
   try {
     // Los cursos del calendario escolar leídos solos (D-146), para los días sin cole, y el tiempo
     // (D-154), que si no llega no impide nada (devuelve una lista vacía).
-    [resumen, , tiempo, estadio] = await Promise.all([
+    [resumen, , tiempo, estadio, barrio] = await Promise.all([
       leerResumenDelCalendario(token),
       cargarCursosEscolares(),
       leerPrevision(),
       leerEventosEstadio(hoyEnMadrid()).catch(() => []),
+      leerPlanesDelBarrio(hoyEnMadrid()),
     ]);
   } catch {
     // Sin detalles: un fallo de Supabase no debe contar nada del servidor.
@@ -69,14 +72,17 @@ export async function GET(request: Request, ctx: { params: Promise<{ token: stri
   // Tres calendarios con el mismo token (D-140, D-163): las fechas, o con `solo=comidas` las comidas
   // y cenas, o con `solo=metropolitano` los partidos y conciertos del estadio.
   const pedido = new URL(request.url).searchParams.get("solo");
-  const solo = pedido === "comidas" || pedido === "metropolitano" ? pedido : "fechas";
+  const solo =
+    pedido === "comidas" || pedido === "metropolitano" || pedido === "barrio" ? pedido : "fechas";
   const ics = generarIcs(
     solo === "comidas"
       ? "¡Hecho! · Comidas"
       : solo === "metropolitano"
         ? "¡Hecho! · Metropolitano"
-        : "¡Hecho!",
-    eventosSuscritos(resumen, { hoy: hoyEnMadrid(), para, solo, tiempo, estadio }),
+        : solo === "barrio"
+          ? "¡Hecho! · Barrio"
+          : "¡Hecho!",
+    eventosSuscritos(resumen, { hoy: hoyEnMadrid(), para, solo, tiempo, estadio, barrio }),
     new Date(),
     1,
   );

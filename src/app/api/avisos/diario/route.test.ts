@@ -15,6 +15,7 @@ const m = vi.hoisted(() => ({
 }));
 vi.mock("@/infraestructura/tiempo", () => ({ leerPrevision: m.tiempo }));
 vi.mock("@/infraestructura/metropolitano", () => ({ leerEventosEstadio: async () => [] }));
+vi.mock("@/infraestructura/barrio", () => ({ leerPlanesDelBarrio: async () => [] }));
 vi.mock("@/infraestructura/avisos/claves", () => ({
   comprobarSecretoDeAvisos: m.comprobar,
   guardarClavesDeAvisos: m.guardarClaves,

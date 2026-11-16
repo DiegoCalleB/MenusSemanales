@@ -2330,6 +2330,53 @@ test.describe("mochila, compartir y plan de la semana", () => {
     await contexto.close();
   });
 
+  test("planes del barrio (D-165): la tarjeta en Fechas, con filtro de familia, y el detalle del día", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    const plan = (id: string, titulo: string, fecha: string, familiar: boolean) => ({
+      id,
+      fecha,
+      hasta: null,
+      hora: "12:00",
+      titulo,
+      lugar: "Centro Cultural Buero Vallejo",
+      barrio: "Canillejas",
+      gratis: true,
+      precio: null,
+      enlace: null,
+      familiar,
+      emoji: familiar ? "🧸" : "🎵",
+    });
+    await pagina.route("**/api/barrio", (ruta) =>
+      ruta.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          planes: [
+            plan("1", "El sueño de Lucía", "2026-11-07", true),
+            plan("2", "Concierto de jazz", "2026-11-08", false),
+          ],
+          fuente: "ok: 2 planes",
+        }),
+      }),
+    );
+    await cargar(pagina, "/fechas");
+    const tarjeta = pagina.getByRole("region", { name: "Planes del barrio" });
+    await expect(tarjeta.getByText("El sueño de Lucía")).toBeVisible();
+    await expect(tarjeta.getByText("Concierto de jazz")).toBeVisible();
+    await tarjeta.getByRole("checkbox", { name: "Solo para la familia" }).check();
+    await expect(tarjeta.getByText("Concierto de jazz")).toHaveCount(0);
+    await expect(tarjeta.getByText("El sueño de Lucía")).toBeVisible();
+
+    // También en el detalle de ese día, en el calendario.
+    await cargar(pagina, "/calendario?dia=2026-11-07");
+    await expect(pagina.getByRole("group", { name: "Planes del barrio" })).toContainText(
+      "El sueño de Lucía",
+    );
+    await contexto.close();
+  });
+
   test("el tiempo (D-145): si la previsión no llega, la tarjeta no sale", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await pagina.route("**/api/tiempo", (ruta) => ruta.abort());

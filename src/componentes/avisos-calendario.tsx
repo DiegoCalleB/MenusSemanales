@@ -33,6 +33,9 @@ export function AvisosCalendario() {
   // Los partidos y conciertos del Metropolitano, en otro más (D-163).
   const enlaceEstadio = enlace ? `${enlace}&solo=metropolitano` : null;
   const webcalEstadio = enlaceEstadio?.replace(/^https?:/, "webcal:") ?? null;
+  // Los planes del barrio, en otro más (D-165).
+  const enlaceBarrio = enlace ? `${enlace}&solo=barrio` : null;
+  const webcalBarrio = enlaceBarrio?.replace(/^https?:/, "webcal:") ?? null;
 
   async function pedir(renovar: boolean) {
     if (!hogar) return;
@@ -137,6 +140,25 @@ export function AvisosCalendario() {
                 onClick={() => void copiar(enlaceEstadio)}
               >
                 Copiar el enlace del Metropolitano
+              </button>
+            </div>
+          </div>
+          <div className="border-borde flex flex-col gap-2 rounded-2xl border p-3">
+            <p className="text-base">
+              <span aria-hidden="true">🏘️ </span>
+              <strong>Los planes del barrio, en otro calendario</strong>: bibliotecas, centros
+              culturales y Quinta de los Molinos de San Blas-Canillejas, con su hora y su precio.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <a className="boton-suave" href={webcalBarrio ?? undefined}>
+                Suscribir el barrio en el iPhone
+              </a>
+              <button
+                type="button"
+                className="boton-suave"
+                onClick={() => void copiar(enlaceBarrio)}
+              >
+                Copiar el enlace del barrio
               </button>
             </div>
           </div>

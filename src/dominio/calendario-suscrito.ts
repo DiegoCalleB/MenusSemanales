@@ -7,6 +7,7 @@ import { NOMBRE_DIA_LARGO, preparacionesEntre } from "./mochila";
 import { MAX_LARGO_MOTIVO, consultaCole, diaDeCole, tramosSinCole } from "./calendario-escolar";
 import { fechaLarga, lineasDelTiempo } from "./avisos";
 import { LUGAR_TIEMPO, type Pronostico } from "./tiempo";
+import { type PlanBarrio } from "./barrio";
 import {
   type EventoEstadio,
   planesDelDia,
@@ -159,11 +160,13 @@ const limpio = (t: string) =>
  * «pensar» ni «comprar» el regalo (D-143; siguen en la app).
  */
 /** Qué calendario se pide (D-140): las fechas (lo de no olvidar) o solo las comidas y cenas. */
-export type CalendarioSuscrito = "fechas" | "comidas" | "metropolitano";
+export type CalendarioSuscrito = "fechas" | "comidas" | "metropolitano" | "barrio";
 
 const esComida = (e: EventoCalendario) => /^(cena|comida|cole)-/.test(e.uid ?? "");
 /** Los partidos y conciertos del estadio (D-163): su propio calendario. Los avisos de choque no. */
 const esEstadio = (e: EventoCalendario) => /^estadio-/.test(e.uid ?? "");
+/** Los planes del barrio (D-165): su propio calendario. */
+const esBarrio = (e: EventoCalendario) => /^barrio-/.test(e.uid ?? "");
 
 /**
  * Los eventos de uno de los dos calendarios suscritos (D-140): «fechas» (citas, fechas señaladas,
@@ -178,14 +181,17 @@ export function eventosSuscritos(
     solo?: CalendarioSuscrito;
     /** La previsión del tiempo (D-154), si se pudo leer: el paraguas y el abrigo, en «fechas». */
     tiempo?: readonly Pronostico[];
-    /** Partidos y conciertos en el estadio de al lado (D-159), en «fechas». */
+    /** Partidos y conciertos en el estadio de al lado (D-159), en su propio calendario. */
     estadio?: readonly EventoEstadio[];
+    /** Los planes del barrio (D-165), en su propio calendario. */
+    barrio?: readonly PlanBarrio[];
   },
 ): EventoCalendario[] {
   const todos = todosLosEventos(p, opciones);
   if (opciones.solo === "comidas") return todos.filter(esComida);
   if (opciones.solo === "metropolitano") return todos.filter(esEstadio);
-  return todos.filter((e) => !esComida(e) && !esEstadio(e));
+  if (opciones.solo === "barrio") return todos.filter(esBarrio);
+  return todos.filter((e) => !esComida(e) && !esEstadio(e) && !esBarrio(e));
 }
 
 function todosLosEventos(
@@ -195,11 +201,13 @@ function todosLosEventos(
     para,
     tiempo = [],
     estadio = [],
+    barrio = [],
   }: {
     hoy: FechaIso;
     para: string | null;
     tiempo?: readonly Pronostico[];
     estadio?: readonly EventoEstadio[];
+    barrio?: readonly PlanBarrio[];
   },
 ): EventoCalendario[] {
   const eventos: EventoCalendario[] = [];
@@ -405,6 +413,28 @@ function todosLosEventos(
       titulo: tituloCortoDelEvento(ev),
       descripcion: `${textoDelEvento(ev)}. Más tráfico, calles cortadas y el metro lleno unas dos horas antes y una después.`,
       hora: ev.hora,
+    });
+  }
+
+  // Los planes del barrio (D-165), en su propio calendario: con su hora si se dice y, si no, de todo
+  // el día. El lugar, el barrio, el precio y el enlace van en la descripción.
+  for (const b of barrio) {
+    if ((b.hasta ?? b.fecha) < hoy) continue;
+    eventos.push({
+      uid: `barrio-${b.id}-${b.fecha}`,
+      fecha: b.fecha,
+      hasta: b.hasta,
+      titulo: `${b.emoji} ${b.titulo}`,
+      descripcion: [
+        b.titulo,
+        [b.lugar, b.barrio ? `barrio de ${b.barrio}` : ""].filter(Boolean).join(", "),
+        b.gratis ? "Gratis." : b.precio ? `Precio: ${b.precio}.` : "",
+        b.familiar ? "Para ir en familia." : "",
+        b.enlace ?? "",
+      ]
+        .filter(Boolean)
+        .join("\n"),
+      hora: b.hora,
     });
   }
 

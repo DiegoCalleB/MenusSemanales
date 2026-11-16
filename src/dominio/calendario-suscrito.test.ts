@@ -519,3 +519,57 @@ describe("títulos cortos en el calendario (D-161)", () => {
     expect(inicio2027?.descripcion).toBe("Empieza vacaciones de verano.");
   });
 });
+
+describe("los planes del barrio en el calendario suscrito (D-165)", () => {
+  const barrio = [
+    {
+      id: "1",
+      fecha: "2026-11-19",
+      hasta: null,
+      hora: "18:00",
+      titulo: "'Otoño de cuentos' con Alicia Cuenteando",
+      lugar: "Biblioteca Pública Municipal Canillejas",
+      barrio: "Canillejas",
+      gratis: true,
+      precio: null,
+      enlace: "http://www.madrid.es/cuentos",
+      familiar: true,
+      emoji: "🧸",
+    },
+    {
+      id: "2",
+      fecha: "2026-11-20",
+      hasta: "2026-11-22",
+      hora: null,
+      titulo: "VI Festival De Raíz Flamenca",
+      lugar: "Centro Cultural Antonio Machado",
+      barrio: "Arcos",
+      gratis: true,
+      precio: null,
+      enlace: null,
+      familiar: false,
+      emoji: "💃",
+    },
+  ];
+
+  it("en su propio calendario, con emoji, hora o todo el día, y el detalle en la descripción", () => {
+    const e = eventosSuscritos(base(), { hoy: HOY, para: null, solo: "barrio", barrio });
+    expect(e.map((x) => [x.uid, x.titulo, x.hora ?? null, x.hasta ?? null])).toEqual([
+      ["barrio-1-2026-11-19", "🧸 'Otoño de cuentos' con Alicia Cuenteando", "18:00", null],
+      ["barrio-2-2026-11-20", "💃 VI Festival De Raíz Flamenca", null, "2026-11-22"],
+    ]);
+    expect(e[0]?.descripcion).toContain(
+      "Biblioteca Pública Municipal Canillejas, barrio de Canillejas",
+    );
+    expect(e[0]?.descripcion).toContain("Gratis.");
+    expect(e[0]?.descripcion).toContain("Para ir en familia.");
+    // Ni en el de fechas, ni en el de comidas, ni en el del estadio.
+    for (const solo of ["fechas", "comidas", "metropolitano"] as const) {
+      expect(
+        eventosSuscritos(base(), { hoy: HOY, para: null, solo, barrio }).some((x) =>
+          x.uid?.startsWith("barrio-"),
+        ),
+      ).toBe(false);
+    }
+  });
+});
