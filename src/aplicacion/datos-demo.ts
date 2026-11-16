@@ -452,6 +452,7 @@ export function estadoInicialDemo(): EstadoHogar {
     ], // prettier-ignore
     diasCole: [],
     medicacion: [],
+    gustosBarrio: [],
     puntuacionesCitas: {},
     compraRevisada: {},
     agenda: [],

@@ -2414,6 +2414,15 @@ test.describe("mochila, compartir y plan de la semana", () => {
     await expect(pagina.getByText("Concierto de jazz")).toHaveCount(0);
     await pagina.getByRole("button", { name: "Todos" }).click();
 
+    // Aprende de lo que gusta (D-171): con un 👍, lo parecido sale en «Para vosotros».
+    await pagina.getByRole("button", { name: "Nos gusta El sueño de Lucía" }).click();
+    await expect(
+      pagina.getByRole("button", { name: "Nos gusta El sueño de Lucía" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await pagina.getByRole("button", { name: /Para vosotros/ }).click();
+    await expect(pagina.getByText("Concierto de jazz")).toBeVisible();
+    await pagina.getByRole("button", { name: "Todos" }).click();
+
     // Apuntar uno en la agenda con un toque.
     await pagina.getByRole("button", { name: "Apuntar El sueño de Lucía en la agenda" }).click();
     await expect(pagina.getByText("✓ Apuntado")).toBeVisible();

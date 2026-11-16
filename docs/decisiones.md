@@ -1508,3 +1508,11 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
   - Tiene su filtro **🌳 Quinta de los Molinos** en Fechas → Barrio.
   - Los **ciclos y talleres de varios meses** (más de 20 días, hasta 250) se enseñan aparte, en «Ciclos y talleres de varios meses». No salen en el calendario del móvil, en el detalle de cada día ni en el aviso del viernes, para no taparlo todo.
   - En el resto de centros, lo que dura más de 20 días sigue sin ser un plan.
+
+## D-171 · La app aprende qué planes del barrio os gustan
+
+- **Petición (Diego):** que el sistema aprenda de nuestros gustos y señale los planes que seguramente nos gusten más.
+- **Cómo funciona (sin magia):** cada plan tiene 👍 «Nos gusta» y 👎 «No es para nosotros» (pulsar de nuevo lo quita). Apuntar un plan en la agenda cuenta como un 👍. La app guarda los rasgos de cada plan votado: el sitio, el tipo, si es de familia o gratis, mañana o tarde, fin de semana o diario y algunas palabras del título. Los rasgos que se repiten en lo que gusta suben puntos a los planes parecidos y los de lo que no gusta los bajan; con pocos votos el efecto es pequeño.
+- **Dónde se ve:** etiqueta «⭐ Os pega · por la Quinta de los Molinos» en los planes con buena puntuación que aún no han votado, y un filtro **⭐ Para vosotros** en Fechas → Barrio. Sin votos no se destaca nada, y el filtro explica cómo empezar.
+- **Qué se guarda:** hasta 150 votos de toda la familia, en el documento del hogar (no va al servidor de avisos ni al calendario). Los más antiguos se olvidan.
+- **Pendiente:** que el aviso del viernes elija entre los planes según el gusto, y aprender también de las puntuaciones de las citas pasadas.

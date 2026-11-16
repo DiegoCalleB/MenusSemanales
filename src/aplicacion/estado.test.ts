@@ -2036,3 +2036,26 @@ describe("medicación (D-166)", () => {
     expect(normalizar(viejo).medicacion).toEqual([]);
   });
 });
+
+describe("gustos de los planes del barrio (D-171)", () => {
+  const base = () => estadoInicialDemo();
+  it("guarda el voto, lo cambia y lo quita", () => {
+    let e = reducir(base(), {
+      tipo: "barrio/voto",
+      id: "p1",
+      rasgos: ["familia", "gratis"],
+      voto: 1,
+    });
+    expect(e.gustosBarrio).toEqual([{ id: "p1", rasgos: ["familia", "gratis"], voto: 1 }]);
+    e = reducir(e, { tipo: "barrio/voto", id: "p1", rasgos: ["familia", "gratis"], voto: -1 });
+    expect(e.gustosBarrio).toHaveLength(1);
+    expect(e.gustosBarrio[0]?.voto).toBe(-1);
+    e = reducir(e, { tipo: "barrio/voto", id: "p1", rasgos: [], voto: 0 });
+    expect(e.gustosBarrio).toEqual([]);
+  });
+  it("ignora votos mal formados", () => {
+    const e = base();
+    expect(reducir(e, { tipo: "barrio/voto", id: "", rasgos: [], voto: 1 })).toBe(e);
+    expect(reducir(e, { tipo: "barrio/voto", id: "x", rasgos: [], voto: 5 as 1 })).toBe(e);
+  });
+});
