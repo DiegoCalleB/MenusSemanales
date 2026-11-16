@@ -55,6 +55,8 @@ insert into _r select 'mal', public.suscripciones_para_avisos(repeat('0', 64));
 select pg_temp.fin();
 select pg_temp.igual('Con el token del calendario devuelve la suscripción',
   (select ((j->0->>'endpoint') = 'https://fcm.googleapis.com/fcm/send/movil-de-diego-0001' and jsonb_array_length(j) = 1)::int from _r where clave = 'con'), 1);
+select pg_temp.igual('Cada móvil lleva la persona de su cuenta (null si no está vinculada) y nada secreto más',
+  (select ((j->0 ? 'persona_id') and not (j->0 ? 'user_id') and not (j->0 ? 'creado_en'))::int from _r where clave = 'con'), 1);
 select pg_temp.igual('Con un token inventado, nada',
   (select jsonb_array_length(j) from _r where clave = 'mal'), 0);
 

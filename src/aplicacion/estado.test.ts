@@ -1958,3 +1958,81 @@ describe("lo que propone el menú para la compra (D-157)", () => {
     expect(articulosPendientes(n).map((a) => a.ingredienteId)).toContain("salmon");
   });
 });
+
+describe("medicación (D-166)", () => {
+  const base = estadoInicialDemo();
+  const diego = base.personas.find((p) => p.tipo === "adulto")!;
+  const guardar = (
+    e: EstadoHogar,
+    extra: Partial<{ id: string; nombre: string; hora: number; dias: number[] }> = {},
+  ) =>
+    reducir(e, {
+      tipo: "medicacion/guardar",
+      personaId: diego.id,
+      nombre: "Pastilla",
+      hora: 21,
+      dias: [5, 1, 3, 2, 4, 3],
+      ...extra,
+    });
+
+  it("se apunta para una persona, con los días ordenados y sin repetir", () => {
+    const e = guardar(base);
+    expect(e.medicacion).toEqual([
+      {
+        id: expect.any(String),
+        personaId: diego.id,
+        nombre: "Pastilla",
+        hora: 21,
+        dias: [1, 2, 3, 4, 5],
+        tomadas: [],
+      },
+    ]);
+    expect(e.aviso?.texto).toBe("Apuntado: Pastilla.");
+  });
+
+  it("se cambia con su id y se borra", () => {
+    const e = guardar(base);
+    const id = e.medicacion[0]!.id;
+    const c = guardar(e, { id, hora: 22, nombre: "Pastilla de la noche" });
+    expect(c.medicacion[0]).toMatchObject({ id, hora: 22, nombre: "Pastilla de la noche" });
+    expect(c.medicacion).toHaveLength(1);
+    expect(reducir(c, { tipo: "medicacion/borrar", id }).medicacion).toEqual([]);
+  });
+
+  it("lo que no vale se rechaza con un aviso, sin guardar nada", () => {
+    for (const mal of [
+      { nombre: "  " },
+      { hora: 24 },
+      { hora: 7.5 },
+      { dias: [] },
+      { dias: [8, 0] },
+    ]) {
+      const e = guardar(base, mal);
+      expect(e.medicacion).toEqual([]);
+      expect(e.aviso?.tipo).toBe("error");
+    }
+    const sinPersona = reducir(base, {
+      tipo: "medicacion/guardar",
+      personaId: "nadie",
+      nombre: "Pastilla",
+      hora: 21,
+      dias: [1],
+    });
+    expect(sinPersona.medicacion).toEqual([]);
+  });
+
+  it("se marca como tomada hoy y se desmarca al volver a tocar", () => {
+    const e = guardar(base);
+    const id = e.medicacion[0]!.id;
+    const t = reducir(e, { tipo: "medicacion/tomada", id, fecha: base.hoy });
+    expect(t.medicacion[0]!.tomadas).toEqual([base.hoy]);
+    expect(
+      reducir(t, { tipo: "medicacion/tomada", id, fecha: base.hoy }).medicacion[0]!.tomadas,
+    ).toEqual([]);
+  });
+
+  it("un estado de antes, sin medicación, se completa con una lista vacía", () => {
+    const viejo = { ...base, medicacion: undefined } as unknown as EstadoHogar;
+    expect(normalizar(viejo).medicacion).toEqual([]);
+  });
+});

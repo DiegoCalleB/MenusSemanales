@@ -12,6 +12,7 @@ import { lineasDelTiempo } from "@/dominio/avisos";
 import { resumenDelTiempo } from "@/dominio/tiempo";
 import { usePrevision } from "../usar-prevision";
 import { useEstadio } from "../usar-estadio";
+import { usePlanesDelBarrio } from "../usar-barrio";
 import { planesDelDia, textoDelEvento } from "@/dominio/metropolitano";
 import {
   MAX_PLATOS_POR_CENA,
@@ -75,6 +76,9 @@ export function CalendarioVista() {
   const prevision = usePrevision();
   // Partidos y conciertos en el estadio de al lado (D-159).
   const estadio = useEstadio();
+  // Los planes del barrio (D-165): en el detalle del día.
+  const barrio = usePlanesDelBarrio();
+  const barrioDe = (f: FechaIso) => barrio.filter((p) => p.fecha <= f && f <= (p.hasta ?? p.fecha));
   const estadioDe = (f: FechaIso) => estadio.filter((e) => e.fecha === f);
   // Lo demás que se hace ese día: si choca con un partido o un concierto, se avisa (D-163).
   const planesDe = (f: FechaIso) =>
@@ -329,6 +333,24 @@ export function CalendarioVista() {
               </p>
             )}
           </div>
+
+          {barrioDe(sel).length > 0 && (
+            <div role="group" aria-label="Planes del barrio" className="bg-suave-1 rounded-2xl p-3">
+              <p className="text-base font-bold">En el barrio</p>
+              {barrioDe(sel).map((p) => (
+                <p key={`${p.id}-${p.fecha}`} className="text-base">
+                  <span aria-hidden="true">{p.emoji} </span>
+                  {p.hora ? `${p.hora} · ` : ""}
+                  {p.titulo}
+                  <span className="text-tinta-suave text-sm">
+                    {p.lugar
+                      ? ` · ${p.lugar.replace(/^(Centro Cultural|Biblioteca Pública Municipal) /, "")}`
+                      : ""}
+                  </span>
+                </p>
+              ))}
+            </div>
+          )}
 
           {estadioDe(sel).map((e) => (
             <p key={e.id} className="bg-suave-1 rounded-2xl p-3 text-base">

@@ -558,3 +558,58 @@ describe("el estadio de al lado (D-159)", () => {
     });
   });
 });
+
+describe("el barrio el fin de semana (D-165)", () => {
+  const plan = (
+    id: string,
+    fecha: string,
+    hora: string | null,
+    titulo: string,
+    familiar = true,
+  ) => ({
+    id,
+    fecha,
+    hasta: null,
+    hora,
+    titulo,
+    lugar: "Biblioteca Pública Municipal Canillejas",
+    barrio: "Canillejas",
+    gratis: true,
+    precio: null,
+    enlace: null,
+    familiar,
+    emoji: "🧸",
+  });
+  const barrio = [
+    plan("1", "2026-11-21", "12:00", "El sueño de Lucía"),
+    plan("2", "2026-11-22", "12:00", "La terrorífica historia de Aba"),
+    plan("3", "2026-11-21", "19:00", "Aurora Vargas. Tradición Flamenca", false),
+    plan("4", "2026-11-19", "18:00", "Cuentos entre semana"),
+  ];
+
+  it("el viernes avisa de lo que hay para la familia el sábado y el domingo, y nada más", () => {
+    const a = avisosDeHoy({ ...base, hoy: "2026-11-20", barrio }).find((x) =>
+      x.id.startsWith("barrio-finde-"),
+    );
+    expect(a?.titulo).toBe(
+      "Este finde en el barrio: sáb 21 12:00 El sueño de Lucía (Canillejas), dom 22 12:00 La terrorífica historia de Aba (Canillejas)",
+    );
+    // Otro día, o sin planes de familia, nada.
+    expect(
+      avisosDeHoy({ ...base, hoy: "2026-11-19", barrio }).some((x) =>
+        x.id.startsWith("barrio-finde-"),
+      ),
+    ).toBe(false);
+    expect(
+      avisosDeHoy({ ...base, hoy: "2026-11-20", barrio: [barrio[2]!] }).some((x) =>
+        x.id.startsWith("barrio-finde-"),
+      ),
+    ).toBe(false);
+    // También en el recordatorio del viernes por la noche.
+    expect(
+      avisosDeLaNoche({ ...base, hoy: "2026-11-20", barrio }).some((x) =>
+        x.id.startsWith("barrio-finde-"),
+      ),
+    ).toBe(true);
+  });
+});

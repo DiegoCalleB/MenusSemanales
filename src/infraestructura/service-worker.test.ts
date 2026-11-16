@@ -11,6 +11,7 @@ const sw = require("../../public/sw.js") as {
   destinoCompartido: (campos: Record<string, unknown>, hayArchivo: boolean) => string;
   codigoHecho: (v: unknown) => string | null;
   rutaDeLaApp: (v: unknown) => string;
+  etiquetaDeAviso: (v: unknown) => string;
   RUTAS: string[];
   SUELTOS: string[];
 };
@@ -79,5 +80,12 @@ describe("compartir con la app desde otra (D-138)", () => {
     expect(sw.rutaDeLaApp("//malo.example")).toBe("/");
     expect(sw.rutaDeLaApp("https://malo.example")).toBe("/");
     expect(sw.rutaDeLaApp(undefined)).toBe("/");
+  });
+
+  it("la etiqueta de la notificación: la propia si vale, la de siempre si no (D-166)", () => {
+    expect(sw.etiquetaDeAviso("medicacion-abc-123")).toBe("medicacion-abc-123");
+    expect(sw.etiquetaDeAviso("con espacios")).toBe("avisos-diarios");
+    expect(sw.etiquetaDeAviso(undefined)).toBe("avisos-diarios");
+    expect(sw.etiquetaDeAviso("x".repeat(60))).toBe("avisos-diarios");
   });
 });

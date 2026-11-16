@@ -2,7 +2,13 @@ import "server-only";
 import { z } from "zod";
 
 const esquema = z.array(
-  z.object({ endpoint: z.string().url(), p256dh: z.string(), auth: z.string() }),
+  z.object({
+    endpoint: z.string().url(),
+    p256dh: z.string(),
+    auth: z.string(),
+    /** La persona de la cuenta de ese móvil (D-166), si está vinculada. */
+    persona_id: z.string().nullish(),
+  }),
 );
 
 function acceso() {

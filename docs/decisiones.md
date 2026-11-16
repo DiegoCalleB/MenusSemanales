@@ -1460,3 +1460,32 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Hora:** la web no da hora de los conciertos, así que salen de todo el día. La final sale como «evento».
 - **Si la web cambia o no responde:** `/api/metropolitano` lo dice en `fuentes.web` (`ok: N eventos` o `error: …`) y el resto sigue igual.
 - **Horizonte:** los conciertos se miran hasta 450 días por delante.
+
+## D-165 · Planes del barrio (San Blas-Canillejas)
+
+- **Petición (Diego):** «planes del barrio, de programas culturales de San Blas, Las Rejas y demás».
+- **Fuente:** la agenda cultural abierta del Ayuntamiento de Madrid (`datos.madrid.es`, «Agenda de eventos culturales»), sin clave. De sus actividades se queda con las del distrito **San Blas-Canillejas** (Rejas, Rosas, Arcos, Canillejas, El Salvador…): bibliotecas, centros culturales (Antonio Machado, Buero Vallejo, López Vázquez), Quinta de los Molinos… Se lee cada 12 horas y, si falla, no hay planes del barrio y lo demás sigue igual.
+- **Qué se pone:** de hoy en adelante, con lugar, barrio, hora si la dice, precio o «gratis», enlace y un emoji por categoría (🧸 cuentacuentos, 🎬 cine, 💃 flamenco…). Los cursos y tertulias semanales que duran meses no son un plan y se dejan fuera. Los campamentos de Navidad, que duran 16 días, sí entran.
+- **Para la familia:** lo marca la categoría de la agenda (cuentacuentos, títeres, circo y magia, fiestas de Navidad, actividades escolares) o palabras del título (infantil, familiar, niños, campamento…).
+- **Dónde sale:**
+  - **Calendario aparte «¡Hecho! · Barrio»** (`&solo=barrio`, como el de comidas y el del Metropolitano). El enlace está en Cuenta → «Avisos en el calendario del móvil».
+  - **Tarjeta «Planes del barrio» en Fechas**, con «Solo para la familia» y «Ver más».
+  - **Detalle de cada día** en el calendario de la app: «En el barrio».
+  - **El viernes**, el aviso «🧸 Este finde en el barrio: sáb 21 12:00 El sueño de Lucía (Canillejas), …» con lo de familia del sábado y el domingo.
+- **Límite:** la agenda del Ayuntamiento solo cubre actividades municipales (no los colegios, las asociaciones de vecinos ni las fiestas de la parroquia), y avisa de lo que está publicado a unos 100 días vista.
+
+## D-166 · Medicación: recordatorio a su hora, configurable
+
+- **Petición (Diego):** «que a las 21 me recuerde tomarme una pastilla, todos los días por la noche de lunes a viernes; como la mochila pero para medicamentos que se puedan configurar».
+- **Qué:** en «Qué llevar» hay una sección «💊 Medicación». Cada medicamento tiene un nombre libre («Pastilla»), la persona que lo toma, la hora (de 00:00 a 23:00) y los días de la semana (atajos «De lunes a viernes» y «Todos los días»). No se guarda nada clínico (dosis, receta): solo un nombre y cuándo avisar.
+- **Aviso:** el servidor lo manda con la llamada horaria de siempre (a los :03, así que el de las 21:00 llega sobre las 21:03). La notificación («💊 Diego: Pastilla — Son las 21:00») va a los móviles vinculados a esa persona y, si ninguno lo está, a todos los del hogar. Lleva su propia etiqueta (`medicacion-<persona>`) para que no tape otros avisos del día.
+- **Tomada:** en «Hoy», el perfil que tiene abierto el móvil ve «Hoy te toca» con la medicación de ese día y la marca como tomada; si ya está marcada a su hora, no se avisa. Las marcas de más de 14 días se podan.
+- **Privacidad:** la medicación solo se enseña en «Hoy» a su dueño. No va al calendario suscrito ni al compartir; la proyección del servidor la incluye únicamente para poder avisar.
+- **Base de datos:** la migración `20261117000000_medicacion.sql` añade `medicacion` a la proyección y devuelve la persona de cada móvil suscrito.
+
+## D-167 · Pantalla de planes del barrio, con «Apuntar» a la agenda
+
+- **Petición (Diego):** los planes del barrio en un módulo nuevo, con todos los planes guays, y poder agregar a la agenda el que interese fácilmente.
+- **Qué:** nueva pestaña **Fechas → Barrio** (`/barrio`) con todos los planes de la agenda cultural de San Blas-Canillejas agrupados por día, con filtros (Todos, Familia, Gratis, Este finde) y «Ver más».
+- **Apuntar:** cada plan lleva «＋ Apuntar», que lo mete en la agenda de la familia (título con el lugar, fecha, hora y último día si dura varios). Si ya está, sale «✓ Apuntado»; apuntarlo dos veces no lo duplica.
+- **Fechas:** la tarjeta plegable se cambia por una sola línea «🏘️ Planes del barrio · N (M para la familia)» que lleva a la pantalla, para que «Próximas fechas» no se sature. Sigue el bloque «En el barrio» del detalle de cada día del calendario y el aviso del viernes.

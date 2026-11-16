@@ -24,7 +24,7 @@ export type ResultadoPush = "ok" | "caducada" | "fallo";
 export async function enviarPush(
   sub: SuscripcionPush,
   /** `hecho`: el código del botón «Hecho» (D-151), si la notificación lo lleva. */
-  mensaje: { titulo: string; cuerpo: string; hecho?: string; url?: string },
+  mensaje: { titulo: string; cuerpo: string; hecho?: string; url?: string; tag?: string },
   enviar: typeof webpush.sendNotification = webpush.sendNotification,
   /** Las claves guardadas en la base de datos (D-139); sin ellas, las de las variables. */
   claves?: { publica: string; privada: string } | null,

@@ -36,6 +36,7 @@ const RUTAS = [
   "/cuenta",
   "/personas",
   "/cumples",
+  "/barrio",
   "/fechas",
   "/casa",
   "/compra",
@@ -1343,6 +1344,7 @@ test.describe("flujos en móvil", () => {
       ["Fechas", "Próximas", "/fechas"],
       ["Fechas", "Calendario", "/calendario"],
       ["Fechas", "Cumples", "/cumples"],
+      ["Fechas", "Barrio", "/barrio"],
       ["Más", "Cuenta", "/cuenta"],
       ["Más", "Enviar", "/compartir"],
     ];
@@ -2166,6 +2168,32 @@ test.describe("mochila, compartir y plan de la semana", () => {
     await contexto.close();
   });
 
+  test("medicación (D-166): se apunta de lunes a viernes a las 21:00, se edita y se quita", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/mochila");
+    await pagina.getByRole("button", { name: "＋ Apuntar un medicamento" }).click();
+    const form = pagina.getByRole("form", { name: "Apuntar un medicamento" });
+    await form.getByLabel("Cómo lo llamas").fill("Pastilla");
+    await form.getByRole("button", { name: "Diego", exact: true }).click();
+    await form.getByRole("button", { name: "Guardar" }).click();
+    const lista = pagina.getByRole("list", { name: "Medicación de Diego" });
+    await expect(lista).toContainText("Pastilla");
+    await expect(lista).toContainText("21:00 · de lunes a viernes");
+
+    await lista.getByRole("button", { name: "Editar Pastilla" }).click();
+    const edicion = pagina.getByRole("form", { name: "Editar Pastilla" });
+    await edicion.getByLabel("A qué hora te aviso").selectOption({ label: "22:00" });
+    await edicion.getByRole("button", { name: "Todos los días" }).click();
+    await edicion.getByRole("button", { name: "Guardar" }).click();
+    await expect(lista).toContainText("22:00 · todos los días");
+
+    await lista.getByRole("button", { name: "Quitar Pastilla de Diego" }).click();
+    await expect(pagina.getByRole("list", { name: "Medicación de Diego" })).toHaveCount(0);
+    await contexto.close();
+  });
+
   test("días sin cole (D-144): el calendario de Madrid viene puesto y se apuntan los del cole", async ({
     browser,
   }) => {
@@ -2327,6 +2355,64 @@ test.describe("mochila, compartir y plan de la semana", () => {
       "⚽ Partido en el Metropolitano a las 21:00: Atlético – Viking FK (Champions)",
     );
     await expect(dia).toContainText("⚠️ Coincide con: Comida en casa");
+    await contexto.close();
+  });
+
+  test("planes del barrio (D-165): la tarjeta en Fechas, con filtro de familia, y el detalle del día", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    const plan = (id: string, titulo: string, fecha: string, familiar: boolean) => ({
+      id,
+      fecha,
+      hasta: null,
+      hora: "12:00",
+      titulo,
+      lugar: "Centro Cultural Buero Vallejo",
+      barrio: "Canillejas",
+      gratis: true,
+      precio: null,
+      enlace: null,
+      familiar,
+      emoji: familiar ? "🧸" : "🎵",
+    });
+    await pagina.route("**/api/barrio", (ruta) =>
+      ruta.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          planes: [
+            plan("1", "El sueño de Lucía", "2026-11-07", true),
+            plan("2", "Concierto de jazz", "2026-11-08", false),
+          ],
+          fuente: "ok: 2 planes",
+        }),
+      }),
+    );
+    await cargar(pagina, "/fechas");
+    // En Fechas solo una línea que lleva a la pantalla de planes: no llena «Próximas».
+    const enlace = pagina.getByRole("link", { name: /Planes del barrio/ });
+    await expect(enlace).toContainText("1 para la familia");
+    await expect(pagina.getByText("El sueño de Lucía")).toHaveCount(0);
+    await enlace.click();
+    await expect(pagina.getByRole("heading", { name: /Planes del barrio/ })).toBeVisible();
+    await expect(pagina.getByText("El sueño de Lucía")).toBeVisible();
+    await expect(pagina.getByText("Concierto de jazz")).toBeVisible();
+    await pagina.getByRole("button", { name: /Familia/ }).click();
+    await expect(pagina.getByText("Concierto de jazz")).toHaveCount(0);
+    await pagina.getByRole("button", { name: "Todos" }).click();
+
+    // Apuntar uno en la agenda con un toque.
+    await pagina.getByRole("button", { name: "Apuntar El sueño de Lucía en la agenda" }).click();
+    await expect(pagina.getByText("✓ Apuntado")).toBeVisible();
+    await cargar(pagina, "/fechas");
+    await expect(pagina.getByText(/El sueño de Lucía \(Buero Vallejo\)/).first()).toBeVisible();
+
+    // También en el detalle de ese día, en el calendario.
+    await cargar(pagina, "/calendario?dia=2026-11-07");
+    await expect(pagina.getByRole("group", { name: "Planes del barrio" })).toContainText(
+      "El sueño de Lucía",
+    );
     await contexto.close();
   });
 

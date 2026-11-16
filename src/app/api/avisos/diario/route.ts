@@ -13,6 +13,7 @@ import {
   notificacionDelDia,
   resumenDelDia,
 } from "@/dominio/avisos";
+import { notificacionDeMedicacion, recordatoriosDeMedicacion } from "@/dominio/medicacion";
 import { hoyEnMadrid, leerResumenDelCalendario } from "@/infraestructura/calendario-suscrito";
 import { enviarPush, generarClavesVapid, pushConfigurado } from "@/infraestructura/avisos/push";
 import {
@@ -25,6 +26,7 @@ import { CorreoNoConfigurado, enviarCorreo } from "@/infraestructura/avisos/rese
 import { leerSuscripciones, olvidarSuscripcion } from "@/infraestructura/avisos/suscripciones";
 import { leerPrevision } from "@/infraestructura/tiempo";
 import { leerEventosEstadio } from "@/infraestructura/metropolitano";
+import { leerPlanesDelBarrio } from "@/infraestructura/barrio";
 import { cargarCursosEscolares } from "@/infraestructura/calendario-escolar";
 
 const CABECERAS = { "Cache-Control": "no-store", "Content-Type": "application/json" } as const;
@@ -47,6 +49,54 @@ const horaEnMadrid = (ahora = new Date()) =>
   );
 
 const TOKEN = /^[0-9a-f]{64}$/;
+
+type CuentaPush = { enviadas: number; caducadas: number; fallos: number };
+
+/**
+ * Recordatorio de la medicación (D-166): a la hora de cada una, una notificación a los móviles de
+ * esa persona (los de su cuenta) o, si ninguno está vinculado, a todos los del hogar. Lo ya marcado
+ * como tomado hoy no avisa. La base de datos llama cada hora, así que llega pasados unos minutos.
+ */
+async function recordarMedicacion(
+  resumen: NonNullable<Awaited<ReturnType<typeof leerResumenDelCalendario>>>,
+  hoy: string,
+  hora: number,
+  token: string,
+  claves: ClavesVapid | null,
+): Promise<CuentaPush | null> {
+  const entrada = entradaDeProyeccion(resumen, hoy);
+  const recordatorios = recordatoriosDeMedicacion(
+    entrada.medicacion ?? [],
+    entrada.personas ?? [],
+    hoy,
+    hora,
+  );
+  if (recordatorios.length === 0) return null;
+  const cuenta: CuentaPush = { enviadas: 0, caducadas: 0, fallos: 0 };
+  try {
+    const moviles = await leerSuscripciones(token);
+    for (const rec of recordatorios) {
+      const suyos = moviles.filter((m) => m.persona_id === rec.personaId);
+      for (const s of suyos.length > 0 ? suyos : moviles) {
+        const r = await enviarPush(
+          { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
+          notificacionDeMedicacion(rec),
+          undefined,
+          claves,
+        );
+        if (r === "ok") cuenta.enviadas += 1;
+        else if (r === "caducada") {
+          cuenta.caducadas += 1;
+          await olvidarSuscripcion(token, s.endpoint);
+        } else cuenta.fallos += 1;
+      }
+    }
+  } catch (e) {
+    console.error("[avisos] medicación", e instanceof Error ? e.message : "desconocido");
+    cuenta.fallos += 1;
+  }
+  return cuenta;
+}
 
 /**
  * Lo que manda la llamada programada en el cuerpo: el token del calendario del hogar y, para
@@ -201,23 +251,38 @@ export async function POST(request: Request) {
         : hora === horaTemprano
           ? "temprano"
           : null;
-  if (!momento) return responder({ enviado: false, motivo: "no-es-la-hora" }, 200);
+  const hoy = hoyEnMadrid();
+  // La medicación va por su cuenta, a la hora que tenga cada una (D-166).
+  let medicacion: CuentaPush | null = null;
+  if (quierePush) {
+    try {
+      const r = await leerResumenDelCalendario(token);
+      if (r) medicacion = await recordarMedicacion(r, hoy, hora, token, claves);
+    } catch {
+      /* sin esto, el resto de avisos sigue igual */
+    }
+  }
+  if (!momento) {
+    return medicacion
+      ? responder({ enviado: medicacion.enviadas > 0, medicacion }, 200)
+      : responder({ enviado: false, motivo: "no-es-la-hora" }, 200);
+  }
 
-  let hoy: string;
   let avisos: Aviso[];
   try {
-    hoy = hoyEnMadrid();
-    const [resumen, tiempo, escolar, estadio] = await Promise.all([
+    const [resumen, tiempo, escolar, estadio, barrio] = await Promise.all([
       leerResumenDelCalendario(token),
       leerPrevision(fetch, { fresco: momento === "temprano" }),
       cargarCursosEscolares(),
       leerEventosEstadio(hoy).catch(() => []),
+      leerPlanesDelBarrio(hoy),
     ]);
     if (!resumen) return responder({ error: "sin-datos" }, 404);
     const entrada = {
       ...entradaDeProyeccion(resumen, hoy),
       tiempo,
       estadio,
+      barrio,
       cursosNuevos: escolar.cursos.map((c) => ({
         nombre: c.nombre,
         inicio: c.inicio,
@@ -235,7 +300,10 @@ export async function POST(request: Request) {
     return responder({ error: "no-disponible" }, 502);
   }
   if (momento !== "manana" && avisos.length === 0) {
-    return responder({ enviado: false, motivo: "nada-que-avisar" }, 200);
+    return responder(
+      { enviado: false, motivo: "nada-que-avisar", ...(medicacion ? { medicacion } : {}) },
+      200,
+    );
   }
 
   // Cada canal va por su cuenta: que falle uno no impide el otro. Sin detalles hacia fuera.
@@ -306,5 +374,13 @@ export async function POST(request: Request) {
   }
   if (!algunoBien && !hayIntentos && !resultado.push)
     return responder({ error: "no-configurado" }, 503);
-  return responder({ enviado: algunoBien, avisos: avisos.length, ...resultado }, 200);
+  return responder(
+    {
+      enviado: algunoBien,
+      avisos: avisos.length,
+      ...resultado,
+      ...(medicacion ? { medicacion } : {}),
+    },
+    200,
+  );
 }
