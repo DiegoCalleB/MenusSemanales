@@ -36,6 +36,7 @@ const RUTAS = [
   "/calendario",
   "/cumples",
   "/barrio",
+  "/papeles",
   "/cuenta",
   "/personas",
   "/compartir",
