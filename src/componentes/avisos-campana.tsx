@@ -32,7 +32,7 @@ export function BotonAvisos() {
   const id = useId();
   const raiz = useRef<HTMLDivElement>(null);
 
-  const estadio = useEstadio();
+  const estadio = useEstadio(4000);
   const avisos = useMemo(() => avisosDelEstado(estado, estadio), [estado, estadio]);
   const importantes = useMemo(() => avisosQueImportan(avisos), [avisos]);
   const nuevos = importantes.filter((a) => !vistos.includes(a.id)).length;

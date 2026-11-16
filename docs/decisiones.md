@@ -1451,3 +1451,4 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
   - **Campanita de la app y notificaciones del móvil:** el aviso de la víspera y del día dicen «… · coincide con Comida en casa».
   - **Calendario de la app:** ⚠️ en la casilla del día y, en el detalle, «⚠️ Coincide con: …. Sal con tiempo.».
 - **Límite:** no distingue entre lo que es en casa, por el barrio o lejos, ni sabe qué horas se pisan. Para eso habría que apuntar el lugar de cada cosa.
+- **Rendimiento:** la campanita está en todas las pantallas, así que no pregunta por los partidos hasta pasados 4 segundos, y solo una vez por sesión y hora. Si no, cada pantalla esperaba a una petición lenta (se notó en las pruebas, sin internet).
