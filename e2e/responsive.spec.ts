@@ -2559,6 +2559,7 @@ test.describe("barra lateral con apartados (D-142)", () => {
       "Recurrente",
       "Por persona",
       "Mochila",
+      "Medicación",
       "Reparto",
     ]);
     await expect(casa.getByRole("link", { name: "Mochila" })).toHaveAttribute(
