@@ -77,7 +77,8 @@ export async function leerEventosEstadio(
   try {
     const r = await pedir(PAGINA_PROGRAMACION, {
       signal: AbortSignal.timeout(6000),
-      next: { revalidate: 6 * 3600 },
+      // Los conciertos se anuncian con semanas de antelación: basta con mirarla una vez por semana.
+      next: { revalidate: 7 * 24 * 3600 },
     } as RequestInit);
     if (!r.ok) throw new Error(`http-${r.status}`);
     delEstadio = eventosDeLaWeb(await r.text(), hoy);
