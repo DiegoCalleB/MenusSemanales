@@ -156,7 +156,7 @@ export function BarrioVista() {
                             hasta: p.hasta,
                             hora: p.hora,
                             titulo: tituloEnLaAgenda(p),
-                            idBase: `barrio-${p.id}-${p.fecha}`,
+                            idBase: crypto.randomUUID(),
                           })
                         }
                       >
