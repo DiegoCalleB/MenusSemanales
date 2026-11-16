@@ -33,6 +33,7 @@ import {
 } from "@/dominio/cumples";
 import { type FrecuenciaTarea, type Tarea, alternarTarea } from "@/dominio/tareas";
 import { type CosaQueLlevar, MAX_ANTES, podarPreparadas } from "@/dominio/mochila";
+import { type VotoBarrio, conVoto } from "@/dominio/gustos-barrio";
 import { MAX_NOMBRE_MEDICAMENTO, type Medicamento, podarTomadas } from "@/dominio/medicacion";
 import { type AjusteCole, MAX_LARGO_MOTIVO, diaOficial } from "@/dominio/calendario-escolar";
 import {
@@ -204,6 +205,8 @@ export interface EstadoHogar {
   mochila: CosaQueLlevar[];
   /** Medicación (D-166): qué toma cada persona, a qué hora y qué días. En el documento del hogar. */
   medicacion: Medicamento[];
+  /** Lo que nos gusta (o no) de los planes del barrio (D-171): sirve para destacar los que más pegan. */
+  gustosBarrio: VotoBarrio[];
   /**
    * Lo que apunta la familia sobre el calendario escolar (D-144): días sin cole propios del centro
    * (libre disposición) o «ese día sí hay cole». Manda sobre el calendario oficial. En el documento.
@@ -381,6 +384,8 @@ export type Accion =
       idBase?: string;
     }
   | { tipo: "medicacion/borrar"; id: string }
+  /** «Nos gusta» (1), «no es para nosotros» (-1) o quitar el voto (0) de un plan del barrio (D-171). */
+  | { tipo: "barrio/voto"; id: string; rasgos: string[]; voto: 1 | -1 | 0 }
   /** Marca (o desmarca) como tomado ese día. */
   | { tipo: "medicacion/tomada"; id: string; fecha: FechaIso }
   /** Calendario escolar (D-144): ese día no hay cole (y por qué) o sí lo hay, contra lo oficial. */
@@ -856,6 +861,7 @@ const normalizarCampos = (e: EstadoHogar): EstadoHogar =>
   Array.isArray(e.mochila) &&
   e.mochila.every((c) => typeof c.soloConCole === "boolean") &&
   Array.isArray(e.medicacion) &&
+  Array.isArray(e.gustosBarrio) &&
   Array.isArray(e.diasCole) &&
   typeof e.puntuacionesCitas === "object" &&
   e.puntuacionesCitas !== null &&
@@ -877,6 +883,7 @@ const normalizarCampos = (e: EstadoHogar): EstadoHogar =>
             )
           : [],
         medicacion: Array.isArray(e.medicacion) ? e.medicacion : [],
+        gustosBarrio: Array.isArray(e.gustosBarrio) ? e.gustosBarrio : [],
         diasCole: Array.isArray(e.diasCole) ? e.diasCole : [],
         puntuacionesCitas: puntuacionesValidas(e.puntuacionesCitas),
         agenda: Array.isArray(e.agenda) ? e.agenda : [],
@@ -2180,6 +2187,19 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
         siguienteId: e.siguienteId + 1,
         aviso: ok(e, "Guardado."),
       };
+    }
+
+    case "barrio/voto": {
+      if (
+        typeof accion.id !== "string" ||
+        accion.id === "" ||
+        accion.id.length > 80 ||
+        !Array.isArray(accion.rasgos) ||
+        ![1, -1, 0].includes(accion.voto)
+      ) {
+        return e;
+      }
+      return { ...e, gustosBarrio: conVoto(e.gustosBarrio, accion) };
     }
 
     case "medicacion/borrar":

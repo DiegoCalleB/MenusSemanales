@@ -1489,3 +1489,52 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Qué:** nueva pestaña **Fechas → Barrio** (`/barrio`) con todos los planes de la agenda cultural de San Blas-Canillejas agrupados por día, con filtros (Todos, Familia, Gratis, Este finde) y «Ver más».
 - **Apuntar:** cada plan lleva «＋ Apuntar», que lo mete en la agenda de la familia (título con el lugar, fecha, hora y último día si dura varios). Si ya está, sale «✓ Apuntado»; apuntarlo dos veces no lo duplica.
 - **Fechas:** la tarjeta plegable se cambia por una sola línea «🏘️ Planes del barrio · N (M para la familia)» que lleva a la pantalla, para que «Próximas fechas» no se sature. Sigue el bloque «En el barrio» del detalle de cada día del calendario y el aviso del viernes.
+
+## D-168 · Fechas de cumpleaños sin teclear «/»
+
+- **Problema (Diego):** el teclado numérico del móvil no tiene la tecla «/», así que no se podía escribir una fecha como 15/03/2017.
+- **Qué:** al escribir el día o el mes (dos cifras) la barra se pone sola, y «.», «-», coma o espacio también valen como barra (para días de una cifra: «5.3»). Debajo del campo hay un selector «…o elígela en el calendario». El año sigue siendo opcional.
+
+## D-169 · Medicación con su propia pestaña y enlaces de planes que sí abren
+
+- **Medicación:** estaba al final de «Qué llevar» y no se encontraba. Ahora tiene su pestaña: **Casa → Medicación** (`/medicacion`).
+- **Enlaces de los planes del barrio:** el `link` que trae la agenda del Ayuntamiento lleva a madrid.es con «Contenido no disponible» (las 48 entradas de San Blas-Canillejas). Se ha cambiado por una búsqueda del plan (título, lugar y Madrid), que siempre abre algo útil. En el calendario suscrito, la descripción lleva ese mismo enlace.
+
+## D-170 · Quinta de los Molinos en los planes del barrio
+
+- **Petición (Diego):** tener los planes del Espacio Abierto de la Quinta de los Molinos (muchos talleres, les encanta ir).
+- **Qué:** sus actividades ya venían en la agenda del Ayuntamiento, pero los ciclos de meses se descartaban y los talleres no contaban como «para la familia». Ahora:
+  - Todo lo del Espacio Abierto y el parque de la **Quinta de los Molinos** cuenta como plan **para la familia** (así entra en el aviso del viernes).
+  - Tiene su filtro **🌳 Quinta de los Molinos** en Fechas → Barrio.
+  - Los **ciclos y talleres de varios meses** (más de 20 días, hasta 250) se enseñan aparte, en «Ciclos y talleres de varios meses». No salen en el calendario del móvil, en el detalle de cada día ni en el aviso del viernes, para no taparlo todo.
+  - En el resto de centros, lo que dura más de 20 días sigue sin ser un plan.
+
+## D-171 · La app aprende qué planes del barrio os gustan
+
+- **Petición (Diego):** que el sistema aprenda de nuestros gustos y señale los planes que seguramente nos gusten más.
+- **Cómo funciona (sin magia):** cada plan tiene 👍 «Nos gusta» y 👎 «No es para nosotros» (pulsar de nuevo lo quita). Apuntar un plan en la agenda cuenta como un 👍. La app guarda los rasgos de cada plan votado: el sitio, el tipo, si es de familia o gratis, mañana o tarde, fin de semana o diario y algunas palabras del título. Los rasgos que se repiten en lo que gusta suben puntos a los planes parecidos y los de lo que no gusta los bajan; con pocos votos el efecto es pequeño.
+- **Dónde se ve:** etiqueta «⭐ Os pega · por la Quinta de los Molinos» en los planes con buena puntuación que aún no han votado, y un filtro **⭐ Para vosotros** en Fechas → Barrio. Sin votos no se destaca nada, y el filtro explica cómo empezar.
+- **Qué se guarda:** hasta 150 votos de toda la familia, en el documento del hogar (no va al servidor de avisos ni al calendario). Los más antiguos se olvidan.
+- **Pendiente:** que el aviso del viernes elija entre los planes según el gusto, y aprender también de las puntuaciones de las citas pasadas.
+
+## D-172 · Eventos del Centro Comercial Las Rosas
+
+- **Petición (Diego):** añadir los eventos especiales del centro comercial Las Rosas.
+- **Fuente:** su web (`cclasrosas.es`) es un WordPress con entradas de texto libre, no una agenda: «Durante los días 9, 10, 11, 12, 16, 17 y 18…». Se leen las entradas recientes de «Eventos» y «Actividades infantiles» (por su API pública, `wp-json`) y la **IA** (Gemini, la misma clave de los demás usos) saca los días y horas. Se excluyen sorteos, ofertas y aperturas de tiendas.
+- **Comprobación:** lo que devuelve la IA se valida con un esquema; solo valen días de hoy a 150 días y a menos de 150 días de la publicación, de entradas que existen. Se guarda 12 horas para no gastar IA de más. Si falla la web, la IA o la validación, simplemente no salen eventos del centro y lo demás sigue igual (`/api/barrio` lo dice en `centro`).
+- **Dónde sale:** mezclado con los demás planes del barrio, con su filtro **🛍️ Las Rosas**, el 👍/👎, «Apuntar» y el aviso del viernes (los de familia). El enlace lleva a la entrada de su web.
+- **Límites:** los eventos solo salen cuando el centro publica la entrada; la hora a veces no se puede saber (varios pases) y entonces no se pone. En la prueba con las entradas de otoño leyó bien «Cuéntame un cuento» (9-18 de octubre) y «Misterio en Las Rosas» (6-8 de noviembre, aplazado).
+
+## D-173 · El menú del cole se lee solo del blog
+
+- **Petición (Diego):** que la app lea sola el menú cuando el cole lo sube, a finales del mes anterior (el de diciembre, a finales de noviembre).
+- **De dónde sale:** el blog del colegio, etiqueta COMEDOR (`ceipmarianojosedelarra.blogspot.com`). Cada mes publican una entrada («MENÚ NOVIEMBRE»…) con un enlace a una carpeta de su nube (educaMadrid) donde están los PDF: el menú normal (`Menu_Basal.pdf`) y las dietas especiales (sin gluten, sin lactosa…). La app lee **solo el menú normal**.
+- **Cómo:**
+  - Cada colegio (`centro`) puede tener la dirección de su blog (`centro.fuente_menu`, solo blogspot). Se pone una vez por base de datos; ahora no hay pantalla para ello.
+  - Cada día a las 6:23 UTC la base de datos llama a la app (`pg_cron`, `menu-cole-diario`, con el secreto de los avisos). La app mira las entradas de las últimas 3 semanas con pinta de menú (no los precios), y la primera sin cargar la baja (el PDF suelto y, si no, el ZIP de la carpeta), la lee con IA (la misma lectura de D-105) y la pasa por el lector de siempre.
+  - **Antes de cargar se comprueba:** un mes cercano, entre 10 y 23 días de entre semana del propio mes, sin repetidos y con primero y segundo plato casi siempre. Si algo no cuadra, no se carga y se anota el motivo.
+  - **Lo apuntado a mano manda:** solo se rellenan los días que faltan; nunca se pisa un día que ya existe. Cada cambio queda en el historial del menú.
+  - **Reintentos:** un fallo se reintenta al día siguiente, hasta tres veces.
+  - **Aviso:** al cargar un mes sale una notificación «🍽️ Ya está el menú de diciembre» a los móviles de los hogares del colegio.
+- **Probado con el blog real:** el menú de noviembre salió con 19 días, con sus kcal, guarnición y grupos (legumbre, carne…).
+- **Límites:** (1) solo el menú normal, no las dietas especiales; (2) si el colegio cambia el nombre del archivo o deja de usar educaMadrid, no se podrá leer y se anotará el fallo; (3) la IA puede equivocarse en algún plato, igual que al subir el PDF a mano: se puede corregir en Comer → Cole.

@@ -10,7 +10,6 @@ import {
 } from "@/dominio/mochila";
 import { CalendarioCole } from "../calendario-cole";
 import { BotonEditar, Campo, Formulario, useGuardar } from "../editar";
-import { Medicacion } from "../medicacion";
 import { MochilaHoy } from "../mochila-hoy";
 import { useHogar } from "../proveedor-hogar";
 
@@ -104,8 +103,6 @@ export function MochilaVista() {
       </section>
 
       <CalendarioCole />
-
-      <Medicacion />
     </div>
   );
 }

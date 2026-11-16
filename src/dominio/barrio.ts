@@ -10,8 +10,13 @@ import { type FechaIso, diaSemanaIso, sumarDias } from "./fechas";
 export const FUENTE_BARRIO =
   "https://datos.madrid.es/egob/catalogo/206974-0-agenda-eventos-culturales-100.json";
 export const DISTRITO = "SanBlas-Canillejas";
-/** Más días seguidos que esto es un curso o una tertulia semanal, no un plan: no se pone. */
+/** Más días seguidos que esto es un curso o una tertulia semanal, no un plan: no se pone (salvo en la Quinta). */
 const MAX_DIAS_SEGUIDOS = 20;
+/** Los ciclos y talleres de la Quinta de los Molinos pueden durar meses (D-170): hasta este tope. */
+const MAX_DIAS_CICLO = 250;
+
+/** El Espacio Abierto y el parque de la Quinta de los Molinos: su programación es para ir en familia. */
+export const esQuinta = (lugar: string): boolean => /quinta (de )?los molinos/i.test(lugar);
 
 export interface PlanBarrio {
   /** Estable: sirve de clave en el calendario. */
@@ -28,9 +33,12 @@ export interface PlanBarrio {
   gratis: boolean;
   /** «3 euros», si se dice. */
   precio: string | null;
+  /** Una búsqueda del plan: los enlaces de la propia agenda del Ayuntamiento no abren (D-169). */
   enlace: string | null;
   /** Para niños o para ir en familia: cuentacuentos, títeres, circo y magia, campamentos… */
   familiar: boolean;
+  /** Ciclo o taller que dura meses (solo de la Quinta): no es un plan de un día, se enseña aparte. */
+  serie: boolean;
   /** Para saber de un vistazo qué es: 🧸 cuentos, 🎬 cine, 💃 flamenco… */
   emoji: string;
 }
@@ -83,6 +91,10 @@ const EMOJI_CATEGORIA: ReadonlyArray<[RegExp, string]> = [
 const FAMILIAR =
   /infantil|familia|niñ|peque|cuentacuentos|cuentos|títeres|titeres|magia|circo|juvenil|campamento|ludoteca|payas/i;
 
+/** La agenda trae un `link` a madrid.es que responde «Contenido no disponible»: se busca el plan. */
+const buscar = (titulo: string, lugar: string): string =>
+  `https://www.google.com/search?q=${encodeURIComponent(`${titulo} ${lugar.replace(/\s*\(.*$/, "")} Madrid`.replace(/\s+/g, " ").trim())}`;
+
 const dia = (s: string): FechaIso | null => {
   const m = /^(\d{4}-\d{2}-\d{2})/.exec(s);
   return m ? m[1]! : null;
@@ -104,7 +116,11 @@ export function planesDelBarrio(json: unknown, hoy: FechaIso): PlanBarrio[] {
     const inicio = dia(v.dtstart);
     if (!inicio) continue;
     const fin = (v.dtend && dia(v.dtend)) || inicio;
-    if (fin < hoy || dias(inicio, fin) > MAX_DIAS_SEGUIDOS) continue;
+    const lugarCrudo = v["event-location"] ?? "";
+    const duracion = dias(inicio, fin);
+    const serie = duracion > MAX_DIAS_SEGUIDOS;
+    if (fin < hoy || duracion > (esQuinta(lugarCrudo) ? MAX_DIAS_CICLO : MAX_DIAS_SEGUIDOS))
+      continue;
     const hora = /^([01]\d|2[0-3]):[0-5]\d$/.test(v.time ?? "") ? v.time! : null;
     const gratis =
       v.free === 1 || v.free === "1" || v.free === true || /gratuit/i.test(v.price ?? "");
@@ -121,8 +137,12 @@ export function planesDelBarrio(json: unknown, hoy: FechaIso): PlanBarrio[] {
       barrio: barrioLegible((v.address?.area?.["@id"] ?? "").split("/").pop() ?? ""),
       gratis,
       precio: !gratis && precio !== "" ? precio.slice(0, 40) : null,
-      enlace: v.link && v.link.startsWith("http") ? v.link : null,
-      familiar: CATEGORIAS_FAMILIARES.test(v["@type"] ?? "") || FAMILIAR.test(titulo),
+      enlace: buscar(titulo, v["event-location"] ?? ""),
+      familiar:
+        CATEGORIAS_FAMILIARES.test(v["@type"] ?? "") ||
+        FAMILIAR.test(titulo) ||
+        esQuinta(lugarCrudo),
+      serie,
       emoji: EMOJI_CATEGORIA.find(([r]) => r.test(v["@type"] ?? ""))?.[1] ?? "🎨",
     });
   }
@@ -142,5 +162,7 @@ export function lineaDelPlan(p: PlanBarrio): string {
 export function planesDelFinde(planes: readonly PlanBarrio[], viernes: FechaIso): PlanBarrio[] {
   const sab = sumarDias(viernes, 1);
   const dom = sumarDias(viernes, 2);
-  return planes.filter((p) => p.familiar && p.fecha <= dom && (p.hasta ?? p.fecha) >= sab);
+  return planes.filter(
+    (p) => p.familiar && !p.serie && p.fecha <= dom && (p.hasta ?? p.fecha) >= sab,
+  );
 }

@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import type { PlanBarrio } from "@/dominio/barrio";
+import { useMemo, useState } from "react";
+import { type PlanBarrio, esQuinta } from "@/dominio/barrio";
+import { esLasRosas } from "@/dominio/centro-comercial";
 import { diaSemanaIso, sumarDias } from "@/dominio/fechas";
 import { claveArticulo } from "@/dominio/habituales";
+import { UMBRAL_ME_PEGA, afinidad, pesosDeGusto, rasgosDelPlan } from "@/dominio/gustos-barrio";
 import { useHogar } from "../proveedor-hogar";
 import { usePlanesDelBarrio } from "../usar-barrio";
 
@@ -19,10 +21,13 @@ const fechaCorta = (f: string) =>
     new Date(`${f}T12:00:00Z`),
   );
 
-type Filtro = "todos" | "familia" | "gratis" | "finde";
+type Filtro = "todos" | "pegan" | "familia" | "quinta" | "rosas" | "gratis" | "finde";
 const FILTROS: ReadonlyArray<[Filtro, string]> = [
   ["todos", "Todos"],
+  ["pegan", "⭐ Para vosotros"],
   ["familia", "👨‍👩‍👧 Familia"],
+  ["quinta", "🌳 Quinta de los Molinos"],
+  ["rosas", "🛍️ Las Rosas"],
   ["gratis", "Gratis"],
   ["finde", "Este finde"],
 ];
@@ -45,12 +50,34 @@ export function BarrioVista() {
   const [filtro, setFiltro] = useState<Filtro>("todos");
   const [cuantos, setCuantos] = useState(DE_UNA_VEZ);
 
+  const pesos = useMemo(() => pesosDeGusto(estado.gustosBarrio), [estado.gustosBarrio]);
+  const votoDe = (id: string) => estado.gustosBarrio.find((v) => v.id === id)?.voto ?? 0;
+  const gusto = (p: PlanBarrio) => afinidad(rasgosDelPlan(p), pesos);
+  const vota = (p: PlanBarrio, voto: 1 | -1) =>
+    despachar({
+      tipo: "barrio/voto",
+      id: p.id,
+      rasgos: rasgosDelPlan(p),
+      // Pulsar el mismo botón otra vez quita el voto.
+      voto: votoDe(p.id) === voto ? 0 : voto,
+    });
+
   const vigentes = planes.filter((p) => (p.hasta ?? p.fecha) >= estado.hoy);
   // El «viernes» de referencia para «este finde»: el de esta semana (o hoy, si ya es sábado o domingo).
   const dow = diaSemanaIso(estado.hoy);
   const viernes = dow >= 6 ? sumarDias(estado.hoy, -(dow - 5)) : sumarDias(estado.hoy, 5 - dow);
   const lista = vigentes.filter((p) =>
-    filtro === "familia" ? p.familiar : filtro === "gratis" ? p.gratis : true,
+    filtro === "pegan"
+      ? votoDe(p.id) !== -1 && gusto(p).puntos >= UMBRAL_ME_PEGA
+      : filtro === "familia"
+        ? p.familiar
+        : filtro === "quinta"
+          ? esQuinta(p.lugar)
+          : filtro === "rosas"
+            ? esLasRosas(p.lugar)
+            : filtro === "gratis"
+              ? p.gratis
+              : true,
   );
   // «Este finde» enseña también lo que no es de familia: se calcula aparte.
   const finde =
@@ -59,7 +86,10 @@ export function BarrioVista() {
           (p) => p.fecha <= sumarDias(viernes, 2) && (p.hasta ?? p.fecha) >= sumarDias(viernes, 1),
         )
       : lista;
-  const visibles = finde.slice(0, cuantos);
+  // Los ciclos y talleres de meses van aparte: no son un plan de un día.
+  const series = finde.filter((p) => p.serie);
+  const sueltos = finde.filter((p) => !p.serie);
+  const visibles = sueltos.slice(0, cuantos);
   const dias = [...new Set(visibles.map((p) => p.fecha))];
   const yaApuntado = (p: PlanBarrio) =>
     estado.agenda.some(
@@ -100,7 +130,11 @@ export function BarrioVista() {
           No consigo leer la agenda del Ayuntamiento ahora mismo. Vuelve a mirar dentro de un rato.
         </p>
       ) : finde.length === 0 ? (
-        <p className="tarjeta text-tinta-suave text-base">Nada por ahora con ese filtro.</p>
+        <p className="tarjeta text-tinta-suave text-base">
+          {filtro === "pegan"
+            ? "Aún no sé qué os gusta. Marca 👍 o 👎 en algunos planes (o apunta los que queráis) y aquí saldrán los que más os pegan."
+            : "Nada por ahora con ese filtro."}
+        </p>
       ) : (
         dias.map((d) => (
           <section key={d} aria-label={fechaLarga(d)} className="flex flex-col gap-2">
@@ -109,60 +143,95 @@ export function BarrioVista() {
               {visibles
                 .filter((p) => p.fecha === d)
                 .map((p) => (
-                  <li
-                    key={`${p.id}-${p.fecha}`}
-                    className="tarjeta flex items-start justify-between gap-2"
-                  >
-                    <div className="flex min-w-0 flex-col gap-0.5">
-                      <p className="text-base font-semibold">
-                        <span aria-hidden="true">{p.emoji} </span>
-                        {p.enlace ? (
-                          <a
-                            href={p.enlace}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex min-h-11 items-center underline"
-                          >
-                            {p.titulo}
-                          </a>
-                        ) : (
-                          p.titulo
-                        )}
-                      </p>
-                      <p className="text-tinta-suave text-sm">
-                        {p.hasta ? `hasta el ${fechaCorta(p.hasta)}` : ""}
-                        {p.hasta && p.hora ? " · " : ""}
-                        {p.hora ?? ""}
-                        {p.hora || p.hasta ? " · " : ""}
-                        {p.lugar.replace(/^(Centro Cultural|Biblioteca Pública Municipal) /, "")}
-                        {p.barrio ? ` (${p.barrio})` : ""}
-                        {` · ${p.gratis ? "gratis" : (p.precio ?? "de pago")}`}
-                        {p.familiar ? " · 👨‍👩‍👧 familia" : ""}
-                      </p>
+                  <li key={`${p.id}-${p.fecha}`} className="tarjeta flex flex-col gap-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex min-w-0 flex-col gap-0.5">
+                        <p className="text-base font-semibold">
+                          <span aria-hidden="true">{p.emoji} </span>
+                          {p.enlace ? (
+                            <a
+                              href={p.enlace}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex min-h-11 items-center underline"
+                              title="Buscar más información"
+                            >
+                              {p.titulo}
+                            </a>
+                          ) : (
+                            p.titulo
+                          )}
+                        </p>
+                        <p className="text-tinta-suave text-sm">
+                          {p.hasta ? `hasta el ${fechaCorta(p.hasta)}` : ""}
+                          {p.hasta && p.hora ? " · " : ""}
+                          {p.hora ?? ""}
+                          {p.hora || p.hasta ? " · " : ""}
+                          {p.lugar.replace(/^(Centro Cultural|Biblioteca Pública Municipal) /, "")}
+                          {p.barrio ? ` (${p.barrio})` : ""}
+                          {` · ${p.gratis ? "gratis" : (p.precio ?? "de pago")}`}
+                          {p.familiar ? " · 👨‍👩‍👧 familia" : ""}
+                        </p>
+                      </div>
+                      {yaApuntado(p) ? (
+                        <span className="text-tinta-suave shrink-0 self-center text-sm font-semibold">
+                          ✓ Apuntado
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          className="boton-suave shrink-0 self-center"
+                          aria-label={`Apuntar ${p.titulo} en la agenda`}
+                          onClick={() => {
+                            despachar({
+                              tipo: "agenda/cita",
+                              fecha: p.fecha,
+                              hasta: p.hasta,
+                              hora: p.hora,
+                              titulo: tituloEnLaAgenda(p),
+                              idBase: crypto.randomUUID(),
+                            });
+                            // Apuntarlo cuenta como un «nos gusta» (si no habían votado ya).
+                            if (votoDe(p.id) === 0) vota(p, 1);
+                          }}
+                        >
+                          ＋ Apuntar
+                        </button>
+                      )}
                     </div>
-                    {yaApuntado(p) ? (
-                      <span className="text-tinta-suave shrink-0 self-center text-sm font-semibold">
-                        ✓ Apuntado
-                      </span>
-                    ) : (
+                    <div className="flex flex-wrap items-center gap-2">
                       <button
                         type="button"
-                        className="boton-suave shrink-0 self-center"
-                        aria-label={`Apuntar ${p.titulo} en la agenda`}
-                        onClick={() =>
-                          despachar({
-                            tipo: "agenda/cita",
-                            fecha: p.fecha,
-                            hasta: p.hasta,
-                            hora: p.hora,
-                            titulo: tituloEnLaAgenda(p),
-                            idBase: crypto.randomUUID(),
-                          })
-                        }
+                        className="boton-icono aria-pressed:border-2 aria-pressed:border-[var(--marca)]"
+                        aria-pressed={votoDe(p.id) === 1}
+                        aria-label={`Nos gusta ${p.titulo}`}
+                        title="Nos gusta"
+                        onClick={() => vota(p, 1)}
                       >
-                        ＋ Apuntar
+                        <span aria-hidden="true">👍</span>
                       </button>
-                    )}
+                      <button
+                        type="button"
+                        className="boton-icono aria-pressed:border-2 aria-pressed:border-[var(--marca)]"
+                        aria-pressed={votoDe(p.id) === -1}
+                        aria-label={`No es para nosotros ${p.titulo}`}
+                        title="No es para nosotros"
+                        onClick={() => vota(p, -1)}
+                      >
+                        <span aria-hidden="true">👎</span>
+                      </button>
+                      {votoDe(p.id) === 0 && gusto(p).puntos >= UMBRAL_ME_PEGA && (
+                        <span className="text-sm font-semibold">
+                          ⭐ Os pega
+                          {gusto(p).motivo ? (
+                            <span className="text-tinta-suave font-normal">
+                              {" "}
+                              · por {gusto(p).motivo}
+                            </span>
+                          ) : null}
+                        </span>
+                      )}
+                    </div>
                   </li>
                 ))}
             </ul>
@@ -170,18 +239,54 @@ export function BarrioVista() {
         ))
       )}
 
-      {finde.length > cuantos && (
+      {series.length > 0 && (
+        <section aria-labelledby="barrio-series" className="flex flex-col gap-2">
+          <h2 id="barrio-series" className="text-lg font-bold">
+            Ciclos y talleres de varios meses
+          </h2>
+          <ul className="flex flex-col gap-2">
+            {series.map((p) => (
+              <li key={`${p.id}-${p.fecha}`} className="tarjeta flex flex-col gap-0.5">
+                <p className="text-base font-semibold">
+                  <span aria-hidden="true">{p.emoji} </span>
+                  {p.enlace ? (
+                    <a
+                      href={p.enlace}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex min-h-11 items-center underline"
+                      title="Buscar más información"
+                    >
+                      {p.titulo}
+                    </a>
+                  ) : (
+                    p.titulo
+                  )}
+                </p>
+                <p className="text-tinta-suave text-sm">
+                  hasta el {fechaCorta(p.hasta ?? p.fecha)} ·{" "}
+                  {p.lugar.replace(/^(Centro Cultural|Biblioteca Pública Municipal) /, "")}
+                  {` · ${p.gratis ? "gratis" : (p.precio ?? "de pago")}`}
+                  {p.familiar ? " · 👨‍👩‍👧 familia" : ""}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {sueltos.length > cuantos && (
         <button
           type="button"
           className="boton-suave w-fit"
           onClick={() => setCuantos((n) => n + DE_UNA_VEZ)}
         >
-          Ver más ({finde.length - cuantos})
+          Ver más ({sueltos.length - cuantos})
         </button>
       )}
       <p className="text-tinta-suave text-sm">
-        Agenda cultural del Ayuntamiento de Madrid. Solo actividades municipales: no están los
-        colegios ni las asociaciones.
+        Agenda cultural del Ayuntamiento de Madrid (solo actividades municipales) y novedades del
+        C.C. Las Rosas, leídas de su web con IA: mira el enlace antes de ir.
       </p>
     </div>
   );

@@ -31,6 +31,7 @@ const RUTAS = [
   "/compartir",
   "/tareas",
   "/mochila",
+  "/medicacion",
   "/semana",
   "/compartido",
   "/cuenta",
@@ -1340,6 +1341,7 @@ test.describe("flujos en móvil", () => {
       ["Casa", "Recurrente", "/casa"],
       ["Casa", "Por persona", "/tareas"],
       ["Casa", "Mochila", "/mochila"],
+      ["Casa", "Medicación", "/medicacion"],
       ["Casa", "Reparto", "/reparto"],
       ["Fechas", "Próximas", "/fechas"],
       ["Fechas", "Calendario", "/calendario"],
@@ -1935,6 +1937,12 @@ test.describe("flujos en móvil", () => {
     await pagina.getByRole("button", { name: "Guardar todos" }).click();
     await expect(pagina.getByRole("heading", { level: 2, name: /Lucas/ })).toBeVisible();
 
+    // Con el teclado numérico (sin «/»), las barras se ponen solas (D-168).
+    const fecha = pagina.getByRole("textbox", { name: /Fecha/ });
+    await fecha.pressSequentially("15032017");
+    await expect(fecha).toHaveValue("15/03/2017");
+    await fecha.fill("");
+
     // Fecha mal escrita: lo dice.
     await pagina.getByLabel("Nombre").fill("Error");
     await pagina.getByRole("textbox", { name: /Fecha/ }).fill("31/2");
@@ -2172,7 +2180,7 @@ test.describe("mochila, compartir y plan de la semana", () => {
     browser,
   }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
-    await cargar(pagina, "/mochila");
+    await cargar(pagina, "/medicacion");
     await pagina.getByRole("button", { name: "＋ Apuntar un medicamento" }).click();
     const form = pagina.getByRole("form", { name: "Apuntar un medicamento" });
     await form.getByLabel("Cómo lo llamas").fill("Pastilla");
@@ -2384,6 +2392,12 @@ test.describe("mochila, compartir y plan de la semana", () => {
           planes: [
             plan("1", "El sueño de Lucía", "2026-11-07", true),
             plan("2", "Concierto de jazz", "2026-11-08", false),
+            {
+              ...plan("cc-9-0", "Misterio en Las Rosas", "2026-11-07", true),
+              lugar: "C.C. Las Rosas",
+              barrio: "Rosas",
+              emoji: "🎲",
+            },
           ],
           fuente: "ok: 2 planes",
         }),
@@ -2392,14 +2406,32 @@ test.describe("mochila, compartir y plan de la semana", () => {
     await cargar(pagina, "/fechas");
     // En Fechas solo una línea que lleva a la pantalla de planes: no llena «Próximas».
     const enlace = pagina.getByRole("link", { name: /Planes del barrio/ });
-    await expect(enlace).toContainText("1 para la familia");
+    await expect(enlace).toContainText("2 para la familia");
     await expect(pagina.getByText("El sueño de Lucía")).toHaveCount(0);
     await enlace.click();
     await expect(pagina.getByRole("heading", { name: /Planes del barrio/ })).toBeVisible();
     await expect(pagina.getByText("El sueño de Lucía")).toBeVisible();
     await expect(pagina.getByText("Concierto de jazz")).toBeVisible();
+    // El centro comercial Las Rosas también (D-172).
+    await pagina.getByRole("button", { name: "🛍️ Las Rosas", exact: true }).click();
+    await expect(pagina.getByText("Misterio en Las Rosas")).toBeVisible();
+    await expect(pagina.getByText("El sueño de Lucía")).toHaveCount(0);
+    await pagina.getByRole("button", { name: "Todos" }).click();
+    // La Quinta de los Molinos tiene su filtro.
+    await pagina.getByRole("button", { name: /Quinta de los Molinos/ }).click();
+    await expect(pagina.getByText("El sueño de Lucía")).toHaveCount(0);
+    await pagina.getByRole("button", { name: "Todos" }).click();
     await pagina.getByRole("button", { name: /Familia/ }).click();
     await expect(pagina.getByText("Concierto de jazz")).toHaveCount(0);
+    await pagina.getByRole("button", { name: "Todos" }).click();
+
+    // Aprende de lo que gusta (D-171): con un 👍, lo parecido sale en «Para vosotros».
+    await pagina.getByRole("button", { name: "Nos gusta El sueño de Lucía" }).click();
+    await expect(
+      pagina.getByRole("button", { name: "Nos gusta El sueño de Lucía" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await pagina.getByRole("button", { name: /Para vosotros/ }).click();
+    await expect(pagina.getByText("Concierto de jazz")).toBeVisible();
     await pagina.getByRole("button", { name: "Todos" }).click();
 
     // Apuntar uno en la agenda con un toque.
@@ -2527,6 +2559,7 @@ test.describe("barra lateral con apartados (D-142)", () => {
       "Recurrente",
       "Por persona",
       "Mochila",
+      "Medicación",
       "Reparto",
     ]);
     await expect(casa.getByRole("link", { name: "Mochila" })).toHaveAttribute(

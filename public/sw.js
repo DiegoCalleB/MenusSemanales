@@ -30,6 +30,7 @@ const RUTAS = [
   "/casa",
   "/tareas",
   "/mochila",
+  "/medicacion",
   "/reparto",
   "/fechas",
   "/calendario",

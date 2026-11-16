@@ -3,6 +3,7 @@ import {
   type Cumple,
   avisosDeCumples,
   diasHasta,
+  escribirFecha,
   edadQueCumple,
   estadoVigente,
   fechaEnAnio,
@@ -146,5 +147,29 @@ describe("felicitacionesDeHoy", () => {
       "cumples",
     );
     expect(felicitacionesDeHoy([c()], "2026-03-11")).toEqual([]);
+  });
+});
+
+describe("escribirFecha (D-168)", () => {
+  const teclear = (texto: string) => {
+    let v = "";
+    for (const c of texto) v = escribirFecha(v + c, v);
+    return v;
+  };
+  it("pone las barras solas con el teclado numérico", () => {
+    expect(teclear("1532017")).toBe("15/32/017"); // mes 32 no se valida aquí: lo dirá parsearFecha
+    expect(teclear("15032017")).toBe("15/03/2017");
+    expect(teclear("1503")).toBe("15/03/");
+    expect(teclear("15")).toBe("15/");
+  });
+  it("acepta «.», «-» y espacio como barra, para los días de una cifra", () => {
+    expect(teclear("5.3.2017")).toBe("5/3/2017");
+    expect(teclear("5-3")).toBe("5/3");
+    expect(teclear("5 3")).toBe("5/3");
+  });
+  it("no estorba al borrar ni deja letras", () => {
+    expect(escribirFecha("15/0", "15/03")).toBe("15/0");
+    expect(escribirFecha("15/", "15/0")).toBe("15/");
+    expect(teclear("1a5")).toBe("15/");
   });
 });
