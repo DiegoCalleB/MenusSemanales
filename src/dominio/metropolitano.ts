@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { proximaFecha } from "./cumples";
-import type { FechaIso } from "./fechas";
+import { type FechaIso, sumarDias } from "./fechas";
 
 /**
  * Lo que pasa en el estadio de al lado (D-159): los partidos del Atlético EN CASA (Liga, Champions,
@@ -267,3 +267,77 @@ export function planesDelDia(f: FechaIso, p: PlanesDelHogar): string[] {
 /** «Partido», «Concierto» o «Evento», con mayúscula, para los títulos cortos. */
 export const queEs = (e: EventoEstadio) =>
   e.tipo === "partido" ? "Partido" : e.tipo === "concierto" ? "Concierto" : "Evento";
+
+/** La programación oficial del estadio (D-164): la web que lista los conciertos con su fecha. */
+export const PAGINA_PROGRAMACION = "https://www.riyadhairmetropolitano.com/programacion";
+
+const MESES_ES: Record<string, string> = {
+  ENERO: "01",
+  FEBRERO: "02",
+  MARZO: "03",
+  ABRIL: "04",
+  MAYO: "05",
+  JUNIO: "06",
+  JULIO: "07",
+  AGOSTO: "08",
+  SEPTIEMBRE: "09",
+  OCTUBRE: "10",
+  NOVIEMBRE: "11",
+  DICIEMBRE: "12",
+};
+const NO_SON_NOMBRE =
+  /^(COMPRAR|MÁS INFORMACIÓN|Sold-out|Próximamente|POR CONFIRMAR|CATEGORÍA|FECHA|MÚSICA|FÚTBOL|DEPORTE)/i;
+const FECHA_WEB = /^(\d{1,2}) · ([A-ZÁÉÍÓÚÑ]+) · (\d{4})(?:\s*-\s*(\d{2}):(\d{2})H)?/;
+
+/**
+ * Los eventos de la programación de la web del estadio (D-164): cada bloque es un nombre seguido
+ * de una o varias fechas «D · MES · AAAA». Los partidos del Atlético («X vs Y») ya los da ESPN y se
+ * dejan fuera para no repetirlos. Puro: recibe el HTML de la página.
+ */
+export function eventosDeLaWeb(html: string, hoy: string): EventoEstadio[] {
+  const texto = html
+    .replace(/<(script|style)[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<[^>]+>/g, "\n")
+    .replace(/&amp;/g, "&")
+    .replace(/&nbsp;/g, " ");
+  const lineas = texto
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l !== "");
+  const hasta = sumarDias(hoy, 450);
+  const out: EventoEstadio[] = [];
+  let nombre = "";
+  for (const linea of lineas) {
+    // Varias fechas pueden ir en la misma línea, separadas por «|».
+    const partes = linea.split("|").map((p) => p.trim());
+    for (const l of partes) {
+      const f = FECHA_WEB.exec(l);
+      if (!f) {
+        // Los nombres son las líneas de texto que no son botones ni etiquetas ni slugs.
+        if (!NO_SON_NOMBRE.test(l) && !/^[a-z0-9-]+$/.test(l) && l.length <= 120) nombre = l;
+        continue;
+      }
+      const mes = MESES_ES[f[2]!.normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase()];
+      if (!mes || !nombre) continue;
+      const fecha = `${f[3]}-${mes}-${f[1]!.padStart(2, "0")}`;
+      if (fecha < hoy || fecha > hasta) continue;
+      // Los partidos del Atlético («X vs Y») ya llegan de ESPN: aquí solo los conciertos y eventos.
+      if (/\bvs\b/i.test(nombre)) continue;
+      const hora = f[4] ? `${f[4]}:${f[5]}` : null;
+      const esFinal = /final/i.test(nombre);
+      out.push({
+        id: `web-${nombre
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[̀-ͯ]/g, "")
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "")}-${fecha}`,
+        fecha,
+        hora,
+        tipo: esFinal ? "evento" : "concierto",
+        titulo: nombre.slice(0, 100),
+      });
+    }
+  }
+  return out;
+}

@@ -1401,7 +1401,7 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
   - **La víspera por la noche:** «Mañana partido…».
   - **El viernes**, en «La semana que viene»: «domingo 21:00 partido en el Metropolitano (…)».
   - En el **calendario suscrito** de fechas (con su hora si está confirmada) y en el **calendario de la app** (⚽ o 🎤 en la casilla y el detalle en el día).
-- Los datos se miran cada seis horas, los próximos 4 meses. Si ESPN o Ticketmaster fallan, no sale nada del estadio y el resto sigue igual.
+- Los partidos se miran cada seis horas, los próximos 4 meses; los conciertos, más de un año (se anuncian con mucha antelación). Si ESPN o Ticketmaster fallan, no sale nada del estadio y el resto sigue igual.
 
 ## D-160 · Apuntar eventos desde el ＋ y compartir un cartel
 
@@ -1452,3 +1452,11 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
   - **Calendario de la app:** ⚠️ en la casilla del día y, en el detalle, «⚠️ Coincide con: …. Sal con tiempo.».
 - **Límite:** no distingue entre lo que es en casa, por el barrio o lejos, ni sabe qué horas se pisan. Para eso habría que apuntar el lugar de cada cosa.
 - **Rendimiento:** la campanita está en todas las pantallas, así que no pregunta por los partidos hasta pasados 4 segundos, y solo una vez por sesión y hora. Si no, cada pantalla esperaba a una petición lenta (se notó en las pruebas, sin internet).
+
+## D-164 · La programación oficial del estadio, como fuente de conciertos
+
+- **Problema:** Ticketmaster respondía «0 eventos cerca» aunque la programación oficial tiene conciertos de 2027 (Karol G, Estopa, Don Omar, Harry Styles) y la final de la Champions de 2027.
+- **Qué:** además de Ticketmaster, la app lee `riyadhairmetropolitano.com/programacion` una vez por semana (los conciertos se anuncian con semanas de antelación). La página lista cada evento con su nombre y sus fechas «D · MES · AAAA»; varias fechas van separadas por «|». Los partidos del Atlético («X vs Y») no se leen de aquí, porque ESPN ya los da.
+- **Hora:** la web no da hora de los conciertos, así que salen de todo el día. La final sale como «evento».
+- **Si la web cambia o no responde:** `/api/metropolitano` lo dice en `fuentes.web` (`ok: N eventos` o `error: …`) y el resto sigue igual.
+- **Horizonte:** los conciertos se miran hasta 450 días por delante.
