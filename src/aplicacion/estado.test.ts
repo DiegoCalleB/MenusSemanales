@@ -2059,3 +2059,68 @@ describe("gustos de los planes del barrio (D-171)", () => {
     expect(reducir(e, { tipo: "barrio/voto", id: "x", rasgos: [], voto: 5 as 1 })).toBe(e);
   });
 });
+
+describe("papeles y vencimientos (D-174)", () => {
+  const base = () => estadoInicialDemo();
+  const itv = {
+    tipo: "vencimiento/guardar" as const,
+    titulo: "ITV del coche",
+    categoria: "coche" as const,
+    personaId: null,
+    fecha: "2026-12-04",
+    repiteMeses: 12,
+    avisos: [30, 7, 1],
+    notas: "",
+  };
+  it("apunta, edita y borra", () => {
+    let e = reducir(base(), itv);
+    expect(e.vencimientos).toHaveLength(1);
+    expect(e.vencimientos[0]).toMatchObject({
+      titulo: "ITV del coche",
+      hechoEn: null,
+      renovado: [],
+    });
+    expect(e.aviso?.tipo).toBe("ok");
+    const id = e.vencimientos[0]!.id;
+    e = reducir(e, { ...itv, id, titulo: "ITV del Seat", fecha: "2026-12-10" });
+    expect(e.vencimientos[0]).toMatchObject({ id, titulo: "ITV del Seat", fecha: "2026-12-10" });
+    e = reducir(e, { tipo: "vencimiento/borrar", id });
+    expect(e.vencimientos).toEqual([]);
+  });
+  it("no guarda lo que no vale y lo dice", () => {
+    const e = reducir(base(), { ...itv, titulo: " " });
+    expect(e.vencimientos).toEqual([]);
+    expect(e.aviso?.tipo).toBe("error");
+    expect(reducir(base(), { ...itv, fecha: "2026-02-31" }).vencimientos).toEqual([]);
+    expect(reducir(base(), { ...itv, personaId: "nadie" }).vencimientos).toEqual([]);
+    expect(reducir(base(), { ...itv, avisos: [5] }).vencimientos).toEqual([]);
+  });
+  it("renovar pasa a la nueva fecha y guarda la anterior; no admite una fecha anterior", () => {
+    let e = reducir(base(), itv);
+    const id = e.vencimientos[0]!.id;
+    const mal = reducir(e, { tipo: "vencimiento/renovar", id, fecha: "2026-11-01" });
+    expect(mal.aviso?.tipo).toBe("error");
+    expect(mal.vencimientos[0]?.fecha).toBe("2026-12-04");
+    e = reducir(e, { tipo: "vencimiento/renovar", id, fecha: "2027-12-04" });
+    expect(e.vencimientos[0]).toMatchObject({
+      fecha: "2027-12-04",
+      renovado: ["2026-12-04"],
+      hechoEn: null,
+    });
+  });
+  it("dar por hecho y reabrir", () => {
+    let e = reducir(base(), { ...itv, repiteMeses: null });
+    const id = e.vencimientos[0]!.id;
+    e = reducir(e, { tipo: "vencimiento/hecho", id, hecho: true });
+    expect(e.vencimientos[0]?.hechoEn).toBe(e.hoy);
+    e = reducir(e, { tipo: "vencimiento/hecho", id, hecho: false });
+    expect(e.vencimientos[0]?.hechoEn).toBeNull();
+  });
+  it("el mismo idBase da el mismo id (no duplica al reintentar)", () => {
+    const idBase = "11111111-1111-4111-8111-111111111111";
+    const a = reducir(base(), { ...itv, idBase });
+    const b = reducir(base(), { ...itv, idBase });
+    expect(a.vencimientos[0]?.id).toBe(b.vencimientos[0]?.id);
+    expect(esUuid(a.vencimientos[0]!.id)).toBe(true);
+  });
+});
