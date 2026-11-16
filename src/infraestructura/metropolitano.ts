@@ -46,6 +46,8 @@ async function json(url: string, pedir: typeof fetch): Promise<unknown> {
 export async function leerEventosEstadio(
   hoy: string,
   pedir: typeof fetch = fetch,
+  /** Cómo ha ido cada fuente, sin datos secretos: «sin-clave», «ok: 12 eventos (3 en el estadio)»… */
+  informe: { ticketmaster?: string } = {},
 ): Promise<EventoEstadio[]> {
   const meses = Array.from({ length: MESES }, (_, i) => {
     const d = new Date(`${hoy.slice(0, 7)}-01T12:00:00Z`);
@@ -64,17 +66,27 @@ export async function leerEventosEstadio(
       ),
     ),
   );
+  const hasta = sumarDias(hoy, DIAS);
   const clave = process.env.TICKETMASTER_API_KEY?.trim();
-  const conciertos = clave
-    ? await json(
+  let conciertos: EventoEstadio[] = [];
+  if (!clave) {
+    informe.ticketmaster = "sin-clave";
+  } else {
+    try {
+      // Un radio de 2 km alrededor del estadio, con los nombres en cualquier idioma y desde hoy.
+      const j = await json(
         "https://app.ticketmaster.com/discovery/v2/events.json" +
           `?apikey=${encodeURIComponent(clave)}&latlong=${ESTADIO.latitud},${ESTADIO.longitud}` +
-          "&radius=1&unit=km&size=100&sort=date,asc&countryCode=ES",
+          `&radius=2&unit=km&locale=*&size=200&sort=date,asc&countryCode=ES` +
+          `&startDateTime=${hoy}T00:00:00Z&endDateTime=${hasta}T23:59:59Z`,
         pedir,
-      )
-        .then(eventosDeTicketmaster)
-        .catch(() => [] as EventoEstadio[])
-    : [];
-  const hasta = sumarDias(hoy, DIAS);
+      );
+      conciertos = eventosDeTicketmaster(j);
+      const brutos = (j as { page?: { totalElements?: number } } | null)?.page?.totalElements;
+      informe.ticketmaster = `ok: ${typeof brutos === "number" ? brutos : "?"} eventos cerca, ${conciertos.length} en el estadio`;
+    } catch (e) {
+      informe.ticketmaster = `error: ${e instanceof Error ? e.message.slice(0, 40) : "desconocido"}`;
+    }
+  }
   return juntarEventos(...partidos, conciertos).filter((e) => e.fecha >= hoy && e.fecha <= hasta);
 }
