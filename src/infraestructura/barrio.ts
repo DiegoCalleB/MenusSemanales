@@ -1,5 +1,6 @@
 import "server-only";
 import { FUENTE_BARRIO, type PlanBarrio, planesDelBarrio } from "@/dominio/barrio";
+import { leerPlanesDelCentro } from "./centro-comercial";
 
 /**
  * La agenda cultural abierta del Ayuntamiento de Madrid, de San Blas-Canillejas (D-165). Se mira
@@ -9,7 +10,22 @@ export async function leerPlanesDelBarrio(
   hoy: string,
   pedir: typeof fetch = fetch,
   /** Cómo ha ido, sin datos secretos: «ok: 35 planes» o «error: http-503». */
-  informe: { barrio?: string } = {},
+  informe: { barrio?: string; centro?: string } = {},
+): Promise<PlanBarrio[]> {
+  // El centro comercial va por su cuenta: si falla, el resto sigue (y al revés).
+  const [municipales, centro] = await Promise.all([
+    leerAgendaMunicipal(hoy, pedir, informe),
+    leerPlanesDelCentro(hoy, pedir, informe).catch(() => [] as PlanBarrio[]),
+  ]);
+  return [...municipales, ...centro].sort(
+    (a, b) => a.fecha.localeCompare(b.fecha) || (a.hora ?? "").localeCompare(b.hora ?? ""),
+  );
+}
+
+async function leerAgendaMunicipal(
+  hoy: string,
+  pedir: typeof fetch,
+  informe: { barrio?: string },
 ): Promise<PlanBarrio[]> {
   try {
     const r = await pedir(FUENTE_BARRIO, {

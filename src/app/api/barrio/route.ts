@@ -6,10 +6,10 @@ import { leerPlanesDelBarrio } from "@/infraestructura/barrio";
  * Ayuntamiento y no dice nada del hogar.
  */
 export async function GET() {
-  const informe: { barrio?: string } = {};
+  const informe: { barrio?: string; centro?: string } = {};
   const planes = await leerPlanesDelBarrio(hoyEnMadrid(), fetch, informe);
   return Response.json(
-    { planes, fuente: informe.barrio ?? "?" },
+    { planes, fuente: informe.barrio ?? "?", centro: informe.centro ?? "?" },
     { headers: { "Cache-Control": planes.length > 0 ? "public, max-age=3600" : "no-store" } },
   );
 }

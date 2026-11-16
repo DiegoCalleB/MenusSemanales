@@ -1516,3 +1516,11 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Dónde se ve:** etiqueta «⭐ Os pega · por la Quinta de los Molinos» en los planes con buena puntuación que aún no han votado, y un filtro **⭐ Para vosotros** en Fechas → Barrio. Sin votos no se destaca nada, y el filtro explica cómo empezar.
 - **Qué se guarda:** hasta 150 votos de toda la familia, en el documento del hogar (no va al servidor de avisos ni al calendario). Los más antiguos se olvidan.
 - **Pendiente:** que el aviso del viernes elija entre los planes según el gusto, y aprender también de las puntuaciones de las citas pasadas.
+
+## D-172 · Eventos del Centro Comercial Las Rosas
+
+- **Petición (Diego):** añadir los eventos especiales del centro comercial Las Rosas.
+- **Fuente:** su web (`cclasrosas.es`) es un WordPress con entradas de texto libre, no una agenda: «Durante los días 9, 10, 11, 12, 16, 17 y 18…». Se leen las entradas recientes de «Eventos» y «Actividades infantiles» (por su API pública, `wp-json`) y la **IA** (Gemini, la misma clave de los demás usos) saca los días y horas. Se excluyen sorteos, ofertas y aperturas de tiendas.
+- **Comprobación:** lo que devuelve la IA se valida con un esquema; solo valen días de hoy a 150 días y a menos de 150 días de la publicación, de entradas que existen. Se guarda 12 horas para no gastar IA de más. Si falla la web, la IA o la validación, simplemente no salen eventos del centro y lo demás sigue igual (`/api/barrio` lo dice en `centro`).
+- **Dónde sale:** mezclado con los demás planes del barrio, con su filtro **🛍️ Las Rosas**, el 👍/👎, «Apuntar» y el aviso del viernes (los de familia). El enlace lleva a la entrada de su web.
+- **Límites:** los eventos solo salen cuando el centro publica la entrada; la hora a veces no se puede saber (varios pases) y entonces no se pone. En la prueba con las entradas de otoño leyó bien «Cuéntame un cuento» (9-18 de octubre) y «Misterio en Las Rosas» (6-8 de noviembre, aplazado).

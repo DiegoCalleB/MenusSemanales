@@ -2392,6 +2392,12 @@ test.describe("mochila, compartir y plan de la semana", () => {
           planes: [
             plan("1", "El sueño de Lucía", "2026-11-07", true),
             plan("2", "Concierto de jazz", "2026-11-08", false),
+            {
+              ...plan("cc-9-0", "Misterio en Las Rosas", "2026-11-07", true),
+              lugar: "C.C. Las Rosas",
+              barrio: "Rosas",
+              emoji: "🎲",
+            },
           ],
           fuente: "ok: 2 planes",
         }),
@@ -2400,12 +2406,17 @@ test.describe("mochila, compartir y plan de la semana", () => {
     await cargar(pagina, "/fechas");
     // En Fechas solo una línea que lleva a la pantalla de planes: no llena «Próximas».
     const enlace = pagina.getByRole("link", { name: /Planes del barrio/ });
-    await expect(enlace).toContainText("1 para la familia");
+    await expect(enlace).toContainText("2 para la familia");
     await expect(pagina.getByText("El sueño de Lucía")).toHaveCount(0);
     await enlace.click();
     await expect(pagina.getByRole("heading", { name: /Planes del barrio/ })).toBeVisible();
     await expect(pagina.getByText("El sueño de Lucía")).toBeVisible();
     await expect(pagina.getByText("Concierto de jazz")).toBeVisible();
+    // El centro comercial Las Rosas también (D-172).
+    await pagina.getByRole("button", { name: "🛍️ Las Rosas", exact: true }).click();
+    await expect(pagina.getByText("Misterio en Las Rosas")).toBeVisible();
+    await expect(pagina.getByText("El sueño de Lucía")).toHaveCount(0);
+    await pagina.getByRole("button", { name: "Todos" }).click();
     // La Quinta de los Molinos tiene su filtro.
     await pagina.getByRole("button", { name: /Quinta de los Molinos/ }).click();
     await expect(pagina.getByText("El sueño de Lucía")).toHaveCount(0);

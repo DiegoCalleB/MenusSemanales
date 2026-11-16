@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { type PlanBarrio, esQuinta } from "@/dominio/barrio";
+import { esLasRosas } from "@/dominio/centro-comercial";
 import { diaSemanaIso, sumarDias } from "@/dominio/fechas";
 import { claveArticulo } from "@/dominio/habituales";
 import { UMBRAL_ME_PEGA, afinidad, pesosDeGusto, rasgosDelPlan } from "@/dominio/gustos-barrio";
@@ -20,12 +21,13 @@ const fechaCorta = (f: string) =>
     new Date(`${f}T12:00:00Z`),
   );
 
-type Filtro = "todos" | "pegan" | "familia" | "quinta" | "gratis" | "finde";
+type Filtro = "todos" | "pegan" | "familia" | "quinta" | "rosas" | "gratis" | "finde";
 const FILTROS: ReadonlyArray<[Filtro, string]> = [
   ["todos", "Todos"],
   ["pegan", "⭐ Para vosotros"],
   ["familia", "👨‍👩‍👧 Familia"],
   ["quinta", "🌳 Quinta de los Molinos"],
+  ["rosas", "🛍️ Las Rosas"],
   ["gratis", "Gratis"],
   ["finde", "Este finde"],
 ];
@@ -71,9 +73,11 @@ export function BarrioVista() {
         ? p.familiar
         : filtro === "quinta"
           ? esQuinta(p.lugar)
-          : filtro === "gratis"
-            ? p.gratis
-            : true,
+          : filtro === "rosas"
+            ? esLasRosas(p.lugar)
+            : filtro === "gratis"
+              ? p.gratis
+              : true,
   );
   // «Este finde» enseña también lo que no es de familia: se calcula aparte.
   const finde =
@@ -281,8 +285,8 @@ export function BarrioVista() {
         </button>
       )}
       <p className="text-tinta-suave text-sm">
-        Agenda cultural del Ayuntamiento de Madrid. Solo actividades municipales: no están los
-        colegios ni las asociaciones.
+        Agenda cultural del Ayuntamiento de Madrid (solo actividades municipales) y novedades del
+        C.C. Las Rosas, leídas de su web con IA: mira el enlace antes de ir.
       </p>
     </div>
   );
