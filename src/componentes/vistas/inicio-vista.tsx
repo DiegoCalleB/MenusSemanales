@@ -21,6 +21,7 @@ import { ComidaDelDia } from "../comida-del-dia";
 import { LoDeHoy } from "../lo-de-hoy";
 import { NuevaCita } from "../nueva-cita";
 import { ActivarAvisosHoy } from "../activar-avisos-hoy";
+import { MedicacionHoy } from "../medicacion-hoy";
 import { MochilaHoy } from "../mochila-hoy";
 import { TiempoHoy } from "../tiempo-hoy";
 import { diaSemanaIso } from "@/dominio/fechas";
@@ -160,6 +161,8 @@ export function InicioVista() {
       <ActivarAvisosHoy />
 
       <TiempoHoy />
+
+      <MedicacionHoy />
 
       <MochilaHoy />
 

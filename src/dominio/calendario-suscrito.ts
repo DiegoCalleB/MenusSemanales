@@ -87,6 +87,19 @@ export const proyeccionSchema = z.object({
     )
     .catch([])
     .optional(),
+  /** Medicación (D-166), solo para los avisos del servidor. Opcional: la SQL anterior no la manda. */
+  medicacion: z
+    .array(
+      z.object({
+        personaId: z.string(),
+        nombre: z.string().trim().min(1).max(60),
+        hora: z.number().int().min(0).max(23),
+        dias: z.array(z.number().int().min(1).max(7)).catch([]),
+        tomadas: z.array(fecha).catch([]),
+      }),
+    )
+    .catch([])
+    .optional(),
   /** Lo que apunta la familia sobre el calendario escolar (D-144). Opcional: la SQL anterior no lo manda. */
   diasCole: z
     .array(

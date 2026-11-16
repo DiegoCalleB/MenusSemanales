@@ -79,6 +79,11 @@ function destinoCompartido(campos, hayArchivo) {
   return s ? `/compartido?${s}` : "/compartido";
 }
 
+/** La etiqueta de la notificación (D-166): propia si es válida; si no, la de siempre. */
+function etiquetaDeAviso(v) {
+  return typeof v === "string" && /^[a-z0-9-]{1,40}$/i.test(v) ? v : "avisos-diarios";
+}
+
 /** A qué pantalla lleva tocar la notificación: una ruta de la propia app, o el inicio. */
 function rutaDeLaApp(v) {
   return typeof v === "string" && /^\/[a-z0-9/-]*$/i.test(v) && !v.startsWith("//") ? v : "/";
@@ -280,7 +285,7 @@ if (typeof self !== "undefined" && typeof self.addEventListener === "function") 
         body: cuerpo,
         icon: "/icon-192.png",
         badge: "/icon-192.png",
-        tag: "avisos-diarios",
+        tag: etiquetaDeAviso(datos.tag),
         data: { url: rutaDeLaApp(datos.url), hecho },
         ...(hecho ? { actions: [{ action: "hecho", title: "✅ Hecho" }] } : {}),
       }),
@@ -336,6 +341,7 @@ if (typeof module !== "undefined" && module.exports) {
     destinoCompartido,
     codigoHecho,
     rutaDeLaApp,
+    etiquetaDeAviso,
     RUTAS,
     SUELTOS,
   };

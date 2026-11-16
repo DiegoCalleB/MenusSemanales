@@ -1473,3 +1473,12 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
   - **Detalle de cada día** en el calendario de la app: «En el barrio».
   - **El viernes**, el aviso «🧸 Este finde en el barrio: sáb 21 12:00 El sueño de Lucía (Canillejas), …» con lo de familia del sábado y el domingo.
 - **Límite:** la agenda del Ayuntamiento solo cubre actividades municipales (no los colegios, las asociaciones de vecinos ni las fiestas de la parroquia), y avisa de lo que está publicado a unos 100 días vista.
+
+## D-166 · Medicación: recordatorio a su hora, configurable
+
+- **Petición (Diego):** «que a las 21 me recuerde tomarme una pastilla, todos los días por la noche de lunes a viernes; como la mochila pero para medicamentos que se puedan configurar».
+- **Qué:** en «Qué llevar» hay una sección «💊 Medicación». Cada medicamento tiene un nombre libre («Pastilla»), la persona que lo toma, la hora (de 00:00 a 23:00) y los días de la semana (atajos «De lunes a viernes» y «Todos los días»). No se guarda nada clínico (dosis, receta): solo un nombre y cuándo avisar.
+- **Aviso:** el servidor lo manda con la llamada horaria de siempre (a los :03, así que el de las 21:00 llega sobre las 21:03). La notificación («💊 Diego: Pastilla — Son las 21:00») va a los móviles vinculados a esa persona y, si ninguno lo está, a todos los del hogar. Lleva su propia etiqueta (`medicacion-<persona>`) para que no tape otros avisos del día.
+- **Tomada:** en «Hoy», el perfil que tiene abierto el móvil ve «Hoy te toca» con la medicación de ese día y la marca como tomada; si ya está marcada a su hora, no se avisa. Las marcas de más de 14 días se podan.
+- **Privacidad:** la medicación solo se enseña en «Hoy» a su dueño. No va al calendario suscrito ni al compartir; la proyección del servidor la incluye únicamente para poder avisar.
+- **Base de datos:** la migración `20261117000000_medicacion.sql` añade `medicacion` a la proyección y devuelve la persona de cada móvil suscrito.

@@ -33,6 +33,7 @@ import {
 } from "@/dominio/cumples";
 import { type FrecuenciaTarea, type Tarea, alternarTarea } from "@/dominio/tareas";
 import { type CosaQueLlevar, MAX_ANTES, podarPreparadas } from "@/dominio/mochila";
+import { MAX_NOMBRE_MEDICAMENTO, type Medicamento, podarTomadas } from "@/dominio/medicacion";
 import { type AjusteCole, MAX_LARGO_MOTIVO, diaOficial } from "@/dominio/calendario-escolar";
 import {
   type Almuerzo,
@@ -201,6 +202,8 @@ export interface EstadoHogar {
   tareas: Tarea[];
   /** Qué llevar al cole o a una actividad (D-136). En el documento del hogar. */
   mochila: CosaQueLlevar[];
+  /** Medicación (D-166): qué toma cada persona, a qué hora y qué días. En el documento del hogar. */
+  medicacion: Medicamento[];
   /**
    * Lo que apunta la familia sobre el calendario escolar (D-144): días sin cole propios del centro
    * (libre disposición) o «ese día sí hay cole». Manda sobre el calendario oficial. En el documento.
@@ -367,6 +370,19 @@ export type Accion =
   | { tipo: "mochila/borrar"; id: string }
   /** Marca (o desmarca) como preparado lo que se lleva el día `para`. */
   | { tipo: "mochila/preparar"; id: string; para: FechaIso }
+  /** Apunta (o cambia, con `id`) un medicamento: para quién, cuál, a qué hora y qué días (D-166). */
+  | {
+      tipo: "medicacion/guardar";
+      id?: string;
+      personaId: string;
+      nombre: string;
+      hora: number;
+      dias: number[];
+      idBase?: string;
+    }
+  | { tipo: "medicacion/borrar"; id: string }
+  /** Marca (o desmarca) como tomado ese día. */
+  | { tipo: "medicacion/tomada"; id: string; fecha: FechaIso }
   /** Calendario escolar (D-144): ese día no hay cole (y por qué) o sí lo hay, contra lo oficial. */
   | { tipo: "cole/dia"; fecha: FechaIso; hay: boolean; motivo?: string }
   /** Vuelve a lo que dice el calendario oficial para ese día. */
@@ -425,6 +441,7 @@ export const ACCIONES_QUE_CREAN = [
   "casa/plantilla",
   "tarea/anadir",
   "mochila/anadir",
+  "medicacion/guardar",
   "premio/guardar",
   "premio/canjear",
 ] as const;
@@ -838,6 +855,7 @@ const normalizarCampos = (e: EstadoHogar): EstadoHogar =>
   Array.isArray(e.canjes) &&
   Array.isArray(e.mochila) &&
   e.mochila.every((c) => typeof c.soloConCole === "boolean") &&
+  Array.isArray(e.medicacion) &&
   Array.isArray(e.diasCole) &&
   typeof e.puntuacionesCitas === "object" &&
   e.puntuacionesCitas !== null &&
@@ -858,6 +876,7 @@ const normalizarCampos = (e: EstadoHogar): EstadoHogar =>
               typeof c.soloConCole === "boolean" ? c : { ...c, soloConCole: true },
             )
           : [],
+        medicacion: Array.isArray(e.medicacion) ? e.medicacion : [],
         diasCole: Array.isArray(e.diasCole) ? e.diasCole : [],
         puntuacionesCitas: puntuacionesValidas(e.puntuacionesCitas),
         agenda: Array.isArray(e.agenda) ? e.agenda : [],
@@ -2120,6 +2139,64 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
             preparadas: podada.preparadas.includes(accion.para)
               ? podada.preparadas.filter((f) => f !== accion.para)
               : [...podada.preparadas, accion.para],
+          };
+        }),
+      };
+    }
+
+    case "medicacion/guardar": {
+      const nombre = accion.nombre.replace(/\s+/g, " ").trim();
+      const persona = e.personas.find((p) => p.id === accion.personaId && p.activa);
+      const dias = [...new Set(accion.dias)]
+        .filter((d) => Number.isInteger(d) && d >= 1 && d <= 7)
+        .sort((a, b) => a - b);
+      const fallo = (t: string): EstadoHogar => ({
+        ...e,
+        siguienteId: e.siguienteId + 1,
+        aviso: error(e, t),
+      });
+      if (!persona) return fallo("Elige quién lo toma.");
+      if (nombre === "" || nombre.length > MAX_NOMBRE_MEDICAMENTO) {
+        return fallo(`Escribe cómo lo llamas (hasta ${MAX_NOMBRE_MEDICAMENTO} letras).`);
+      }
+      if (!Number.isInteger(accion.hora) || accion.hora < 0 || accion.hora > 23) {
+        return fallo("La hora va de 0 a 23.");
+      }
+      if (dias.length === 0) return fallo("Elige algún día de la semana.");
+      const datos = { personaId: persona.id, nombre, hora: accion.hora, dias };
+      if (accion.id === undefined) {
+        const id = idNuevo(accion.idBase, "medicacion", "0", `med-${e.siguienteId}`);
+        return {
+          ...e,
+          medicacion: [...e.medicacion, { id, ...datos, tomadas: [] }],
+          siguienteId: e.siguienteId + 1,
+          aviso: ok(e, `Apuntado: ${nombre}.`),
+        };
+      }
+      if (!e.medicacion.some((m) => m.id === accion.id)) return e;
+      return {
+        ...e,
+        medicacion: e.medicacion.map((m) => (m.id === accion.id ? { ...m, ...datos } : m)),
+        siguienteId: e.siguienteId + 1,
+        aviso: ok(e, "Guardado."),
+      };
+    }
+
+    case "medicacion/borrar":
+      return { ...e, medicacion: e.medicacion.filter((m) => m.id !== accion.id) };
+
+    case "medicacion/tomada": {
+      if (!fechaIsoValida(accion.fecha)) return e;
+      return {
+        ...e,
+        medicacion: e.medicacion.map((m) => {
+          if (m.id !== accion.id) return m;
+          const podada = podarTomadas(m, e.hoy);
+          return {
+            ...podada,
+            tomadas: podada.tomadas.includes(accion.fecha)
+              ? podada.tomadas.filter((f) => f !== accion.fecha)
+              : [...podada.tomadas, accion.fecha].sort(),
           };
         }),
       };

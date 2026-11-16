@@ -18,7 +18,9 @@ select public.guardar_estado_hogar((select id from _ids where clave = 'HA'), 0,
     "comidas":[{"fecha":"2026-11-09","plato":{"nombre":"Del documento"}}],
     "mochila":[{"id":"m1","personaId":"dddddddd-0000-0000-0000-000000000001","texto":"Patines",
                 "dias":[5],"fecha":null,"antes":1,"preparadas":["2026-11-06"],"secreto":"no sale"}],
-    "diasCole":[{"fecha":"2026-12-04","hay":false,"motivo":"Libre disposición","otro":"no sale"}]}'::jsonb);
+    "diasCole":[{"fecha":"2026-12-04","hay":false,"motivo":"Libre disposición","otro":"no sale"}],
+    "medicacion":[{"id":"med1","personaId":"dddddddd-0000-0000-0000-000000000001","nombre":"Pastilla",
+                   "hora":21,"dias":[1,2,3,4,5],"tomadas":["2026-11-02"],"secreto":"no sale"}]}'::jsonb);
 insert into _t select 'A', public.enlace_calendario((select id from _ids where clave = 'HA'));
 -- Menú del cole (D-141): uno de hoy (sale) y uno de hace un mes (no sale).
 select public.aplicar_cambios_cole((select id from _ids where clave = 'HA'), jsonb_build_object(
@@ -70,9 +72,16 @@ select pg_temp.igual('No sale nada del documento viejo',
   (select (j::text !~ 'Del documento' and j::text !~ 'Viejo')::int from _r where clave = 'r'), 1);
 select pg_temp.igual('Solo las claves de siempre',
   (select (select count(*)::int from jsonb_object_keys(j) k where k in
-     ('agenda','almuerzos','casa','cenas','cole','cumples','diasCole','eventos','mochila','personas')) from _r where clave = 'r'), 10);
+     ('agenda','almuerzos','casa','cenas','cole','cumples','diasCole','eventos','medicacion','mochila','personas')) from _r where clave = 'r'), 11);
 select pg_temp.igual('Y ninguna más',
-  (select count(*)::int from _r, jsonb_object_keys(j) where clave = 'r'), 10);
+  (select count(*)::int from _r, jsonb_object_keys(j) where clave = 'r'), 11);
+-- Medicación (D-166): para el servidor de los avisos, solo lo necesario.
+select pg_temp.igual('La medicación sale con persona, nombre, hora, días y tomadas, y nada más',
+  (select ((j->'medicacion'->0->>'nombre') = 'Pastilla' and (j->'medicacion'->0->>'hora') = '21'
+        and (j->'medicacion'->0->'dias') = '[1,2,3,4,5]'::jsonb
+        and (j->'medicacion'->0->'tomadas') = '["2026-11-02"]'::jsonb
+        and (j->'medicacion'->0->>'personaId') = 'dddddddd-0000-0000-0000-000000000001'
+        and not (j->'medicacion'->0 ? 'secreto'))::int from _r where clave = 'r'), 1);
 -- Calendario escolar (D-144): los días que apunta la familia y si lo de la mochila es del cole.
 select pg_temp.igual('Los días sin cole de la familia salen del documento, solo fecha, si hay y motivo',
   (select ((j->'diasCole'->0->>'fecha') = '2026-12-04' and (j->'diasCole'->0->>'hay') = 'false'

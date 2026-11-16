@@ -5,6 +5,7 @@ import { type FechaIso, diaSemanaIso, sumarDias } from "./fechas";
 import { paraPreparar } from "./mochila";
 import { type AjusteCole, consultaCole, diaDeCole } from "./calendario-escolar";
 import { type PlanBarrio, lineaDelPlan, planesDelFinde } from "./barrio";
+import type { Medicamento } from "./medicacion";
 import { type EventoEstadio, ESTADIO, planesDelDia } from "./metropolitano";
 import {
   type LluviaEnFranja,
@@ -67,6 +68,10 @@ export interface EntradaAvisos {
   estadio?: readonly EventoEstadio[];
   /** Planes del barrio (D-165): el viernes se avisa de los de familia del fin de semana. */
   barrio?: readonly PlanBarrio[];
+  /** Medicación (D-166): el servidor avisa a la hora, a esa persona. */
+  medicacion?: readonly Medicamento[];
+  /** Las personas del hogar (id y nombre), para poner el nombre en el aviso de la medicación. */
+  personas?: ReadonlyArray<{ id: string; nombre: string }>;
   /** La cena que repite lo del comedor (D-155), hoy o mañana. Solo en la app (el servidor no lo sabe). */
   repiteCole?: ReadonlyArray<{ fecha: FechaIso; plato: string; grupo: string }>;
   /** Los cursos del calendario escolar leídos solos (D-146): se avisa los días después de cargarlos. */
@@ -682,6 +687,8 @@ export function entradaDeProyeccion(p: ProyeccionCalendario, hoy: FechaIso): Ent
       personaId: c.personaId ?? null,
     })),
     diasConCena: [...new Set(p.cenas.map((c) => c.fecha))],
+    medicacion: (p.medicacion ?? []).map((m, i) => ({ id: `med-${i}`, ...m })),
+    personas: p.personas.map((x) => ({ id: x.id, nombre: x.nombre })),
     diasCole: p.diasCole ?? [],
     conCole:
       (p.mochila ?? []).length > 0 || (p.cole ?? []).length > 0 || (p.diasCole ?? []).length > 0,

@@ -418,3 +418,72 @@ describe("el paraguas antes de salir de casa (D-148)", () => {
     expect(m.push).not.toHaveBeenCalled();
   });
 });
+
+describe("medicación (D-166)", () => {
+  const horaAhora = Number(
+    new Intl.DateTimeFormat("es-ES", {
+      timeZone: "Europe/Madrid",
+      hour: "numeric",
+      hourCycle: "h23",
+    }).format(new Date()),
+  );
+  // 2026-11-03 es martes.
+  const conMedicacion = (extra: object = {}) => ({
+    ...resumen,
+    personas: [
+      { id: "diego", nombre: "Diego", tipo: "adulto" },
+      { id: "ana", nombre: "Ana", tipo: "adulto" },
+    ],
+    medicacion: [
+      {
+        personaId: "diego",
+        nombre: "Pastilla",
+        hora: horaAhora,
+        dias: [1, 2, 3, 4, 5],
+        tomadas: [],
+        ...extra,
+      },
+    ],
+  });
+  const movil = (endpoint: string, persona: string | null) => ({
+    endpoint: `https://push.test/${endpoint}`,
+    p256dh: "p",
+    auth: "a",
+    persona_id: persona,
+  });
+  beforeEach(() => {
+    vi.stubEnv("AVISOS_HORA", "-1");
+    m.comprobar.mockResolvedValue({ valido: true, claves: { publica: "P", privada: "k" } });
+  });
+
+  it("a su hora avisa solo a los móviles de esa persona", async () => {
+    m.leer.mockResolvedValue(conMedicacion());
+    m.subs.mockResolvedValue([movil("diego", "diego"), movil("ana", "ana")]);
+    const r = await pedir(`Bearer ${TOKEN}`, "", { token: TOKEN });
+    expect((await r.json()).medicacion.enviadas).toBe(1);
+    expect(m.push).toHaveBeenCalledTimes(1);
+    expect(m.push.mock.calls[0]?.[0].endpoint).toBe("https://push.test/diego");
+    expect(m.push.mock.calls[0]?.[1]).toMatchObject({
+      titulo: "💊 Diego: Pastilla",
+      tag: "medicacion-diego",
+    });
+  });
+
+  it("si ningún móvil está vinculado a esa persona, avisa a todos los del hogar", async () => {
+    m.leer.mockResolvedValue(conMedicacion());
+    m.subs.mockResolvedValue([movil("a", null), movil("b", "ana")]);
+    await pedir(`Bearer ${TOKEN}`, "", { token: TOKEN });
+    expect(m.push).toHaveBeenCalledTimes(2);
+  });
+
+  it("si ya la ha tomado hoy, o hoy no toca, no avisa", async () => {
+    m.subs.mockResolvedValue([movil("diego", "diego")]);
+    m.leer.mockResolvedValue(conMedicacion({ tomadas: ["2026-11-03"] }));
+    expect((await (await pedir(`Bearer ${TOKEN}`, "", { token: TOKEN })).json()).motivo).toBe(
+      "no-es-la-hora",
+    );
+    m.leer.mockResolvedValue(conMedicacion({ dias: [6, 7] }));
+    await pedir(`Bearer ${TOKEN}`, "", { token: TOKEN });
+    expect(m.push).not.toHaveBeenCalled();
+  });
+});

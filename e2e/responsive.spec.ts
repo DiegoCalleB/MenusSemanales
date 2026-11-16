@@ -2166,6 +2166,32 @@ test.describe("mochila, compartir y plan de la semana", () => {
     await contexto.close();
   });
 
+  test("medicación (D-166): se apunta de lunes a viernes a las 21:00, se edita y se quita", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/mochila");
+    await pagina.getByRole("button", { name: "＋ Apuntar un medicamento" }).click();
+    const form = pagina.getByRole("form", { name: "Apuntar un medicamento" });
+    await form.getByLabel("Cómo lo llamas").fill("Pastilla");
+    await form.getByRole("button", { name: "Diego", exact: true }).click();
+    await form.getByRole("button", { name: "Guardar" }).click();
+    const lista = pagina.getByRole("list", { name: "Medicación de Diego" });
+    await expect(lista).toContainText("Pastilla");
+    await expect(lista).toContainText("21:00 · de lunes a viernes");
+
+    await lista.getByRole("button", { name: "Editar Pastilla" }).click();
+    const edicion = pagina.getByRole("form", { name: "Editar Pastilla" });
+    await edicion.getByLabel("A qué hora te aviso").selectOption({ label: "22:00" });
+    await edicion.getByRole("button", { name: "Todos los días" }).click();
+    await edicion.getByRole("button", { name: "Guardar" }).click();
+    await expect(lista).toContainText("22:00 · todos los días");
+
+    await lista.getByRole("button", { name: "Quitar Pastilla de Diego" }).click();
+    await expect(pagina.getByRole("list", { name: "Medicación de Diego" })).toHaveCount(0);
+    await contexto.close();
+  });
+
   test("días sin cole (D-144): el calendario de Madrid viene puesto y se apuntan los del cole", async ({
     browser,
   }) => {
@@ -2362,7 +2388,11 @@ test.describe("mochila, compartir y plan de la semana", () => {
       }),
     );
     await cargar(pagina, "/fechas");
-    const tarjeta = pagina.getByRole("region", { name: "Planes del barrio" });
+    const tarjeta = pagina.getByRole("region", { name: /Planes del barrio/ });
+    // Plegada por defecto: solo el resumen, para no llenar Fechas.
+    await expect(tarjeta.getByText("El sueño de Lucía")).toHaveCount(0);
+    await expect(tarjeta).toContainText("1 para la familia");
+    await tarjeta.getByRole("button", { name: /Planes del barrio/ }).click();
     await expect(tarjeta.getByText("El sueño de Lucía")).toBeVisible();
     await expect(tarjeta.getByText("Concierto de jazz")).toBeVisible();
     await tarjeta.getByRole("checkbox", { name: "Solo para la familia" }).check();
