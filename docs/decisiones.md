@@ -1482,3 +1482,10 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Tomada:** en «Hoy», el perfil que tiene abierto el móvil ve «Hoy te toca» con la medicación de ese día y la marca como tomada; si ya está marcada a su hora, no se avisa. Las marcas de más de 14 días se podan.
 - **Privacidad:** la medicación solo se enseña en «Hoy» a su dueño. No va al calendario suscrito ni al compartir; la proyección del servidor la incluye únicamente para poder avisar.
 - **Base de datos:** la migración `20261117000000_medicacion.sql` añade `medicacion` a la proyección y devuelve la persona de cada móvil suscrito.
+
+## D-167 · Pantalla de planes del barrio, con «Apuntar» a la agenda
+
+- **Petición (Diego):** los planes del barrio en un módulo nuevo, con todos los planes guays, y poder agregar a la agenda el que interese fácilmente.
+- **Qué:** nueva pestaña **Fechas → Barrio** (`/barrio`) con todos los planes de la agenda cultural de San Blas-Canillejas agrupados por día, con filtros (Todos, Familia, Gratis, Este finde) y «Ver más».
+- **Apuntar:** cada plan lleva «＋ Apuntar», que lo mete en la agenda de la familia (título con el lugar, fecha, hora y último día si dura varios). Si ya está, sale «✓ Apuntado»; apuntarlo dos veces no lo duplica.
+- **Fechas:** la tarjeta plegable se cambia por una sola línea «🏘️ Planes del barrio · N (M para la familia)» que lleva a la pantalla, para que «Próximas fechas» no se sature. Sigue el bloque «En el barrio» del detalle de cada día del calendario y el aviso del viernes.

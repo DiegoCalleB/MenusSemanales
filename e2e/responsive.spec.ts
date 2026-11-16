@@ -36,6 +36,7 @@ const RUTAS = [
   "/cuenta",
   "/personas",
   "/cumples",
+  "/barrio",
   "/fechas",
   "/casa",
   "/compra",
@@ -1343,6 +1344,7 @@ test.describe("flujos en móvil", () => {
       ["Fechas", "Próximas", "/fechas"],
       ["Fechas", "Calendario", "/calendario"],
       ["Fechas", "Cumples", "/cumples"],
+      ["Fechas", "Barrio", "/barrio"],
       ["Más", "Cuenta", "/cuenta"],
       ["Más", "Enviar", "/compartir"],
     ];
@@ -2388,16 +2390,23 @@ test.describe("mochila, compartir y plan de la semana", () => {
       }),
     );
     await cargar(pagina, "/fechas");
-    const tarjeta = pagina.getByRole("region", { name: /Planes del barrio/ });
-    // Plegada por defecto: solo el resumen, para no llenar Fechas.
-    await expect(tarjeta.getByText("El sueño de Lucía")).toHaveCount(0);
-    await expect(tarjeta).toContainText("1 para la familia");
-    await tarjeta.getByRole("button", { name: /Planes del barrio/ }).click();
-    await expect(tarjeta.getByText("El sueño de Lucía")).toBeVisible();
-    await expect(tarjeta.getByText("Concierto de jazz")).toBeVisible();
-    await tarjeta.getByRole("checkbox", { name: "Solo para la familia" }).check();
-    await expect(tarjeta.getByText("Concierto de jazz")).toHaveCount(0);
-    await expect(tarjeta.getByText("El sueño de Lucía")).toBeVisible();
+    // En Fechas solo una línea que lleva a la pantalla de planes: no llena «Próximas».
+    const enlace = pagina.getByRole("link", { name: /Planes del barrio/ });
+    await expect(enlace).toContainText("1 para la familia");
+    await expect(pagina.getByText("El sueño de Lucía")).toHaveCount(0);
+    await enlace.click();
+    await expect(pagina.getByRole("heading", { name: /Planes del barrio/ })).toBeVisible();
+    await expect(pagina.getByText("El sueño de Lucía")).toBeVisible();
+    await expect(pagina.getByText("Concierto de jazz")).toBeVisible();
+    await pagina.getByRole("button", { name: /Familia/ }).click();
+    await expect(pagina.getByText("Concierto de jazz")).toHaveCount(0);
+    await pagina.getByRole("button", { name: "Todos" }).click();
+
+    // Apuntar uno en la agenda con un toque.
+    await pagina.getByRole("button", { name: "Apuntar El sueño de Lucía en la agenda" }).click();
+    await expect(pagina.getByText("✓ Apuntado")).toBeVisible();
+    await cargar(pagina, "/fechas");
+    await expect(pagina.getByText(/El sueño de Lucía \(Buero Vallejo\)/).first()).toBeVisible();
 
     // También en el detalle de ese día, en el calendario.
     await cargar(pagina, "/calendario?dia=2026-11-07");

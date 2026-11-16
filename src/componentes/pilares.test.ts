@@ -21,6 +21,7 @@ describe("pilares de la app", () => {
       "/fechas": "fechas",
       "/calendario": "fechas",
       "/cumples": "fechas",
+      "/barrio": "fechas",
       "/cuenta": "mas",
       "/compartir": "mas",
       "/personas": "mas",
