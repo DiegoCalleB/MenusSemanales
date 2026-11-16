@@ -28,6 +28,7 @@ export interface PlanBarrio {
   gratis: boolean;
   /** «3 euros», si se dice. */
   precio: string | null;
+  /** Una búsqueda del plan: los enlaces de la propia agenda del Ayuntamiento no abren (D-169). */
   enlace: string | null;
   /** Para niños o para ir en familia: cuentacuentos, títeres, circo y magia, campamentos… */
   familiar: boolean;
@@ -83,6 +84,10 @@ const EMOJI_CATEGORIA: ReadonlyArray<[RegExp, string]> = [
 const FAMILIAR =
   /infantil|familia|niñ|peque|cuentacuentos|cuentos|títeres|titeres|magia|circo|juvenil|campamento|ludoteca|payas/i;
 
+/** La agenda trae un `link` a madrid.es que responde «Contenido no disponible»: se busca el plan. */
+const buscar = (titulo: string, lugar: string): string =>
+  `https://www.google.com/search?q=${encodeURIComponent(`${titulo} ${lugar.replace(/\s*\(.*$/, "")} Madrid`.replace(/\s+/g, " ").trim())}`;
+
 const dia = (s: string): FechaIso | null => {
   const m = /^(\d{4}-\d{2}-\d{2})/.exec(s);
   return m ? m[1]! : null;
@@ -121,7 +126,7 @@ export function planesDelBarrio(json: unknown, hoy: FechaIso): PlanBarrio[] {
       barrio: barrioLegible((v.address?.area?.["@id"] ?? "").split("/").pop() ?? ""),
       gratis,
       precio: !gratis && precio !== "" ? precio.slice(0, 40) : null,
-      enlace: v.link && v.link.startsWith("http") ? v.link : null,
+      enlace: buscar(titulo, v["event-location"] ?? ""),
       familiar: CATEGORIAS_FAMILIARES.test(v["@type"] ?? "") || FAMILIAR.test(titulo),
       emoji: EMOJI_CATEGORIA.find(([r]) => r.test(v["@type"] ?? ""))?.[1] ?? "🎨",
     });

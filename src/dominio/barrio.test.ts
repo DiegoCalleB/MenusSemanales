@@ -102,7 +102,7 @@ describe("planes del barrio (D-165)", () => {
       barrio: "Canillejas",
       gratis: true,
       precio: null,
-      enlace: "http://www.madrid.es/cuentos",
+      enlace: expect.stringContaining("https://www.google.com/search?q="),
       familiar: true,
       emoji: "🧸",
     });

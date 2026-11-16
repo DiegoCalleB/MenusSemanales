@@ -122,6 +122,7 @@ export function BarrioVista() {
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex min-h-11 items-center underline"
+                            title="Buscar más información"
                           >
                             {p.titulo}
                           </a>

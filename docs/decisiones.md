@@ -1494,3 +1494,8 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 
 - **Problema (Diego):** el teclado numérico del móvil no tiene la tecla «/», así que no se podía escribir una fecha como 15/03/2017.
 - **Qué:** al escribir el día o el mes (dos cifras) la barra se pone sola, y «.», «-», coma o espacio también valen como barra (para días de una cifra: «5.3»). Debajo del campo hay un selector «…o elígela en el calendario». El año sigue siendo opcional.
+
+## D-169 · Medicación con su propia pestaña y enlaces de planes que sí abren
+
+- **Medicación:** estaba al final de «Qué llevar» y no se encontraba. Ahora tiene su pestaña: **Casa → Medicación** (`/medicacion`).
+- **Enlaces de los planes del barrio:** el `link` que trae la agenda del Ayuntamiento lleva a madrid.es con «Contenido no disponible» (las 48 entradas de San Blas-Canillejas). Se ha cambiado por una búsqueda del plan (título, lugar y Madrid), que siempre abre algo útil. En el calendario suscrito, la descripción lleva ese mismo enlace.

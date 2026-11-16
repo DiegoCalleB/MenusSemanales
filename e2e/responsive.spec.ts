@@ -31,6 +31,7 @@ const RUTAS = [
   "/compartir",
   "/tareas",
   "/mochila",
+  "/medicacion",
   "/semana",
   "/compartido",
   "/cuenta",
@@ -1340,6 +1341,7 @@ test.describe("flujos en móvil", () => {
       ["Casa", "Recurrente", "/casa"],
       ["Casa", "Por persona", "/tareas"],
       ["Casa", "Mochila", "/mochila"],
+      ["Casa", "Medicación", "/medicacion"],
       ["Casa", "Reparto", "/reparto"],
       ["Fechas", "Próximas", "/fechas"],
       ["Fechas", "Calendario", "/calendario"],
@@ -2178,7 +2180,7 @@ test.describe("mochila, compartir y plan de la semana", () => {
     browser,
   }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
-    await cargar(pagina, "/mochila");
+    await cargar(pagina, "/medicacion");
     await pagina.getByRole("button", { name: "＋ Apuntar un medicamento" }).click();
     const form = pagina.getByRole("form", { name: "Apuntar un medicamento" });
     await form.getByLabel("Cómo lo llamas").fill("Pastilla");
