@@ -211,18 +211,40 @@ export function eventosDeTicketmaster(json: unknown): EventoEstadio[] {
   return out;
 }
 
-/** Junta y ordena, sin repetir el mismo día y título. */
+/**
+ * La clave de un evento para no repetirlo: su día y el primer nombre del artista («Karol», «Harry»…),
+ * porque la web y Ticketmaster lo llaman distinto («Karol G» y «KAROL G - VIAJANDO…»).
+ */
+const claveDeRepetido = (e: EventoEstadio) => {
+  const primera = e.titulo
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .find((p) => p.length > 1);
+  return `${e.fecha}|${primera ?? e.titulo.toLowerCase()}`;
+};
+
+/**
+ * Junta y ordena. Un mismo concierto que llega de dos fuentes cuenta una vez, y se queda la versión
+ * con hora (la de Ticketmaster, que sí la da). Los partidos no se repiten entre sí.
+ */
 export function juntarEventos(...listas: ReadonlyArray<readonly EventoEstadio[]>): EventoEstadio[] {
-  const vistos = new Set<string>();
-  return listas
-    .flat()
-    .filter((e) => {
-      const k = `${e.fecha}|${e.titulo.toLowerCase()}`;
-      if (vistos.has(k)) return false;
-      vistos.add(k);
-      return true;
-    })
-    .sort((a, b) => a.fecha.localeCompare(b.fecha) || (a.hora ?? "").localeCompare(b.hora ?? ""));
+  const todos = listas.flat();
+  const mejor = new Map<string, EventoEstadio>();
+  const sinRepetir: EventoEstadio[] = [];
+  for (const e of todos) {
+    if (e.tipo === "partido") {
+      if (!sinRepetir.some((x) => x.fecha === e.fecha && x.titulo === e.titulo)) sinRepetir.push(e);
+      continue;
+    }
+    const k = claveDeRepetido(e);
+    const actual = mejor.get(k);
+    if (!actual || (!actual.hora && e.hora)) mejor.set(k, e);
+  }
+  return [...sinRepetir, ...mejor.values()].sort(
+    (a, b) => a.fecha.localeCompare(b.fecha) || (a.hora ?? "").localeCompare(b.hora ?? ""),
+  );
 }
 
 /** «⚽ Partido en el Metropolitano a las 21:00: Atlético – Real Betis (Liga)». */
