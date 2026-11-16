@@ -1452,3 +1452,11 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
   - **Calendario de la app:** ⚠️ en la casilla del día y, en el detalle, «⚠️ Coincide con: …. Sal con tiempo.».
 - **Límite:** no distingue entre lo que es en casa, por el barrio o lejos, ni sabe qué horas se pisan. Para eso habría que apuntar el lugar de cada cosa.
 - **Rendimiento:** la campanita está en todas las pantallas, así que no pregunta por los partidos hasta pasados 4 segundos, y solo una vez por sesión y hora. Si no, cada pantalla esperaba a una petición lenta (se notó en las pruebas, sin internet).
+
+## D-164 · La programación oficial del estadio, como fuente de conciertos
+
+- **Problema:** Ticketmaster respondía «0 eventos cerca» aunque la programación oficial tiene conciertos de 2027 (Karol G, Estopa, Don Omar, Harry Styles) y la final de la Champions de 2027.
+- **Qué:** además de Ticketmaster, la app lee `riyadhairmetropolitano.com/programacion` cada seis horas. La página lista cada evento con su nombre y sus fechas «D · MES · AAAA»; varias fechas van separadas por «|». Los partidos del Atlético («X vs Y») no se leen de aquí, porque ESPN ya los da.
+- **Hora:** la web no da hora de los conciertos, así que salen de todo el día. La final sale como «evento».
+- **Si la web cambia o no responde:** `/api/metropolitano` lo dice en `fuentes.web` (`ok: N eventos` o `error: …`) y el resto sigue igual.
+- **Horizonte:** los conciertos se miran hasta 450 días por delante.

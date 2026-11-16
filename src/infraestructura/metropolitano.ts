@@ -3,6 +3,8 @@ import { sumarDias } from "@/dominio/fechas";
 import {
   ESTADIO,
   type EventoEstadio,
+  PAGINA_PROGRAMACION,
+  eventosDeLaWeb,
   eventosDeTicketmaster,
   juntarEventos,
   partidosEnCasa,
@@ -49,7 +51,7 @@ export async function leerEventosEstadio(
   hoy: string,
   pedir: typeof fetch = fetch,
   /** Cómo ha ido cada fuente, sin datos secretos: «sin-clave», «ok: 12 eventos (3 en el estadio)»… */
-  informe: { ticketmaster?: string } = {},
+  informe: { ticketmaster?: string; web?: string } = {},
 ): Promise<EventoEstadio[]> {
   const meses = Array.from({ length: MESES }, (_, i) => {
     const d = new Date(`${hoy.slice(0, 7)}-01T12:00:00Z`);
@@ -70,6 +72,19 @@ export async function leerEventosEstadio(
   );
   const hasta = sumarDias(hoy, DIAS);
   const hastaConciertos = sumarDias(hoy, DIAS_CONCIERTOS);
+  // La programación oficial de la web del estadio (D-164): conciertos y eventos con su fecha.
+  let delEstadio: EventoEstadio[] = [];
+  try {
+    const r = await pedir(PAGINA_PROGRAMACION, {
+      signal: AbortSignal.timeout(6000),
+      next: { revalidate: 6 * 3600 },
+    } as RequestInit);
+    if (!r.ok) throw new Error(`http-${r.status}`);
+    delEstadio = eventosDeLaWeb(await r.text(), hoy);
+    informe.web = `ok: ${delEstadio.length} eventos`;
+  } catch (e) {
+    informe.web = `error: ${e instanceof Error ? e.message.slice(0, 40) : "desconocido"}`;
+  }
   const clave = process.env.TICKETMASTER_API_KEY?.trim();
   let conciertos: EventoEstadio[] = [];
   if (!clave) {
@@ -92,5 +107,7 @@ export async function leerEventosEstadio(
     }
   }
   const lejos = (e: EventoEstadio) => e.fecha <= (e.tipo === "partido" ? hasta : hastaConciertos);
-  return juntarEventos(...partidos, conciertos).filter((e) => e.fecha >= hoy && lejos(e));
+  return juntarEventos(...partidos, conciertos, delEstadio).filter(
+    (e) => e.fecha >= hoy && lejos(e),
+  );
 }

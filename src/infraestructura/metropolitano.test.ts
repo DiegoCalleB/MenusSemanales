@@ -6,6 +6,11 @@ import { leerEventosEstadio } from "./metropolitano";
 
 const respuesta = (cuerpo: unknown, status = 200) =>
   Promise.resolve(new Response(JSON.stringify(cuerpo), { status }));
+/** La programación de la web del estadio (D-164), recortada a dos bloques reales. */
+const WEB = `<div>Karol G</div><div>24 · JUNIO · 2027 | 25 · JUNIO · 2027</div>
+<div>COMPRAR</div><div>estopa</div><div>Estopa</div><div>9 · JULIO · 2027</div>
+<div>Atlético de Madrid vs Málaga</div><div>19 · AGOSTO · 2026 - 21:00H</div>`;
+const pagina = (html: string) => Promise.resolve(new Response(html, { status: 200 }));
 const concierto = {
   id: "a",
   name: "Bad Bunny",
@@ -40,6 +45,7 @@ describe("leerEventosEstadio (D-159)", () => {
     const llamadas: string[] = [];
     const pedir = vi.fn((url: string) => {
       llamadas.push(url);
+      if (url.includes("riyadhairmetropolitano")) return pagina("");
       return url.includes("ticketmaster")
         ? respuesta({ page: { totalElements: 3 }, _embedded: { events: [concierto, lejano] } })
         : respuesta({ events: [] });
@@ -62,10 +68,47 @@ describe("leerEventosEstadio (D-159)", () => {
   it("si Ticketmaster responde con error, lo dice sin romper los partidos", async () => {
     vi.stubEnv("TICKETMASTER_API_KEY", "clave-de-prueba");
     const pedir = vi.fn((url: string) =>
-      url.includes("ticketmaster") ? respuesta({}, 401) : respuesta({ events: [] }),
+      url.includes("ticketmaster")
+        ? respuesta({}, 401)
+        : url.includes("riyadhairmetropolitano")
+          ? pagina("")
+          : respuesta({ events: [] }),
     );
-    const informe: { ticketmaster?: string } = {};
+    const informe: { ticketmaster?: string; web?: string } = {};
     await leerEventosEstadio("2026-11-16", pedir as never, informe);
     expect(informe.ticketmaster).toBe("error: http-401");
+  });
+});
+
+describe("la programación de la web del estadio (D-164)", () => {
+  it("los conciertos de la web entran aunque Ticketmaster no tenga nada", async () => {
+    vi.stubEnv("TICKETMASTER_API_KEY", "clave-de-prueba");
+    const pedir = vi.fn((url: string) =>
+      url.includes("riyadhairmetropolitano")
+        ? pagina(WEB)
+        : url.includes("ticketmaster")
+          ? respuesta({ page: { totalElements: 0 } })
+          : respuesta({ events: [] }),
+    );
+    const informe: { ticketmaster?: string; web?: string } = {};
+    const e = await leerEventosEstadio("2026-11-16", pedir as never, informe);
+    expect(e.map((x) => [x.fecha, x.titulo])).toEqual([
+      ["2027-06-24", "Karol G"],
+      ["2027-06-25", "Karol G"],
+      ["2027-07-09", "Estopa"],
+    ]);
+    expect(informe.web).toBe("ok: 3 eventos");
+  });
+
+  it("si la web no responde, lo dice y sigue con lo demás", async () => {
+    vi.stubEnv("TICKETMASTER_API_KEY", "");
+    const pedir = vi.fn((url: string) =>
+      url.includes("riyadhairmetropolitano")
+        ? Promise.resolve(new Response("", { status: 503 }))
+        : respuesta({ events: [] }),
+    );
+    const informe: { ticketmaster?: string; web?: string } = {};
+    await leerEventosEstadio("2026-11-16", pedir as never, informe);
+    expect(informe.web).toBe("error: http-503");
   });
 });
