@@ -27,6 +27,8 @@ const COMPETICIONES = [
 ] as const;
 const MESES = 4;
 const DIAS = 120;
+/** Los conciertos se anuncian con mucha antelación (los de verano, en otoño): se miran más lejos. */
+const DIAS_CONCIERTOS = 450;
 
 async function json(url: string, pedir: typeof fetch): Promise<unknown> {
   const r = await pedir(url, {
@@ -67,6 +69,7 @@ export async function leerEventosEstadio(
     ),
   );
   const hasta = sumarDias(hoy, DIAS);
+  const hastaConciertos = sumarDias(hoy, DIAS_CONCIERTOS);
   const clave = process.env.TICKETMASTER_API_KEY?.trim();
   let conciertos: EventoEstadio[] = [];
   if (!clave) {
@@ -78,7 +81,7 @@ export async function leerEventosEstadio(
         "https://app.ticketmaster.com/discovery/v2/events.json" +
           `?apikey=${encodeURIComponent(clave)}&latlong=${ESTADIO.latitud},${ESTADIO.longitud}` +
           `&radius=2&unit=km&locale=*&size=200&sort=date,asc&countryCode=ES` +
-          `&startDateTime=${hoy}T00:00:00Z&endDateTime=${hasta}T23:59:59Z`,
+          `&startDateTime=${hoy}T00:00:00Z&endDateTime=${hastaConciertos}T23:59:59Z`,
         pedir,
       );
       conciertos = eventosDeTicketmaster(j);
@@ -88,5 +91,6 @@ export async function leerEventosEstadio(
       informe.ticketmaster = `error: ${e instanceof Error ? e.message.slice(0, 40) : "desconocido"}`;
     }
   }
-  return juntarEventos(...partidos, conciertos).filter((e) => e.fecha >= hoy && e.fecha <= hasta);
+  const lejos = (e: EventoEstadio) => e.fecha <= (e.tipo === "partido" ? hasta : hastaConciertos);
+  return juntarEventos(...partidos, conciertos).filter((e) => e.fecha >= hoy && lejos(e));
 }

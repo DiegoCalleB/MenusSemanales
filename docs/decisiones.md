@@ -1401,7 +1401,7 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
   - **La víspera por la noche:** «Mañana partido…».
   - **El viernes**, en «La semana que viene»: «domingo 21:00 partido en el Metropolitano (…)».
   - En el **calendario suscrito** de fechas (con su hora si está confirmada) y en el **calendario de la app** (⚽ o 🎤 en la casilla y el detalle en el día).
-- Los datos se miran cada seis horas, los próximos 4 meses. Si ESPN o Ticketmaster fallan, no sale nada del estadio y el resto sigue igual.
+- Los partidos se miran cada seis horas, los próximos 4 meses; los conciertos, más de un año (se anuncian con mucha antelación). Si ESPN o Ticketmaster fallan, no sale nada del estadio y el resto sigue igual.
 
 ## D-160 · Apuntar eventos desde el ＋ y compartir un cartel
 

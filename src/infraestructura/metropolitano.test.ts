@@ -13,6 +13,12 @@ const concierto = {
   classifications: [{ segment: { name: "Music" } }],
   _embedded: { venues: [{ name: "Riyadh Air Metropolitano" }] },
 };
+const lejano = {
+  ...concierto,
+  id: "b",
+  name: "Karol G",
+  dates: { start: { localDate: "2027-06-24" } },
+};
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -35,17 +41,20 @@ describe("leerEventosEstadio (D-159)", () => {
     const pedir = vi.fn((url: string) => {
       llamadas.push(url);
       return url.includes("ticketmaster")
-        ? respuesta({ page: { totalElements: 3 }, _embedded: { events: [concierto] } })
+        ? respuesta({ page: { totalElements: 3 }, _embedded: { events: [concierto, lejano] } })
         : respuesta({ events: [] });
     });
     const informe: { ticketmaster?: string } = {};
     const e = await leerEventosEstadio("2026-11-16", pedir as never, informe);
-    expect(e.map((x) => x.titulo)).toEqual(["Bad Bunny"]);
-    expect(informe.ticketmaster).toBe("ok: 3 eventos cerca, 1 en el estadio");
+    // También el concierto de junio de 2027, que está a siete meses.
+    expect(e.map((x) => x.titulo)).toEqual(["Bad Bunny", "Karol G"]);
+    expect(informe.ticketmaster).toBe("ok: 3 eventos cerca, 2 en el estadio");
     const tm = llamadas.find((u) => u.includes("ticketmaster"))!;
     expect(tm).toContain("radius=2");
     expect(tm).toContain("locale=*");
     expect(tm).toContain("startDateTime=2026-11-16T00:00:00Z");
+    // Los conciertos de verano se anuncian en otoño: se mira más de un año.
+    expect(tm).toContain("endDateTime=2028-02-09T23:59:59Z");
     // El informe nunca lleva la clave.
     expect(JSON.stringify(informe)).not.toContain("clave-de-prueba");
   });
