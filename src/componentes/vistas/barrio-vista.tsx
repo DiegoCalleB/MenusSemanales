@@ -121,7 +121,7 @@ export function BarrioVista() {
                             href={p.enlace}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="underline"
+                            className="inline-flex min-h-11 items-center underline"
                           >
                             {p.titulo}
                           </a>
