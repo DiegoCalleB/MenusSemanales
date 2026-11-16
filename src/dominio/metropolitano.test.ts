@@ -240,4 +240,25 @@ describe("el Metropolitano (D-159)", () => {
     };
     expect(partidosEnCasa(mes, "esp.1")[0]).toMatchObject({ fecha: "2026-12-13", hora: null });
   });
+
+  it("un concierto que llega de la web y de Ticketmaster cuenta una vez, con su hora (D-164)", () => {
+    const web = {
+      id: "web-karol-g-2027-06-24",
+      fecha: "2027-06-24",
+      hora: null,
+      tipo: "concierto" as const,
+      titulo: "Karol G",
+    };
+    const tm = {
+      id: "evento-x",
+      fecha: "2027-06-24",
+      hora: "20:00",
+      tipo: "concierto" as const,
+      titulo: "KAROL G - VIAJANDO POR EL MUNDO TROPITOUR",
+    };
+    expect(juntarEventos([web], [tm])).toEqual([tm]);
+    // Dos conciertos distintos el mismo día no se funden.
+    const otro = { ...web, id: "web-estopa", titulo: "Estopa" };
+    expect(juntarEventos([web, otro])).toHaveLength(2);
+  });
 });
