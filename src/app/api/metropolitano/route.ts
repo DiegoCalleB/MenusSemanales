@@ -6,9 +6,11 @@ import { leerEventosEstadio } from "@/infraestructura/metropolitano";
  * información pública y no dice nada del hogar.
  */
 export async function GET() {
-  const eventos = await leerEventosEstadio(hoyEnMadrid());
+  const informe: { ticketmaster?: string } = {};
+  const eventos = await leerEventosEstadio(hoyEnMadrid(), fetch, informe);
   return Response.json(
-    { eventos },
+    // `fuentes` dice cómo ha ido cada fuente (nunca la clave), para saber por qué falta algo.
+    { eventos, fuentes: { ticketmaster: informe.ticketmaster ?? "?" } },
     { headers: { "Cache-Control": eventos.length > 0 ? "public, max-age=3600" : "no-store" } },
   );
 }

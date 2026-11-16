@@ -102,6 +102,8 @@ const espnSchema = z.object({
         competitions: z
           .array(
             z.object({
+              /** En los listados por mes, ESPN dice aquí si la hora es oficial o provisional. */
+              timeValid: z.boolean().optional(),
               venue: z.object({ fullName: z.string().optional() }).optional(),
               competitors: z.array(
                 z.object({
@@ -141,7 +143,8 @@ export function partidosEnCasa(json: unknown, liga: string): EventoEstadio[] {
     out.push({
       id: `partido-${e.id}`,
       fecha: cuando.fecha,
-      hora: e.timeValid === false ? null : cuando.hora,
+      // La hora solo si ESPN la da por buena: la de la Liga es provisional hasta unas semanas antes.
+      hora: (c.timeValid ?? e.timeValid) === false ? null : cuando.hora,
       tipo: "partido",
       titulo: `${corto(local?.team.displayName ?? "?")} – ${corto(visitante?.team.displayName ?? "?")}${comp ? ` (${comp})` : ""}`,
     });

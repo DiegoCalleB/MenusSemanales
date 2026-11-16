@@ -218,4 +218,26 @@ describe("el Metropolitano (D-159)", () => {
     ]);
     expect(planesDelDia("2026-12-20", planes)).toEqual([]);
   });
+
+  it("en los listados por mes, la hora provisional está dentro del partido (D-163)", () => {
+    const mes = {
+      events: [
+        {
+          id: "10",
+          date: "2026-12-13T20:00Z",
+          competitions: [
+            {
+              timeValid: false,
+              venue: { fullName: "Riyadh Air Metropolitano" },
+              competitors: [
+                { homeAway: "home", team: { id: "1068", displayName: "Atlético Madrid" } },
+                { homeAway: "away", team: { id: "94", displayName: "Valencia" } },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    expect(partidosEnCasa(mes, "esp.1")[0]).toMatchObject({ fecha: "2026-12-13", hora: null });
+  });
 });
