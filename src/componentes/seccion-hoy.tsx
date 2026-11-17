@@ -13,8 +13,11 @@ export function SeccionHoy({
   cuenta,
   urgente = false,
   enlace,
+  compacta = false,
   children,
 }: {
+  /** Sin nada que enseñar: una sola línea en vez de una tarjeta entera. */
+  compacta?: boolean;
   /** Para llevar hasta aquí desde el resumen («sec-pendientes»). */
   id: string;
   emoji: string;
@@ -29,10 +32,14 @@ export function SeccionHoy({
     <section
       id={id}
       aria-labelledby={`${id}-t`}
-      className="tarjeta flex scroll-mt-20 flex-col gap-2"
+      className={
+        compacta
+          ? "tarjeta flex scroll-mt-20 flex-col gap-0 px-3 py-1 sm:px-4"
+          : "tarjeta flex scroll-mt-20 flex-col gap-2"
+      }
     >
       <div className="flex items-center justify-between gap-2">
-        <h2 id={`${id}-t`} className="text-lg font-extrabold">
+        <h2 id={`${id}-t`} className={compacta ? "text-base font-bold" : "text-lg font-extrabold"}>
           <span aria-hidden="true">{emoji} </span>
           {titulo}
           {cuenta !== undefined && (

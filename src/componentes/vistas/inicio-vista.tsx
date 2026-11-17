@@ -99,208 +99,219 @@ export function InicioVista() {
           </section>
         );
       })}
-      {proximos.length > 0 && (
-        <ul aria-label="Cuenta atrás" className="flex flex-wrap gap-2">
-          {proximos.map((p) => (
-            <li
-              key={p.clave}
-              className="bg-suave-1 border-borde rounded-full border px-3 py-1 text-sm font-bold"
-            >
-              <span aria-hidden="true">{p.emoji} </span>
-              {p.titulo}
-              {p.hora && ` (${p.hora})`} · {p.dias <= 1 ? p.texto : `en ${p.texto}`}
-            </li>
-          ))}
-        </ul>
-      )}
-      <section
-        aria-labelledby="hoy"
-        className="from-suave-1 to-suave-2 border-borde flex flex-col gap-3 overflow-hidden rounded-3xl border bg-linear-to-br p-4 sm:p-6"
-      >
-        <CintaAnimal className="-mx-4 -mt-4 sm:-mx-6 sm:-mt-6" />
-        <p className="text-tinta-suave text-base font-semibold">
-          {yo ? `¡Hola, ${yo.nombre}! 👋` : "¡Hola! 👋"}
-          <span className="block text-sm font-medium first-letter:uppercase">
-            {new Intl.DateTimeFormat("es-ES", {
-              weekday: "long",
-              day: "numeric",
-              month: "long",
-              timeZone: "UTC",
-            }).format(new Date(`${estado.hoy}T12:00:00Z`))}
-          </span>
-        </p>
-        <h1 id="hoy" className="text-2xl font-extrabold tracking-tight">
-          {cena ? "Hoy cenáis…" : "¿Qué cenamos hoy?"}
-        </h1>
-        {comidaHoy.length > 0 && (
-          <p className="text-base font-semibold">
-            <span aria-hidden="true">☀️ </span>Comida: {comidaHoy.map((a) => a.texto).join(" + ")}
-          </p>
-        )}
-        {cena && (
-          <p className="flex items-center gap-2 text-xl font-bold">
-            <span aria-hidden="true" className="text-3xl">
-              {EMOJI_GRUPO[(cena.plato as { grupo?: string }).grupo ?? "otro"] ?? "🍽️"}
-            </span>
-            {cenas.map((c) => c.plato.nombre).join(" + ")}
-          </p>
-        )}
-        <div className="flex flex-wrap gap-2">
-          <Link href="/menu" className="boton">
-            {cena ? "Ver el menú" : "Elegir la cena"}
-          </Link>
-          <Link href="/menu/emergencia" className="boton-suave">
-            Hoy llego tarde
-          </Link>
-        </div>
-        <details>
-          <summary className="text-marca-fuerte flex min-h-11 cursor-pointer items-center text-base font-semibold">
-            <span aria-hidden="true">☀️ </span>&nbsp;Apuntar la comida de hoy
-          </summary>
-          <div className="pb-1">
-            <ComidaDelDia fecha={estado.hoy} puedeApuntar />
-          </div>
-        </details>
-      </section>
-
       <ResumenHoy />
 
       <ActivarAvisosHoy />
 
-      {/* El tablero (D-180): apartados fijos, siempre en su sitio. En pantallas anchas, dos columnas. */}
-      <div className="md:columns-2 md:gap-4 [&>*]:mb-4 [&>*]:break-inside-avoid">
-        <MochilaHoy />
-
-        <MedicacionHoy />
-
-        <PendientesHoy />
-
-        <PapelesHoy />
-
-        <MananaHoy />
-
-        {diaCole && (
-          <section aria-labelledby="cole-hoy" className="flex flex-col gap-2">
-            <h2 id="cole-hoy" className="text-lg font-extrabold">
-              {diaCole === estado.hoy
-                ? "Hoy en el cole"
-                : `Próximo menú del cole · ${fechaCorta(diaCole)}`}
-            </h2>
-            <TarjetaCole cole={estado.colegio[diaCole] ?? null} fecha={diaCole} />
-          </section>
-        )}
-
-        <TiempoHoy />
-
-        <section
-          id="sec-citas"
-          aria-labelledby="cita-rapida"
-          className="tarjeta flex scroll-mt-20 flex-col gap-2 p-3 sm:p-4"
-        >
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 id="cita-rapida" className="text-lg font-extrabold">
-              Citas y eventos
-            </h2>
-            <div className="flex gap-2">
-              {!apuntandoCita && (
-                <button type="button" className="boton" onClick={() => setApuntandoCita(true)}>
-                  ＋ Cita
-                </button>
-              )}
-              <Link href="/calendario" className="boton-suave">
-                📅 Calendario
+      {/* El tablero (D-181): dos columnas explícitas. Izquierda, hoy y mañana; derecha, lo que hay que hacer. */}
+      <div className="grid gap-4 md:grid-cols-2 md:items-start">
+        <div className="flex flex-col gap-4">
+          <section
+            aria-labelledby="hoy"
+            className="from-suave-1 to-suave-2 border-borde flex flex-col gap-3 overflow-hidden rounded-3xl border bg-linear-to-br p-4 sm:p-6"
+          >
+            <CintaAnimal className="-mx-4 -mt-4 sm:-mx-6 sm:-mt-6" />
+            <p className="text-tinta-suave text-base font-semibold">
+              {yo ? `¡Hola, ${yo.nombre}! 👋` : "¡Hola! 👋"}
+              <span className="block text-sm font-medium first-letter:uppercase">
+                {new Intl.DateTimeFormat("es-ES", {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                  timeZone: "UTC",
+                }).format(new Date(`${estado.hoy}T12:00:00Z`))}
+              </span>
+            </p>
+            <h1 id="hoy" className="text-2xl font-extrabold tracking-tight">
+              {cena ? "Hoy cenáis…" : "¿Qué cenamos hoy?"}
+            </h1>
+            {comidaHoy.length > 0 && (
+              <p className="text-base font-semibold">
+                <span aria-hidden="true">☀️ </span>Comida:{" "}
+                {comidaHoy.map((a) => a.texto).join(" + ")}
+              </p>
+            )}
+            {cena && (
+              <p className="flex items-center gap-2 text-xl font-bold">
+                <span aria-hidden="true" className="text-3xl">
+                  {EMOJI_GRUPO[(cena.plato as { grupo?: string }).grupo ?? "otro"] ?? "🍽️"}
+                </span>
+                {cenas.map((c) => c.plato.nombre).join(" + ")}
+              </p>
+            )}
+            <div className="flex flex-wrap gap-2">
+              <Link href="/menu" className="boton">
+                {cena ? "Ver el menú" : "Elegir la cena"}
+              </Link>
+              <Link href="/menu/emergencia" className="boton-suave">
+                Hoy llego tarde
               </Link>
             </div>
-          </div>
-          {apuntandoCita && <NuevaCita alGuardar={() => setApuntandoCita(false)} />}
-        </section>
-
-        <SeccionHoy
-          id="sec-casa"
-          emoji="🏠"
-          titulo="Toca en casa"
-          cuenta={casaHoy.length}
-          urgente
-          enlace={{
-            href: "/casa",
-            texto: casaHoy.length > 3 ? `Ver las ${casaHoy.length}` : "Ver la casa",
-          }}
-        >
-          {casaHoy.length === 0 ? (
-            <Vacio>Nada que hacer hoy en casa 🎉</Vacio>
-          ) : (
-            <ul className="flex flex-col gap-2">
-              {casaHoy.slice(0, 3).map((t) => (
-                <li key={t.id} className="flex items-center justify-between gap-3">
-                  <span className="min-w-0 text-base font-semibold">
-                    <span aria-hidden="true">{t.emoji} </span>
-                    {t.titulo}
-                  </span>
-                  <button
-                    type="button"
-                    className="boton"
-                    aria-label={`Marcar hecha: ${t.titulo}`}
-                    onClick={() => despachar({ tipo: "casa/hecha", id: t.id })}
-                  >
-                    ✓ Hecha
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          {yo && misTareas && misTareas.total > 0 && (
-            <Link href="/tareas" className="flex items-center justify-between gap-3 text-base">
-              <span className="font-bold">
-                <span aria-hidden="true">🧹 </span>Tus tareas de hoy
-              </span>
-              <span className="font-semibold tabular-nums">
-                {misTareas.hechas} de {misTareas.total}
-              </span>
-            </Link>
-          )}
-        </SeccionHoy>
-
-        <SeccionHoy
-          id="sec-compra"
-          emoji="🛒"
-          titulo="Falta por comprar"
-          cuenta={porComprar}
-          enlace={{ href: "/compra", texto: "Ver la lista" }}
-        >
-          {nombresCompra.length === 0 ? (
-            <Vacio>Nada por comprar.</Vacio>
-          ) : (
-            <p className="text-base">
-              {nombresCompra.slice(0, 5).join(", ")}
-              {nombresCompra.length > 5 ? ` y ${nombresCompra.length - 5} más` : ""}
-            </p>
-          )}
-        </SeccionHoy>
-
-        {avisosCumples.length > 0 && (
-          <section aria-labelledby="cumples" className="tarjeta flex flex-col gap-2">
-            <h2 id="cumples" className="text-lg font-extrabold">
-              🎁 Próximos cumples
-            </h2>
-            <ul className="flex flex-col gap-1">
-              {avisosCumples.slice(0, 3).map((a) => (
-                <li key={a.cumple.id} className="text-base">
-                  <strong>{a.cumple.nombre}</strong>
-                  {a.edad !== null && ` (${a.edad})`} ·{" "}
-                  {a.dias === 0 ? "¡hoy!" : a.dias === 1 ? "mañana" : `en ${a.dias} días`}
-                  <span className="text-tinta-suave block text-sm">
-                    {TEXTO_URGENCIA[a.urgencia]}
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <Link href="/cumples" className="boton-suave w-fit">
-              Pensar los regalos
-            </Link>
+            <details>
+              <summary className="text-marca-fuerte flex min-h-11 cursor-pointer items-center text-base font-semibold">
+                <span aria-hidden="true">☀️ </span>&nbsp;Apuntar la comida de hoy
+              </summary>
+              <div className="pb-1">
+                <ComidaDelDia fecha={estado.hoy} puedeApuntar />
+              </div>
+            </details>
           </section>
-        )}
 
-        {estado.personas.some((p) => p.activa) && <LoDeHoy />}
+          {diaCole && (
+            <section aria-labelledby="cole-hoy" className="flex flex-col gap-2">
+              <h2 id="cole-hoy" className="text-lg font-extrabold">
+                {diaCole === estado.hoy
+                  ? "Hoy en el cole"
+                  : `Próximo menú del cole · ${fechaCorta(diaCole)}`}
+              </h2>
+              <TarjetaCole cole={estado.colegio[diaCole] ?? null} fecha={diaCole} />
+            </section>
+          )}
+
+          <MedicacionHoy />
+
+          <TiempoHoy />
+
+          <MochilaHoy />
+
+          <MananaHoy />
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <section
+            id="sec-citas"
+            aria-labelledby="cita-rapida"
+            className="tarjeta flex scroll-mt-20 flex-col gap-2 p-3 sm:p-4"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 id="cita-rapida" className="text-lg font-extrabold">
+                Citas y eventos
+              </h2>
+              <div className="flex gap-2">
+                {!apuntandoCita && (
+                  <button type="button" className="boton" onClick={() => setApuntandoCita(true)}>
+                    ＋ Cita
+                  </button>
+                )}
+                <Link href="/calendario" className="boton-suave">
+                  📅 Calendario
+                </Link>
+              </div>
+            </div>
+            {apuntandoCita && <NuevaCita alGuardar={() => setApuntandoCita(false)} />}
+            {proximos.length > 0 ? (
+              <ul aria-label="Cuenta atrás" className="flex flex-col gap-1">
+                {proximos.map((p) => (
+                  <li key={p.clave} className="flex items-baseline justify-between gap-3 text-base">
+                    <span className="min-w-0 font-semibold">
+                      <span aria-hidden="true">{p.emoji} </span>
+                      {p.titulo}
+                      {p.hora && ` (${p.hora})`}
+                    </span>
+                    <span className="text-tinta-suave shrink-0 text-sm font-bold">
+                      {p.dias <= 1 ? p.texto : `en ${p.texto}`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <Vacio>Nada en el calendario de los próximos días.</Vacio>
+            )}
+          </section>
+
+          <PendientesHoy />
+
+          <SeccionHoy
+            id="sec-casa"
+            compacta={casaHoy.length === 0 && !(yo && misTareas && misTareas.total > 0)}
+            emoji="🏠"
+            titulo="Toca en casa"
+            cuenta={casaHoy.length}
+            urgente
+            enlace={{
+              href: "/casa",
+              texto: casaHoy.length > 3 ? `Ver las ${casaHoy.length}` : "Ver la casa",
+            }}
+          >
+            {casaHoy.length === 0 ? (
+              <Vacio>Nada que hacer hoy en casa 🎉</Vacio>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {casaHoy.slice(0, 3).map((t) => (
+                  <li key={t.id} className="flex items-center justify-between gap-3">
+                    <span className="min-w-0 text-base font-semibold">
+                      <span aria-hidden="true">{t.emoji} </span>
+                      {t.titulo}
+                    </span>
+                    <button
+                      type="button"
+                      className="boton"
+                      aria-label={`Marcar hecha: ${t.titulo}`}
+                      onClick={() => despachar({ tipo: "casa/hecha", id: t.id })}
+                    >
+                      ✓ Hecha
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {yo && misTareas && misTareas.total > 0 && (
+              <Link href="/tareas" className="flex items-center justify-between gap-3 text-base">
+                <span className="font-bold">
+                  <span aria-hidden="true">🧹 </span>Tus tareas de hoy
+                </span>
+                <span className="font-semibold tabular-nums">
+                  {misTareas.hechas} de {misTareas.total}
+                </span>
+              </Link>
+            )}
+          </SeccionHoy>
+
+          <SeccionHoy
+            id="sec-compra"
+            compacta={porComprar === 0}
+            emoji="🛒"
+            titulo="Falta por comprar"
+            cuenta={porComprar}
+            enlace={{ href: "/compra", texto: "Ver la lista" }}
+          >
+            {nombresCompra.length === 0 ? (
+              <Vacio>Nada por comprar.</Vacio>
+            ) : (
+              <p className="text-base">
+                {nombresCompra.slice(0, 5).join(", ")}
+                {nombresCompra.length > 5 ? ` y ${nombresCompra.length - 5} más` : ""}
+              </p>
+            )}
+          </SeccionHoy>
+
+          <PapelesHoy />
+
+          {avisosCumples.length > 0 && (
+            <section aria-labelledby="cumples" className="tarjeta flex flex-col gap-2">
+              <h2 id="cumples" className="text-lg font-extrabold">
+                🎁 Próximos cumples
+              </h2>
+              <ul className="flex flex-col gap-1">
+                {avisosCumples.slice(0, 3).map((a) => (
+                  <li key={a.cumple.id} className="text-base">
+                    <strong>{a.cumple.nombre}</strong>
+                    {a.edad !== null && ` (${a.edad})`} ·{" "}
+                    {a.dias === 0 ? "¡hoy!" : a.dias === 1 ? "mañana" : `en ${a.dias} días`}
+                    <span className="text-tinta-suave block text-sm">
+                      {TEXTO_URGENCIA[a.urgencia]}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <Link href="/cumples" className="boton-suave w-fit">
+                Pensar los regalos
+              </Link>
+            </section>
+          )}
+
+          {estado.personas.some((p) => p.activa) && <LoDeHoy />}
+        </div>
       </div>
 
       <Link
