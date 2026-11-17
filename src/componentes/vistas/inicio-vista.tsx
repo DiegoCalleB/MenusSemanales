@@ -26,6 +26,9 @@ import { PapelesHoy } from "../papeles-hoy";
 import { PendientesHoy } from "../pendientes-hoy";
 import { MochilaHoy } from "../mochila-hoy";
 import { TiempoHoy } from "../tiempo-hoy";
+import { MananaHoy } from "../manana-hoy";
+import { ResumenHoy } from "../resumen-hoy";
+import { SeccionHoy, Vacio } from "../seccion-hoy";
 import { diaSemanaIso } from "@/dominio/fechas";
 
 /** Portada: arriba, la cena y el cole de hoy; después lo pendiente y, plegado, lo demás. */
@@ -58,8 +61,11 @@ export function InicioVista() {
     (t) => t.responsableId === null || t.responsableId === yo?.id,
   );
 
-  const porComprar =
-    articulosPendientes(estado).length + estado.manuales.filter((m) => !m.comprado).length;
+  const nombresCompra = [
+    ...estado.manuales.filter((m) => !m.comprado).map((m) => m.nombre),
+    ...articulosPendientes(estado).map((a) => a.nombre),
+  ];
+  const porComprar = nombresCompra.length;
   const comidaHoy = almuerzosDe(estado.almuerzos, estado.hoy);
   const felicitaciones = felicitacionesDeHoy(estado.cumples, estado.hoy);
 
@@ -114,6 +120,14 @@ export function InicioVista() {
         <CintaAnimal className="-mx-4 -mt-4 sm:-mx-6 sm:-mt-6" />
         <p className="text-tinta-suave text-base font-semibold">
           {yo ? `¡Hola, ${yo.nombre}! 👋` : "¡Hola! 👋"}
+          <span className="block text-sm font-medium first-letter:uppercase">
+            {new Intl.DateTimeFormat("es-ES", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+              timeZone: "UTC",
+            }).format(new Date(`${estado.hoy}T12:00:00Z`))}
+          </span>
         </p>
         <h1 id="hoy" className="text-2xl font-extrabold tracking-tight">
           {cena ? "Hoy cenáis…" : "¿Qué cenamos hoy?"}
@@ -149,28 +163,145 @@ export function InicioVista() {
         </details>
       </section>
 
-      {diaCole && (
-        <section aria-labelledby="cole-hoy" className="flex flex-col gap-2">
-          <h2 id="cole-hoy" className="text-lg font-extrabold">
-            {diaCole === estado.hoy
-              ? "Hoy en el cole"
-              : `Próximo menú del cole · ${fechaCorta(diaCole)}`}
-          </h2>
-          <TarjetaCole cole={estado.colegio[diaCole] ?? null} fecha={diaCole} />
-        </section>
-      )}
+      <ResumenHoy />
 
       <ActivarAvisosHoy />
 
-      <TiempoHoy />
+      {/* El tablero (D-180): apartados fijos, siempre en su sitio. En pantallas anchas, dos columnas. */}
+      <div className="md:columns-2 md:gap-4 [&>*]:mb-4 [&>*]:break-inside-avoid">
+        <MochilaHoy />
 
-      <MedicacionHoy />
+        <MedicacionHoy />
 
-      <PapelesHoy />
+        <PendientesHoy />
 
-      <PendientesHoy />
+        <PapelesHoy />
 
-      <MochilaHoy />
+        <MananaHoy />
+
+        {diaCole && (
+          <section aria-labelledby="cole-hoy" className="flex flex-col gap-2">
+            <h2 id="cole-hoy" className="text-lg font-extrabold">
+              {diaCole === estado.hoy
+                ? "Hoy en el cole"
+                : `Próximo menú del cole · ${fechaCorta(diaCole)}`}
+            </h2>
+            <TarjetaCole cole={estado.colegio[diaCole] ?? null} fecha={diaCole} />
+          </section>
+        )}
+
+        <TiempoHoy />
+
+        <section
+          id="sec-citas"
+          aria-labelledby="cita-rapida"
+          className="tarjeta flex scroll-mt-20 flex-col gap-2 p-3 sm:p-4"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 id="cita-rapida" className="text-lg font-extrabold">
+              Citas y eventos
+            </h2>
+            <div className="flex gap-2">
+              {!apuntandoCita && (
+                <button type="button" className="boton" onClick={() => setApuntandoCita(true)}>
+                  ＋ Cita
+                </button>
+              )}
+              <Link href="/calendario" className="boton-suave">
+                📅 Calendario
+              </Link>
+            </div>
+          </div>
+          {apuntandoCita && <NuevaCita alGuardar={() => setApuntandoCita(false)} />}
+        </section>
+
+        <SeccionHoy
+          id="sec-casa"
+          emoji="🏠"
+          titulo="Toca en casa"
+          cuenta={casaHoy.length}
+          urgente
+          enlace={{
+            href: "/casa",
+            texto: casaHoy.length > 3 ? `Ver las ${casaHoy.length}` : "Ver la casa",
+          }}
+        >
+          {casaHoy.length === 0 ? (
+            <Vacio>Nada que hacer hoy en casa 🎉</Vacio>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {casaHoy.slice(0, 3).map((t) => (
+                <li key={t.id} className="flex items-center justify-between gap-3">
+                  <span className="min-w-0 text-base font-semibold">
+                    <span aria-hidden="true">{t.emoji} </span>
+                    {t.titulo}
+                  </span>
+                  <button
+                    type="button"
+                    className="boton"
+                    aria-label={`Marcar hecha: ${t.titulo}`}
+                    onClick={() => despachar({ tipo: "casa/hecha", id: t.id })}
+                  >
+                    ✓ Hecha
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {yo && misTareas && misTareas.total > 0 && (
+            <Link href="/tareas" className="flex items-center justify-between gap-3 text-base">
+              <span className="font-bold">
+                <span aria-hidden="true">🧹 </span>Tus tareas de hoy
+              </span>
+              <span className="font-semibold tabular-nums">
+                {misTareas.hechas} de {misTareas.total}
+              </span>
+            </Link>
+          )}
+        </SeccionHoy>
+
+        <SeccionHoy
+          id="sec-compra"
+          emoji="🛒"
+          titulo="Falta por comprar"
+          cuenta={porComprar}
+          enlace={{ href: "/compra", texto: "Ver la lista" }}
+        >
+          {nombresCompra.length === 0 ? (
+            <Vacio>Nada por comprar.</Vacio>
+          ) : (
+            <p className="text-base">
+              {nombresCompra.slice(0, 5).join(", ")}
+              {nombresCompra.length > 5 ? ` y ${nombresCompra.length - 5} más` : ""}
+            </p>
+          )}
+        </SeccionHoy>
+
+        {avisosCumples.length > 0 && (
+          <section aria-labelledby="cumples" className="tarjeta flex flex-col gap-2">
+            <h2 id="cumples" className="text-lg font-extrabold">
+              🎁 Próximos cumples
+            </h2>
+            <ul className="flex flex-col gap-1">
+              {avisosCumples.slice(0, 3).map((a) => (
+                <li key={a.cumple.id} className="text-base">
+                  <strong>{a.cumple.nombre}</strong>
+                  {a.edad !== null && ` (${a.edad})`} ·{" "}
+                  {a.dias === 0 ? "¡hoy!" : a.dias === 1 ? "mañana" : `en ${a.dias} días`}
+                  <span className="text-tinta-suave block text-sm">
+                    {TEXTO_URGENCIA[a.urgencia]}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <Link href="/cumples" className="boton-suave w-fit">
+              Pensar los regalos
+            </Link>
+          </section>
+        )}
+
+        {estado.personas.some((p) => p.activa) && <LoDeHoy />}
+      </div>
 
       <Link
         href="/semana"
@@ -189,97 +320,6 @@ export function InicioVista() {
       </Link>
 
       <AyudaInstalarIos />
-
-      {estado.personas.some((p) => p.activa) && <LoDeHoy />}
-
-      {casaHoy.length > 0 && (
-        <section aria-labelledby="casa-hoy" className="tarjeta flex flex-col gap-2">
-          <h2 id="casa-hoy" className="text-lg font-extrabold">
-            🏠 Hoy toca en casa
-          </h2>
-          <ul className="flex flex-col gap-2">
-            {casaHoy.slice(0, 3).map((t) => (
-              <li key={t.id} className="flex items-center justify-between gap-3">
-                <span className="min-w-0 text-base font-semibold">
-                  <span aria-hidden="true">{t.emoji} </span>
-                  {t.titulo}
-                </span>
-                <button
-                  type="button"
-                  className="boton"
-                  aria-label={`Marcar hecha: ${t.titulo}`}
-                  onClick={() => despachar({ tipo: "casa/hecha", id: t.id })}
-                >
-                  ✓ Hecha
-                </button>
-              </li>
-            ))}
-          </ul>
-          <Link href="/casa" className="boton-suave w-fit">
-            {casaHoy.length > 3 ? `Ver las ${casaHoy.length}` : "Ver la casa"}
-          </Link>
-        </section>
-      )}
-
-      {yo && misTareas && misTareas.total > 0 && (
-        <Link href="/tareas" className="tarjeta flex items-center justify-between gap-3">
-          <span className="text-base font-bold">
-            <span aria-hidden="true">🧹 </span>Tus tareas de hoy
-          </span>
-          <span className="text-base font-semibold tabular-nums">
-            {misTareas.hechas} de {misTareas.total}
-          </span>
-        </Link>
-      )}
-
-      {porComprar > 0 && (
-        <Link href="/compra" className="tarjeta flex items-center justify-between gap-3">
-          <span className="text-base font-bold">
-            <span aria-hidden="true">🛒 </span>Falta por comprar
-          </span>
-          <span className="text-base font-semibold tabular-nums">{porComprar}</span>
-        </Link>
-      )}
-
-      {avisosCumples.length > 0 && (
-        <section aria-labelledby="cumples" className="tarjeta flex flex-col gap-2">
-          <h2 id="cumples" className="text-lg font-extrabold">
-            🎁 Próximos cumples
-          </h2>
-          <ul className="flex flex-col gap-1">
-            {avisosCumples.slice(0, 3).map((a) => (
-              <li key={a.cumple.id} className="text-base">
-                <strong>{a.cumple.nombre}</strong>
-                {a.edad !== null && ` (${a.edad})`} ·{" "}
-                {a.dias === 0 ? "¡hoy!" : a.dias === 1 ? "mañana" : `en ${a.dias} días`}
-                <span className="text-tinta-suave block text-sm">{TEXTO_URGENCIA[a.urgencia]}</span>
-              </li>
-            ))}
-          </ul>
-          <Link href="/cumples" className="boton-suave w-fit">
-            Pensar los regalos
-          </Link>
-        </section>
-      )}
-
-      <section aria-labelledby="cita-rapida" className="tarjeta flex flex-col gap-2 p-3 sm:p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 id="cita-rapida" className="text-lg font-extrabold">
-            Citas y eventos
-          </h2>
-          <div className="flex gap-2">
-            {!apuntandoCita && (
-              <button type="button" className="boton" onClick={() => setApuntandoCita(true)}>
-                ＋ Cita
-              </button>
-            )}
-            <Link href="/calendario" className="boton-suave">
-              📅 Calendario
-            </Link>
-          </div>
-        </div>
-        {apuntandoCita && <NuevaCita alGuardar={() => setApuntandoCita(false)} />}
-      </section>
 
       {yo?.id === "diego" && (
         <Link href="/regalo" className="boton-suave w-fit">

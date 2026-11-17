@@ -3108,3 +3108,116 @@ test.describe("pregúntale a tu casa (D-179)", () => {
     await contexto.close();
   });
 });
+
+test.describe("Hoy como tablero fijo (D-180)", () => {
+  test("los apartados están siempre, en su sitio, aunque no haya nada", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/");
+    const vistazo = pagina.getByRole("list", { name: "De un vistazo" });
+    await expect(vistazo.getByRole("listitem")).toHaveCount(5);
+    for (const nombre of [
+      "Pendientes",
+      "Papeles por vencer",
+      "Mañana",
+      "Citas y eventos",
+      "Toca en casa",
+      "Falta por comprar",
+    ]) {
+      await expect(
+        pagina.getByRole("heading", { level: 2, name: new RegExp(nombre) }),
+      ).toBeVisible();
+    }
+    // Sin nada, lo dicen con calma.
+    await expect(pagina.getByText("Todo al día ✅")).toBeVisible();
+    await expect(pagina.getByText("Nada pendiente. Apunta aquí")).toBeVisible();
+    // «Mañana» enseña la cena (o que falta elegirla) y si hay cole.
+    const manana = pagina.getByRole("region", { name: /Mañana/ });
+    await expect(manana).toContainText("Cena:");
+    await expect(manana).toContainText("Hay cole");
+    await contexto.close();
+  });
+
+  test("pendientes a mano: se apunta y se marca sin salir de la portada, y el resumen lo cuenta", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/");
+    const resumen = pagina.getByRole("list", { name: "De un vistazo" });
+    const ficha = resumen.getByRole("button", { name: /Pendientes/ });
+    await expect(ficha).toContainText("✓");
+
+    const seccion = pagina.getByRole("region", { name: /Pendientes/ });
+    const nuevo = seccion.getByRole("textbox", { name: "Nuevo pendiente" });
+    // Vacío no vale y lo dice.
+    await seccion.getByRole("button", { name: "Apuntar pendiente" }).click();
+    await expect(seccion.getByRole("alert")).toContainText("Escribe qué hay que hacer");
+    await nuevo.fill("Llamar al fontanero");
+    await seccion.getByRole("button", { name: "Marcar como importante" }).click();
+    await nuevo.press("Enter");
+    await nuevo.fill("Arreglar la persiana");
+    await nuevo.press("Enter");
+
+    await expect(seccion.getByRole("checkbox")).toHaveCount(2);
+    // Lo importante va primero.
+    await expect(seccion.getByRole("checkbox").first()).toHaveAccessibleName(
+      "Hecho: Llamar al fontanero",
+    );
+    await expect(ficha).toContainText("2");
+    // Un toque lo marca como hecho.
+    await seccion.getByRole("checkbox", { name: "Hecho: Llamar al fontanero" }).click();
+    await expect(seccion.getByRole("checkbox")).toHaveCount(1);
+    await expect(ficha).toContainText("1");
+    // Se queda al recargar.
+    await cargar(pagina, "/");
+    await expect(
+      pagina.getByRole("region", { name: /Pendientes/ }).getByRole("checkbox"),
+    ).toHaveCount(1);
+    await contexto.close();
+  });
+
+  test("los papeles por vencer salen siempre que vencen en 30 días, y el resumen lo avisa si hay vencidos", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/papeles");
+    await pagina.getByRole("button", { name: /Otro…/ }).click();
+    const form = pagina.getByRole("form", { name: "Apuntar un papel" });
+    await form.getByLabel("Qué es").fill("Recibo de la comunidad");
+    await form.getByLabel("Cuándo vence").fill("2026-10-30");
+    await form.getByLabel("Se repite").selectOption({ label: "No se repite" });
+    await form.getByRole("button", { name: "Guardar" }).click();
+    await cargar(pagina, "/");
+    const papeles = pagina.getByRole("region", { name: /Papeles por vencer/ });
+    await expect(papeles).toContainText("Recibo de la comunidad");
+    await expect(papeles).toContainText("venció hace 5 días");
+    await expect(
+      pagina.getByRole("list", { name: "De un vistazo" }).getByRole("button", { name: /Papeles/ }),
+    ).toContainText("1");
+    await contexto.close();
+  });
+
+  test("tocar una ficha del resumen lleva a su apartado", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/");
+    await pagina
+      .getByRole("list", { name: "De un vistazo" })
+      .getByRole("button", { name: /Por comprar/ })
+      .click();
+    await expect(pagina.getByRole("region", { name: /Falta por comprar/ })).toBeInViewport();
+    await contexto.close();
+  });
+
+  test("en pantallas anchas los apartados se reparten en dos columnas", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 1280, 800);
+    await cargar(pagina, "/");
+    const a = await pagina.getByRole("region", { name: /Pendientes/ }).boundingBox();
+    const b = await pagina.getByRole("region", { name: /Papeles por vencer/ }).boundingBox();
+    const c = await pagina.getByRole("region", { name: /Falta por comprar/ }).boundingBox();
+    expect(a && b && c).toBeTruthy();
+    // Hay al menos dos columnas distintas (x diferentes) y nada se sale de la pantalla.
+    const xs = new Set([a!.x, b!.x, c!.x].map((x) => Math.round(x)));
+    expect(xs.size).toBeGreaterThanOrEqual(2);
+    for (const r of [a!, b!, c!]) expect(r.x + r.width).toBeLessThanOrEqual(1280);
+    await contexto.close();
+  });
+});

@@ -72,6 +72,10 @@ Markdown (punto 1): barata y útil por sí sola. Se decide más adelante.
 
 ## Otras ideas pendientes
 
+- **Hoy personalizable:** ocultar, reordenar y plegar apartados por persona (como una página de Notion). De momento el tablero es fijo y igual para todos.
+- **«Hoy en una frase» con IA:** un resumen de dos líneas arriba («Hoy hay cole con lluvia a la entrada, pediatra a las 18:00 y falta elegir la cena»), sacado de lo que ya hay en el tablero.
+- **Apuntar desde la portada:** una barra arriba («Apunta o pregunta algo…») que abra la caja única y el buscador sin ir al botón ＋.
+
 - **Garantías y documentos con foto.** Fotografiar el ticket; la IA saca la fecha de compra y los años
   de garantía y crea el vencimiento en Papeles. Guardar también el manual en PDF.
 - **Libro de la casa.** Notas y contactos con buscador: el fontanero, el teléfono del colegio, las
