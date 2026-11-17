@@ -2649,7 +2649,7 @@ test.describe("papeles y vencimientos (D-174)", () => {
     await expect(vencidos).toContainText("venció hace 5 días");
     await pagina.getByRole("button", { name: "Hecho: Pedir cita en el médico" }).click();
     await expect(pagina.getByRole("region", { name: "Vencidos" })).toHaveCount(0);
-    await pagina.getByText("Hechos (2)").click();
+    await pagina.getByText("Hechos (1)").click();
     await pagina.getByRole("button", { name: "Reabrir" }).click();
     await expect(pagina.getByRole("region", { name: "Vencidos" })).toContainText(
       "Pedir cita en el médico",
