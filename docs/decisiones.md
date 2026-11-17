@@ -1631,3 +1631,15 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Ahora:** dos columnas explícitas. **Izquierda, «Hoy y mañana»:** la cena, el cole justo debajo, medicación, el tiempo, lo que se deja preparado (mochila y lluvia) y mañana. **Derecha, «Por hacer»:** citas y eventos (con la cuenta atrás dentro, en lista), pendientes, lo que toca en casa, la compra y los papeles. En el móvil se leen en ese mismo orden.
 - Los apartados sin nada pasan a **una sola línea** (casa, compra, papeles), en vez de una tarjeta entera.
 - «De un vistazo» sube justo debajo de la cabecera.
+
+## D-182 · Cuidarse: agua, ejercicio y hábitos para toda la familia
+
+- **Petición (Diego):** aprovechar la app para motivar a hacer ejercicio, beber agua y ser más saludable, para todos.
+- **Qué hay:** un apartado fijo de «Hoy», **Cuidarse**, de quien tiene abierto el móvil (cada perfil ve y ajusta lo suyo):
+  1. **Agua:** «Agua: 5 de 8 vasos», gotas, «＋ Vaso» y «− Quitar», con un ánimo según el avance. Meta por persona (de 1 a 20; 8 de partida).
+  2. **Ejercicio (opcional):** qué y qué días; los días que toca sale «Hoy toca: …» con su ✓; si no, «Hoy descansas». Se cuenta **por semanas** («3 de 4 esta semana») y la racha es de semanas seguidas, así que un día fallado no la rompe.
+  3. **Hábitos sanos:** hasta seis, cortos y por persona, con ✓ cada día.
+  4. **Ajustes** en un desplegable dentro del mismo apartado (no hay página nueva).
+- **Tono:** nunca reproches ni rachas rotas.
+- **Privacidad:** vive en el documento del hogar (`cuidado`), se guardan solo cinco semanas y no entra en la búsqueda, ni en el contexto de la IA, ni en el calendario.
+- **Pendiente (backlog):** avisos al móvil (agua a media mañana y por la tarde, aviso del día de ejercicio), cenas más sanas con 👍 y conexión con apps de salud.

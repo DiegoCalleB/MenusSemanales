@@ -21,6 +21,7 @@ import { ComidaDelDia } from "../comida-del-dia";
 import { LoDeHoy } from "../lo-de-hoy";
 import { NuevaCita } from "../nueva-cita";
 import { ActivarAvisosHoy } from "../activar-avisos-hoy";
+import { CuidarseHoy } from "../cuidarse-hoy";
 import { MedicacionHoy } from "../medicacion-hoy";
 import { PapelesHoy } from "../papeles-hoy";
 import { PendientesHoy } from "../pendientes-hoy";
@@ -169,6 +170,8 @@ export function InicioVista() {
           )}
 
           <MedicacionHoy />
+
+          <CuidarseHoy />
 
           <TiempoHoy />
 

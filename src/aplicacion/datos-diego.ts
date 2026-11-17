@@ -755,6 +755,7 @@ export function estadoModoDiego(hoy: string): EstadoHogar {
     vencimientos: [],
     pendientes: [],
     lluviaPreparada: [],
+    cuidado: [],
     puntuacionesCitas: {},
     compraRevisada: {},
     tareas: TAREAS_FAMILIA.map(([personaId, frecuencia, texto], i) => ({
