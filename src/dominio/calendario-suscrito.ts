@@ -100,6 +100,19 @@ export const proyeccionSchema = z.object({
     )
     .catch([])
     .optional(),
+  /** Pendientes sin fecha (D-175), solo para el recordatorio del domingo. Opcional. */
+  pendientes: z
+    .array(
+      z.object({
+        texto: z.string().trim().min(1).max(120),
+        personaId: z.string().nullable().catch(null),
+        importante: z.boolean().catch(false),
+        creadoEn: fecha,
+        hechoEn: fecha.nullable().catch(null),
+      }),
+    )
+    .catch([])
+    .optional(),
   /** Papeles y vencimientos (D-174). Opcional: la SQL anterior no los manda. */
   vencimientos: z
     .array(

@@ -633,3 +633,25 @@ describe("los papeles y vencimientos en el calendario suscrito (D-174)", () => {
     expect(proyeccionSchema.parse({ ...base(), vencimientos: "mal" }).vencimientos).toEqual([]);
   });
 });
+
+describe("el resumen con pendientes sin fecha (D-175)", () => {
+  it("se valida y lo de más se ignora; sin ellos (base antigua) sigue valiendo", () => {
+    const ok = proyeccionSchema.parse({
+      ...base(),
+      pendientes: [
+        {
+          texto: "Llamar",
+          personaId: null,
+          importante: true,
+          creadoEn: HOY,
+          hechoEn: null,
+          extra: "x",
+        },
+      ],
+    });
+    expect(ok.pendientes).toHaveLength(1);
+    expect(JSON.stringify(ok)).not.toContain('"extra"');
+    expect(proyeccionSchema.parse({ ...base(), pendientes: "mal" }).pendientes).toEqual([]);
+    expect(proyeccionSchema.safeParse(base()).success).toBe(true);
+  });
+});

@@ -38,6 +38,7 @@ export function entradaDeEstado(
       soloConCole: c.soloConCole,
     })),
     vencimientos: e.vencimientos,
+    pendientes: e.pendientes,
     personas: e.personas.map((p) => ({ id: p.id, nombre: p.nombre })),
     diasConCena: [...new Set(e.comidas.map((c) => c.fecha))],
     diasSinCena: e.saltados,

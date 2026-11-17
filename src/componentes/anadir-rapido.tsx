@@ -6,6 +6,7 @@ import { articulosPendientes } from "@/aplicacion/estado";
 import { claveArticulo } from "@/dominio/habituales";
 import { ApuntarEventoRapido } from "./apuntar-evento-rapido";
 import { EntradaCompra } from "./entrada-compra";
+import { NuevoPendiente } from "./pendientes";
 import { useHogar } from "./proveedor-hogar";
 
 /**
@@ -17,7 +18,7 @@ export function AnadirRapido() {
   const ruta = usePathname();
   const [abierto, setAbierto] = useState(false);
   // En «Compra» ya está el campo para la lista: allí se abre directamente en «Evento».
-  const [que, setQue] = useState<"compra" | "evento">("compra");
+  const [que, setQue] = useState<"compra" | "evento" | "pendiente">("compra");
   const panel = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -50,6 +51,7 @@ export function AnadirRapido() {
                 [
                   ["compra", "🛒 Compra"],
                   ["evento", "📌 Evento"],
+                  ["pendiente", "📝 Pendiente"],
                 ] as const
               ).map(([id, texto]) => (
                 <button
@@ -69,6 +71,8 @@ export function AnadirRapido() {
           </div>
           {que === "compra" ? (
             <EntradaCompra yaEnLista={yaEnLista} />
+          ) : que === "pendiente" ? (
+            <NuevoPendiente compacto alTerminar={() => setAbierto(false)} />
           ) : (
             <ApuntarEventoRapido alTerminar={() => setAbierto(false)} />
           )}

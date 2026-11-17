@@ -23,7 +23,9 @@ select public.guardar_estado_hogar((select id from _ids where clave = 'HA'), 0,
                    "hora":21,"dias":[1,2,3,4,5],"tomadas":["2026-11-02"],"secreto":"no sale"}],
     "vencimientos":[{"id":"v1","titulo":"ITV del coche","categoria":"coche","personaId":null,
                      "fecha":"2026-12-04","repiteMeses":12,"avisos":[30,7,1],"notas":"no sale",
-                     "hechoEn":null,"renovado":["2025-12-04"]}]}'::jsonb);
+                     "hechoEn":null,"renovado":["2025-12-04"]}],
+    "pendientes":[{"id":"p1","texto":"Llamar al fontanero","personaId":null,"importante":true,
+                   "creadoEn":"2026-11-01","hechoEn":null,"secreto":"no sale"}]}'::jsonb);
 insert into _t select 'A', public.enlace_calendario((select id from _ids where clave = 'HA'));
 -- Menú del cole (D-141): uno de hoy (sale) y uno de hace un mes (no sale).
 select public.aplicar_cambios_cole((select id from _ids where clave = 'HA'), jsonb_build_object(
@@ -75,9 +77,9 @@ select pg_temp.igual('No sale nada del documento viejo',
   (select (j::text !~ 'Del documento' and j::text !~ 'Viejo')::int from _r where clave = 'r'), 1);
 select pg_temp.igual('Solo las claves de siempre',
   (select (select count(*)::int from jsonb_object_keys(j) k where k in
-     ('agenda','almuerzos','casa','cenas','cole','cumples','diasCole','eventos','medicacion','mochila','personas','vencimientos')) from _r where clave = 'r'), 12);
+     ('agenda','almuerzos','casa','cenas','cole','cumples','diasCole','eventos','medicacion','mochila','pendientes','personas','vencimientos')) from _r where clave = 'r'), 13);
 select pg_temp.igual('Y ninguna más',
-  (select count(*)::int from _r, jsonb_object_keys(j) where clave = 'r'), 12);
+  (select count(*)::int from _r, jsonb_object_keys(j) where clave = 'r'), 13);
 -- Medicación (D-166): para el servidor de los avisos, solo lo necesario.
 select pg_temp.igual('La medicación sale con persona, nombre, hora, días y tomadas, y nada más',
   (select ((j->'medicacion'->0->>'nombre') = 'Pastilla' and (j->'medicacion'->0->>'hora') = '21'
@@ -92,6 +94,14 @@ select pg_temp.igual('Los vencimientos salen con título, tipo, fecha, avisos y 
         and (j->'vencimientos'->0->'avisos') = '[30,7,1]'::jsonb
         and (j->'vencimientos'->0->'hechoEn') = 'null'::jsonb
         and not (j->'vencimientos'->0 ? 'notas') and not (j->'vencimientos'->0 ? 'renovado'))::int
+     from _r where clave = 'r'), 1);
+-- Pendientes sin fecha (D-175): texto, de quién, importante, cuándo se apuntó y hecho; nada más.
+select pg_temp.igual('Los pendientes salen con texto, importante y fechas, y nada más',
+  (select ((j->'pendientes'->0->>'texto') = 'Llamar al fontanero'
+        and (j->'pendientes'->0->>'importante') = 'true'
+        and (j->'pendientes'->0->>'creadoEn') = '2026-11-01'
+        and (j->'pendientes'->0->'hechoEn') = 'null'::jsonb
+        and not (j->'pendientes'->0 ? 'secreto') and not (j->'pendientes'->0 ? 'id'))::int
      from _r where clave = 'r'), 1);
 -- Calendario escolar (D-144): los días que apunta la familia y si lo de la mochila es del cole.
 select pg_temp.igual('Los días sin cole de la familia salen del documento, solo fecha, si hay y motivo',

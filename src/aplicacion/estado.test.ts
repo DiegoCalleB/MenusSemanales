@@ -2124,3 +2124,67 @@ describe("papeles y vencimientos (D-174)", () => {
     expect(esUuid(a.vencimientos[0]!.id)).toBe(true);
   });
 });
+
+describe("pendientes sin fecha (D-175)", () => {
+  const base = () => estadoInicialDemo();
+  const nuevo = {
+    tipo: "pendiente/anadir" as const,
+    texto: "Llamar al fontanero",
+    personaId: null,
+    importante: false,
+  };
+  it("apunta con la fecha de hoy, edita, marca como hecho, reabre y borra", () => {
+    let e = reducir(base(), nuevo);
+    expect(e.pendientes).toHaveLength(1);
+    expect(e.pendientes[0]).toMatchObject({
+      texto: "Llamar al fontanero",
+      creadoEn: e.hoy,
+      hechoEn: null,
+    });
+    const id = e.pendientes[0]!.id;
+    e = reducir(e, {
+      tipo: "pendiente/editar",
+      id,
+      texto: "Llamar al fontanero de la tele",
+      personaId: null,
+      importante: true,
+    });
+    expect(e.pendientes[0]).toMatchObject({
+      texto: "Llamar al fontanero de la tele",
+      importante: true,
+    });
+    e = reducir(e, { tipo: "pendiente/hecho", id, hecho: true });
+    expect(e.pendientes[0]?.hechoEn).toBe(e.hoy);
+    e = reducir(e, { tipo: "pendiente/hecho", id, hecho: false });
+    expect(e.pendientes[0]?.hechoEn).toBeNull();
+    e = reducir(e, { tipo: "pendiente/borrar", id });
+    expect(e.pendientes).toEqual([]);
+  });
+  it("no guarda lo vacío, lo largo ni una persona que no existe", () => {
+    expect(reducir(base(), { ...nuevo, texto: "  " }).pendientes).toEqual([]);
+    expect(reducir(base(), { ...nuevo, texto: "x".repeat(121) }).aviso?.tipo).toBe("error");
+    expect(reducir(base(), { ...nuevo, personaId: "nadie" }).pendientes).toEqual([]);
+  });
+  it("limpiar quita solo los hechos; los hechos de hace más de dos semanas se olvidan solos", () => {
+    let e = reducir(base(), nuevo);
+    e = reducir(e, { ...nuevo, texto: "Pedir cita" });
+    e = reducir(e, { tipo: "pendiente/hecho", id: e.pendientes[0]!.id, hecho: true });
+    expect(reducir(e, { tipo: "pendiente/limpiar" }).pendientes.map((x) => x.texto)).toEqual([
+      "Pedir cita",
+    ]);
+    const viejo = {
+      ...e,
+      pendientes: e.pendientes.map((x) => (x.hechoEn ? { ...x, hechoEn: "2026-01-01" } : x)),
+    };
+    expect(reducir(viejo, { ...nuevo, texto: "Otro" }).pendientes.map((x) => x.texto)).toEqual([
+      "Pedir cita",
+      "Otro",
+    ]);
+  });
+  it("el mismo idBase da el mismo id", () => {
+    const idBase = "22222222-2222-4222-8222-222222222222";
+    expect(reducir(base(), { ...nuevo, idBase }).pendientes[0]?.id).toBe(
+      reducir(base(), { ...nuevo, idBase }).pendientes[0]?.id,
+    );
+  });
+});

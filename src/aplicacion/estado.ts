@@ -35,6 +35,12 @@ import { type FrecuenciaTarea, type Tarea, alternarTarea } from "@/dominio/tarea
 import { type CosaQueLlevar, MAX_ANTES, podarPreparadas } from "@/dominio/mochila";
 import { type VotoBarrio, conVoto } from "@/dominio/gustos-barrio";
 import {
+  MAX_PENDIENTES,
+  type Pendiente,
+  sinHechosViejos,
+  validarPendiente,
+} from "@/dominio/pendientes";
+import {
   type CategoriaVencimiento,
   MAX_VENCIMIENTOS,
   type Vencimiento,
@@ -217,6 +223,8 @@ export interface EstadoHogar {
   gustosBarrio: VotoBarrio[];
   /** Papeles y vencimientos (D-174): ITV, seguros, DNI, pasaportes… con su fecha y sus avisos. */
   vencimientos: Vencimiento[];
+  /** Pendientes sin fecha (D-175): lo que hay que hacer «algún día». */
+  pendientes: Pendiente[];
   /**
    * Lo que apunta la familia sobre el calendario escolar (D-144): días sin cole propios del centro
    * (libre disposición) o «ese día sí hay cole». Manda sobre el calendario oficial. En el documento.
@@ -412,6 +420,26 @@ export type Accion =
   /** Da por hecho (o reabre) uno que no se repite. */
   | { tipo: "vencimiento/hecho"; id: string; hecho: boolean }
   | { tipo: "vencimiento/borrar"; id: string }
+  /** Apunta algo pendiente sin fecha (D-175). */
+  | {
+      tipo: "pendiente/anadir";
+      texto: string;
+      personaId: string | null;
+      importante: boolean;
+      idBase?: string;
+    }
+  | {
+      tipo: "pendiente/editar";
+      id: string;
+      texto: string;
+      personaId: string | null;
+      importante: boolean;
+    }
+  /** Lo marca como hecho (o lo reabre). */
+  | { tipo: "pendiente/hecho"; id: string; hecho: boolean }
+  | { tipo: "pendiente/borrar"; id: string }
+  /** Quita de la lista los que ya están hechos. */
+  | { tipo: "pendiente/limpiar" }
   /** «Nos gusta» (1), «no es para nosotros» (-1) o quitar el voto (0) de un plan del barrio (D-171). */
   | { tipo: "barrio/voto"; id: string; rasgos: string[]; voto: 1 | -1 | 0 }
   /** Marca (o desmarca) como tomado ese día. */
@@ -476,6 +504,7 @@ export const ACCIONES_QUE_CREAN = [
   "mochila/anadir",
   "medicacion/guardar",
   "vencimiento/guardar",
+  "pendiente/anadir",
   "premio/guardar",
   "premio/canjear",
 ] as const;
@@ -892,6 +921,7 @@ const normalizarCampos = (e: EstadoHogar): EstadoHogar =>
   Array.isArray(e.medicacion) &&
   Array.isArray(e.gustosBarrio) &&
   Array.isArray(e.vencimientos) &&
+  Array.isArray(e.pendientes) &&
   Array.isArray(e.diasCole) &&
   typeof e.puntuacionesCitas === "object" &&
   e.puntuacionesCitas !== null &&
@@ -915,6 +945,7 @@ const normalizarCampos = (e: EstadoHogar): EstadoHogar =>
         medicacion: Array.isArray(e.medicacion) ? e.medicacion : [],
         gustosBarrio: Array.isArray(e.gustosBarrio) ? e.gustosBarrio : [],
         vencimientos: Array.isArray(e.vencimientos) ? e.vencimientos : [],
+        pendientes: Array.isArray(e.pendientes) ? e.pendientes : [],
         diasCole: Array.isArray(e.diasCole) ? e.diasCole : [],
         puntuacionesCitas: puntuacionesValidas(e.puntuacionesCitas),
         agenda: Array.isArray(e.agenda) ? e.agenda : [],
@@ -2219,6 +2250,50 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
         aviso: ok(e, "Guardado."),
       };
     }
+
+    case "pendiente/anadir":
+    case "pendiente/editar": {
+      const fallo = (t: string): EstadoHogar => ({
+        ...e,
+        siguienteId: e.siguienteId + 1,
+        aviso: error(e, t),
+      });
+      const r = validarPendiente(accion, new Set(e.personas.map((p) => p.id)));
+      if (!r.ok) return fallo(r.motivo);
+      if (accion.tipo === "pendiente/editar") {
+        if (!e.pendientes.some((x) => x.id === accion.id)) return e;
+        return {
+          ...e,
+          pendientes: e.pendientes.map((x) => (x.id === accion.id ? { ...x, ...r.datos } : x)),
+        };
+      }
+      const vivos = sinHechosViejos(e.pendientes, e.hoy);
+      if (vivos.length >= MAX_PENDIENTES)
+        return fallo("Ya hay demasiados pendientes: haz o quita alguno.");
+      const id = idNuevo(accion.idBase, "pendiente", "0", `pen-${e.siguienteId}`);
+      return {
+        ...e,
+        pendientes: [...vivos, { id, ...r.datos, creadoEn: e.hoy, hechoEn: null }],
+        siguienteId: e.siguienteId + 1,
+      };
+    }
+
+    case "pendiente/hecho":
+      return {
+        ...e,
+        pendientes: sinHechosViejos(
+          e.pendientes.map((x) =>
+            x.id === accion.id ? { ...x, hechoEn: accion.hecho ? e.hoy : null } : x,
+          ),
+          e.hoy,
+        ),
+      };
+
+    case "pendiente/borrar":
+      return { ...e, pendientes: e.pendientes.filter((x) => x.id !== accion.id) };
+
+    case "pendiente/limpiar":
+      return { ...e, pendientes: e.pendientes.filter((x) => x.hechoEn === null) };
 
     case "vencimiento/guardar": {
       const fallo = (t: string): EstadoHogar => ({

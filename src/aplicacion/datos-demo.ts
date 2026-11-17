@@ -454,6 +454,7 @@ export function estadoInicialDemo(): EstadoHogar {
     medicacion: [],
     gustosBarrio: [],
     vencimientos: [],
+    pendientes: [],
     puntuacionesCitas: {},
     compraRevisada: {},
     agenda: [],
