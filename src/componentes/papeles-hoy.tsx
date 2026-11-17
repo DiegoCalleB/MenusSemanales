@@ -1,51 +1,60 @@
 "use client";
 
-import Link from "next/link";
-import { diasHasta, emojiDe, estadoDe, paraHoy, textoCuando } from "@/dominio/vencimientos";
+import { type Vencimiento, diasHasta, emojiDe, textoCuando } from "@/dominio/vencimientos";
 import { useHogar } from "./proveedor-hogar";
+import { SeccionHoy, Vacio } from "./seccion-hoy";
 
-const MAX_EN_HOY = 3;
+const MAX_EN_HOY = 4;
 
 /**
- * Los papeles que vencen pronto, en «Hoy» (D-174): lo vencido y lo de las dos próximas semanas.
- * Como mucho tres, para no llenar la portada; el resto, en «Papeles».
+ * Los papeles que vencen pronto, siempre en «Hoy» (D-174, D-180): lo ya vencido y lo de los próximos
+ * 30 días, lo más urgente primero. Sin nada, dice que está todo al día.
  */
 export function PapelesHoy() {
   const { estado } = useHogar();
-  const lista = paraHoy(estado.vencimientos, estado.hoy);
-  if (lista.length === 0) return null;
+  const lista = estado.vencimientos
+    .filter((v) => v.hechoEn === null && diasHasta(v, estado.hoy) <= 30)
+    .sort((a, b) => a.fecha.localeCompare(b.fecha) || a.titulo.localeCompare(b.titulo, "es"));
   const vista = lista.slice(0, MAX_EN_HOY);
+  const vencidos = lista.filter((v) => diasHasta(v, estado.hoy) < 0).length;
+  const de = (v: Vencimiento) =>
+    v.personaId ? estado.personas.find((p) => p.id === v.personaId)?.nombre : null;
 
   return (
-    <section aria-labelledby="papeles-hoy" className="tarjeta flex flex-col gap-2">
-      <h2 id="papeles-hoy" className="text-lg font-bold">
-        <span aria-hidden="true">📄 </span>Papeles por vencer
-      </h2>
-      <ul className="flex flex-col gap-1">
-        {vista.map((v) => {
-          const e = estadoDe(v, estado.hoy);
-          const de = v.personaId ? estado.personas.find((p) => p.id === v.personaId)?.nombre : null;
-          return (
-            <li key={v.id} className="text-base">
-              <span aria-hidden="true">{emojiDe(v.categoria)} </span>
-              <strong>
-                {v.titulo}
-                {de ? ` de ${de}` : ""}
-              </strong>{" "}
-              <span
-                className={
-                  e === "vencido" ? "text-peligro-texto font-semibold" : "text-tinta-suave"
-                }
-              >
-                · {textoCuando(diasHasta(v, estado.hoy))}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
-      <Link href="/papeles" className="boton-suave w-fit">
-        {lista.length > MAX_EN_HOY ? `Ver los ${lista.length}` : "Ver papeles"}
-      </Link>
-    </section>
+    <SeccionHoy
+      id="sec-papeles"
+      emoji="📄"
+      titulo="Papeles por vencer"
+      cuenta={lista.length}
+      urgente={vencidos > 0}
+      enlace={{
+        href: "/papeles",
+        texto: lista.length > MAX_EN_HOY ? `Ver los ${lista.length}` : "Ver papeles",
+      }}
+    >
+      {vista.length === 0 ? (
+        <Vacio>Todo al día ✅ Nada vence en los próximos 30 días.</Vacio>
+      ) : (
+        <ul className="flex flex-col gap-1">
+          {vista.map((v) => {
+            const dias = diasHasta(v, estado.hoy);
+            return (
+              <li key={v.id} className="text-base">
+                <span aria-hidden="true">{emojiDe(v.categoria)} </span>
+                <strong>
+                  {v.titulo}
+                  {de(v) ? ` de ${de(v)}` : ""}
+                </strong>{" "}
+                <span
+                  className={dias < 0 ? "text-peligro-texto font-semibold" : "text-tinta-suave"}
+                >
+                  · {textoCuando(dias)}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </SeccionHoy>
   );
 }

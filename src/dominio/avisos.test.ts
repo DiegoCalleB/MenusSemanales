@@ -4,6 +4,8 @@ import {
   avisosAntesDelCole,
   avisosDeHoy,
   avisosDeLaNoche,
+  cosaDeLluvia,
+  cosasParaMarcar,
   notificacionAntesDelCole,
   notificacionDeLaNoche,
   avisosQueImportan,
@@ -406,15 +408,16 @@ describe("el paraguas a la hora del cole (D-148)", () => {
     expect(avisosAntesDelCole({ ...cole, hoy: "2026-11-19", tiempo: seco })).toEqual([]);
   });
 
-  it("la noche antes dice a qué hora llueve, en vez de la lluvia del día", () => {
-    const titulos = avisosDeLaNoche({ ...cole, hoy: "2026-11-18" }).map((a) => a.titulo);
-    expect(titulos).toContain(
-      "Mañana llueve de camino al cole (de 8 a 9 h, 70 %): paraguas y chubasquero",
-    );
-    expect(titulos.some((t) => t.includes("Mañana, lluvia"))).toBe(false);
-    // El sábado no hay cole: el aviso del día, como siempre.
-    expect(avisosDeLaNoche({ ...cole, hoy: "2026-11-20" }).map((a) => a.titulo)).toContain(
-      "Mañana, lluvia (70 %): chubasquero y botas",
+  it("la noche antes, la lluvia es algo que dejar preparado y dice a qué hora llueve (D-176)", () => {
+    const noche = avisosDeLaNoche({ ...cole, hoy: "2026-11-18" });
+    const lluvia = noche.find((a) => a.id === "mochila-2026-11-19-lluvia");
+    expect(lluvia?.titulo).toBe("Deja preparado: paraguas y ropa de lluvia (para mañana)");
+    expect(lluvia?.detalle).toBe("Mañana llueve de camino al cole (de 8 a 9 h, 70 %)");
+    expect(noche.some((a) => a.titulo.includes("Mañana, lluvia"))).toBe(false);
+    // El sábado no hay cole: también, con la lluvia del día.
+    const sabado = avisosDeLaNoche({ ...cole, hoy: "2026-11-20" });
+    expect(sabado.find((a) => a.id === "mochila-2026-11-21-lluvia")?.detalle).toBe(
+      "Mañana lluvia (70 %)",
     );
   });
 });
@@ -686,5 +689,86 @@ describe("recordatorio de pendientes sin fecha (D-175)", () => {
       aviso("2026-11-15", [pen({ creadoEn: "2026-11-13", importante: true })])?.detalle,
     ).toContain("⭐");
     expect(aviso("2026-11-15", [pen({ hechoEn: "2026-11-02" })])).toBeUndefined();
+  });
+});
+
+describe("paraguas y ropa de lluvia como cosa que preparar (D-176)", () => {
+  const horas = (lluvia: number[]) =>
+    Array.from({ length: 24 }, (_, hora) => ({
+      hora,
+      prob: lluvia.includes(hora) ? 70 : 0,
+      mm: lluvia.includes(hora) ? 1 : 0,
+      codigo: lluvia.includes(hora) ? 61 : 2,
+    }));
+  const dia = (fecha: string, lluvia: number[], extra: object = {}) => ({
+    fecha,
+    codigo: lluvia.length > 0 ? 61 : 1,
+    max: 14,
+    min: 9,
+    probLluvia: lluvia.length > 0 ? 70 : 0,
+    lluviaMm: lluvia.length > 0 ? 3 : 0,
+    horas: horas(lluvia),
+    ...extra,
+  });
+
+  it("un día de cole, solo si moja a la ida o a la vuelta", () => {
+    expect(cosaDeLluvia(dia("2026-11-20", [9]), true)).toEqual({
+      texto: "Paraguas y ropa de lluvia",
+      motivo: "llueve de camino al cole (de 8 a 9 h, 70 %)",
+    });
+    // Llueve por la tarde, ya en casa: no hace falta prepararlo para el cole.
+    expect(cosaDeLluvia(dia("2026-11-20", [18, 19]), true)).toBeNull();
+    expect(cosaDeLluvia(dia("2026-11-20", []), true)).toBeNull();
+    expect(cosaDeLluvia(undefined, true)).toBeNull();
+  });
+
+  it("sin cole (fin de semana o festivo), si el día es de lluvia; con tormenta, siempre", () => {
+    expect(cosaDeLluvia(dia("2026-11-21", [11]), false)?.motivo).toBe("lluvia (70 %)");
+    expect(cosaDeLluvia(dia("2026-11-21", []), false)).toBeNull();
+    const tormenta = dia("2026-11-20", [], { codigo: 95, probLluvia: 60, lluviaMm: 5 });
+    expect(cosaDeLluvia(tormenta, true)?.motivo).toBe("tormentas");
+  });
+
+  const conColeBase = { ...base, conCole: true, hoy: "2026-11-19" };
+  it("por la noche, si mañana llueve, sale con lo de la mochila y no repetida como aviso del tiempo", () => {
+    const e = {
+      ...conColeBase,
+      tiempo: [dia("2026-11-20", [9], { min: 2 })],
+      mochila: [{ texto: "Patines", persona: "Emma", dias: [5], fecha: null, antes: 1 }],
+    };
+    const noche = avisosDeLaNoche(e);
+    expect(noche.map((a) => a.titulo)).toEqual([
+      "Deja preparado: Patines de Emma (para mañana)",
+      "Deja preparado: paraguas y ropa de lluvia (para mañana)",
+      "Mañana, frío (mín. 2 °C): abrigo, gorro y guantes",
+    ]);
+    const lluvia = noche.find((a) => a.id === "mochila-2026-11-20-lluvia");
+    expect(lluvia).toMatchObject({
+      emoji: "☔",
+      detalle: "Mañana llueve de camino al cole (de 8 a 9 h, 70 %)",
+      nivel: "ya",
+    });
+    // No se manda también el aviso general del paraguas ni el de la lluvia.
+    expect(noche.some((a) => /paraguas y chubasquero|chubasquero y botas/.test(a.titulo))).toBe(
+      false,
+    );
+    // Es «de la mochila», así que no tiene botón «Hecho» (no es algo apuntado en la mochila).
+    expect(cosasParaMarcar(noche).some((c) => /lluvia/i.test(c.texto))).toBe(false);
+    expect(notificacionDeLaNoche(noche).titulo).toBe("🎒 Antes de dormir");
+  });
+
+  it("solo la lluvia ya basta para el aviso de la noche; sin lluvia, no sale", () => {
+    const solo = avisosDeLaNoche({ ...conColeBase, tiempo: [dia("2026-11-20", [9])] });
+    expect(solo.map((a) => a.id)).toEqual(["mochila-2026-11-20-lluvia"]);
+    expect(notificacionDeLaNoche(solo)).toEqual({
+      titulo: "🎒 Antes de dormir",
+      cuerpo: "☔ Deja preparado: paraguas y ropa de lluvia (para mañana)",
+    });
+    expect(avisosDeLaNoche({ ...conColeBase, tiempo: [dia("2026-11-20", [])] })).toEqual([]);
+  });
+
+  it("el aviso de la mañana no cambia: sigue diciendo que se coja el paraguas", () => {
+    const hoy = avisosDeHoy({ ...conColeBase, tiempo: [dia("2026-11-19", [9])] });
+    expect(hoy.some((a) => a.id === "tiempo-2026-11-19-paraguas")).toBe(true);
   });
 });

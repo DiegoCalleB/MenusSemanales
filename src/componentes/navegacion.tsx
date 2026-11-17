@@ -6,6 +6,7 @@ import { articulosPendientes } from "@/aplicacion/estado";
 import { useCuenta, useHogar } from "./proveedor-hogar";
 import { NUBE_DISPONIBLE } from "./usar-nube";
 import { BotonAvisos } from "./avisos-campana";
+import { BotonBuscar } from "./boton-buscar";
 import { BotonPerfil } from "./perfiles";
 import { BotonTema } from "./tema";
 import { PILARES, pestanaActiva, pilarDe } from "./pilares";
@@ -141,6 +142,7 @@ export function NavegacionLateral() {
         </ul>
       </nav>
       <div className="mt-auto flex flex-col items-start gap-2 px-2">
+        <BotonBuscar />
         <BotonAvisos />
         <BotonPerfil />
         <BotonTema />

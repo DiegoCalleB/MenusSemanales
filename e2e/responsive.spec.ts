@@ -39,6 +39,7 @@ const RUTAS = [
   "/cumples",
   "/barrio",
   "/papeles",
+  "/buscar",
   "/fechas",
   "/casa",
   "/compra",
@@ -1735,6 +1736,12 @@ test.describe("flujos en móvil", () => {
     await cargar(pagina, "/menu");
     await pagina.getByRole("button", { name: "Apuntar algo" }).click();
     const dialogo = pagina.getByRole("dialog", { name: "Apuntar" });
+    // Se abre en «✨ Todo»; la compra está a un toque.
+    await expect(dialogo.getByRole("button", { name: "✨ Todo" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await dialogo.getByRole("button", { name: "🛒 Compra" }).click();
     await dialogo.getByLabel("Añadir algo a la lista").fill("crema solar y pilas");
     await dialogo.getByRole("button", { name: "Añadir", exact: true }).click();
     await expect(
@@ -2747,6 +2754,470 @@ test.describe("pendientes sin fecha (D-175)", () => {
     await pagina.getByRole("button", { name: "Quitar Arreglar la persiana" }).click();
     await pagina.getByRole("button", { name: "Sí, quitar" }).click();
     await expect(lista.getByRole("listitem")).toHaveCount(1);
+    await contexto.close();
+  });
+});
+
+test.describe("paraguas y ropa de lluvia en lo que hay que preparar (D-176)", () => {
+  test("si mañana llueve, sale en «Hoy» y en la mochila, con su casilla", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    const horas = Array.from({ length: 24 }, (_, hora) => ({
+      hora,
+      prob: hora === 9 ? 70 : 0,
+      mm: hora === 9 ? 1.5 : 0,
+      codigo: hora === 9 ? 61 : 2,
+    }));
+    await pagina.route("**/api/tiempo", (ruta) =>
+      ruta.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          dias: [
+            {
+              fecha: "2026-11-05",
+              codigo: 61,
+              max: 14,
+              min: 9,
+              probLluvia: 70,
+              lluviaMm: 2,
+              horas,
+            },
+          ],
+        }),
+      }),
+    );
+    await cargar(pagina, "/");
+    const lista = pagina.getByRole("list", { name: "Para dejar preparado hoy" });
+    await expect(lista).toContainText("Paraguas y ropa de lluvia");
+    await expect(lista).toContainText("para mañana: llueve de camino al cole (de 8 a 9 h, 70 %)");
+    const casilla = lista.getByRole("checkbox", { name: /Paraguas y ropa de lluvia/ });
+    await expect(casilla).not.toBeChecked();
+    await casilla.check();
+    await expect(casilla).toBeChecked();
+    // Se queda marcado al volver a abrir y también se ve en Casa → Mochila.
+    await cargar(pagina, "/mochila");
+    await expect(
+      pagina
+        .getByRole("list", { name: "Para dejar preparado hoy" })
+        .getByRole("checkbox", { name: /Paraguas y ropa de lluvia/ }),
+    ).toBeChecked();
+    await contexto.close();
+  });
+
+  test("si mañana no llueve, no sale", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await pagina.route("**/api/tiempo", (ruta) =>
+      ruta.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          dias: [{ fecha: "2026-11-05", codigo: 1, max: 14, min: 9, probLluvia: 0, lluviaMm: 0 }],
+        }),
+      }),
+    );
+    await cargar(pagina, "/mochila");
+    await expect(pagina.getByText("Paraguas y ropa de lluvia")).toHaveCount(0);
+    await contexto.close();
+  });
+});
+
+test.describe("buscador (D-177)", () => {
+  test("busca sin tildes ni mayúsculas, agrupa por tipo y cada resultado lleva a su sitio", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/papeles");
+    await pagina.getByRole("button", { name: /ITV del coche/ }).click();
+    const form = pagina.getByRole("form", { name: "Apuntar un papel" });
+    await form.getByLabel("Cuándo vence").fill("2026-12-04");
+    await form.getByRole("button", { name: "Guardar" }).click();
+
+    await cargar(pagina, "/buscar");
+    const caja = pagina.getByRole("searchbox", { name: "¿Qué buscas?" });
+    // Con una sola letra no busca.
+    await caja.fill("l");
+    await expect(pagina.getByText("No he encontrado nada")).toHaveCount(0);
+    await caja.fill("LENTEJAS");
+    await expect(pagina.getByRole("region", { name: "Platos" })).toContainText(
+      "Lentejas con verduras",
+    );
+    await caja.fill("ARROZ");
+    await expect(pagina.getByRole("region", { name: "Despensa" })).toContainText("Arroz");
+    await caja.fill("itv");
+    const papeles = pagina.getByRole("region", { name: "Papeles y vencimientos" });
+    await expect(papeles).toContainText("ITV del coche");
+    await papeles.getByRole("link", { name: /ITV del coche/ }).click();
+    await pagina.waitForURL("**/papeles");
+    await contexto.close();
+  });
+
+  test("no busca en la medicación y avisa si no encuentra nada", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/medicacion");
+    await pagina.getByRole("button", { name: "＋ Apuntar un medicamento" }).click();
+    const form = pagina.getByRole("form", { name: "Apuntar un medicamento" });
+    await form.getByLabel("Cómo lo llamas").fill("Omeprazol");
+    await form.getByRole("button", { name: "Guardar" }).click();
+    await expect(pagina.getByRole("list", { name: /Medicación de/ })).toContainText("Omeprazol");
+    await cargar(pagina, "/buscar");
+    await pagina.getByRole("searchbox", { name: "¿Qué buscas?" }).fill("omeprazol");
+    await expect(pagina.getByText("No he encontrado nada con «omeprazol»")).toBeVisible();
+    await contexto.close();
+  });
+
+  test("en Fechas hay una caja que solo busca lo de fechas", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/fechas");
+    await pagina.getByRole("button", { name: /Pendientes sin fecha/ }).click();
+    const nuevo = pagina.getByRole("form", { name: "Apuntar un pendiente" });
+    await nuevo.getByLabel("¿Qué hay que hacer?").fill("Llamar al fontanero");
+    await nuevo.getByRole("button", { name: "＋ Apuntar" }).click();
+
+    const caja = pagina.getByRole("searchbox", { name: "Buscar en las fechas" });
+    await caja.fill("fontanero");
+    await expect(pagina.getByRole("region", { name: "Pendientes" }).first()).toContainText(
+      "Llamar al fontanero",
+    );
+    // Lo que no es de fechas (un plato) no sale aquí.
+    await caja.fill("lentejas");
+    await expect(pagina.getByText("No he encontrado nada con «lentejas»")).toBeVisible();
+    await contexto.close();
+  });
+
+  test("la lupa de la cabecera lleva al buscador", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/");
+    await pagina.getByRole("link", { name: "Buscar" }).first().click();
+    await pagina.waitForURL("**/buscar");
+    await expect(pagina.getByRole("searchbox", { name: "¿Qué buscas?" })).toBeFocused();
+    await contexto.close();
+  });
+});
+
+test.describe("una sola caja con IA (D-178)", () => {
+  const items = [
+    {
+      tipo: "compra",
+      titulo: "Pañales",
+      fecha: null,
+      hasta: null,
+      hora: null,
+      persona: null,
+      importante: false,
+      repiteMeses: null,
+      categoria: "otro",
+    },
+    {
+      tipo: "evento",
+      titulo: "Pediatra de Alba",
+      fecha: "2026-11-06",
+      hasta: null,
+      hora: "18:00",
+      persona: "Alba",
+      importante: false,
+      repiteMeses: null,
+      categoria: "otro",
+    },
+    {
+      tipo: "pendiente",
+      titulo: "Llamar al fontanero",
+      fecha: null,
+      hasta: null,
+      hora: null,
+      persona: null,
+      importante: true,
+      repiteMeses: null,
+      categoria: "otro",
+    },
+    {
+      tipo: "papel",
+      titulo: "Seguro del coche",
+      fecha: "2026-12-04",
+      hasta: null,
+      hora: null,
+      persona: null,
+      importante: false,
+      repiteMeses: 12,
+      categoria: "coche",
+    },
+  ];
+
+  test("se escribe todo junto, se repasa lo entendido y se apunta lo elegido", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    let cuerpo = "";
+    await pagina.route("**/api/ia/captura", async (ruta) => {
+      cuerpo = ruta.request().postData() ?? "";
+      await ruta.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ items, pasados: 0, usadas: 1, limite: 40 }),
+      });
+    });
+    await cargar(pagina, "/menu");
+    await pagina.getByRole("button", { name: "Apuntar algo" }).click();
+    const dialogo = pagina.getByRole("dialog", { name: "Apuntar" });
+    await dialogo
+      .getByLabel("Qué quieres apuntar")
+      .fill(
+        "pañales, el jueves a las 18 pediatra de Alba, llamar al fontanero, seguro del coche el 4 de diciembre",
+      );
+    await dialogo.getByRole("button", { name: "✨ Entender" }).click();
+
+    const lista = dialogo.getByRole("list", { name: "Lo que se va a apuntar" });
+    await expect(lista.getByRole("listitem")).toHaveCount(4);
+    await expect(lista).toContainText("Pediatra de Alba");
+    await expect(lista).toContainText("18:00");
+    expect(cuerpo).toContain("Alba");
+    // Se quita lo que no se quiere.
+    await lista.getByRole("checkbox").nth(2).uncheck();
+    await dialogo.getByRole("button", { name: "Apuntar 3 cosas" }).click();
+    await expect(dialogo).toHaveCount(0);
+
+    // Cada cosa, en su sitio.
+    await cargar(pagina, "/compra");
+    await expect(pagina.getByRole("checkbox", { name: /Pañales/ })).toBeVisible();
+    await cargar(pagina, "/fechas");
+    await expect(pagina.getByText("Pediatra de Alba").first()).toBeVisible();
+    await cargar(pagina, "/papeles");
+    const proximos = pagina.getByRole("region", { name: "Próximos 30 días" });
+    await expect(proximos).toContainText("Seguro del coche");
+    await expect(proximos).toContainText("cada año");
+    // El pendiente se desmarcó: no se apuntó.
+    await cargar(pagina, "/fechas#sin-fecha");
+    await expect(pagina.getByText("Llamar al fontanero")).toHaveCount(0);
+    await contexto.close();
+  });
+
+  test("si la IA no está disponible, lo dice y deja usar las otras pestañas", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await pagina.route("**/api/ia/captura", (ruta) =>
+      ruta.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "ia-no-configurada" }),
+      }),
+    );
+    await cargar(pagina, "/menu");
+    await pagina.getByRole("button", { name: "Apuntar algo" }).click();
+    const dialogo = pagina.getByRole("dialog", { name: "Apuntar" });
+    await dialogo.getByLabel("Qué quieres apuntar").fill("comprar leche");
+    await dialogo.getByRole("button", { name: "✨ Entender" }).click();
+    await expect(dialogo.getByRole("alert")).toContainText("La IA no está activada");
+    await expect(dialogo.getByLabel("Qué quieres apuntar")).toHaveValue("comprar leche");
+    await contexto.close();
+  });
+
+  test("si no encuentra nada que apuntar, lo dice", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await pagina.route("**/api/ia/captura", (ruta) =>
+      ruta.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ items: [], pasados: 0 }),
+      }),
+    );
+    await cargar(pagina, "/menu");
+    await pagina.getByRole("button", { name: "Apuntar algo" }).click();
+    const dialogo = pagina.getByRole("dialog", { name: "Apuntar" });
+    await dialogo.getByLabel("Qué quieres apuntar").fill("hola qué tal");
+    await dialogo.getByRole("button", { name: "✨ Entender" }).click();
+    await expect(dialogo.getByRole("alert")).toContainText("No he encontrado nada que apuntar");
+    await contexto.close();
+  });
+});
+
+test.describe("pregúntale a tu casa (D-179)", () => {
+  test("se pregunta desde el buscador; se manda un resumen sin la medicación y sale la respuesta", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    // Algo que preguntar y algo que no debe salir de la app.
+    await cargar(pagina, "/papeles");
+    await pagina.getByRole("button", { name: /ITV del coche/ }).click();
+    const papel = pagina.getByRole("form", { name: "Apuntar un papel" });
+    await papel.getByLabel("Cuándo vence").fill("2026-12-04");
+    await papel.getByRole("button", { name: "Guardar" }).click();
+    await cargar(pagina, "/medicacion");
+    await pagina.getByRole("button", { name: "＋ Apuntar un medicamento" }).click();
+    const med = pagina.getByRole("form", { name: "Apuntar un medicamento" });
+    await med.getByLabel("Cómo lo llamas").fill("Omeprazol");
+    await med.getByRole("button", { name: "Guardar" }).click();
+    await expect(pagina.getByRole("list", { name: /Medicación de/ })).toContainText("Omeprazol");
+
+    let enviado = "";
+    await pagina.route("**/api/ia/preguntar", async (ruta) => {
+      enviado = ruta.request().postData() ?? "";
+      await ruta.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          respuesta: "La ITV del coche vence el viernes 4 de diciembre.",
+          usadas: 1,
+          limite: 40,
+        }),
+      });
+    });
+    await cargar(pagina, "/buscar");
+    // Una sola letra o una búsqueda corta no ofrece preguntar.
+    const caja = pagina.getByRole("searchbox", { name: "¿Qué buscas?" });
+    await caja.fill("itv");
+    await expect(pagina.getByRole("button", { name: /Preguntar a la IA/ })).toHaveCount(0);
+    await caja.fill("¿cuándo vence la ITV?");
+    await pagina.getByRole("button", { name: /Preguntar a la IA/ }).click();
+    const r = pagina.getByRole("region", { name: "Respuesta" });
+    await expect(r).toContainText("vence el viernes 4 de diciembre");
+    await expect(r).toContainText("puede equivocarse");
+    expect(enviado).toContain("ITV del coche");
+    expect(enviado).toContain("¿cuándo vence la ITV?");
+    expect(enviado).not.toContain("Omeprazol");
+    // Al cambiar lo escrito, la respuesta anterior se quita.
+    await caja.fill("¿qué cenamos mañana?");
+    await expect(pagina.getByRole("region", { name: "Respuesta" })).toHaveCount(0);
+    await contexto.close();
+  });
+
+  test("si la IA no está disponible, lo dice", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await pagina.route("**/api/ia/preguntar", (ruta) =>
+      ruta.fulfill({
+        status: 429,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "tope-diario" }),
+      }),
+    );
+    await cargar(pagina, "/buscar");
+    await pagina.getByRole("searchbox", { name: "¿Qué buscas?" }).fill("¿qué hay hoy?");
+    await pagina.getByRole("button", { name: /Preguntar a la IA/ }).click();
+    await expect(
+      pagina.getByRole("alert").filter({ hasText: "Hoy ya has usado todas las consultas" }),
+    ).toBeVisible();
+    await contexto.close();
+  });
+
+  test("en la caja de Fechas no se ofrece preguntar", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/fechas");
+    await pagina
+      .getByRole("searchbox", { name: "Buscar en las fechas" })
+      .fill("¿cuándo es el pediatra?");
+    await expect(pagina.getByRole("button", { name: /Preguntar a la IA/ })).toHaveCount(0);
+    await contexto.close();
+  });
+});
+
+test.describe("Hoy como tablero fijo (D-180)", () => {
+  test("los apartados están siempre, en su sitio, aunque no haya nada", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/");
+    const vistazo = pagina.getByRole("list", { name: "De un vistazo" });
+    await expect(vistazo.getByRole("listitem")).toHaveCount(5);
+    for (const nombre of [
+      "Pendientes",
+      "Papeles por vencer",
+      "Mañana",
+      "Citas y eventos",
+      "Toca en casa",
+      "Falta por comprar",
+    ]) {
+      await expect(
+        pagina.getByRole("heading", { level: 2, name: new RegExp(nombre) }),
+      ).toBeVisible();
+    }
+    // Sin nada, lo dicen con calma.
+    await expect(pagina.getByText("Todo al día ✅")).toBeVisible();
+    await expect(pagina.getByText("Nada pendiente. Apunta aquí")).toBeVisible();
+    // «Mañana» enseña la cena (o que falta elegirla) y si hay cole.
+    const manana = pagina.getByRole("region", { name: /Mañana/ });
+    await expect(manana).toContainText("Cena:");
+    await expect(manana).toContainText("Hay cole");
+    await contexto.close();
+  });
+
+  test("pendientes a mano: se apunta y se marca sin salir de la portada, y el resumen lo cuenta", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/");
+    const resumen = pagina.getByRole("list", { name: "De un vistazo" });
+    const ficha = resumen.getByRole("button", { name: /Pendientes/ });
+    await expect(ficha).toContainText("✓");
+
+    const seccion = pagina.getByRole("region", { name: /Pendientes/ });
+    const nuevo = seccion.getByRole("textbox", { name: "Nuevo pendiente" });
+    // Vacío no vale y lo dice.
+    await seccion.getByRole("button", { name: "Apuntar pendiente" }).click();
+    await expect(seccion.getByRole("alert")).toContainText("Escribe qué hay que hacer");
+    await nuevo.fill("Llamar al fontanero");
+    await seccion.getByRole("button", { name: "Marcar como importante" }).click();
+    await nuevo.press("Enter");
+    await nuevo.fill("Arreglar la persiana");
+    await nuevo.press("Enter");
+
+    await expect(seccion.getByRole("checkbox")).toHaveCount(2);
+    // Lo importante va primero.
+    await expect(seccion.getByRole("checkbox").first()).toHaveAccessibleName(
+      "Hecho: Llamar al fontanero",
+    );
+    await expect(ficha).toContainText("2");
+    // Un toque lo marca como hecho.
+    await seccion.getByRole("checkbox", { name: "Hecho: Llamar al fontanero" }).click();
+    await expect(seccion.getByRole("checkbox")).toHaveCount(1);
+    await expect(ficha).toContainText("1");
+    // Se queda al recargar.
+    await cargar(pagina, "/");
+    await expect(
+      pagina.getByRole("region", { name: /Pendientes/ }).getByRole("checkbox"),
+    ).toHaveCount(1);
+    await contexto.close();
+  });
+
+  test("los papeles por vencer salen siempre que vencen en 30 días, y el resumen lo avisa si hay vencidos", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/papeles");
+    await pagina.getByRole("button", { name: /Otro…/ }).click();
+    const form = pagina.getByRole("form", { name: "Apuntar un papel" });
+    await form.getByLabel("Qué es").fill("Recibo de la comunidad");
+    await form.getByLabel("Cuándo vence").fill("2026-10-30");
+    await form.getByLabel("Se repite").selectOption({ label: "No se repite" });
+    await form.getByRole("button", { name: "Guardar" }).click();
+    await cargar(pagina, "/");
+    const papeles = pagina.getByRole("region", { name: /Papeles por vencer/ });
+    await expect(papeles).toContainText("Recibo de la comunidad");
+    await expect(papeles).toContainText("venció hace 5 días");
+    await expect(
+      pagina.getByRole("list", { name: "De un vistazo" }).getByRole("button", { name: /Papeles/ }),
+    ).toContainText("1");
+    await contexto.close();
+  });
+
+  test("tocar una ficha del resumen lleva a su apartado", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/");
+    await pagina
+      .getByRole("list", { name: "De un vistazo" })
+      .getByRole("button", { name: /Por comprar/ })
+      .click();
+    await expect(pagina.getByRole("region", { name: /Falta por comprar/ })).toBeInViewport();
+    await contexto.close();
+  });
+
+  test("en pantallas anchas los apartados se reparten en dos columnas", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 1280, 800);
+    await cargar(pagina, "/");
+    const a = await pagina.getByRole("region", { name: /Pendientes/ }).boundingBox();
+    const b = await pagina.getByRole("region", { name: /Papeles por vencer/ }).boundingBox();
+    const c = await pagina.getByRole("region", { name: /Falta por comprar/ }).boundingBox();
+    expect(a && b && c).toBeTruthy();
+    // Hay al menos dos columnas distintas (x diferentes) y nada se sale de la pantalla.
+    const xs = new Set([a!.x, b!.x, c!.x].map((x) => Math.round(x)));
+    expect(xs.size).toBeGreaterThanOrEqual(2);
+    for (const r of [a!, b!, c!]) expect(r.x + r.width).toBeLessThanOrEqual(1280);
     await contexto.close();
   });
 });

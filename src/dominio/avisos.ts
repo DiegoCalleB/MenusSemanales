@@ -95,14 +95,17 @@ function avisosDelTiempo(
   fecha: FechaIso,
   cuando: "Hoy" | "Mañana",
   conCole = false,
+  /** La lluvia ya va como cosa que preparar (D-176): no se repite como aviso del tiempo. */
+  sinLluvia = false,
 ): Aviso[] {
   const p = tiempo?.find((x) => x.fecha === fecha);
   if (!p) return [];
-  const paraguas = conCole ? avisoDelParaguas(p, cuando) : null;
+  const paraguas = conCole && !sinLluvia ? avisoDelParaguas(p, cuando) : null;
   return [
     ...(paraguas ? [paraguas] : []),
     ...consejosDelTiempo(p)
       .filter((c) => !(paraguas && c.clave === "lluvia"))
+      .filter((c) => !(sinLluvia && (c.clave === "lluvia" || c.clave === "tormenta")))
       .map((c) => ({
         id: `tiempo-${fecha}-${c.clave}`,
         emoji: c.emoji,
@@ -130,6 +133,35 @@ function avisoDelParaguas(p: Pronostico, cuando: "Hoy" | "Mañana"): Aviso | nul
     titulo: `${cuando} ${textoDeLluviaDelCole(l)}: ${soloVuelta ? "salid con paraguas" : "paraguas y chubasquero"}`,
     nivel: "ya",
   };
+}
+
+export interface CosaDeLluvia {
+  /** Lo que hay que dejar preparado. */
+  texto: string;
+  /** Por qué: «llueve de camino al cole (de 8 a 9 h, 70 %)» o «lluvia (65 %)». */
+  motivo: string;
+}
+
+/**
+ * Si llueve ese día, el paraguas y la ropa de lluvia son una cosa más que dejar preparada la noche
+ * antes (D-176), junto a lo de la mochila. Un día de cole, solo si moja a la ida o a la vuelta (como
+ * el aviso del paraguas, D-148) o hay tormenta; sin cole, si el día es de lluvia. null si no.
+ */
+export function cosaDeLluvia(p: Pronostico | undefined, conCole: boolean): CosaDeLluvia | null {
+  if (!p) return null;
+  const franjas = conCole ? lluviaDelCole(p) : [];
+  const consejos = consejosDelTiempo(p);
+  const tormenta = consejos.find((c) => c.clave === "tormenta");
+  const lluvia = consejos.find((c) => c.clave === "lluvia");
+  const motivo =
+    franjas.length > 0
+      ? textoDeLluviaDelCole(franjas)
+      : tormenta
+        ? tormenta.que.toLowerCase()
+        : !conCole && lluvia
+          ? lluvia.que.toLowerCase()
+          : null;
+  return motivo ? { texto: "Paraguas y ropa de lluvia", motivo } : null;
 }
 
 /**
@@ -607,12 +639,31 @@ export function avisosDeLaNoche(e: EntradaAvisos): Aviso[] {
       (a.id.startsWith("estadio-") && a.nivel === "pronto") ||
       (a.id.startsWith("cita-") && a.nivel === "pronto"),
   );
-  // Lo de la mochila primero; luego el tiempo de mañana (D-145), que también se deja preparado.
-  const mochila = delDia.filter((a) => a.id.startsWith("mochila-"));
+  // Lo de la mochila primero y, si mañana llueve, el paraguas y la ropa de lluvia como una cosa más
+  // que dejar preparada (D-176); luego el resto del tiempo de mañana (D-145).
+  const conColeManana = hayColeEse(e, manana);
+  const lluvia = cosaDeLluvia(
+    e.tiempo?.find((x) => x.fecha === manana),
+    conColeManana,
+  );
+  const mochila: Aviso[] = [
+    ...delDia.filter((a) => a.id.startsWith("mochila-")),
+    ...(lluvia
+      ? [
+          {
+            id: `mochila-${manana}-lluvia`,
+            emoji: "☔",
+            titulo: `Deja preparado: ${lluvia.texto.toLowerCase()} (para mañana)`,
+            detalle: `Mañana ${lluvia.motivo}`,
+            nivel: "ya" as const,
+          },
+        ]
+      : []),
+  ];
   const resto = delDia.filter((a) => !a.id.startsWith("mochila-"));
   return [
     ...mochila,
-    ...avisosDelTiempo(e.tiempo, manana, "Mañana", hayColeEse(e, manana)),
+    ...avisosDelTiempo(e.tiempo, manana, "Mañana", conColeManana, lluvia !== null),
     ...resto,
   ];
 }

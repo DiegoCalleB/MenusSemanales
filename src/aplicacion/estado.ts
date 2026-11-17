@@ -225,6 +225,8 @@ export interface EstadoHogar {
   vencimientos: Vencimiento[];
   /** Pendientes sin fecha (D-175): lo que hay que hacer «algún día». */
   pendientes: Pendiente[];
+  /** Los días para los que ya se dejó preparado el paraguas y la ropa de lluvia (D-176). */
+  lluviaPreparada: FechaIso[];
   /**
    * Lo que apunta la familia sobre el calendario escolar (D-144): días sin cole propios del centro
    * (libre disposición) o «ese día sí hay cole». Manda sobre el calendario oficial. En el documento.
@@ -440,6 +442,8 @@ export type Accion =
   | { tipo: "pendiente/borrar"; id: string }
   /** Quita de la lista los que ya están hechos. */
   | { tipo: "pendiente/limpiar" }
+  /** Marca (o desmarca) como preparado el paraguas y la ropa de lluvia para el día `para` (D-176). */
+  | { tipo: "lluvia/preparar"; para: FechaIso }
   /** «Nos gusta» (1), «no es para nosotros» (-1) o quitar el voto (0) de un plan del barrio (D-171). */
   | { tipo: "barrio/voto"; id: string; rasgos: string[]; voto: 1 | -1 | 0 }
   /** Marca (o desmarca) como tomado ese día. */
@@ -922,6 +926,7 @@ const normalizarCampos = (e: EstadoHogar): EstadoHogar =>
   Array.isArray(e.gustosBarrio) &&
   Array.isArray(e.vencimientos) &&
   Array.isArray(e.pendientes) &&
+  Array.isArray(e.lluviaPreparada) &&
   Array.isArray(e.diasCole) &&
   typeof e.puntuacionesCitas === "object" &&
   e.puntuacionesCitas !== null &&
@@ -946,6 +951,7 @@ const normalizarCampos = (e: EstadoHogar): EstadoHogar =>
         gustosBarrio: Array.isArray(e.gustosBarrio) ? e.gustosBarrio : [],
         vencimientos: Array.isArray(e.vencimientos) ? e.vencimientos : [],
         pendientes: Array.isArray(e.pendientes) ? e.pendientes : [],
+        lluviaPreparada: Array.isArray(e.lluviaPreparada) ? e.lluviaPreparada : [],
         diasCole: Array.isArray(e.diasCole) ? e.diasCole : [],
         puntuacionesCitas: puntuacionesValidas(e.puntuacionesCitas),
         agenda: Array.isArray(e.agenda) ? e.agenda : [],
@@ -2288,6 +2294,22 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
           e.hoy,
         ),
       };
+
+    case "lluvia/preparar": {
+      if (!fechaIsoValida(accion.para)) return e;
+      const ya = e.lluviaPreparada.includes(accion.para);
+      // Solo se guardan los días de las dos últimas semanas en adelante.
+      const desde = sumarDias(e.hoy, -14);
+      return {
+        ...e,
+        lluviaPreparada: (ya
+          ? e.lluviaPreparada.filter((f) => f !== accion.para)
+          : [...e.lluviaPreparada, accion.para]
+        )
+          .filter((f) => f >= desde)
+          .sort(),
+      };
+    }
 
     case "pendiente/borrar":
       return { ...e, pendientes: e.pendientes.filter((x) => x.id !== accion.id) };

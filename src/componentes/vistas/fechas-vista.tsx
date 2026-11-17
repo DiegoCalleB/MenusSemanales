@@ -10,6 +10,7 @@ import { textoFechas } from "@/dominio/compartir";
 import { Apuntar } from "../apuntar";
 import { CircularesCorreo } from "../circulares-correo";
 import { CitasPasadas } from "../citas-pasadas";
+import { Buscador } from "../buscador";
 import { PendientesSeccion } from "../pendientes";
 import { PlanesDelBarrio } from "../planes-del-barrio";
 import { BotonEditar, EditarCita, EditarCumple } from "../editar";
@@ -108,6 +109,8 @@ export function FechasVista() {
           Calendario
         </Link>
       </header>
+
+      <Buscador ambito="fechas" />
 
       <EstadoGuardado />
       <Apuntar />

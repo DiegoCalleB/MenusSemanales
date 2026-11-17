@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { articulosPendientes } from "@/aplicacion/estado";
 import { claveArticulo } from "@/dominio/habituales";
 import { ApuntarEventoRapido } from "./apuntar-evento-rapido";
+import { CapturaRapida } from "./captura-rapida";
 import { EntradaCompra } from "./entrada-compra";
 import { NuevoPendiente } from "./pendientes";
 import { useHogar } from "./proveedor-hogar";
@@ -18,7 +19,7 @@ export function AnadirRapido() {
   const ruta = usePathname();
   const [abierto, setAbierto] = useState(false);
   // En «Compra» ya está el campo para la lista: allí se abre directamente en «Evento».
-  const [que, setQue] = useState<"compra" | "evento" | "pendiente">("compra");
+  const [que, setQue] = useState<"todo" | "compra" | "evento" | "pendiente">("todo");
   const panel = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -49,6 +50,7 @@ export function AnadirRapido() {
             <div role="group" aria-label="Qué apuntar" className="flex gap-1">
               {(
                 [
+                  ["todo", "✨ Todo"],
                   ["compra", "🛒 Compra"],
                   ["evento", "📌 Evento"],
                   ["pendiente", "📝 Pendiente"],
@@ -69,7 +71,9 @@ export function AnadirRapido() {
               Cerrar
             </button>
           </div>
-          {que === "compra" ? (
+          {que === "todo" ? (
+            <CapturaRapida alTerminar={() => setAbierto(false)} />
+          ) : que === "compra" ? (
             <EntradaCompra yaEnLista={yaEnLista} />
           ) : que === "pendiente" ? (
             <NuevoPendiente compacto alTerminar={() => setAbierto(false)} />
@@ -84,7 +88,7 @@ export function AnadirRapido() {
         aria-label="Apuntar algo"
         aria-expanded={abierto}
         onClick={() => {
-          if (!abierto) setQue(ruta === "/compra" ? "evento" : "compra");
+          if (!abierto) setQue(ruta === "/compra" ? "evento" : "todo");
           setAbierto((a) => !a);
         }}
       >

@@ -2188,3 +2188,21 @@ describe("pendientes sin fecha (D-175)", () => {
     );
   });
 });
+
+describe("paraguas y ropa de lluvia preparados (D-176)", () => {
+  it("se marca y se desmarca por día, y los días viejos se olvidan", () => {
+    let e = estadoInicialDemo();
+    const manana = sumarDias(e.hoy, 1);
+    e = reducir(e, { tipo: "lluvia/preparar", para: manana });
+    expect(e.lluviaPreparada).toEqual([manana]);
+    e = reducir(e, { tipo: "lluvia/preparar", para: sumarDias(e.hoy, 2) });
+    expect(e.lluviaPreparada).toEqual([manana, sumarDias(e.hoy, 2)]);
+    e = reducir(e, { tipo: "lluvia/preparar", para: manana });
+    expect(e.lluviaPreparada).toEqual([sumarDias(e.hoy, 2)]);
+    const viejo = { ...e, lluviaPreparada: ["2020-01-01"] };
+    expect(reducir(viejo, { tipo: "lluvia/preparar", para: manana }).lluviaPreparada).toEqual([
+      manana,
+    ]);
+    expect(reducir(e, { tipo: "lluvia/preparar", para: "mañana" })).toBe(e);
+  });
+});
