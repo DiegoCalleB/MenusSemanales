@@ -1555,12 +1555,13 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 
 ## D-175 · Pendientes sin fecha
 
-- **Petición (Diego):** un sitio donde apuntar tareas pendientes que no tienen fecha concreta. «Por persona» (Casa) es para el zafarrancho de la casa, no para esto.
-- **Dónde:** Casa → **Pendientes** (`/pendientes`).
-- **Apuntar en un momento:** un cuadro de texto («Llamar al fontanero», «Arreglar la persiana»), Intro y listo. Opcionalmente, ⭐ **Importante** y **para quién** (por defecto, «Quien pueda»).
-- **La lista:** lo importante primero y, dentro, lo que más lleva esperando («hace 3 semanas»). Se marca como hecho con un toque y se puede reabrir; hay filtro por persona y «Sin asignar». Lo hecho se enseña dos semanas («Hechos») y luego se olvida solo; «Borrar los hechos» lo limpia antes. Quitar sin hacerlo pide confirmación.
-- **Que no se pierdan:**
-  - En **Hoy**, una tarjeta con los tres más importantes o antiguos (los de quien tiene el móvil y los de nadie en concreto), que se pueden marcar ahí mismo.
-  - **El domingo**, un aviso («📝 3 pendientes sin fecha · Llamar al fontanero, hace 2 semanas») en el resumen de la mañana, solo si hay algo importante o algo que lleve una semana o más: no se agobia por poco.
+- **Petición (Diego):** un sitio donde apuntar tareas pendientes que no tienen fecha concreta. «Por persona» (Casa) es para el zafarrancho de la casa, no para esto. Y que **no fuera un apartado nuevo**.
+- **Dónde (sin apartado nuevo):**
+  - Una sección **plegada** «📝 Pendientes sin fecha · N» al final de **Fechas → Próximas**, junto a las citas, que solo enseña cuántos hay para no llenar la pantalla (como los planes del barrio). Al abrirla: apuntar, la lista y lo hecho.
+  - La tercera opción **«📝 Pendiente»** del botón **＋** que está en todas las pantallas (junto a «Compra» y «Evento»): se apunta desde donde estés, en dos toques.
+  - Una tarjeta en **Hoy** con los tres más importantes o antiguos, con enlace a la sección.
+- **Apuntar en un momento:** un cuadro de texto («Llamar al fontanero»), Intro y listo. Opcionalmente ⭐ **Importante** y **para quién** (por defecto «Quien pueda»).
+- **La lista:** lo importante primero y, dentro, lo que más lleva esperando («hace 3 semanas»). Se marca como hecho con un toque y se puede reabrir; filtro por persona y «Sin asignar». Lo hecho se enseña dos semanas («Hechos») y luego se olvida solo; «Borrar los hechos» lo limpia antes. Quitar sin hacerlo pide confirmación.
+- **Que no se pierdan:** en «Hoy», y **el domingo** un aviso en el resumen de la mañana («📝 3 pendientes sin fecha · Llamar al fontanero, hace 2 semanas»), solo si hay algo importante o que lleve una semana o más: no se agobia por poco.
 - **Base de datos:** `20261120000000_pendientes.sql` añade `pendientes` al resumen del servidor, solo para el recordatorio del domingo.
 - **Diferencia con lo demás:** las tareas de casa se repiten, las citas y papeles tienen día, los pendientes no.

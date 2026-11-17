@@ -44,7 +44,7 @@ export function PendientesHoy() {
           </li>
         ))}
       </ul>
-      <Link href="/pendientes" className="boton-suave w-fit">
+      <Link href="/fechas#sin-fecha" className="boton-suave w-fit">
         {total > vista.length ? `Ver los ${total}` : "Ver pendientes"}
       </Link>
     </section>

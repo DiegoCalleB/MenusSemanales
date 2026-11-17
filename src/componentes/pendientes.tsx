@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import {
   MAX_TEXTO_PENDIENTE,
   type Pendiente,
@@ -13,8 +13,49 @@ import { useHogar } from "./proveedor-hogar";
 
 type Filtro = "todos" | "nadie" | string;
 
-/** Pendientes sin fecha (D-175): apuntar en un momento, marcar al hacerlo, que no se pierdan. */
-export function Pendientes() {
+/**
+ * Pendientes sin fecha (D-175), como una sección plegada de Fechas → Próximas (junto a las citas, y
+ * sin llenarla): arriba, cuántos hay; al abrirla, apuntar uno, la lista y lo hecho. Se abre sola si se
+ * llega con `#sin-fecha`.
+ */
+export function PendientesSeccion() {
+  const { estado } = useHogar();
+  const [abierta, setAbierta] = useState(false);
+  useEffect(() => {
+    if (window.location.hash === "#sin-fecha") void Promise.resolve().then(() => setAbierta(true));
+  }, []);
+  const n = abiertos(estado.pendientes).length;
+  return (
+    <section
+      id="sin-fecha"
+      aria-labelledby="sin-fecha-titulo"
+      className="tarjeta flex flex-col gap-3"
+    >
+      <button
+        type="button"
+        aria-expanded={abierta}
+        aria-controls="sin-fecha-contenido"
+        className="flex min-h-11 w-full items-center justify-between gap-2 text-left"
+        onClick={() => setAbierta((a) => !a)}
+      >
+        <span id="sin-fecha-titulo" className="text-xl font-extrabold">
+          <span aria-hidden="true">📝 </span>Pendientes sin fecha
+          <span className="text-tinta-suave text-base font-medium"> · {n}</span>
+        </span>
+        <span aria-hidden="true" className="text-xl">
+          {abierta ? "▴" : "▾"}
+        </span>
+      </button>
+      {abierta && (
+        <div id="sin-fecha-contenido">
+          <Pendientes />
+        </div>
+      )}
+    </section>
+  );
+}
+
+function Pendientes() {
   const { estado, despachar } = useHogar();
   const personas = estado.personas.filter((p) => p.activa);
   const [filtro, setFiltro] = useState<Filtro>("todos");
@@ -94,7 +135,13 @@ export function Pendientes() {
 }
 
 /** Apuntar de un tirón: escribir y pulsar Intro. La estrella y «de quién» son opcionales. */
-function NuevoPendiente() {
+export function NuevoPendiente({
+  alTerminar,
+  compacto = false,
+}: {
+  alTerminar?: () => void;
+  compacto?: boolean;
+}) {
   const { estado } = useHogar();
   const guardar = useGuardar();
   const personas = estado.personas.filter((p) => p.activa);
@@ -116,6 +163,7 @@ function NuevoPendiente() {
     if (!motivo) {
       setTexto("");
       setImportante(false);
+      alTerminar?.();
     }
   }
 
@@ -124,7 +172,7 @@ function NuevoPendiente() {
       onSubmit={enviar}
       noValidate
       aria-label="Apuntar un pendiente"
-      className="tarjeta flex flex-col gap-2"
+      className={`flex flex-col gap-2 ${compacto ? "" : "border-borde bg-superficie rounded-2xl border p-3"}`}
     >
       <Campo texto="¿Qué hay que hacer?">
         <input

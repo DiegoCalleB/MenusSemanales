@@ -10,6 +10,7 @@ import { textoFechas } from "@/dominio/compartir";
 import { Apuntar } from "../apuntar";
 import { CircularesCorreo } from "../circulares-correo";
 import { CitasPasadas } from "../citas-pasadas";
+import { PendientesSeccion } from "../pendientes";
 import { PlanesDelBarrio } from "../planes-del-barrio";
 import { BotonEditar, EditarCita, EditarCumple } from "../editar";
 import { LeerCircular } from "../leer-circular";
@@ -229,6 +230,8 @@ export function FechasVista() {
           elemento y, si la vuelves a copiar y pegar aquí, se apunta igual.
         </p>
       </section>
+
+      <PendientesSeccion />
 
       <PlanesDelBarrio />
 
