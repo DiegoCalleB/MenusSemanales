@@ -1575,3 +1575,12 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Cuándo cuenta como lluvia:** un día de cole, solo si moja a la ida o a la vuelta (como el aviso del paraguas, D-148) o hay tormenta; si llueve por la tarde, con los niños ya en casa, no hace falta prepararlo. Sin cole (fin de semana, festivo), si el día es de lluvia.
 - **No cambia:** el aviso de las 7 («Hoy llueve de camino al cole: paraguas y chubasquero») sigue igual. El resto del tiempo de mañana (frío, calor…) sigue como aviso aparte.
 - **Límites:** (1) no tiene botón «Hecho» en la notificación (no es algo apuntado en la mochila); se marca en la app; (2) la notificación de las 20:00 no sabe si ya lo habéis marcado en la app (el servidor no recibe ese marcado), así que lo recuerda igualmente.
+
+## D-177 · Buscador de todo el hogar
+
+- **Petición (Diego):** un buscador (idea de «segundo cerebro»), también en Fechas.
+- **Dónde:** la lupa 🔍 de la cabecera (y de la barra lateral) lleva a **Buscar** (`/buscar`), con la caja enfocada; y en **Fechas** hay otra caja arriba que busca solo lo que tiene que ver con fechas.
+- **Qué encuentra:** citas, fechas señaladas, cumpleaños (solo nombre y día), papeles y vencimientos (también por sus notas), pendientes sin fecha, planes del barrio, tareas de la casa, tareas por persona, lo de la mochila, platos (también por sus ingredientes), la lista de la compra y la despensa. **Nunca la medicación** (es personal) ni los regalos de los cumpleaños (la sorpresa).
+- **Cómo busca:** al escribir, sin tildes ni mayúsculas, con varias palabras (todas tienen que estar). Salen primero el título exacto, la palabra entera y el principio de una palabra; a igualdad, lo que viene antes que lo ya pasado. Con una sola letra no busca. Resultados agrupados por tipo (los cinco primeros, con «Ver los N») y cada uno lleva a su pantalla (una cita, al día del calendario).
+- **Todo en el móvil:** busca en lo que la app ya tiene en memoria; no se manda nada a ningún servidor.
+- **Después:** «Pregúntale a tu casa» (IA con los datos) se apoya en esta misma pantalla.

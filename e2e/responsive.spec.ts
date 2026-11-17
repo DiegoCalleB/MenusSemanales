@@ -39,6 +39,7 @@ const RUTAS = [
   "/cumples",
   "/barrio",
   "/papeles",
+  "/buscar",
   "/fechas",
   "/casa",
   "/compra",
@@ -2810,6 +2811,79 @@ test.describe("paraguas y ropa de lluvia en lo que hay que preparar (D-176)", ()
     );
     await cargar(pagina, "/mochila");
     await expect(pagina.getByText("Paraguas y ropa de lluvia")).toHaveCount(0);
+    await contexto.close();
+  });
+});
+
+test.describe("buscador (D-177)", () => {
+  test("busca sin tildes ni mayúsculas, agrupa por tipo y cada resultado lleva a su sitio", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/papeles");
+    await pagina.getByRole("button", { name: /ITV del coche/ }).click();
+    const form = pagina.getByRole("form", { name: "Apuntar un papel" });
+    await form.getByLabel("Cuándo vence").fill("2026-12-04");
+    await form.getByRole("button", { name: "Guardar" }).click();
+
+    await cargar(pagina, "/buscar");
+    const caja = pagina.getByRole("searchbox", { name: "¿Qué buscas?" });
+    // Con una sola letra no busca.
+    await caja.fill("l");
+    await expect(pagina.getByText("No he encontrado nada")).toHaveCount(0);
+    await caja.fill("LENTEJAS");
+    await expect(pagina.getByRole("region", { name: "Platos" })).toContainText(
+      "Lentejas con verduras",
+    );
+    await caja.fill("ARROZ");
+    await expect(pagina.getByRole("region", { name: "Despensa" })).toContainText("Arroz");
+    await caja.fill("itv");
+    const papeles = pagina.getByRole("region", { name: "Papeles y vencimientos" });
+    await expect(papeles).toContainText("ITV del coche");
+    await papeles.getByRole("link", { name: /ITV del coche/ }).click();
+    await pagina.waitForURL("**/papeles");
+    await contexto.close();
+  });
+
+  test("no busca en la medicación y avisa si no encuentra nada", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/medicacion");
+    await pagina.getByRole("button", { name: "＋ Apuntar un medicamento" }).click();
+    const form = pagina.getByRole("form", { name: "Apuntar un medicamento" });
+    await form.getByLabel("Cómo lo llamas").fill("Omeprazol");
+    await form.getByRole("button", { name: "Guardar" }).click();
+    await expect(pagina.getByRole("list", { name: /Medicación de/ })).toContainText("Omeprazol");
+    await cargar(pagina, "/buscar");
+    await pagina.getByRole("searchbox", { name: "¿Qué buscas?" }).fill("omeprazol");
+    await expect(pagina.getByText("No he encontrado nada con «omeprazol»")).toBeVisible();
+    await contexto.close();
+  });
+
+  test("en Fechas hay una caja que solo busca lo de fechas", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/fechas");
+    await pagina.getByRole("button", { name: /Pendientes sin fecha/ }).click();
+    const nuevo = pagina.getByRole("form", { name: "Apuntar un pendiente" });
+    await nuevo.getByLabel("¿Qué hay que hacer?").fill("Llamar al fontanero");
+    await nuevo.getByRole("button", { name: "＋ Apuntar" }).click();
+
+    const caja = pagina.getByRole("searchbox", { name: "Buscar en las fechas" });
+    await caja.fill("fontanero");
+    await expect(pagina.getByRole("region", { name: "Pendientes" }).first()).toContainText(
+      "Llamar al fontanero",
+    );
+    // Lo que no es de fechas (un plato) no sale aquí.
+    await caja.fill("lentejas");
+    await expect(pagina.getByText("No he encontrado nada con «lentejas»")).toBeVisible();
+    await contexto.close();
+  });
+
+  test("la lupa de la cabecera lleva al buscador", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/");
+    await pagina.getByRole("link", { name: "Buscar" }).first().click();
+    await pagina.waitForURL("**/buscar");
+    await expect(pagina.getByRole("searchbox", { name: "¿Qué buscas?" })).toBeFocused();
     await contexto.close();
   });
 });
