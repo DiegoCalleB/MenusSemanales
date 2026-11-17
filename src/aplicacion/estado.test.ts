@@ -2206,3 +2206,73 @@ describe("paraguas y ropa de lluvia preparados (D-176)", () => {
     expect(reducir(e, { tipo: "lluvia/preparar", para: "mañana" })).toBe(e);
   });
 });
+
+describe("Cuidarse (D-182)", () => {
+  const e0 = estadoInicialDemo();
+  const yo = e0.personas.find((p) => p.activa)!.id;
+
+  it("suma y quita vasos, sin bajar de 0", () => {
+    let e = reducir(e0, { tipo: "cuidado/agua", personaId: yo, fecha: e0.hoy, delta: 1 });
+    e = reducir(e, { tipo: "cuidado/agua", personaId: yo, fecha: e0.hoy, delta: 1 });
+    expect(e.cuidado[0]!.dias[e0.hoy]!.agua).toBe(2);
+    e = reducir(e, { tipo: "cuidado/agua", personaId: yo, fecha: e0.hoy, delta: -1 });
+    e = reducir(e, { tipo: "cuidado/agua", personaId: yo, fecha: e0.hoy, delta: -1 });
+    e = reducir(e, { tipo: "cuidado/agua", personaId: yo, fecha: e0.hoy, delta: -1 });
+    expect(e.cuidado[0]!.dias[e0.hoy]!.agua).toBe(0);
+  });
+
+  it("no hace caso de una persona que no existe ni de una fecha mala", () => {
+    expect(reducir(e0, { tipo: "cuidado/agua", personaId: "nadie", fecha: e0.hoy, delta: 1 })).toBe(
+      e0,
+    );
+    expect(reducir(e0, { tipo: "cuidado/agua", personaId: yo, fecha: "hoy", delta: 1 })).toBe(e0);
+  });
+
+  it("guarda los ajustes, conserva lo marcado de un hábito y marca ejercicio", () => {
+    let e = reducir(e0, {
+      tipo: "cuidado/ajustes",
+      personaId: yo,
+      metaAgua: 6,
+      habitos: ["Fruta", " Caminar  20 min ", "Fruta"],
+      ejercicio: { nombre: "Correr", dias: [3, 1, 1] },
+    });
+    const c = e.cuidado[0]!;
+    expect(c.metaAgua).toBe(6);
+    expect(c.habitos.map((h) => h.nombre)).toEqual(["Fruta", "Caminar 20 min"]);
+    expect(c.ejercicio).toEqual({ nombre: "Correr", dias: [1, 3] });
+    const fruta = c.habitos[0]!.id;
+    e = reducir(e, { tipo: "cuidado/habito", personaId: yo, fecha: e0.hoy, id: fruta });
+    expect(e.cuidado[0]!.dias[e0.hoy]!.habitos).toEqual([fruta]);
+    e = reducir(e, { tipo: "cuidado/ejercicio", personaId: yo, fecha: e0.hoy });
+    expect(e.cuidado[0]!.dias[e0.hoy]!.ejercicio).toBe(true);
+    // Al volver a guardar con «Fruta», sigue siendo el mismo hábito y sigue marcado.
+    e = reducir(e, {
+      tipo: "cuidado/ajustes",
+      personaId: yo,
+      metaAgua: 6,
+      habitos: ["Fruta"],
+      ejercicio: null,
+    });
+    expect(e.cuidado[0]!.habitos[0]!.id).toBe(fruta);
+    expect(e.cuidado[0]!.dias[e0.hoy]!.habitos).toEqual([fruta]);
+    expect(e.cuidado[0]!.ejercicio).toBeNull();
+  });
+
+  it("rechaza una meta absurda y un hábito de otra persona", () => {
+    const mala = reducir(e0, {
+      tipo: "cuidado/ajustes",
+      personaId: yo,
+      metaAgua: 99,
+      habitos: [],
+      ejercicio: null,
+    });
+    expect(mala.cuidado).toEqual([]);
+    expect(mala.aviso?.tipo).toBe("error");
+    expect(reducir(e0, { tipo: "cuidado/habito", personaId: yo, fecha: e0.hoy, id: "x" })).toBe(e0);
+  });
+
+  it("un estado de antes, sin cuidado, se completa con una lista vacía", () => {
+    const viejo = { ...e0, cuidado: undefined } as unknown as EstadoHogar;
+    expect(normalizar(viejo).cuidado).toEqual([]);
+  });
+});

@@ -3220,4 +3220,39 @@ test.describe("Hoy como tablero fijo (D-180)", () => {
     for (const r of [izq!, der!, papeles!]) expect(r.x + r.width).toBeLessThanOrEqual(1280);
     await contexto.close();
   });
+  test("cuidarse (D-182): se suman vasos, se ajusta la meta y se marcan ejercicio y hábitos", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/");
+    const bloque = pagina.getByRole("region", { name: /Cuidarse/ });
+    await expect(bloque).toContainText("Agua: 0 de 8 vasos");
+    await bloque.getByRole("button", { name: "＋ Vaso" }).click();
+    await bloque.getByRole("button", { name: "＋ Vaso" }).click();
+    await expect(bloque).toContainText("Agua: 2 de 8 vasos");
+    await bloque.getByRole("button", { name: "− Quitar" }).click();
+    await expect(bloque).toContainText("Agua: 1 de 8 vasos");
+
+    await bloque.getByText("Ajustar mi meta, ejercicio y hábitos").click();
+    const form = bloque.getByRole("form", { name: "Ajustes de cuidarse" });
+    await form.getByLabel("Vasos de agua al día").fill("6");
+    await form.getByLabel(/Hábitos sanos/).fill("Una fruta");
+    await form.getByLabel("Quiero hacer ejercicio").check();
+    await form.getByLabel("Qué ejercicio").fill("Caminar");
+    await form.getByRole("button", { name: "martes" }).click();
+    await form.getByRole("button", { name: "jueves" }).click();
+    await form.getByRole("button", { name: "sábado" }).click();
+    await form.getByRole("button", { name: "domingo" }).click();
+    await form.getByRole("button", { name: "Guardar" }).click();
+    await expect(bloque).toContainText("Agua: 1 de 6 vasos");
+
+    const fruta = bloque.getByRole("button", { name: "Una fruta" });
+    await fruta.click();
+    await expect(fruta).toHaveAttribute("aria-pressed", "true");
+    const camina = bloque.getByRole("button", { name: /Hoy toca: Caminar/ });
+    await camina.click();
+    await expect(camina).toHaveAttribute("aria-pressed", "true");
+    await expect(bloque).toContainText("1 de");
+    await contexto.close();
+  });
 });

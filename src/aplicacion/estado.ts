@@ -49,6 +49,14 @@ import {
   validarDatos,
 } from "@/dominio/vencimientos";
 import { MAX_NOMBRE_MEDICAMENTO, type Medicamento, podarTomadas } from "@/dominio/medicacion";
+import {
+  type Cuidado,
+  MAX_VASOS_AL_DIA,
+  cuidadoDe,
+  diaDe,
+  podarDias,
+  validarAjustes,
+} from "@/dominio/cuidado";
 import { type AjusteCole, MAX_LARGO_MOTIVO, diaOficial } from "@/dominio/calendario-escolar";
 import {
   type Almuerzo,
@@ -225,6 +233,8 @@ export interface EstadoHogar {
   vencimientos: Vencimiento[];
   /** Pendientes sin fecha (D-175): lo que hay que hacer «algún día». */
   pendientes: Pendiente[];
+  /** Cuidarse (D-182): agua, ejercicio y hábitos de cada persona. En el documento del hogar. */
+  cuidado: Cuidado[];
   /** Los días para los que ya se dejó preparado el paraguas y la ropa de lluvia (D-176). */
   lluviaPreparada: FechaIso[];
   /**
@@ -444,6 +454,20 @@ export type Accion =
   | { tipo: "pendiente/limpiar" }
   /** Marca (o desmarca) como preparado el paraguas y la ropa de lluvia para el día `para` (D-176). */
   | { tipo: "lluvia/preparar"; para: FechaIso }
+  /** Suma (1) o quita (-1) un vaso de agua de esa persona ese día (D-182). */
+  | { tipo: "cuidado/agua"; personaId: string; fecha: FechaIso; delta: 1 | -1 }
+  /** Marca (o desmarca) un hábito sano ese día. */
+  | { tipo: "cuidado/habito"; personaId: string; fecha: FechaIso; id: string }
+  /** Marca (o desmarca) el ejercicio de ese día. */
+  | { tipo: "cuidado/ejercicio"; personaId: string; fecha: FechaIso }
+  /** Cambia la meta de agua, los hábitos y el ejercicio de una persona. */
+  | {
+      tipo: "cuidado/ajustes";
+      personaId: string;
+      metaAgua: number;
+      habitos: string[];
+      ejercicio: { nombre: string; dias: number[] } | null;
+    }
   /** «Nos gusta» (1), «no es para nosotros» (-1) o quitar el voto (0) de un plan del barrio (D-171). */
   | { tipo: "barrio/voto"; id: string; rasgos: string[]; voto: 1 | -1 | 0 }
   /** Marca (o desmarca) como tomado ese día. */
@@ -927,6 +951,7 @@ const normalizarCampos = (e: EstadoHogar): EstadoHogar =>
   Array.isArray(e.vencimientos) &&
   Array.isArray(e.pendientes) &&
   Array.isArray(e.lluviaPreparada) &&
+  Array.isArray(e.cuidado) &&
   Array.isArray(e.diasCole) &&
   typeof e.puntuacionesCitas === "object" &&
   e.puntuacionesCitas !== null &&
@@ -952,6 +977,7 @@ const normalizarCampos = (e: EstadoHogar): EstadoHogar =>
         vencimientos: Array.isArray(e.vencimientos) ? e.vencimientos : [],
         pendientes: Array.isArray(e.pendientes) ? e.pendientes : [],
         lluviaPreparada: Array.isArray(e.lluviaPreparada) ? e.lluviaPreparada : [],
+        cuidado: Array.isArray(e.cuidado) ? e.cuidado : [],
         diasCole: Array.isArray(e.diasCole) ? e.diasCole : [],
         puntuacionesCitas: puntuacionesValidas(e.puntuacionesCitas),
         agenda: Array.isArray(e.agenda) ? e.agenda : [],
@@ -1003,6 +1029,13 @@ function operar(
           : "No se ha podido completar la operación.";
     return { ...e, siguienteId: e.siguienteId + 1, aviso: error(e, texto) };
   }
+}
+
+/** Guarda lo de una persona en `cuidado` (la añade si aún no estaba). */
+function conCuidado(e: EstadoHogar, c: Cuidado): EstadoHogar {
+  return e.cuidado.some((x) => x.personaId === c.personaId)
+    ? { ...e, cuidado: e.cuidado.map((x) => (x.personaId === c.personaId ? c : x)) }
+    : { ...e, cuidado: [...e.cuidado, c] };
 }
 
 export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
@@ -2294,6 +2327,66 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
           e.hoy,
         ),
       };
+
+    case "cuidado/agua":
+    case "cuidado/habito":
+    case "cuidado/ejercicio": {
+      if (!fechaIsoValida(accion.fecha)) return e;
+      if (!e.personas.some((p) => p.id === accion.personaId && p.activa)) return e;
+      const actual = podarDias(cuidadoDe(e.cuidado, accion.personaId), e.hoy);
+      const dia = diaDe(actual, accion.fecha);
+      let nuevo = dia;
+      if (accion.tipo === "cuidado/agua") {
+        nuevo = { ...dia, agua: Math.min(MAX_VASOS_AL_DIA, Math.max(0, dia.agua + accion.delta)) };
+      } else if (accion.tipo === "cuidado/habito") {
+        if (!actual.habitos.some((h) => h.id === accion.id)) return e;
+        nuevo = {
+          ...dia,
+          habitos: dia.habitos.includes(accion.id)
+            ? dia.habitos.filter((h) => h !== accion.id)
+            : [...dia.habitos, accion.id],
+        };
+      } else {
+        nuevo = { ...dia, ejercicio: !dia.ejercicio };
+      }
+      return conCuidado(e, { ...actual, dias: { ...actual.dias, [accion.fecha]: nuevo } });
+    }
+
+    case "cuidado/ajustes": {
+      if (!e.personas.some((p) => p.id === accion.personaId && p.activa)) return e;
+      const datos = validarAjustes(accion);
+      if (!datos) {
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: error(e, "Revisa los ajustes: meta de 1 a 20 vasos y hasta 6 hábitos cortos."),
+        };
+      }
+      const actual = cuidadoDe(e.cuidado, accion.personaId);
+      // Un hábito con el mismo nombre conserva su id (y lo ya marcado).
+      const habitos = datos.habitos.map((nombre, i) => ({
+        id: actual.habitos.find((h) => h.nombre === nombre)?.id ?? `h${e.siguienteId}-${i}`,
+        nombre,
+      }));
+      const vivos = new Set(habitos.map((h) => h.id));
+      const dias = Object.fromEntries(
+        Object.entries(actual.dias).map(([f, d]) => [
+          f,
+          { ...d, habitos: d.habitos.filter((id) => vivos.has(id)) },
+        ]),
+      );
+      return {
+        ...conCuidado(e, {
+          ...actual,
+          metaAgua: datos.metaAgua,
+          habitos,
+          ejercicio: datos.ejercicio,
+          dias,
+        }),
+        siguienteId: e.siguienteId + 1,
+        aviso: ok(e, "Guardado."),
+      };
+    }
 
     case "lluvia/preparar": {
       if (!fechaIsoValida(accion.para)) return e;
