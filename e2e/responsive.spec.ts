@@ -3210,14 +3210,14 @@ test.describe("Hoy como tablero fijo (D-180)", () => {
   test("en pantallas anchas los apartados se reparten en dos columnas", async ({ browser }) => {
     const { contexto, pagina } = await abrir(browser, 1280, 800);
     await cargar(pagina, "/");
-    const a = await pagina.getByRole("region", { name: /Pendientes/ }).boundingBox();
-    const b = await pagina.getByRole("region", { name: /Papeles por vencer/ }).boundingBox();
-    const c = await pagina.getByRole("region", { name: /Falta por comprar/ }).boundingBox();
-    expect(a && b && c).toBeTruthy();
-    // Hay al menos dos columnas distintas (x diferentes) y nada se sale de la pantalla.
-    const xs = new Set([a!.x, b!.x, c!.x].map((x) => Math.round(x)));
-    expect(xs.size).toBeGreaterThanOrEqual(2);
-    for (const r of [a!, b!, c!]) expect(r.x + r.width).toBeLessThanOrEqual(1280);
+    const izq = await pagina.getByRole("region", { name: /Mañana/ }).boundingBox();
+    const der = await pagina.getByRole("region", { name: /Pendientes/ }).boundingBox();
+    const papeles = await pagina.getByRole("region", { name: /Papeles por vencer/ }).boundingBox();
+    expect(izq && der && papeles).toBeTruthy();
+    // Hoy y mañana a la izquierda; lo que hay que hacer, a la derecha. Nada se sale de la pantalla.
+    expect(der!.x).toBeGreaterThan(izq!.x + 200);
+    expect(Math.round(papeles!.x)).toBe(Math.round(der!.x));
+    for (const r of [izq!, der!, papeles!]) expect(r.x + r.width).toBeLessThanOrEqual(1280);
     await contexto.close();
   });
 });

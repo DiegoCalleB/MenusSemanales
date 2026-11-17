@@ -23,6 +23,7 @@ export function PapelesHoy() {
   return (
     <SeccionHoy
       id="sec-papeles"
+      compacta={vista.length === 0}
       emoji="📄"
       titulo="Papeles por vencer"
       cuenta={lista.length}

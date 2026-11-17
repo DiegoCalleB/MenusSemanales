@@ -1623,3 +1623,11 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Mañana (nuevo):** la cena de mañana (o «aún sin elegir» con enlace para elegirla), si hay cole (o por qué no) y sus citas: lo que queda por decidir antes de dormir.
 - **Compra y casa** pasan a ser apartados con la lista corta (los primeros artículos; lo que toca hoy con su «✓ Hecha»), no solo un contador.
 - **Accesibilidad:** zonas táctiles de 44 px, nombres que incluyen el texto visible y el mismo comportamiento en el móvil y en pantallas anchas.
+
+## D-181 · Hoy mejor organizado: dos columnas con sentido
+
+- **Petición (Diego):** la portada se podía organizar mucho mejor.
+- **Problema:** las columnas automáticas llenaban por altura y perdían el orden de importancia; lo relacionado quedaba lejos (menú del cole abajo, el tiempo lejos del paraguas, «Mañana» lejos de lo que se deja preparado); había tarjetas casi vacías y las citas salían dos veces (chips arriba y ficha).
+- **Ahora:** dos columnas explícitas. **Izquierda, «Hoy y mañana»:** la cena, el cole justo debajo, medicación, el tiempo, lo que se deja preparado (mochila y lluvia) y mañana. **Derecha, «Por hacer»:** citas y eventos (con la cuenta atrás dentro, en lista), pendientes, lo que toca en casa, la compra y los papeles. En el móvil se leen en ese mismo orden.
+- Los apartados sin nada pasan a **una sola línea** (casa, compra, papeles), en vez de una tarjeta entera.
+- «De un vistazo» sube justo debajo de la cabecera.
