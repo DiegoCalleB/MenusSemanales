@@ -207,7 +207,7 @@ export function InicioVista() {
                       <span aria-hidden="true">{p.emoji} </span>
                       {p.titulo}
                       {p.hora && ` (${p.hora})`}
-                    </span>
+                    </span>{" "}
                     <span className="text-tinta-suave shrink-0 text-sm font-bold">
                       {p.dias <= 1 ? p.texto : `en ${p.texto}`}
                     </span>
