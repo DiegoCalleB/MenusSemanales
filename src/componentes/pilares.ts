@@ -57,6 +57,7 @@ export const PILARES: readonly Pilar[] = [
       { href: "/calendario", texto: "Calendario" },
       { href: "/cumples", texto: "Cumples" },
       { href: "/barrio", texto: "Barrio" },
+      { href: "/papeles", texto: "Papeles" },
     ],
   },
   {

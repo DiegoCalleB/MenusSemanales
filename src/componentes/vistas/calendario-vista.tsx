@@ -12,6 +12,7 @@ import { lineasDelTiempo } from "@/dominio/avisos";
 import { resumenDelTiempo } from "@/dominio/tiempo";
 import { usePrevision } from "../usar-prevision";
 import { useEstadio } from "../usar-estadio";
+import { emojiDe } from "@/dominio/vencimientos";
 import { usePlanesDelBarrio } from "../usar-barrio";
 import { planesDelDia, textoDelEvento } from "@/dominio/metropolitano";
 import {
@@ -120,7 +121,13 @@ export function CalendarioVista() {
   // Fechas señaladas y cumpleaños: el detalle del día los enseña aparte de las citas.
   const fijos = { ...eventos };
   // Lo apuntado a mano (D-075) y lo del Google Calendar «Familia», si está conectado (D-074).
-  const apuntes = estado.agenda.map((a) => ({ fecha: a.fecha, titulo: a.titulo, hora: a.hora }));
+  const apuntes = [
+    ...estado.agenda.map((a) => ({ fecha: a.fecha, titulo: a.titulo, hora: a.hora })),
+    // Los papeles que vencen (D-174), el día en que vencen.
+    ...estado.vencimientos
+      .filter((v) => v.hechoEn === null)
+      .map((v) => ({ fecha: v.fecha, titulo: `📄 ${v.titulo}`, hora: null as string | null })),
+  ];
   for (const ev of [...apuntes, ...deGoogle]) {
     if (esCumpleRepetido(ev.titulo, estado.cumples)) continue;
     const texto = ev.hora ? `${ev.titulo} (${ev.hora})` : ev.titulo;
@@ -334,6 +341,27 @@ export function CalendarioVista() {
               </p>
             )}
           </div>
+
+          {estado.vencimientos.some((v) => v.hechoEn === null && v.fecha === sel) && (
+            <div
+              role="group"
+              aria-label="Papeles que vencen"
+              className="bg-aviso-fondo text-aviso-texto rounded-2xl p-3"
+            >
+              <p className="text-base font-bold">Vencen hoy</p>
+              {estado.vencimientos
+                .filter((v) => v.hechoEn === null && v.fecha === sel)
+                .map((v) => (
+                  <p key={v.id} className="text-base">
+                    <span aria-hidden="true">{emojiDe(v.categoria)} </span>
+                    {v.titulo}
+                  </p>
+                ))}
+              <Link href="/papeles" className="text-sm font-semibold underline">
+                Ir a papeles
+              </Link>
+            </div>
+          )}
 
           {barrioDe(sel).length > 0 && (
             <div role="group" aria-label="Planes del barrio" className="bg-suave-1 rounded-2xl p-3">

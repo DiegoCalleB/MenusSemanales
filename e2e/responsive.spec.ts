@@ -38,6 +38,7 @@ const RUTAS = [
   "/personas",
   "/cumples",
   "/barrio",
+  "/papeles",
   "/fechas",
   "/casa",
   "/compra",
@@ -1347,6 +1348,7 @@ test.describe("flujos en móvil", () => {
       ["Fechas", "Calendario", "/calendario"],
       ["Fechas", "Cumples", "/cumples"],
       ["Fechas", "Barrio", "/barrio"],
+      ["Fechas", "Papeles", "/papeles"],
       ["Más", "Cuenta", "/cuenta"],
       ["Más", "Enviar", "/compartir"],
     ];
@@ -2578,6 +2580,99 @@ test.describe("barra lateral con apartados (D-142)", () => {
         .getByRole("list", { name: "Apartados de Fechas" })
         .getByRole("link", { name: "Calendario" }),
     ).toBeVisible();
+    await contexto.close();
+  });
+});
+
+test.describe("papeles y vencimientos (D-174)", () => {
+  test("se apunta desde una plantilla, sale en Hoy, se renueva y se quita", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/papeles");
+    // Sin nada, se ofrece apuntar lo habitual.
+    await expect(pagina.getByRole("heading", { name: "¿Qué quieres apuntar?" })).toBeVisible();
+    await pagina.getByRole("button", { name: /ITV del coche/ }).click();
+    const form = pagina.getByRole("form", { name: "Apuntar un papel" });
+    // La plantilla rellena el nombre, cada año y los avisos habituales.
+    await expect(form.getByLabel("Qué es")).toHaveValue("ITV del coche");
+    await expect(form.getByLabel("Se repite")).toHaveValue("12");
+    // Sin fecha, no se guarda y dice por qué.
+    await form.getByRole("button", { name: "Guardar" }).click();
+    await expect(form.getByRole("alert")).toContainText("día en que vence");
+    await form.getByLabel("Cuándo vence").fill("2026-11-10");
+    await form.getByRole("button", { name: "Guardar" }).click();
+
+    const proximos = pagina.getByRole("region", { name: "Próximos 30 días" });
+    await expect(proximos).toContainText("ITV del coche");
+    await expect(proximos).toContainText("vence en 6 días");
+    await expect(proximos).toContainText("cada año");
+
+    // En «Hoy» sale lo que vence pronto.
+    await cargar(pagina, "/");
+    await expect(pagina.getByRole("region", { name: /Papeles por vencer/ })).toContainText(
+      "ITV del coche",
+    );
+
+    // Renovar: la fecha siguiente viene puesta.
+    await cargar(pagina, "/papeles");
+    await pagina.getByRole("button", { name: "Renovado: ITV del coche" }).click();
+    const renovar = pagina.getByRole("form", { name: "Renovar ITV del coche" });
+    await expect(renovar.getByLabel("¿Cuándo vence ahora?")).toHaveValue("2027-11-10");
+    await renovar.getByRole("button", { name: "Guardar" }).click();
+    const despues = pagina.getByRole("region", { name: "Más adelante" });
+    await expect(despues).toContainText("ITV del coche");
+    await expect(despues).toContainText("renovado 1 vez");
+    await expect(pagina.getByRole("region", { name: "Próximos 30 días" })).toHaveCount(0);
+
+    // Quitar pide confirmación.
+    await pagina.getByRole("button", { name: "Quitar ITV del coche" }).click();
+    await pagina.getByRole("button", { name: "No" }).click();
+    await expect(despues).toContainText("ITV del coche");
+    await pagina.getByRole("button", { name: "Quitar ITV del coche" }).click();
+    await pagina.getByRole("button", { name: "Sí, quitar" }).click();
+    await expect(pagina.getByRole("region", { name: "Más adelante" })).toHaveCount(0);
+    await contexto.close();
+  });
+
+  test("lo que no se repite se da por hecho y se puede reabrir; lo vencido va primero", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/papeles");
+    await pagina.getByRole("button", { name: /Otro…/ }).click();
+    const form = pagina.getByRole("form", { name: "Apuntar un papel" });
+    await form.getByLabel("Qué es").fill("Pedir cita en el médico");
+    await form.getByLabel("Cuándo vence").fill("2026-10-30");
+    await form.getByLabel("Se repite").selectOption({ label: "No se repite" });
+    await form.getByRole("button", { name: "Guardar" }).click();
+    const vencidos = pagina.getByRole("region", { name: "Vencidos" });
+    await expect(vencidos).toContainText("Pedir cita en el médico");
+    await expect(vencidos).toContainText("venció hace 5 días");
+    await pagina.getByRole("button", { name: "Hecho: Pedir cita en el médico" }).click();
+    await expect(pagina.getByRole("region", { name: "Vencidos" })).toHaveCount(0);
+    await pagina.getByText("Hechos (1)").click();
+    await pagina.getByRole("button", { name: "Reabrir" }).click();
+    await expect(pagina.getByRole("region", { name: "Vencidos" })).toContainText(
+      "Pedir cita en el médico",
+    );
+    await contexto.close();
+  });
+});
+
+test.describe("papeles en el calendario (D-174)", () => {
+  test("el día en que vence sale en el calendario de la app", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/papeles");
+    await pagina.getByRole("button", { name: /Seguro del hogar/ }).click();
+    const form = pagina.getByRole("form", { name: "Apuntar un papel" });
+    await form.getByLabel("Cuándo vence").fill("2026-11-12");
+    await form.getByRole("button", { name: "Guardar" }).click();
+    await expect(pagina.getByRole("region", { name: "Próximos 30 días" })).toContainText(
+      "Seguro del hogar",
+    );
+    await cargar(pagina, "/calendario?dia=2026-11-12");
+    await expect(pagina.getByRole("group", { name: "Papeles que vencen" })).toContainText(
+      "Seguro del hogar",
+    );
     await contexto.close();
   });
 });

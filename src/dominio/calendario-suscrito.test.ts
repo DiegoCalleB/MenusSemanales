@@ -575,3 +575,61 @@ describe("los planes del barrio en el calendario suscrito (D-165)", () => {
     }
   });
 });
+
+describe("los papeles y vencimientos en el calendario suscrito (D-174)", () => {
+  const venc = (o: object = {}) => ({
+    titulo: "ITV del coche",
+    categoria: "coche",
+    personaId: null,
+    fecha: "2026-12-04",
+    avisos: [30, 7],
+    hechoEn: null,
+    ...o,
+  });
+  it("salen el día en que vencen, de todo el día y con aviso, con de quién son", () => {
+    const e = eventosSuscritos(
+      base({
+        vencimientos: [
+          venc(),
+          venc({ titulo: "Pasaporte", personaId: "alba", fecha: "2027-01-10" }),
+        ],
+      }),
+      { hoy: HOY, para: null },
+    );
+    const papeles = e.filter((x) => x.uid?.startsWith("papel-"));
+    expect(papeles.map((x) => [x.titulo, x.fecha])).toEqual([
+      ["📄 ITV del coche", "2026-12-04"],
+      ["📄 Pasaporte · Alba", "2027-01-10"],
+    ]);
+    expect(papeles[0]).toMatchObject({ aviso: true });
+    expect(papeles[0]?.hora ?? null).toBeNull();
+  });
+  it("no salen los hechos ni los vencidos hace más de un mes; sí los de hace poco", () => {
+    const e = eventosSuscritos(
+      base({
+        vencimientos: [
+          venc({ titulo: "Hecho", hechoEn: "2026-10-01" }),
+          venc({ titulo: "Muy viejo", fecha: "2026-09-01" }),
+          venc({ titulo: "Reciente", fecha: "2026-10-20" }),
+        ],
+      }),
+      { hoy: HOY, para: null },
+    );
+    expect(titulos(e.filter((x) => x.uid?.startsWith("papel-")))).toEqual(["📄 Reciente"]);
+  });
+  it("no mezclan con las comidas ni el estadio: van en el calendario principal", () => {
+    const todos = eventosSuscritos(base({ vencimientos: [venc()] }), { hoy: HOY, para: null });
+    expect(todos.some((x) => x.uid?.startsWith("papel-"))).toBe(true);
+    expect(
+      eventosSuscritos(base({ vencimientos: [venc()] }), {
+        hoy: HOY,
+        para: null,
+        solo: "comidas",
+      }).some((x) => x.uid?.startsWith("papel-")),
+    ).toBe(false);
+  });
+  it("el resumen sin vencimientos (la base de datos antigua) sigue valiendo", () => {
+    expect(proyeccionSchema.safeParse(base()).success).toBe(true);
+    expect(proyeccionSchema.parse({ ...base(), vencimientos: "mal" }).vencimientos).toEqual([]);
+  });
+});

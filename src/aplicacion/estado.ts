@@ -34,6 +34,14 @@ import {
 import { type FrecuenciaTarea, type Tarea, alternarTarea } from "@/dominio/tareas";
 import { type CosaQueLlevar, MAX_ANTES, podarPreparadas } from "@/dominio/mochila";
 import { type VotoBarrio, conVoto } from "@/dominio/gustos-barrio";
+import {
+  type CategoriaVencimiento,
+  MAX_VENCIMIENTOS,
+  type Vencimiento,
+  esFechaValida,
+  renovar,
+  validarDatos,
+} from "@/dominio/vencimientos";
 import { MAX_NOMBRE_MEDICAMENTO, type Medicamento, podarTomadas } from "@/dominio/medicacion";
 import { type AjusteCole, MAX_LARGO_MOTIVO, diaOficial } from "@/dominio/calendario-escolar";
 import {
@@ -207,6 +215,8 @@ export interface EstadoHogar {
   medicacion: Medicamento[];
   /** Lo que nos gusta (o no) de los planes del barrio (D-171): sirve para destacar los que más pegan. */
   gustosBarrio: VotoBarrio[];
+  /** Papeles y vencimientos (D-174): ITV, seguros, DNI, pasaportes… con su fecha y sus avisos. */
+  vencimientos: Vencimiento[];
   /**
    * Lo que apunta la familia sobre el calendario escolar (D-144): días sin cole propios del centro
    * (libre disposición) o «ese día sí hay cole». Manda sobre el calendario oficial. En el documento.
@@ -384,6 +394,24 @@ export type Accion =
       idBase?: string;
     }
   | { tipo: "medicacion/borrar"; id: string }
+  /** Apunta (o cambia, con `id`) un papel o vencimiento (D-174). */
+  | {
+      tipo: "vencimiento/guardar";
+      id?: string;
+      titulo: string;
+      categoria: CategoriaVencimiento;
+      personaId: string | null;
+      fecha: FechaIso;
+      repiteMeses: number | null;
+      avisos: number[];
+      notas: string;
+      idBase?: string;
+    }
+  /** Lo renueva: pasa a la nueva fecha de vencimiento y guarda la anterior. */
+  | { tipo: "vencimiento/renovar"; id: string; fecha: FechaIso }
+  /** Da por hecho (o reabre) uno que no se repite. */
+  | { tipo: "vencimiento/hecho"; id: string; hecho: boolean }
+  | { tipo: "vencimiento/borrar"; id: string }
   /** «Nos gusta» (1), «no es para nosotros» (-1) o quitar el voto (0) de un plan del barrio (D-171). */
   | { tipo: "barrio/voto"; id: string; rasgos: string[]; voto: 1 | -1 | 0 }
   /** Marca (o desmarca) como tomado ese día. */
@@ -447,6 +475,7 @@ export const ACCIONES_QUE_CREAN = [
   "tarea/anadir",
   "mochila/anadir",
   "medicacion/guardar",
+  "vencimiento/guardar",
   "premio/guardar",
   "premio/canjear",
 ] as const;
@@ -862,6 +891,7 @@ const normalizarCampos = (e: EstadoHogar): EstadoHogar =>
   e.mochila.every((c) => typeof c.soloConCole === "boolean") &&
   Array.isArray(e.medicacion) &&
   Array.isArray(e.gustosBarrio) &&
+  Array.isArray(e.vencimientos) &&
   Array.isArray(e.diasCole) &&
   typeof e.puntuacionesCitas === "object" &&
   e.puntuacionesCitas !== null &&
@@ -884,6 +914,7 @@ const normalizarCampos = (e: EstadoHogar): EstadoHogar =>
           : [],
         medicacion: Array.isArray(e.medicacion) ? e.medicacion : [],
         gustosBarrio: Array.isArray(e.gustosBarrio) ? e.gustosBarrio : [],
+        vencimientos: Array.isArray(e.vencimientos) ? e.vencimientos : [],
         diasCole: Array.isArray(e.diasCole) ? e.diasCole : [],
         puntuacionesCitas: puntuacionesValidas(e.puntuacionesCitas),
         agenda: Array.isArray(e.agenda) ? e.agenda : [],
@@ -2188,6 +2219,76 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
         aviso: ok(e, "Guardado."),
       };
     }
+
+    case "vencimiento/guardar": {
+      const fallo = (t: string): EstadoHogar => ({
+        ...e,
+        siguienteId: e.siguienteId + 1,
+        aviso: error(e, t),
+      });
+      const r = validarDatos(
+        {
+          titulo: accion.titulo,
+          categoria: accion.categoria,
+          personaId: accion.personaId,
+          fecha: accion.fecha,
+          repiteMeses: accion.repiteMeses,
+          avisos: accion.avisos,
+          notas: accion.notas,
+        },
+        new Set(e.personas.map((p) => p.id)),
+      );
+      if (!r.ok) return fallo(r.motivo);
+      if (accion.id === undefined) {
+        if (e.vencimientos.length >= MAX_VENCIMIENTOS) return fallo("Ya hay demasiados apuntados.");
+        const id = idNuevo(accion.idBase, "vencimiento", "0", `ven-${e.siguienteId}`);
+        return {
+          ...e,
+          vencimientos: [...e.vencimientos, { id, ...r.datos, hechoEn: null, renovado: [] }],
+          siguienteId: e.siguienteId + 1,
+          aviso: ok(e, `Apuntado: ${r.datos.titulo}.`),
+        };
+      }
+      if (!e.vencimientos.some((v) => v.id === accion.id)) return e;
+      return {
+        ...e,
+        vencimientos: e.vencimientos.map((v) => (v.id === accion.id ? { ...v, ...r.datos } : v)),
+        siguienteId: e.siguienteId + 1,
+        aviso: ok(e, "Guardado."),
+      };
+    }
+
+    case "vencimiento/renovar": {
+      const v = e.vencimientos.find((x) => x.id === accion.id);
+      if (!v) return e;
+      if (!esFechaValida(accion.fecha) || accion.fecha > "2200-12-31") {
+        return { ...e, siguienteId: e.siguienteId + 1, aviso: error(e, "Elige la nueva fecha.") };
+      }
+      if (accion.fecha <= v.fecha) {
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: error(e, "La nueva fecha tiene que ser posterior a la que había."),
+        };
+      }
+      return {
+        ...e,
+        vencimientos: e.vencimientos.map((x) => (x.id === v.id ? renovar(x, accion.fecha) : x)),
+        siguienteId: e.siguienteId + 1,
+        aviso: ok(e, `Renovado: ${v.titulo}.`),
+      };
+    }
+
+    case "vencimiento/hecho":
+      return {
+        ...e,
+        vencimientos: e.vencimientos.map((v) =>
+          v.id === accion.id ? { ...v, hechoEn: accion.hecho ? e.hoy : null } : v,
+        ),
+      };
+
+    case "vencimiento/borrar":
+      return { ...e, vencimientos: e.vencimientos.filter((v) => v.id !== accion.id) };
 
     case "barrio/voto": {
       if (
