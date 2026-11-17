@@ -1736,6 +1736,12 @@ test.describe("flujos en móvil", () => {
     await cargar(pagina, "/menu");
     await pagina.getByRole("button", { name: "Apuntar algo" }).click();
     const dialogo = pagina.getByRole("dialog", { name: "Apuntar" });
+    // Se abre en «✨ Todo»; la compra está a un toque.
+    await expect(dialogo.getByRole("button", { name: "✨ Todo" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await dialogo.getByRole("button", { name: "🛒 Compra" }).click();
     await dialogo.getByLabel("Añadir algo a la lista").fill("crema solar y pilas");
     await dialogo.getByRole("button", { name: "Añadir", exact: true }).click();
     await expect(
@@ -2884,6 +2890,142 @@ test.describe("buscador (D-177)", () => {
     await pagina.getByRole("link", { name: "Buscar" }).first().click();
     await pagina.waitForURL("**/buscar");
     await expect(pagina.getByRole("searchbox", { name: "¿Qué buscas?" })).toBeFocused();
+    await contexto.close();
+  });
+});
+
+test.describe("una sola caja con IA (D-178)", () => {
+  const items = [
+    {
+      tipo: "compra",
+      titulo: "Pañales",
+      fecha: null,
+      hasta: null,
+      hora: null,
+      persona: null,
+      importante: false,
+      repiteMeses: null,
+      categoria: "otro",
+    },
+    {
+      tipo: "evento",
+      titulo: "Pediatra de Alba",
+      fecha: "2026-11-06",
+      hasta: null,
+      hora: "18:00",
+      persona: "Alba",
+      importante: false,
+      repiteMeses: null,
+      categoria: "otro",
+    },
+    {
+      tipo: "pendiente",
+      titulo: "Llamar al fontanero",
+      fecha: null,
+      hasta: null,
+      hora: null,
+      persona: null,
+      importante: true,
+      repiteMeses: null,
+      categoria: "otro",
+    },
+    {
+      tipo: "papel",
+      titulo: "Seguro del coche",
+      fecha: "2026-12-04",
+      hasta: null,
+      hora: null,
+      persona: null,
+      importante: false,
+      repiteMeses: 12,
+      categoria: "coche",
+    },
+  ];
+
+  test("se escribe todo junto, se repasa lo entendido y se apunta lo elegido", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    let cuerpo = "";
+    await pagina.route("**/api/ia/captura", async (ruta) => {
+      cuerpo = ruta.request().postData() ?? "";
+      await ruta.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ items, pasados: 0, usadas: 1, limite: 40 }),
+      });
+    });
+    await cargar(pagina, "/menu");
+    await pagina.getByRole("button", { name: "Apuntar algo" }).click();
+    const dialogo = pagina.getByRole("dialog", { name: "Apuntar" });
+    await dialogo
+      .getByLabel("Qué quieres apuntar")
+      .fill(
+        "pañales, el jueves a las 18 pediatra de Alba, llamar al fontanero, seguro del coche el 4 de diciembre",
+      );
+    await dialogo.getByRole("button", { name: "✨ Entender" }).click();
+
+    const lista = dialogo.getByRole("list", { name: "Lo que se va a apuntar" });
+    await expect(lista.getByRole("listitem")).toHaveCount(4);
+    await expect(lista).toContainText("Pediatra de Alba");
+    await expect(lista).toContainText("18:00");
+    expect(cuerpo).toContain("Alba");
+    // Se quita lo que no se quiere.
+    await lista.getByRole("checkbox").nth(2).uncheck();
+    await dialogo.getByRole("button", { name: "Apuntar 3 cosas" }).click();
+    await expect(dialogo).toHaveCount(0);
+
+    // Cada cosa, en su sitio.
+    await cargar(pagina, "/compra");
+    await expect(pagina.getByRole("checkbox", { name: /Pañales/ })).toBeVisible();
+    await cargar(pagina, "/fechas");
+    await expect(pagina.getByText("Pediatra de Alba").first()).toBeVisible();
+    await cargar(pagina, "/papeles");
+    const proximos = pagina.getByRole("region", { name: "Próximos 30 días" });
+    await expect(proximos).toContainText("Seguro del coche");
+    await expect(proximos).toContainText("cada año");
+    // El pendiente se desmarcó: no se apuntó.
+    await cargar(pagina, "/fechas#sin-fecha");
+    await expect(pagina.getByText("Llamar al fontanero")).toHaveCount(0);
+    await contexto.close();
+  });
+
+  test("si la IA no está disponible, lo dice y deja usar las otras pestañas", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await pagina.route("**/api/ia/captura", (ruta) =>
+      ruta.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "ia-no-configurada" }),
+      }),
+    );
+    await cargar(pagina, "/menu");
+    await pagina.getByRole("button", { name: "Apuntar algo" }).click();
+    const dialogo = pagina.getByRole("dialog", { name: "Apuntar" });
+    await dialogo.getByLabel("Qué quieres apuntar").fill("comprar leche");
+    await dialogo.getByRole("button", { name: "✨ Entender" }).click();
+    await expect(dialogo.getByRole("alert")).toContainText("La IA no está activada");
+    await expect(dialogo.getByLabel("Qué quieres apuntar")).toHaveValue("comprar leche");
+    await contexto.close();
+  });
+
+  test("si no encuentra nada que apuntar, lo dice", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await pagina.route("**/api/ia/captura", (ruta) =>
+      ruta.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ items: [], pasados: 0 }),
+      }),
+    );
+    await cargar(pagina, "/menu");
+    await pagina.getByRole("button", { name: "Apuntar algo" }).click();
+    const dialogo = pagina.getByRole("dialog", { name: "Apuntar" });
+    await dialogo.getByLabel("Qué quieres apuntar").fill("hola qué tal");
+    await dialogo.getByRole("button", { name: "✨ Entender" }).click();
+    await expect(dialogo.getByRole("alert")).toContainText("No he encontrado nada que apuntar");
     await contexto.close();
   });
 });

@@ -1584,3 +1584,18 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Cómo busca:** al escribir, sin tildes ni mayúsculas, con varias palabras (todas tienen que estar). Salen primero el título exacto, la palabra entera y el principio de una palabra; a igualdad, lo que viene antes que lo ya pasado. Con una sola letra no busca. Resultados agrupados por tipo (los cinco primeros, con «Ver los N») y cada uno lleva a su pantalla (una cita, al día del calendario).
 - **Todo en el móvil:** busca en lo que la app ya tiene en memoria; no se manda nada a ningún servidor.
 - **Después:** «Pregúntale a tu casa» (IA con los datos) se apoya en esta misma pantalla.
+
+## D-178 · Una sola caja para apuntarlo todo (con IA)
+
+- **Petición (Diego):** la idea de «inbox» de los segundos cerebros: apuntar sin pensar dónde va.
+- **Dónde:** en el botón **＋** de todas las pantallas, la primera pestaña es ahora **«✨ Todo»** (las demás siguen a un toque: Compra, Evento, Pendiente). En «Compra» se sigue abriendo en «Evento».
+- **Cómo:** se escribe o se dicta todo junto («pañales y 2 litros de leche, el jueves a las seis pediatra de Alba, llamar al fontanero que es urgente, la ITV vence el 4 de diciembre y se repite cada año») y se pulsa «✨ Entender». La IA (Gemini, como las circulares) lo reparte en:
+  - **Compra** (con su cantidad),
+  - **Cita** (con día y hora; «a las seis» en una cita es 18:00),
+  - **Pendiente** sin fecha (con ⭐ si es urgente y la persona si se dice),
+  - **Papel** con vencimiento (con cada cuánto se repite y su tipo: coche, casa, documentos…).
+- **Nada se apunta sin verlo:** sale la lista de lo entendido con una casilla en cada cosa; se quita lo que no se quiere y se pulsa «Apuntar N cosas». Cada cosa usa la acción de su pantalla de siempre (mismas reglas, y «ya estaba apuntado» si se repite). Si alguna no se puede apuntar, se queda en la lista con el motivo.
+- **Se corrige solo lo dudoso:** una cita o un papel sin día claro pasa a pendiente; una cita que ya pasó se quita (y se avisa); de un papel con solo mes y año se usa el último día del mes; no se inventan horas.
+- **Dictado:** el micrófono del navegador, como en la compra (código compartido en `voz.ts`).
+- **Si falla:** sin IA, sin sesión, sin conexión o con el tope diario, lo dice y deja usar las otras pestañas. Cuenta en el tope diario de IA del hogar (como las circulares). No se guarda el texto en el servidor.
+- **Probado con la IA real:** repartió bien los cinco elementos del ejemplo, entendió «mañana cumple de Lucas» como cita del día siguiente y «hola qué tal» como nada que apuntar.

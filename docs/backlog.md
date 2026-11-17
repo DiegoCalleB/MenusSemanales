@@ -7,7 +7,7 @@ Cada idea lleva una nota de **cómo sería** y, si la hay, una **precaución de 
 ## En marcha (fases acordadas)
 
 - [x] Buscador global y buscador en Fechas (D-177).
-- [ ] Una sola caja con IA: escribir o dictar varias cosas y que se repartan en compra, evento, pendiente o papel, con un modal para elegir qué se apunta.
+- [x] Una sola caja con IA (D-178): escribir o dictar varias cosas y que se repartan en compra, evento, pendiente o papel, con un modal para elegir qué se apunta.
 - [ ] «Pregúntale a tu casa»: preguntas en lenguaje natural sobre los datos del hogar (dentro del buscador).
 
 ## Ideas aceptadas, para más adelante
