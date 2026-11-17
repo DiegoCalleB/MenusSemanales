@@ -3029,3 +3029,82 @@ test.describe("una sola caja con IA (D-178)", () => {
     await contexto.close();
   });
 });
+
+test.describe("pregúntale a tu casa (D-179)", () => {
+  test("se pregunta desde el buscador; se manda un resumen sin la medicación y sale la respuesta", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    // Algo que preguntar y algo que no debe salir de la app.
+    await cargar(pagina, "/papeles");
+    await pagina.getByRole("button", { name: /ITV del coche/ }).click();
+    const papel = pagina.getByRole("form", { name: "Apuntar un papel" });
+    await papel.getByLabel("Cuándo vence").fill("2026-12-04");
+    await papel.getByRole("button", { name: "Guardar" }).click();
+    await cargar(pagina, "/medicacion");
+    await pagina.getByRole("button", { name: "＋ Apuntar un medicamento" }).click();
+    const med = pagina.getByRole("form", { name: "Apuntar un medicamento" });
+    await med.getByLabel("Cómo lo llamas").fill("Omeprazol");
+    await med.getByRole("button", { name: "Guardar" }).click();
+    await expect(pagina.getByRole("list", { name: /Medicación de/ })).toContainText("Omeprazol");
+
+    let enviado = "";
+    await pagina.route("**/api/ia/preguntar", async (ruta) => {
+      enviado = ruta.request().postData() ?? "";
+      await ruta.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          respuesta: "La ITV del coche vence el viernes 4 de diciembre.",
+          usadas: 1,
+          limite: 40,
+        }),
+      });
+    });
+    await cargar(pagina, "/buscar");
+    // Una sola letra o una búsqueda corta no ofrece preguntar.
+    const caja = pagina.getByRole("searchbox", { name: "¿Qué buscas?" });
+    await caja.fill("itv");
+    await expect(pagina.getByRole("button", { name: /Preguntar a la IA/ })).toHaveCount(0);
+    await caja.fill("¿cuándo vence la ITV?");
+    await pagina.getByRole("button", { name: /Preguntar a la IA/ }).click();
+    const r = pagina.getByRole("region", { name: "Respuesta" });
+    await expect(r).toContainText("vence el viernes 4 de diciembre");
+    await expect(r).toContainText("puede equivocarse");
+    expect(enviado).toContain("ITV del coche");
+    expect(enviado).toContain("¿cuándo vence la ITV?");
+    expect(enviado).not.toContain("Omeprazol");
+    // Al cambiar lo escrito, la respuesta anterior se quita.
+    await caja.fill("¿qué cenamos mañana?");
+    await expect(pagina.getByRole("region", { name: "Respuesta" })).toHaveCount(0);
+    await contexto.close();
+  });
+
+  test("si la IA no está disponible, lo dice", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await pagina.route("**/api/ia/preguntar", (ruta) =>
+      ruta.fulfill({
+        status: 429,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "tope-diario" }),
+      }),
+    );
+    await cargar(pagina, "/buscar");
+    await pagina.getByRole("searchbox", { name: "¿Qué buscas?" }).fill("¿qué hay hoy?");
+    await pagina.getByRole("button", { name: /Preguntar a la IA/ }).click();
+    await expect(
+      pagina.getByRole("alert").filter({ hasText: "Hoy ya has usado todas las consultas" }),
+    ).toBeVisible();
+    await contexto.close();
+  });
+
+  test("en la caja de Fechas no se ofrece preguntar", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/fechas");
+    await pagina
+      .getByRole("searchbox", { name: "Buscar en las fechas" })
+      .fill("¿cuándo es el pediatra?");
+    await expect(pagina.getByRole("button", { name: /Preguntar a la IA/ })).toHaveCount(0);
+    await contexto.close();
+  });
+});
