@@ -23,6 +23,7 @@ import { NuevaCita } from "../nueva-cita";
 import { ActivarAvisosHoy } from "../activar-avisos-hoy";
 import { MedicacionHoy } from "../medicacion-hoy";
 import { PapelesHoy } from "../papeles-hoy";
+import { PendientesHoy } from "../pendientes-hoy";
 import { MochilaHoy } from "../mochila-hoy";
 import { TiempoHoy } from "../tiempo-hoy";
 import { diaSemanaIso } from "@/dominio/fechas";
@@ -166,6 +167,8 @@ export function InicioVista() {
       <MedicacionHoy />
 
       <PapelesHoy />
+
+      <PendientesHoy />
 
       <MochilaHoy />
 

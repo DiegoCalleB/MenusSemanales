@@ -39,6 +39,7 @@ const RUTAS = [
   "/cumples",
   "/barrio",
   "/papeles",
+  "/pendientes",
   "/fechas",
   "/casa",
   "/compra",
@@ -1340,6 +1341,7 @@ test.describe("flujos en móvil", () => {
       ["Comer", "Despensa", "/despensa"],
       ["Comer", "Platos", "/menu/platos"],
       ["Casa", "Recurrente", "/casa"],
+      ["Casa", "Pendientes", "/pendientes"],
       ["Casa", "Por persona", "/tareas"],
       ["Casa", "Mochila", "/mochila"],
       ["Casa", "Medicación", "/medicacion"],
@@ -2559,6 +2561,7 @@ test.describe("barra lateral con apartados (D-142)", () => {
     const casa = lateral.getByRole("list", { name: "Apartados de Casa" });
     await expect(casa.getByRole("link")).toHaveText([
       "Recurrente",
+      "Pendientes",
       "Por persona",
       "Mochila",
       "Medicación",
@@ -2673,6 +2676,60 @@ test.describe("papeles en el calendario (D-174)", () => {
     await expect(pagina.getByRole("group", { name: "Papeles que vencen" })).toContainText(
       "Seguro del hogar",
     );
+    await contexto.close();
+  });
+});
+
+test.describe("pendientes sin fecha (D-175)", () => {
+  test("se apuntan en un momento, salen en Hoy, se marcan y se pueden reabrir", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/pendientes");
+    await expect(pagina.getByText("Nada pendiente")).toBeVisible();
+
+    const form = pagina.getByRole("form", { name: "Apuntar un pendiente" });
+    // Vacío no vale y lo dice.
+    await form.getByRole("button", { name: "＋ Apuntar" }).click();
+    await expect(form.getByRole("alert")).toContainText("Escribe qué hay que hacer");
+    await form.getByLabel("¿Qué hay que hacer?").fill("Llamar al fontanero");
+    await form.getByRole("button", { name: /Importante/ }).click();
+    await form.getByLabel("¿Qué hay que hacer?").press("Enter");
+    await form.getByLabel("¿Qué hay que hacer?").fill("Arreglar la persiana");
+    await form.getByRole("button", { name: "Ana", exact: true }).click();
+    await form.getByRole("button", { name: "＋ Apuntar" }).click();
+
+    const lista = pagina.getByRole("region", { name: /Por hacer/ });
+    // Lo importante va primero y lleva su estrella.
+    await expect(lista.getByRole("listitem")).toHaveCount(2);
+    await expect(lista.getByRole("listitem").first()).toContainText("Llamar al fontanero");
+    await expect(lista.getByRole("listitem").first()).toContainText("⭐");
+    await expect(lista.getByRole("listitem").last()).toContainText("Ana");
+
+    // El filtro por persona aparece cuando hay asignados.
+    const filtro = pagina.getByRole("group", { name: "Filtrar pendientes" });
+    await filtro.getByRole("button", { name: "Ana", exact: true }).click();
+    await expect(lista.getByRole("listitem")).toHaveCount(1);
+    await filtro.getByRole("button", { name: "Todos" }).click();
+
+    // En «Hoy» sale lo que no es de nadie en concreto.
+    await cargar(pagina, "/");
+    await expect(pagina.getByRole("region", { name: "Pendientes" })).toContainText(
+      "Llamar al fontanero",
+    );
+
+    // Marcar como hecho y reabrir.
+    await cargar(pagina, "/pendientes");
+    await pagina.getByRole("checkbox", { name: "Hecho: Llamar al fontanero" }).click();
+    await expect(lista.getByRole("listitem")).toHaveCount(1);
+    await pagina.getByText("Hechos (1)").click();
+    await pagina.getByRole("checkbox", { name: "Reabrir: Llamar al fontanero" }).click();
+    await expect(lista.getByRole("listitem")).toHaveCount(2);
+
+    // Quitar pide confirmación.
+    await pagina.getByRole("button", { name: "Quitar Arreglar la persiana" }).click();
+    await pagina.getByRole("button", { name: "Sí, quitar" }).click();
+    await expect(lista.getByRole("listitem")).toHaveCount(1);
     await contexto.close();
   });
 });

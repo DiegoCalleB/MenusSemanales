@@ -1552,3 +1552,15 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
   - En el **calendario suscrito** (el principal) y en el de la app, el día en que vence, de todo el día y con aviso. Lo hecho no sale y lo vencido hace más de un mes tampoco.
 - **Privacidad:** solo se guarda nombre, fecha y notas (la pantalla pide no apuntar números de documento ni contraseñas). El servidor solo recibe nombre, tipo, de quién es, fecha, días de aviso y si está hecho; las notas no salen de la app (`20261119000000_papeles.sql`).
 - **Pendiente:** adjuntar la foto del documento y leer la fecha con IA (como las circulares); aún no.
+
+## D-175 · Pendientes sin fecha
+
+- **Petición (Diego):** un sitio donde apuntar tareas pendientes que no tienen fecha concreta. «Por persona» (Casa) es para el zafarrancho de la casa, no para esto.
+- **Dónde:** Casa → **Pendientes** (`/pendientes`).
+- **Apuntar en un momento:** un cuadro de texto («Llamar al fontanero», «Arreglar la persiana»), Intro y listo. Opcionalmente, ⭐ **Importante** y **para quién** (por defecto, «Quien pueda»).
+- **La lista:** lo importante primero y, dentro, lo que más lleva esperando («hace 3 semanas»). Se marca como hecho con un toque y se puede reabrir; hay filtro por persona y «Sin asignar». Lo hecho se enseña dos semanas («Hechos») y luego se olvida solo; «Borrar los hechos» lo limpia antes. Quitar sin hacerlo pide confirmación.
+- **Que no se pierdan:**
+  - En **Hoy**, una tarjeta con los tres más importantes o antiguos (los de quien tiene el móvil y los de nadie en concreto), que se pueden marcar ahí mismo.
+  - **El domingo**, un aviso («📝 3 pendientes sin fecha · Llamar al fontanero, hace 2 semanas») en el resumen de la mañana, solo si hay algo importante o algo que lleve una semana o más: no se agobia por poco.
+- **Base de datos:** `20261120000000_pendientes.sql` añade `pendientes` al resumen del servidor, solo para el recordatorio del domingo.
+- **Diferencia con lo demás:** las tareas de casa se repiten, las citas y papeles tienen día, los pendientes no.

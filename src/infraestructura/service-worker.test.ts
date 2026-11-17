@@ -65,7 +65,14 @@ describe("compartir con la app desde otra (D-138)", () => {
 
   it("guarda la pantalla de lo compartido y la del plan de la semana para usarlas sin conexión", () => {
     expect(sw.RUTAS).toEqual(
-      expect.arrayContaining(["/compartido", "/semana", "/mochila", "/medicacion", "/papeles"]),
+      expect.arrayContaining([
+        "/compartido",
+        "/semana",
+        "/mochila",
+        "/medicacion",
+        "/papeles",
+        "/pendientes",
+      ]),
     );
   });
 

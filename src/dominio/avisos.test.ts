@@ -655,3 +655,36 @@ describe("avisos de papeles y vencimientos (D-174)", () => {
     expect(papel("2026-11-20", [venc({ hechoEn: "2026-11-01" })])).toEqual([]);
   });
 });
+
+describe("recordatorio de pendientes sin fecha (D-175)", () => {
+  const pen = (o: object = {}) => ({
+    id: "p1",
+    texto: "Llamar al fontanero",
+    personaId: null,
+    importante: false,
+    creadoEn: "2026-11-01",
+    hechoEn: null,
+    ...o,
+  });
+  const aviso = (hoy: string, pendientes: ReturnType<typeof pen>[]) =>
+    avisosDeHoy({ ...base, hoy, pendientes }).find((a) => a.id.startsWith("pendientes-semana-"));
+  it("el domingo recuerda cuántos hay y el que más lleva", () => {
+    // 2026-11-15 es domingo.
+    expect(aviso("2026-11-15", [pen(), pen({ id: "p2", texto: "Pedir cita" })])).toEqual({
+      id: "pendientes-semana-2026-11-15",
+      emoji: "📝",
+      titulo: "2 pendientes sin fecha",
+      detalle: "Llamar al fontanero (hace 2 semanas)",
+      nivel: "info",
+    });
+    expect(aviso("2026-11-15", [pen()])?.titulo).toBe("1 pendiente sin fecha");
+  });
+  it("solo los domingos, y solo si hay algo importante o que lleva una semana", () => {
+    expect(aviso("2026-11-16", [pen()])).toBeUndefined();
+    expect(aviso("2026-11-15", [pen({ creadoEn: "2026-11-13" })])).toBeUndefined();
+    expect(
+      aviso("2026-11-15", [pen({ creadoEn: "2026-11-13", importante: true })])?.detalle,
+    ).toContain("⭐");
+    expect(aviso("2026-11-15", [pen({ hechoEn: "2026-11-02" })])).toBeUndefined();
+  });
+});

@@ -6,6 +6,7 @@ import { paraPreparar } from "./mochila";
 import { type AjusteCole, consultaCole, diaDeCole } from "./calendario-escolar";
 import { type PlanBarrio, lineaDelPlan, planesDelFinde } from "./barrio";
 import type { Medicamento } from "./medicacion";
+import { type Pendiente, recordatorioSemanal, textoEspera } from "./pendientes";
 import { type Vencimiento, avisosDeVencimientos } from "./vencimientos";
 import { type EventoEstadio, ESTADIO, planesDelDia } from "./metropolitano";
 import {
@@ -71,6 +72,8 @@ export interface EntradaAvisos {
   barrio?: readonly PlanBarrio[];
   /** Medicación (D-166): el servidor avisa a la hora, a esa persona. */
   medicacion?: readonly Medicamento[];
+  /** Pendientes sin fecha (D-175): el domingo se recuerda cuántos hay y el que más lleva. */
+  pendientes?: readonly Pendiente[];
   /** Papeles y vencimientos (D-174): se avisa con el margen que tiene cada uno. */
   vencimientos?: readonly Vencimiento[];
   /** Las personas del hogar (id y nombre), para poner el nombre en el aviso de la medicación. */
@@ -557,6 +560,21 @@ export function avisosDeHoy(e: EntradaAvisos): Aviso[] {
     });
   }
 
+  // El domingo, los pendientes sin fecha que siguen esperando (D-175): no cada día, solo una vez a la
+  // semana y solo si hay algo importante o que lleve una semana o más.
+  if (diaSemanaIso(e.hoy) === 7) {
+    const r = recordatorioSemanal(e.pendientes ?? [], e.hoy);
+    if (r) {
+      out.push({
+        id: `pendientes-semana-${e.hoy}`,
+        emoji: "📝",
+        titulo: `${r.cuantos} ${r.cuantos === 1 ? "pendiente" : "pendientes"} sin fecha`,
+        detalle: `${r.primero.importante ? "⭐ " : ""}${r.primero.texto} (${textoEspera(r.primero.creadoEn, e.hoy)})`,
+        nivel: "info",
+      });
+    }
+  }
+
   // Mañana sin cena elegida: mejor pensarla hoy.
   if (e.cenaManana.length === 0 && !e.mananaSinCena) {
     out.push({
@@ -702,6 +720,14 @@ export function entradaDeProyeccion(p: ProyeccionCalendario, hoy: FechaIso): Ent
     })),
     diasConCena: [...new Set(p.cenas.map((c) => c.fecha))],
     medicacion: (p.medicacion ?? []).map((m, i) => ({ id: `med-${i}`, ...m })),
+    pendientes: (p.pendientes ?? []).map((x, i) => ({
+      id: `pen-${i}`,
+      texto: x.texto,
+      personaId: x.personaId,
+      importante: x.importante,
+      creadoEn: x.creadoEn,
+      hechoEn: x.hechoEn,
+    })),
     vencimientos: (p.vencimientos ?? []).map((v, i) => ({
       id: `ven-${i}`,
       titulo: v.titulo,

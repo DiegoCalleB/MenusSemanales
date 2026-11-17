@@ -24,6 +24,7 @@ describe("pilares de la app", () => {
       "/medicacion": "casa",
       "/barrio": "fechas",
       "/papeles": "fechas",
+      "/pendientes": "casa",
       "/cuenta": "mas",
       "/compartir": "mas",
       "/personas": "mas",
