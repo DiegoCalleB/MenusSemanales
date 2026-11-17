@@ -1565,3 +1565,13 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Que no se pierdan:** en «Hoy», y **el domingo** un aviso en el resumen de la mañana («📝 3 pendientes sin fecha · Llamar al fontanero, hace 2 semanas»), solo si hay algo importante o que lleve una semana o más: no se agobia por poco.
 - **Base de datos:** `20261120000000_pendientes.sql` añade `pendientes` al resumen del servidor, solo para el recordatorio del domingo.
 - **Diferencia con lo demás:** las tareas de casa se repiten, las citas y papeles tienen día, los pendientes no.
+
+## D-176 · Si mañana llueve, el paraguas y la ropa de lluvia se dejan preparados la noche antes
+
+- **Petición (Diego):** «si mañana va a llover, deberíamos añadir a preparar en la mochila el paraguas y la ropa de lluvia la noche anterior».
+- **Qué cambia:** la lluvia de mañana deja de ser un aviso suelto del tiempo («Mañana, lluvia: chubasquero y botas») y pasa a ser **una cosa más que dejar preparada**, junto a lo de la mochila: «☔ Deja preparado: paraguas y ropa de lluvia (para mañana)», con el motivo debajo («Mañana llueve de camino al cole (de 8 a 9 h, 70 %)»).
+  - **En la notificación de la noche (20:00):** va con lo de la mochila, bajo «🎒 Antes de dormir». Solo la lluvia ya basta para mandarla.
+  - **En «Hoy» y en Casa → Mochila:** aparece en «Hoy toca dejar preparado» con su casilla; marcada, queda como «preparada» (se guarda por día y se olvida a las dos semanas).
+- **Cuándo cuenta como lluvia:** un día de cole, solo si moja a la ida o a la vuelta (como el aviso del paraguas, D-148) o hay tormenta; si llueve por la tarde, con los niños ya en casa, no hace falta prepararlo. Sin cole (fin de semana, festivo), si el día es de lluvia.
+- **No cambia:** el aviso de las 7 («Hoy llueve de camino al cole: paraguas y chubasquero») sigue igual. El resto del tiempo de mañana (frío, calor…) sigue como aviso aparte.
+- **Límites:** (1) no tiene botón «Hecho» en la notificación (no es algo apuntado en la mochila); se marca en la app; (2) la notificación de las 20:00 no sabe si ya lo habéis marcado en la app (el servidor no recibe ese marcado), así que lo recuerda igualmente.

@@ -2750,3 +2750,66 @@ test.describe("pendientes sin fecha (D-175)", () => {
     await contexto.close();
   });
 });
+
+test.describe("paraguas y ropa de lluvia en lo que hay que preparar (D-176)", () => {
+  test("si mañana llueve, sale en «Hoy» y en la mochila, con su casilla", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    const horas = Array.from({ length: 24 }, (_, hora) => ({
+      hora,
+      prob: hora === 9 ? 70 : 0,
+      mm: hora === 9 ? 1.5 : 0,
+      codigo: hora === 9 ? 61 : 2,
+    }));
+    await pagina.route("**/api/tiempo", (ruta) =>
+      ruta.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          dias: [
+            {
+              fecha: "2026-11-05",
+              codigo: 61,
+              max: 14,
+              min: 9,
+              probLluvia: 70,
+              lluviaMm: 2,
+              horas,
+            },
+          ],
+        }),
+      }),
+    );
+    await cargar(pagina, "/");
+    const lista = pagina.getByRole("list", { name: "Para dejar preparado hoy" });
+    await expect(lista).toContainText("Paraguas y ropa de lluvia");
+    await expect(lista).toContainText("para mañana: llueve de camino al cole (de 8 a 9 h, 70 %)");
+    const casilla = lista.getByRole("checkbox", { name: /Paraguas y ropa de lluvia/ });
+    await expect(casilla).not.toBeChecked();
+    await casilla.check();
+    await expect(casilla).toBeChecked();
+    // Se queda marcado al volver a abrir y también se ve en Casa → Mochila.
+    await cargar(pagina, "/mochila");
+    await expect(
+      pagina
+        .getByRole("list", { name: "Para dejar preparado hoy" })
+        .getByRole("checkbox", { name: /Paraguas y ropa de lluvia/ }),
+    ).toBeChecked();
+    await contexto.close();
+  });
+
+  test("si mañana no llueve, no sale", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await pagina.route("**/api/tiempo", (ruta) =>
+      ruta.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          dias: [{ fecha: "2026-11-05", codigo: 1, max: 14, min: 9, probLluvia: 0, lluviaMm: 0 }],
+        }),
+      }),
+    );
+    await cargar(pagina, "/mochila");
+    await expect(pagina.getByText("Paraguas y ropa de lluvia")).toHaveCount(0);
+    await contexto.close();
+  });
+});
