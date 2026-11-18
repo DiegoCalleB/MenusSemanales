@@ -1652,3 +1652,11 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **A quién:** a los móviles vinculados a esa persona; si ninguno lo está, a los del hogar (igual que la medicación). Una notificación por persona y tipo (`tag`), que no tapa los demás avisos.
 - **Privacidad:** `estado_para_calendario` añade `cuidado` **solo de quien pidió avisos** y solo meta de agua, ejercicio (nombre y días) y agua/ejercicio de los últimos días. Nunca los hábitos. No entra en el calendario suscrito, la búsqueda ni la IA. Migración `20261121000000_cuidarse.sql`.
 - **Código:** `recordatoriosDeCuidado` y `notificacionDeCuidado` en `src/dominio/cuidado.ts`; la ruta de avisos reparte medicación y cuidado con un mismo envío por persona.
+
+## D-184 · Llenar la cesta de Mercadona con una extensión del navegador
+
+- **Petición (Diego):** que los productos guardados («⭐ Mi producto») acaben en la cesta sin ir uno a uno.
+- **Por qué una extensión:** no hay API (D-127/D-131) ni se guarda la contraseña. Una extensión corre **en el navegador de quien compra, con su sesión**: la app no ve la cuenta de nadie.
+- **App:** en «Comprar online», «📋 Copiar el pedido para la extensión» copia un JSON (`formato: hecho-pedido`) con los artículos pendientes que tienen producto guardado; los demás siguen en el asistente paso a paso (`pedidoParaExtension`).
+- **Extensión** (`extension-mercadona/`, Manifest V3, solo `tienda.mercadona.es`): se pega el pedido, abre cada producto, pulsa «Añadir» y al final enseña cuántos se añadieron y cuáles no. Solo acepta enlaces https del propio dominio. Una unidad por producto.
+- **Límites:** solo ordenador (Chrome/Edge). **No se ha podido probar contra la tienda real** (no es alcanzable desde el entorno de desarrollo): la forma del botón «Añadir» está supuesta por su texto y puede necesitar ajuste con la primera prueba. Las condiciones de uso de Mercadona respecto a automatizar el carrito no se han comprobado. Siempre hay que revisar la cesta antes de pagar.

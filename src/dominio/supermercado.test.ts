@@ -9,6 +9,7 @@ import {
   extraerEnlace,
   marcarEnCesta,
   nombreDeProducto,
+  pedidoParaExtension,
   revisarEnlaceDeProducto,
   podarProgreso,
   quitarDeCesta,
@@ -159,5 +160,36 @@ describe("recordar el producto elegido (D-132)", () => {
     ).toBe("Leche entera hacendado");
     expect(nombreDeProducto("https://tienda.mercadona.es/product/10409")).toBe("Producto guardado");
     expect(nombreDeProducto("nada")).toBe("Producto guardado");
+  });
+});
+
+describe("pedido para la extensión del navegador (D-184)", () => {
+  const articulos = [
+    { clave: "a", nombre: "Berenjena" },
+    { clave: "b", nombre: "Lechuga" },
+    { clave: "c", nombre: "Pollo" },
+  ];
+  const productos: Record<string, string> = {
+    Berenjena: "https://tienda.mercadona.es/product/123/berenjena?x=1",
+    Lechuga: "https://otro-sitio.com/product/1",
+  };
+
+  it("lleva solo lo que tiene producto guardado y aún no está en la cesta", () => {
+    const r = pedidoParaExtension(mercadona, articulos, (n) => productos[n], []);
+    expect(r.incluidos).toBe(1);
+    expect(r.sinProducto).toEqual(["Lechuga", "Pollo"]);
+    expect(JSON.parse(r.texto)).toEqual({
+      formato: "hecho-pedido",
+      version: 1,
+      tienda: "mercadona",
+      articulos: [
+        { nombre: "Berenjena", enlace: "https://tienda.mercadona.es/product/123/berenjena" },
+      ],
+    });
+  });
+
+  it("no repite lo que ya está en la cesta", () => {
+    const r = pedidoParaExtension(mercadona, articulos, (n) => productos[n], ["a"]);
+    expect(r.incluidos).toBe(0);
   });
 });

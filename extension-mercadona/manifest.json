@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "¡Hecho! → cesta de Mercadona",
+  "version": "1.0.0",
+  "description": "Añade a la cesta de Mercadona, con tu sesión, los productos que has guardado en la lista de la compra de ¡Hecho!.",
+  "permissions": ["storage", "clipboardRead"],
+  "host_permissions": ["https://tienda.mercadona.es/*"],
+  "action": { "default_popup": "popup.html", "default_title": "Llenar la cesta" },
+  "content_scripts": [
+    {
+      "matches": ["https://tienda.mercadona.es/*"],
+      "js": ["contenido.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
