@@ -2235,11 +2235,13 @@ describe("Cuidarse (D-182)", () => {
       metaAgua: 6,
       habitos: ["Fruta", " Caminar  20 min ", "Fruta"],
       ejercicio: { nombre: "Correr", dias: [3, 1, 1] },
+      avisos: true,
     });
     const c = e.cuidado[0]!;
     expect(c.metaAgua).toBe(6);
     expect(c.habitos.map((h) => h.nombre)).toEqual(["Fruta", "Caminar 20 min"]);
     expect(c.ejercicio).toEqual({ nombre: "Correr", dias: [1, 3] });
+    expect(c.avisos).toBe(true);
     const fruta = c.habitos[0]!.id;
     e = reducir(e, { tipo: "cuidado/habito", personaId: yo, fecha: e0.hoy, id: fruta });
     expect(e.cuidado[0]!.dias[e0.hoy]!.habitos).toEqual([fruta]);
@@ -2252,10 +2254,12 @@ describe("Cuidarse (D-182)", () => {
       metaAgua: 6,
       habitos: ["Fruta"],
       ejercicio: null,
+      avisos: false,
     });
     expect(e.cuidado[0]!.habitos[0]!.id).toBe(fruta);
     expect(e.cuidado[0]!.dias[e0.hoy]!.habitos).toEqual([fruta]);
     expect(e.cuidado[0]!.ejercicio).toBeNull();
+    expect(e.cuidado[0]!.avisos).toBe(false);
   });
 
   it("rechaza una meta absurda y un hábito de otra persona", () => {
@@ -2265,6 +2269,7 @@ describe("Cuidarse (D-182)", () => {
       metaAgua: 99,
       habitos: [],
       ejercicio: null,
+      avisos: false,
     });
     expect(mala.cuidado).toEqual([]);
     expect(mala.aviso?.tipo).toBe("error");

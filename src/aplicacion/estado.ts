@@ -467,6 +467,7 @@ export type Accion =
       metaAgua: number;
       habitos: string[];
       ejercicio: { nombre: string; dias: number[] } | null;
+      avisos: boolean;
     }
   /** «Nos gusta» (1), «no es para nosotros» (-1) o quitar el voto (0) de un plan del barrio (D-171). */
   | { tipo: "barrio/voto"; id: string; rasgos: string[]; voto: 1 | -1 | 0 }
@@ -2381,6 +2382,7 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
           metaAgua: datos.metaAgua,
           habitos,
           ejercicio: datos.ejercicio,
+          avisos: datos.avisos,
           dias,
         }),
         siguienteId: e.siguienteId + 1,

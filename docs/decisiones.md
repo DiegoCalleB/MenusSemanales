@@ -1643,3 +1643,12 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Tono:** nunca reproches ni rachas rotas.
 - **Privacidad:** vive en el documento del hogar (`cuidado`), se guardan solo cinco semanas y no entra en la búsqueda, ni en el contexto de la IA, ni en el calendario.
 - **Pendiente (backlog):** avisos al móvil (agua a media mañana y por la tarde, aviso del día de ejercicio), cenas más sanas con 👍 y conexión con apps de salud.
+
+## D-183 · Avisos al móvil de «Cuidarse»
+
+- **Petición (Diego):** que Cuidarse (D-182) avise en el móvil, no solo se vea al abrir la app.
+- **Opt-in por persona:** casilla «Avisarme en el móvil» en los ajustes de Cuidarse (`avisos`, apagada por defecto; lo guardado antes cuenta como apagado). Nadie recibe avisos sin pedirlos.
+- **Qué avisa** (hora de Madrid, la base de datos llama cada hora como con la medicación): agua a las 11 h si lleva menos de un cuarto de la meta y a las 17 h si menos del 60 %; ejercicio a las 18 h si hoy toca y no lo ha marcado. Si va bien, no avisa. Sin reproches ni rachas rotas.
+- **A quién:** a los móviles vinculados a esa persona; si ninguno lo está, a los del hogar (igual que la medicación). Una notificación por persona y tipo (`tag`), que no tapa los demás avisos.
+- **Privacidad:** `estado_para_calendario` añade `cuidado` **solo de quien pidió avisos** y solo meta de agua, ejercicio (nombre y días) y agua/ejercicio de los últimos días. Nunca los hábitos. No entra en el calendario suscrito, la búsqueda ni la IA. Migración `20261121000000_cuidarse.sql`.
+- **Código:** `recordatoriosDeCuidado` y `notificacionDeCuidado` en `src/dominio/cuidado.ts`; la ruta de avisos reparte medicación y cuidado con un mismo envío por persona.

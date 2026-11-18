@@ -3,7 +3,9 @@ import {
   type Cuidado,
   animoDeAgua,
   cuidadoDe,
+  notificacionDeCuidado,
   podarDias,
+  recordatoriosDeCuidado,
   semanaDeEjercicio,
   semanasSeguidas,
   tocaEjercicio,
@@ -18,6 +20,7 @@ const base = (dias: Cuidado["dias"], ejercicio: Cuidado["ejercicio"]): Cuidado =
   metaAgua: 8,
   habitos: [],
   ejercicio,
+  avisos: false,
   dias,
 });
 
@@ -65,16 +68,71 @@ describe("cuidado", () => {
   });
 
   it("valida los ajustes", () => {
-    expect(validarAjustes({ metaAgua: 0, habitos: [], ejercicio: null })).toBeNull();
+    expect(validarAjustes({ metaAgua: 0, habitos: [], ejercicio: null, avisos: false })).toBeNull();
     expect(
       validarAjustes({
         metaAgua: 8,
         habitos: ["a", "b", "c", "d", "e", "f", "g"],
         ejercicio: null,
+        avisos: false,
       }),
     ).toBeNull();
     expect(
-      validarAjustes({ metaAgua: 8, habitos: [], ejercicio: { nombre: " ", dias: [2, 9] } }),
-    ).toEqual({ metaAgua: 8, habitos: [], ejercicio: { nombre: "Ejercicio", dias: [2] } });
+      validarAjustes({
+        metaAgua: 8,
+        habitos: [],
+        ejercicio: { nombre: " ", dias: [2, 9] },
+        avisos: true,
+      }),
+    ).toEqual({
+      metaAgua: 8,
+      habitos: [],
+      ejercicio: { nombre: "Ejercicio", dias: [2] },
+      avisos: true,
+    });
+  });
+
+  describe("avisos del móvil (D-183)", () => {
+    const personas = [{ id: "d", nombre: "Diego" }];
+    // 2026-11-04 es miércoles (3).
+    const hoy = "2026-11-04";
+    const base = (agua: number, ejercicio = false) => [
+      {
+        personaId: "d",
+        metaAgua: 8,
+        ejercicio: { nombre: "Correr", dias: [1, 3, 5] },
+        dias: [{ fecha: hoy, agua, ejercicio }],
+      },
+    ];
+
+    it("recuerda el agua solo si va corto", () => {
+      expect(recordatoriosDeCuidado(base(0), personas, hoy, 11)).toHaveLength(1);
+      expect(recordatoriosDeCuidado(base(2), personas, hoy, 11)).toHaveLength(0);
+      expect(recordatoriosDeCuidado(base(4), personas, hoy, 17)).toHaveLength(1);
+      expect(recordatoriosDeCuidado(base(5), personas, hoy, 17)).toHaveLength(0);
+      expect(recordatoriosDeCuidado(base(0), personas, hoy, 14)).toHaveLength(0);
+    });
+
+    it("recuerda el ejercicio a las 18 h si toca y no está hecho", () => {
+      const r = recordatoriosDeCuidado(base(8), personas, hoy, 18);
+      expect(r.map((x) => x.tipo)).toEqual(["ejercicio"]);
+      expect(recordatoriosDeCuidado(base(8, true), personas, hoy, 18)).toHaveLength(0);
+      // Jueves: no toca.
+      expect(recordatoriosDeCuidado(base(8), personas, "2026-11-05", 18)).toHaveLength(0);
+    });
+
+    it("sin datos de hoy cuenta cero vasos y la notificación lleva el nombre", () => {
+      const r = recordatoriosDeCuidado(
+        [{ personaId: "d", metaAgua: 8, ejercicio: null, dias: [] }],
+        personas,
+        hoy,
+        11,
+      );
+      expect(r[0]!.texto).toContain("0 de 8");
+      expect(notificacionDeCuidado(r[0]!)).toMatchObject({
+        titulo: "💧 Diego: agua",
+        tag: "cuidado-d-agua",
+      });
+    });
   });
 });

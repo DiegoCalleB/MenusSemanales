@@ -100,6 +100,32 @@ export const proyeccionSchema = z.object({
     )
     .catch([])
     .optional(),
+  /** Cuidarse (D-183): solo de quien pidió avisos, y solo agua y ejercicio (nunca los hábitos). */
+  cuidado: z
+    .array(
+      z.object({
+        personaId: z.string(),
+        metaAgua: z.number().int().min(1).max(20).catch(8),
+        ejercicio: z
+          .object({
+            nombre: z.string().trim().min(1).max(60),
+            dias: z.array(z.number().int().min(1).max(7)).catch([]),
+          })
+          .nullable()
+          .catch(null),
+        dias: z
+          .array(
+            z.object({
+              fecha,
+              agua: z.number().int().min(0).max(30).catch(0),
+              ejercicio: z.boolean().catch(false),
+            }),
+          )
+          .catch([]),
+      }),
+    )
+    .catch([])
+    .optional(),
   /** Pendientes sin fecha (D-175), solo para el recordatorio del domingo. Opcional. */
   pendientes: z
     .array(

@@ -152,6 +152,7 @@ function AjustesDeCuidado({ personaId }: { personaId: string }) {
   const [hace, setHace] = useState(c.ejercicio !== null);
   const [nombre, setNombre] = useState(c.ejercicio?.nombre ?? "");
   const [dias, setDias] = useState<number[]>(c.ejercicio?.dias ?? [1, 3, 5]);
+  const [avisos, setAvisos] = useState(c.avisos);
   const [problema, setProblema] = useState("");
   const [guardado, setGuardado] = useState(false);
 
@@ -163,6 +164,7 @@ function AjustesDeCuidado({ personaId }: { personaId: string }) {
       metaAgua: Number(meta),
       habitos: habitos.split("\n"),
       ejercicio: hace ? { nombre, dias } : null,
+      avisos,
     });
     setProblema(motivo ?? "");
     setGuardado(!motivo);
@@ -246,6 +248,20 @@ function AjustesDeCuidado({ personaId }: { personaId: string }) {
           </fieldset>
         </>
       )}
+
+      <label className="flex min-h-11 items-center gap-3 text-base font-semibold">
+        <input
+          type="checkbox"
+          className="h-5 w-5"
+          checked={avisos}
+          onChange={(e) => setAvisos(e.target.checked)}
+        />
+        Avisarme en el móvil
+      </label>
+      <p className="text-tinta-suave -mt-2 text-sm">
+        Agua a las 11 y a las 17 h si vas corto, y el ejercicio a las 18 h si hoy toca y no lo has
+        hecho. Hace falta tener activadas las notificaciones.
+      </p>
 
       {problema && (
         <p role="alert" className="bg-aviso-fondo text-aviso-texto rounded-2xl p-2 text-sm">
