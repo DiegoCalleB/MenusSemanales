@@ -22,6 +22,7 @@ import { LoDeHoy } from "../lo-de-hoy";
 import { NuevaCita } from "../nueva-cita";
 import { ActivarAvisosHoy } from "../activar-avisos-hoy";
 import { BarraDeCaptura } from "../barra-de-captura";
+import { FraseDeHoy } from "../frase-de-hoy";
 import { CuidarseHoy } from "../cuidarse-hoy";
 import { MiDiaHoy } from "../mi-dia-hoy";
 import { MedicacionHoy } from "../medicacion-hoy";
@@ -103,6 +104,8 @@ export function InicioVista() {
         );
       })}
       <BarraDeCaptura />
+
+      <FraseDeHoy />
 
       <ResumenHoy />
 
@@ -336,6 +339,22 @@ export function InicioVista() {
         </span>
         {diaSemanaIso(estado.hoy) >= 6 && (
           <span className="text-tinta-suave text-sm">cenas, citas, mochila y compra</span>
+        )}
+      </Link>
+
+      <Link
+        href="/repaso"
+        className={
+          diaSemanaIso(estado.hoy) === 7
+            ? "tarjeta flex items-center justify-between gap-3"
+            : "boton-suave w-fit"
+        }
+      >
+        <span className="text-base font-semibold">
+          <span aria-hidden="true">🔎 </span>Revisión de la semana
+        </span>
+        {diaSemanaIso(estado.hoy) === 7 && (
+          <span className="text-tinta-suave text-sm">dos minutos: qué hiciste y qué viene</span>
         )}
       </Link>
 

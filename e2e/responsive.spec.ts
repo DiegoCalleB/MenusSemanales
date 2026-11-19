@@ -3335,4 +3335,11 @@ test.describe("Hoy como tablero fijo (D-180)", () => {
     );
     await contexto.close();
   });
+
+  test("hoy en una frase (D-190): la línea de arriba resume el día", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/");
+    await expect(pagina.getByText(/^Miércoles 4: .*cena/)).toBeVisible();
+    await contexto.close();
+  });
 });

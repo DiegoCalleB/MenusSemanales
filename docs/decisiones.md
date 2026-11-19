@@ -1695,3 +1695,15 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Contador local:** cada apartado de Hoy cuenta sus toques por día, **solo en cada móvil** (`localStorage`): no se guarda qué se tocó ni quién, ni sale de ahí. Se guardan 45 días. Cuenta → «Qué usáis de “Hoy”» los enseña (toques de las dos últimas semanas) y permite empezar a contar de nuevo.
 - **Plegado automático:** un apartado **que lleva dos semanas sin tocarse**, y que no tiene nada pendiente, se pliega en una línea («Cuidarse · sin usar hace 2 semanas · Mostrar»); un toque lo despliega y cuenta como uso. Un apartado recién llegado no se pliega hasta cumplir las dos semanas. Solo lo personal y opcional: **Cuidarse, Mi día, Pendientes y Papeles** (Papeles y Pendientes nunca con algo dentro). Medicación, tiempo, mochila y mañana no se pliegan nunca.
 - **Pendiente:** ordenar o ocultar apartados a mano («Hoy personalizable», backlog).
+
+## D-190 · «Hoy» en una frase
+
+- **Petición (Diego):** una frase de resumen arriba de la portada.
+- **Qué hay:** «Miércoles 4: es el cumple de Ana, tienes pediatra a las 17:00, hay que dejar preparado flauta de Emma y en casa tocan 2 cosas.» Sale en orden de importancia (cumples, citas, lo que hay que dejar preparado, casa, cena), con un máximo de cuatro cosas, y si no hay nada especial dice solo la cena.
+- **Por qué sin IA:** con plantillas es **al instante, gratis, funciona sin conexión** y es siempre exacta; una IA añadiría espera, gasto del tope diario y mandar datos de la casa fuera. Nunca lleva medicación, regalos ni lo personal de Cuidarse. Si más adelante se quiere un tono más natural, se puede pulir con IA sobre esta misma frase.
+
+## D-191 · Revisión de la semana
+
+- **Petición (Diego):** una revisión de dos minutos que mantenga el sistema vivo.
+- **Qué hay:** pantalla `/repaso` («🔎 Revisión de la semana», en Hoy; el domingo sale como tarjeta destacada). **Lo que hiciste** (tareas de casa y pendientes hechos esta semana y, de quien tiene el móvil abierto, días con «Mi día» completo, agua y ejercicio), **lo que se quedó** (pendientes que llevan una semana o más) y **lo que viene** (citas de los próximos 7 días, cumples y papeles de los próximos 14), con el botón de «Planear la semana».
+- **Sin datos nuevos:** todo sale de lo que la app ya sabe (`repasoDeLaSemana`, puro y probado).
