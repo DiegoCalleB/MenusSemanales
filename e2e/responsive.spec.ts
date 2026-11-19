@@ -3293,4 +3293,18 @@ test.describe("Hoy como tablero fijo (D-180)", () => {
     );
     await contexto.close();
   });
+
+  test("barra de captura (D-188): lo escrito en Hoy abre la caja de apuntar con ese texto", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/");
+    const barra = pagina.getByRole("search", { name: "Apuntar rápido" });
+    await barra.getByLabel("Escribe lo que quieras apuntar").fill("leche y pañales");
+    await barra.getByRole("button", { name: /Apuntar/ }).click();
+    const caja = pagina.getByRole("dialog", { name: "Apuntar" });
+    await expect(caja).toBeVisible();
+    await expect(caja.locator("textarea")).toHaveValue("leche y pañales");
+    await contexto.close();
+  });
 });

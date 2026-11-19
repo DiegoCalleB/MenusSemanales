@@ -29,10 +29,17 @@ function detalleDe(i: ItemCaptura, quien: string | null): string {
  * seis pediatra de Alba, llamar al fontanero…»), la IA lo reparte en compra, citas, pendientes y
  * papeles y la persona elige qué se apunta. Nada se apunta sin que lo vea.
  */
-export function CapturaRapida({ alTerminar }: { alTerminar: () => void }) {
+export function CapturaRapida({
+  alTerminar,
+  inicial = "",
+}: {
+  alTerminar: () => void;
+  /** Lo que ya se escribió en la barra de la portada (D-188). */
+  inicial?: string;
+}) {
   const { estado, despachar } = useHogar();
   const [fase, setFase] = useState<Fase>("escribir");
-  const [texto, setTexto] = useState("");
+  const [texto, setTexto] = useState(inicial);
   const [items, setItems] = useState<ItemCaptura[]>([]);
   const [elegidos, setElegidos] = useState<Set<number>>(new Set());
   const [problema, setProblema] = useState("");

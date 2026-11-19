@@ -21,6 +21,7 @@ import { ComidaDelDia } from "../comida-del-dia";
 import { LoDeHoy } from "../lo-de-hoy";
 import { NuevaCita } from "../nueva-cita";
 import { ActivarAvisosHoy } from "../activar-avisos-hoy";
+import { BarraDeCaptura } from "../barra-de-captura";
 import { CuidarseHoy } from "../cuidarse-hoy";
 import { MiDiaHoy } from "../mi-dia-hoy";
 import { MedicacionHoy } from "../medicacion-hoy";
@@ -101,6 +102,8 @@ export function InicioVista() {
           </section>
         );
       })}
+      <BarraDeCaptura />
+
       <ResumenHoy />
 
       <ActivarAvisosHoy />

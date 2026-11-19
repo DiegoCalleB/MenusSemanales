@@ -1682,3 +1682,9 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Ayer:** «¿Se te olvidó marcar algo de ayer?» abre la lista de ayer con sus casillas. Lo marcado un día anterior cuenta aunque la cosa se apuntara después (el historial lo muestra como hecho).
 - **Aviso:** en «Cambiar mi lista», «Avisarme en el móvil si me falta algo» (de 18 a 23 h, o no avisar). A esa hora llega «✅ Diego: tu lista del día — Te faltan 2 cosas de tu lista de hoy», solo si falta algo. **Sin decir cuáles**: el servidor solo recibe cuántas cosas hay y cuántas se hicieron, nunca sus nombres.
 - **Independiente de los avisos de agua y ejercicio** (D-183): quien solo quiere el de la lista entra en el resumen del servidor sin recibir los otros. Migración `20261123000000_mi_dia_avisos.sql`.
+
+## D-188 · Barra de captura en «Hoy»
+
+- **Petición (Diego):** soltar lo que se le ocurra desde la portada, sin buscar dónde va.
+- **Qué hay:** una barra arriba de Hoy («Apunta lo que sea: compra, cita, pendiente…» + «✨ Apuntar»). Al enviarla se abre la misma caja de ＋ (D-178) con el texto ya puesto: la IA lo reparte entre compra, citas, pendientes y papeles y **nada se apunta sin verlo antes**. Sin la IA (sin cuenta, tope diario), la caja explica que se usen Compra, Evento o Pendiente.
+- **Cómo:** la barra y el botón ＋ se hablan con un evento del navegador (`hecho-apuntar`), sin estado compartido nuevo.
