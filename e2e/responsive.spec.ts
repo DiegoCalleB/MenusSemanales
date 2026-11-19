@@ -3307,4 +3307,32 @@ test.describe("Hoy como tablero fijo (D-180)", () => {
     await expect(caja.locator("textarea")).toHaveValue("leche y pañales");
     await contexto.close();
   });
+
+  test("apartados sin uso (D-189): se pliegan solos tras dos semanas y un toque los despliega", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await pagina.addInitScript(() => {
+      window.localStorage.setItem(
+        "menus-semanales:uso-hoy",
+        JSON.stringify({
+          "sec-cuidarse": { nombre: "💧 Cuidarse", visto: "2026-10-01", usos: {} },
+        }),
+      );
+    });
+    await cargar(pagina, "/");
+    const bloque = pagina.getByRole("region", { name: /Cuidarse/ });
+    await expect(bloque).toContainText("sin usar hace 2 semanas");
+    await expect(bloque).not.toContainText("Agua:");
+    await bloque.getByRole("button", { name: /Cuidarse/ }).click();
+    await expect(bloque).toContainText("Agua: 0 de 8 vasos");
+
+    // El panel de la cuenta lo cuenta.
+    await cargar(pagina, "/cuenta");
+    await pagina.getByText("Qué usáis de «Hoy»").click();
+    await expect(pagina.getByRole("list", { name: "Uso de los apartados" })).toContainText(
+      "Cuidarse",
+    );
+    await contexto.close();
+  });
 });

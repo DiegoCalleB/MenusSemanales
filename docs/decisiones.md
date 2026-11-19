@@ -1688,3 +1688,10 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Petición (Diego):** soltar lo que se le ocurra desde la portada, sin buscar dónde va.
 - **Qué hay:** una barra arriba de Hoy («Apunta lo que sea: compra, cita, pendiente…» + «✨ Apuntar»). Al enviarla se abre la misma caja de ＋ (D-178) con el texto ya puesto: la IA lo reparte entre compra, citas, pendientes y papeles y **nada se apunta sin verlo antes**. Sin la IA (sin cuenta, tope diario), la caja explica que se usen Compra, Evento o Pendiente.
 - **Cómo:** la barra y el botón ＋ se hablan con un evento del navegador (`hecho-apuntar`), sin estado compartido nuevo.
+
+## D-189 · Qué se usa de «Hoy» y apartados que se pliegan solos
+
+- **Petición (Diego):** ver qué se toca y qué no, y recortar sin intuición; que lo que no se use se apague solo.
+- **Contador local:** cada apartado de Hoy cuenta sus toques por día, **solo en cada móvil** (`localStorage`): no se guarda qué se tocó ni quién, ni sale de ahí. Se guardan 45 días. Cuenta → «Qué usáis de “Hoy”» los enseña (toques de las dos últimas semanas) y permite empezar a contar de nuevo.
+- **Plegado automático:** un apartado **que lleva dos semanas sin tocarse**, y que no tiene nada pendiente, se pliega en una línea («Cuidarse · sin usar hace 2 semanas · Mostrar»); un toque lo despliega y cuenta como uso. Un apartado recién llegado no se pliega hasta cumplir las dos semanas. Solo lo personal y opcional: **Cuidarse, Mi día, Pendientes y Papeles** (Papeles y Pendientes nunca con algo dentro). Medicación, tiempo, mochila y mañana no se pliegan nunca.
+- **Pendiente:** ordenar o ocultar apartados a mano («Hoy personalizable», backlog).

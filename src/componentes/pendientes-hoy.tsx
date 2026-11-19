@@ -41,6 +41,7 @@ export function PendientesHoy() {
   return (
     <SeccionHoy
       id="sec-pendientes"
+      plegable
       emoji="📝"
       titulo="Pendientes"
       cuenta={todos.length}

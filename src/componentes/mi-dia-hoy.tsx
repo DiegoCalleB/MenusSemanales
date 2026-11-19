@@ -41,7 +41,7 @@ export function MiDiaHoy() {
   const vacio = c.habitos.length === 0;
 
   return (
-    <SeccionHoy id="sec-mi-dia" emoji="✅" titulo="Mi día" compacta={vacio}>
+    <SeccionHoy id="sec-mi-dia" emoji="✅" titulo="Mi día" compacta={vacio} plegable>
       {!vacio && (
         <>
           <p role="status" className="text-base font-semibold">

@@ -45,7 +45,7 @@ export function CuidarseHoy() {
   const enCamino = Math.min(dia.agua, c.metaAgua);
 
   return (
-    <SeccionHoy id="sec-cuidarse" emoji="💧" titulo="Cuidarse">
+    <SeccionHoy id="sec-cuidarse" emoji="💧" titulo="Cuidarse" plegable>
       <div className="flex flex-col gap-1">
         <p className="text-base font-semibold">
           Agua: {dia.agua} de {c.metaAgua} vasos
