@@ -3294,6 +3294,28 @@ test.describe("Hoy como tablero fijo (D-180)", () => {
     await contexto.close();
   });
 
+  test("mi día (D-193): la lista se agrupa en bloques con su título", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/");
+    const bloque = pagina.getByRole("region", { name: /Mi día/ });
+    await bloque.getByText("Apuntar lo que quiero hacer cada día").click();
+    const form = bloque.getByRole("form", { name: "Mi lista de cada día" });
+    await form
+      .getByLabel(/Lo que quiero hacer cada día/)
+      .fill("Mañana:\nSkincare\nMeditar\nNoche:\nLeer");
+    await form.getByRole("button", { name: "Guardar mi lista" }).click();
+    await expect(bloque).toContainText("0 de 3 hechas hoy");
+    const lista = bloque.getByRole("list", { name: "Mi lista de hoy" });
+    await expect(lista.getByText("Mañana", { exact: true })).toBeVisible();
+    await expect(lista.getByText("Noche", { exact: true })).toBeVisible();
+    await expect(lista.getByRole("button")).toHaveCount(3);
+    // Al volver a abrir el formulario, los títulos siguen en el texto.
+    await expect(form.getByLabel(/Lo que quiero hacer cada día/)).toHaveValue(
+      "Mañana:\nSkincare\nMeditar\nNoche:\nLeer",
+    );
+    await contexto.close();
+  });
+
   test("barra de captura (D-188): lo escrito en Hoy abre la caja de apuntar con ese texto", async ({
     browser,
   }) => {

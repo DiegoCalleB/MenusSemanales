@@ -9,6 +9,7 @@ import {
   diaDe,
   semanaDeEjercicio,
   semanasSeguidas,
+  textoDeHabitos,
   tocaEjercicio,
 } from "@/dominio/cuidado";
 import { resumenDeDias } from "@/dominio/medicacion";
@@ -132,7 +133,7 @@ function AjustesDeCuidado({ personaId }: { personaId: string }) {
       tipo: "cuidado/ajustes",
       personaId,
       metaAgua: Number(meta),
-      habitos: c.habitos.map((h) => h.nombre),
+      habitos: textoDeHabitos(c.habitos).split("\n"),
       ejercicio: hace ? { nombre, dias } : null,
       avisos,
     });

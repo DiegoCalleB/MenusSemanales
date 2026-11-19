@@ -1713,3 +1713,8 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Petición (Diego):** le gustaba más cuando arriba del todo salían las próximas fechas más cercanas.
 - **Qué cambia:** la fila de «cuenta atrás» (🎂 Ana · en 6 días, 📅 Cine · mañana…) vuelve a ir **encima de todo** en Hoy, antes de la barra de captura. Se quita la lista duplicada de la tarjeta «Citas y eventos» (D-181), que ahora solo lleva sus botones.
 - **Orden del mismo día:** los eventos de un mismo día salen de **más pronto a más tarde** (lo de todo el día, primero), en la lista de «Apuntado» de Fechas (antes por título) y en la cuenta atrás de Hoy y de Fechas. En el resto de listas (mañana, plan de la semana, avisos) ya era así.
+
+## D-193 · «Mi día» en bloques
+
+- **Petición (Diego):** agrupar la lista diaria en tres bloques (mañana, día, noche).
+- **Qué hay:** en «Cambiar mi lista», una línea que acaba en «:» (por ejemplo «Mañana:») abre un bloque y lo que va debajo pertenece a él. En Hoy se ve como un título con sus cosas. Los títulos no cuentan como cosas (siguen siendo hasta 15, y hasta 6 bloques) y no cambian el historial ni los avisos: el servidor sigue recibiendo solo cuántas son. Sin títulos, todo sigue como antes.
