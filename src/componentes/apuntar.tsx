@@ -22,7 +22,12 @@ export function Apuntar() {
   const total = leido.conFecha.length + leido.sinFecha.length;
   const proximos = estado.agenda
     .filter((a) => (a.hasta ?? a.fecha) >= estado.hoy)
-    .sort((a, b) => a.fecha.localeCompare(b.fecha) || a.titulo.localeCompare(b.titulo, "es"));
+    .sort(
+      (a, b) =>
+        a.fecha.localeCompare(b.fecha) ||
+        (a.hora ?? "").localeCompare(b.hora ?? "") ||
+        a.titulo.localeCompare(b.titulo, "es"),
+    );
 
   function apuntar() {
     despachar({ tipo: "agenda/anadir", texto, personaId: yo });

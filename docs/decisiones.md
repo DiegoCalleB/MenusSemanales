@@ -1707,3 +1707,9 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Petición (Diego):** una revisión de dos minutos que mantenga el sistema vivo.
 - **Qué hay:** pantalla `/repaso` («🔎 Revisión de la semana», en Hoy; el domingo sale como tarjeta destacada). **Lo que hiciste** (tareas de casa y pendientes hechos esta semana y, de quien tiene el móvil abierto, días con «Mi día» completo, agua y ejercicio), **lo que se quedó** (pendientes que llevan una semana o más) y **lo que viene** (citas de los próximos 7 días, cumples y papeles de los próximos 14), con el botón de «Planear la semana».
 - **Sin datos nuevos:** todo sale de lo que la app ya sabe (`repasoDeLaSemana`, puro y probado).
+
+## D-192 · Las próximas fechas, otra vez arriba del todo; y el mismo día, por hora
+
+- **Petición (Diego):** le gustaba más cuando arriba del todo salían las próximas fechas más cercanas.
+- **Qué cambia:** la fila de «cuenta atrás» (🎂 Ana · en 6 días, 📅 Cine · mañana…) vuelve a ir **encima de todo** en Hoy, antes de la barra de captura. Se quita la lista duplicada de la tarjeta «Citas y eventos» (D-181), que ahora solo lleva sus botones.
+- **Orden del mismo día:** los eventos de un mismo día salen de **más pronto a más tarde** (lo de todo el día, primero), en la lista de «Apuntado» de Fechas (antes por título) y en la cuenta atrás de Hoy y de Fechas. En el resto de listas (mañana, plan de la semana, avisos) ya era así.

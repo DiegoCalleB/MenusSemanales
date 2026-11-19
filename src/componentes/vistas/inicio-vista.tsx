@@ -103,6 +103,21 @@ export function InicioVista() {
           </section>
         );
       })}
+      {proximos.length > 0 && (
+        <ul aria-label="Cuenta atrás" className="flex flex-wrap gap-2">
+          {proximos.map((p) => (
+            <li
+              key={p.clave}
+              className="bg-suave-1 border-borde rounded-full border px-3 py-1 text-sm font-bold"
+            >
+              <span aria-hidden="true">{p.emoji} </span>
+              {p.titulo}
+              {p.hora && ` (${p.hora})`} · {p.dias <= 1 ? p.texto : `en ${p.texto}`}
+            </li>
+          ))}
+        </ul>
+      )}
+
       <BarraDeCaptura />
 
       <FraseDeHoy />
@@ -212,20 +227,7 @@ export function InicioVista() {
             </div>
             {apuntandoCita && <NuevaCita alGuardar={() => setApuntandoCita(false)} />}
             {proximos.length > 0 ? (
-              <ul aria-label="Cuenta atrás" className="flex flex-col gap-1">
-                {proximos.map((p) => (
-                  <li key={p.clave} className="flex items-baseline justify-between gap-3 text-base">
-                    <span className="min-w-0 font-semibold">
-                      <span aria-hidden="true">{p.emoji} </span>
-                      {p.titulo}
-                      {p.hora && ` (${p.hora})`}
-                    </span>{" "}
-                    <span className="text-tinta-suave shrink-0 text-sm font-bold">
-                      {p.dias <= 1 ? p.texto : `en ${p.texto}`}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              <p className="text-tinta-suave text-sm">Las próximas fechas salen arriba del todo.</p>
             ) : (
               <Vacio>Nada en el calendario de los próximos días.</Vacio>
             )}
