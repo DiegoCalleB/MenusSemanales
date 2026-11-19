@@ -5,10 +5,12 @@ la lista de la compra de ¡Hecho! («⭐ Mi producto»). No pide ni guarda contr
 `tienda.mercadona.es`.
 
 ## Instalar (una vez, en el ordenador)
+
 1. Abre `chrome://extensions` y activa «Modo desarrollador».
 2. «Cargar descomprimida» y elige esta carpeta (`extension-mercadona`).
 
 ## Usar
+
 1. Entra en Mercadona con tu cuenta y elige tu código postal.
 2. En ¡Hecho! → Comer → Comprar online → **«Copiar el pedido para la extensión»**.
 3. Abre la extensión (el puzle de Chrome), **Pegar** y **Empezar**.
@@ -16,6 +18,7 @@ la lista de la compra de ¡Hecho! («⭐ Mi producto»). No pide ni guarda contr
    cuántos se han añadido y cuáles no. **Revisa siempre la cesta antes de pagar.**
 
 ## Límites
+
 - Solo añade 1 unidad de cada producto (las cantidades de la lista, como «600 g», no se traducen).
 - Solo los artículos con producto guardado; los demás se quedan en la lista.
 - Si Mercadona cambia su web, puede dejar de encontrar el botón: avisará de lo que no pudo añadir.

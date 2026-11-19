@@ -5,10 +5,18 @@
   var ESPERA_BOTON = 12000;
   var ESPERA_TRAS_PULSAR = 1500;
 
-  function dormir(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
-  function limpia(url) { return hechoComun.enlaceValido(url); }
+  function dormir(ms) {
+    return new Promise(function (r) {
+      setTimeout(r, ms);
+    });
+  }
+  function limpia(url) {
+    return hechoComun.enlaceValido(url);
+  }
 
-  function visible(el) { return !!(el && (el.offsetWidth || el.offsetHeight || el.getClientRects().length)); }
+  function visible(el) {
+    return !!(el && (el.offsetWidth || el.offsetHeight || el.getClientRects().length));
+  }
 
   /** El botón «Añadir» (o «Añadir al carro») del producto abierto, o null. */
   function botonAnadir() {
@@ -17,7 +25,11 @@
       var botones = raices[i].querySelectorAll("button");
       for (var j = 0; j < botones.length; j++) {
         var t = (botones[j].textContent || "").replace(/\s+/g, " ").trim();
-        if (/^a[ñn]adir( al carro| a la cesta)?$/i.test(t) && visible(botones[j]) && !botones[j].disabled) {
+        if (
+          /^a[ñn]adir( al carro| a la cesta)?$/i.test(t) &&
+          visible(botones[j]) &&
+          !botones[j].disabled
+        ) {
           return botones[j];
         }
       }
@@ -35,7 +47,9 @@
     return null;
   }
 
-  function guardar(pedido) { return chrome.storage.local.set({ pedido: pedido }); }
+  function guardar(pedido) {
+    return chrome.storage.local.set({ pedido: pedido });
+  }
 
   function pintar(pedido, texto, final) {
     var caja = document.getElementById("hecho-extension");
@@ -54,10 +68,18 @@
     p.textContent = texto;
     caja.appendChild(p);
     if (final) {
-      var mal = pedido.resultados.filter(function (r) { return !r.ok; });
+      var mal = pedido.resultados.filter(function (r) {
+        return !r.ok;
+      });
       if (mal.length) {
         var l = document.createElement("div");
-        l.textContent = "Sin añadir: " + mal.map(function (r) { return r.nombre; }).join(", ");
+        l.textContent =
+          "Sin añadir: " +
+          mal
+            .map(function (r) {
+              return r.nombre;
+            })
+            .join(", ");
         caja.appendChild(l);
       }
     }
@@ -65,7 +87,10 @@
     b.type = "button";
     b.textContent = final ? "Cerrar" : "Parar";
     b.style.cssText = "margin-top:8px;padding:6px 10px;border-radius:8px;border:0;cursor:pointer";
-    b.onclick = function () { chrome.storage.local.remove("pedido"); caja.remove(); };
+    b.onclick = function () {
+      chrome.storage.local.remove("pedido");
+      caja.remove();
+    };
     caja.appendChild(b);
   }
 
@@ -76,8 +101,14 @@
     var total = pedido.articulos.length;
 
     if (pedido.estado === "terminado") {
-      var ok = pedido.resultados.filter(function (r) { return r.ok; }).length;
-      return pintar(pedido, ok + " de " + total + " añadidos a la cesta. Revisa el pedido y paga.", true);
+      var ok = pedido.resultados.filter(function (r) {
+        return r.ok;
+      }).length;
+      return pintar(
+        pedido,
+        ok + " de " + total + " añadidos a la cesta. Revisa el pedido y paga.",
+        true,
+      );
     }
     if (pedido.estado !== "en-curso") return;
 

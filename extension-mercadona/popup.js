@@ -1,10 +1,18 @@
-var $ = function (id) { return document.getElementById(id); };
-var estado = function (t) { $("estado").textContent = t; };
+var $ = function (id) {
+  return document.getElementById(id);
+};
+var estado = function (t) {
+  $("estado").textContent = t;
+};
 
 $("pegar").addEventListener("click", function () {
   navigator.clipboard.readText().then(
-    function (t) { $("pedido").value = t; },
-    function () { estado("No he podido leer el portapapeles: pégalo a mano."); }
+    function (t) {
+      $("pedido").value = t;
+    },
+    function () {
+      estado("No he podido leer el portapapeles: pégalo a mano.");
+    },
   );
 });
 
@@ -16,10 +24,12 @@ $("empezar").addEventListener("click", function () {
     function () {
       chrome.tabs.create({ url: r.articulos[0].enlace });
       window.close();
-    }
+    },
   );
 });
 
 $("parar").addEventListener("click", function () {
-  chrome.storage.local.remove("pedido", function () { estado("Parado."); });
+  chrome.storage.local.remove("pedido", function () {
+    estado("Parado.");
+  });
 });

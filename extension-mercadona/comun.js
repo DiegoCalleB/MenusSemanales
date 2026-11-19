@@ -1,5 +1,5 @@
 // Lo que comparten el popup y el script de la página. Sin dependencias.
-/* exported hechoComun */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 var hechoComun = (function () {
   var MAX_ARTICULOS = 80;
 
@@ -9,11 +9,16 @@ var hechoComun = (function () {
       var u = new URL(String(texto));
       var propio = u.hostname === "tienda.mercadona.es";
       var ruta = u.pathname.replace(/\/+$/, "");
-      if (u.protocol !== "https:" || !propio || ruta === "" || ruta.indexOf("/search-results") === 0) {
+      if (
+        u.protocol !== "https:" ||
+        !propio ||
+        ruta === "" ||
+        ruta.indexOf("/search-results") === 0
+      ) {
         return null;
       }
       return "https://" + u.host + ruta;
-    } catch (e) {
+    } catch {
       return null;
     }
   }
@@ -23,10 +28,17 @@ var hechoComun = (function () {
     var crudo;
     try {
       crudo = JSON.parse(String(texto).trim());
-    } catch (e) {
-      return { error: "Eso no es un pedido de ¡Hecho!. Cópialo otra vez desde la lista de la compra." };
+    } catch {
+      return {
+        error: "Eso no es un pedido de ¡Hecho!. Cópialo otra vez desde la lista de la compra.",
+      };
     }
-    if (!crudo || crudo.formato !== "hecho-pedido" || crudo.version !== 1 || !Array.isArray(crudo.articulos)) {
+    if (
+      !crudo ||
+      crudo.formato !== "hecho-pedido" ||
+      crudo.version !== 1 ||
+      !Array.isArray(crudo.articulos)
+    ) {
       return { error: "Eso no es un pedido de ¡Hecho!." };
     }
     var articulos = [];
