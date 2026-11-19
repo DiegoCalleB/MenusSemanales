@@ -180,6 +180,9 @@ export function InicioVista() {
             </details>
           </section>
 
+          {/* Lo de cada día va justo bajo la cena: en el móvil, una sola columna, no debe quedar al fondo. */}
+          <MiDiaHoy />
+
           {diaCole && (
             <section aria-labelledby="cole-hoy" className="flex flex-col gap-2">
               <h2 id="cole-hoy" className="text-lg font-extrabold">
@@ -192,8 +195,6 @@ export function InicioVista() {
           )}
 
           <MedicacionHoy />
-
-          <MiDiaHoy />
 
           <CuidarseHoy />
 
