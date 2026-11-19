@@ -3,7 +3,10 @@ import {
   type Cuidado,
   animoDeAgua,
   cuidadoDe,
+  historialDeHabitos,
   notificacionDeCuidado,
+  rachaDeHabito,
+  resumenDelDia,
   podarDias,
   recordatoriosDeCuidado,
   semanaDeEjercicio,
@@ -72,7 +75,7 @@ describe("cuidado", () => {
     expect(
       validarAjustes({
         metaAgua: 8,
-        habitos: ["a", "b", "c", "d", "e", "f", "g"],
+        habitos: Array.from({ length: 16 }, (_, i) => `cosa${i}`),
         ejercicio: null,
         avisos: false,
       }),
@@ -134,5 +137,55 @@ describe("cuidado", () => {
         tag: "cuidado-d-agua",
       });
     });
+  });
+});
+
+describe("Mi día: lista diaria e historial (D-186)", () => {
+  const leer = { id: "h1", nombre: "Leer", desde: "2026-11-10" };
+  const antigua = { id: "h2", nombre: "Escaleras" };
+  const c = {
+    ...base(
+      {
+        "2026-11-16": { agua: 0, habitos: ["h1", "h2"], ejercicio: false },
+        "2026-11-17": { agua: 0, habitos: ["h1"], ejercicio: false },
+        "2026-11-18": { agua: 0, habitos: ["h1"], ejercicio: false },
+      },
+      null,
+    ),
+    habitos: [leer, antigua],
+  };
+
+  it("cuenta lo hecho de cada día sobre lo que había apuntado", () => {
+    expect(resumenDelDia(c, "2026-11-16")).toEqual({ hechos: 2, total: 2 });
+    expect(resumenDelDia(c, "2026-11-18")).toEqual({ hechos: 1, total: 2 });
+    // Antes de apuntar «Leer» (10-nov) solo cuenta la antigua.
+    expect(resumenDelDia(c, "2026-11-09")).toEqual({ hechos: 0, total: 1 });
+  });
+
+  it("la racha cuenta hasta hoy, o hasta ayer si hoy aún falta", () => {
+    expect(rachaDeHabito(c, "h1", HOY)).toBe(3);
+    expect(rachaDeHabito(c, "h1", "2026-11-19")).toBe(3);
+    expect(rachaDeHabito(c, "h2", HOY)).toBe(0);
+    expect(rachaDeHabito(c, "h2", "2026-11-17")).toBe(1);
+  });
+
+  it("el historial marca hecho, no, hoy pendiente y aún no apuntado", () => {
+    const h = historialDeHabitos(c, HOY, 14);
+    expect(h.fechas).toHaveLength(14);
+    expect(h.fechas.at(-1)).toBe(HOY);
+    const leerFila = h.filas[0]!;
+    expect(leerFila.celdas.at(-1)).toBe("hecho");
+    expect(leerFila.celdas[0]).toBe("antes");
+    expect(leerFila.hechos).toBe(3);
+    expect(leerFila.racha).toBe(3);
+    const esc = h.filas[1]!;
+    expect(esc.celdas.at(-1)).toBe("pendiente");
+    expect(esc.celdas.at(-2)).toBe("no");
+    expect(esc.hechos).toBe(1);
+    expect(esc.aplicables).toBe(13);
+    // Hoy sin hacer no cuenta como fallo en los días aplicables.
+    const sinHoy = historialDeHabitos({ ...c, dias: {} }, HOY, 3);
+    expect(sinHoy.filas[0]!.celdas.at(-1)).toBe("pendiente");
+    expect(sinHoy.filas[0]!.aplicables).toBe(2);
   });
 });

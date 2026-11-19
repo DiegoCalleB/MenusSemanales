@@ -9,6 +9,8 @@ import { type FechaIso, diaSemanaIso, sumarDias } from "./fechas";
 export interface Habito {
   id: string;
   nombre: string;
+  /** El día en que se apuntó (antes de eso no cuenta como «no hecho»). Las antiguas no lo tienen. */
+  desde?: FechaIso;
 }
 
 export interface DiaDeCuidado {
@@ -36,9 +38,9 @@ export interface Cuidado {
 export const META_AGUA_POR_DEFECTO = 8;
 export const MAX_META_AGUA = 20;
 export const MAX_VASOS_AL_DIA = 30;
-export const MAX_HABITOS = 6;
+export const MAX_HABITOS = 15;
 export const MAX_NOMBRE_HABITO = 40;
-const DIAS_QUE_SE_GUARDAN = 35;
+const DIAS_QUE_SE_GUARDAN = 180;
 
 export const diaVacio = (): DiaDeCuidado => ({ agua: 0, habitos: [], ejercicio: false });
 
@@ -59,7 +61,7 @@ export const cuidadoDe = (lista: readonly Cuidado[], personaId: string): Cuidado
 
 export const diaDe = (c: Cuidado, fecha: FechaIso): DiaDeCuidado => c.dias[fecha] ?? diaVacio();
 
-/** Quita lo anterior a cinco semanas. */
+/** Quita lo anterior a seis meses (el historial de «Mi día», D-186, llega hasta ahí). */
 export function podarDias(c: Cuidado, hoy: FechaIso): Cuidado {
   const desde = sumarDias(hoy, -DIAS_QUE_SE_GUARDAN);
   const dias = Object.fromEntries(Object.entries(c.dias).filter(([f]) => f >= desde));
@@ -219,5 +221,75 @@ export function notificacionDeCuidado(r: RecordatorioDeCuidado) {
       ),
     cuerpo: r.texto.slice(0, 240),
     tag: `cuidado-${r.personaId}-${r.tipo}`.replace(/[^a-z0-9-]/gi, "").slice(0, 40),
+  };
+}
+
+/** «Mi día» (D-186): la lista de cosas de cada día y su historial. */
+
+/** ¿Estaba apuntado ese hábito ese día? (Los antiguos, sin fecha de alta, siempre.) */
+const aplica = (h: Habito, fecha: FechaIso) => h.desde === undefined || fecha >= h.desde;
+
+/** Cuántas cosas de la lista se hicieron ese día, de cuántas había apuntadas. */
+export function resumenDelDia(c: Cuidado, fecha: FechaIso): { hechos: number; total: number } {
+  const dia = diaDe(c, fecha);
+  const vivos = c.habitos.filter((h) => aplica(h, fecha));
+  return { hechos: vivos.filter((h) => dia.habitos.includes(h.id)).length, total: vivos.length };
+}
+
+/** Días seguidos haciéndolo hasta hoy (si hoy aún no, cuenta desde ayer: el día no ha acabado). */
+export function rachaDeHabito(c: Cuidado, id: string, hoy: FechaIso): number {
+  let f = diaDe(c, hoy).habitos.includes(id) ? hoy : sumarDias(hoy, -1);
+  let racha = 0;
+  for (let i = 0; i < DIAS_QUE_SE_GUARDAN; i++, f = sumarDias(f, -1)) {
+    if (!diaDe(c, f).habitos.includes(id)) break;
+    racha++;
+  }
+  return racha;
+}
+
+export type CeldaDeHistorial = "hecho" | "no" | "pendiente" | "antes";
+
+export interface FilaDeHistorial {
+  habito: Habito;
+  celdas: CeldaDeHistorial[];
+  /** Días hechos y días en que estaba apuntado, dentro del periodo. */
+  hechos: number;
+  aplicables: number;
+  racha: number;
+}
+
+/**
+ * El historial de los últimos `dias` días (el más antiguo primero, hoy al final): por cosa, qué días
+ * se hizo, cuántos de cuántos y la racha; y por día, cuántas se hicieron.
+ */
+export function historialDeHabitos(
+  c: Cuidado,
+  hoy: FechaIso,
+  dias: number,
+): {
+  fechas: FechaIso[];
+  filas: FilaDeHistorial[];
+  porDia: Array<{ fecha: FechaIso; hechos: number; total: number }>;
+} {
+  const n = Math.max(1, Math.min(dias, DIAS_QUE_SE_GUARDAN));
+  const fechas = Array.from({ length: n }, (_, i) => sumarDias(hoy, i - (n - 1)));
+  const filas = c.habitos.map((habito) => {
+    const celdas = fechas.map((f): CeldaDeHistorial => {
+      if (!aplica(habito, f)) return "antes";
+      if (diaDe(c, f).habitos.includes(habito.id)) return "hecho";
+      return f === hoy ? "pendiente" : "no";
+    });
+    return {
+      habito,
+      celdas,
+      hechos: celdas.filter((x) => x === "hecho").length,
+      aplicables: celdas.filter((x) => x === "hecho" || x === "no").length,
+      racha: rachaDeHabito(c, habito.id, hoy),
+    };
+  });
+  return {
+    fechas,
+    filas,
+    porDia: fechas.map((fecha) => ({ fecha, ...resumenDelDia(c, fecha) })),
   };
 }

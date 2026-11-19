@@ -2,7 +2,6 @@
 
 import { type FormEvent, useState } from "react";
 import {
-  MAX_HABITOS,
   MAX_META_AGUA,
   MAX_NOMBRE_HABITO,
   animoDeAgua,
@@ -29,7 +28,7 @@ const DIAS = [
 ];
 
 /**
- * «Cuidarse» (D-182): el agua, el ejercicio y los hábitos sanos de quien tiene abierto el móvil, en
+ * «Cuidarse» (D-182): el agua y el ejercicio de quien tiene abierto el móvil, en
  * «Hoy». Un toque suma un vaso o marca lo hecho; se cuentan semanas, no se castiga un día fallado. Es
  * personal: cada perfil ve y ajusta lo suyo, y no sale de la app.
  */
@@ -105,37 +104,9 @@ export function CuidarseHoy() {
         </div>
       )}
 
-      {c.habitos.length > 0 && (
-        <ul aria-label="Hábitos de hoy" className="flex flex-col">
-          {c.habitos.map((h) => {
-            const hecho = dia.habitos.includes(h.id);
-            return (
-              <li key={h.id}>
-                <button
-                  type="button"
-                  aria-pressed={hecho}
-                  className={`flex min-h-11 w-full items-center gap-3 rounded-xl text-left text-base ${hecho ? "text-tinta-suave line-through" : ""}`}
-                  onClick={() =>
-                    despachar({
-                      tipo: "cuidado/habito",
-                      personaId: yo.id,
-                      fecha: estado.hoy,
-                      id: h.id,
-                    })
-                  }
-                >
-                  <span aria-hidden="true">{hecho ? "✅" : "⬜"}</span>
-                  <span>{h.nombre}</span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-
       <details>
         <summary className="text-marca-fuerte flex min-h-11 cursor-pointer items-center text-base font-semibold">
-          Ajustar mi meta, ejercicio y hábitos
+          Ajustar mi meta de agua y mi ejercicio
         </summary>
         <AjustesDeCuidado key={`${yo.id}-${estado.cuidado.length}`} personaId={yo.id} />
       </details>
@@ -148,7 +119,6 @@ function AjustesDeCuidado({ personaId }: { personaId: string }) {
   const guardar = useGuardar();
   const c = cuidadoDe(estado.cuidado, personaId);
   const [meta, setMeta] = useState(String(c.metaAgua));
-  const [habitos, setHabitos] = useState(c.habitos.map((h) => h.nombre).join("\n"));
   const [hace, setHace] = useState(c.ejercicio !== null);
   const [nombre, setNombre] = useState(c.ejercicio?.nombre ?? "");
   const [dias, setDias] = useState<number[]>(c.ejercicio?.dias ?? [1, 3, 5]);
@@ -162,7 +132,7 @@ function AjustesDeCuidado({ personaId }: { personaId: string }) {
       tipo: "cuidado/ajustes",
       personaId,
       metaAgua: Number(meta),
-      habitos: habitos.split("\n"),
+      habitos: c.habitos.map((h) => h.nombre),
       ejercicio: hace ? { nombre, dias } : null,
       avisos,
     });
@@ -187,18 +157,6 @@ function AjustesDeCuidado({ personaId }: { personaId: string }) {
           max={MAX_META_AGUA}
           value={meta}
           onChange={(e) => setMeta(e.target.value)}
-        />
-      </label>
-
-      <label className="flex flex-col gap-1 text-base font-semibold">
-        Hábitos sanos (uno por línea, hasta {MAX_HABITOS})
-        <textarea
-          className="campo"
-          rows={3}
-          maxLength={(MAX_NOMBRE_HABITO + 1) * MAX_HABITOS}
-          placeholder={"Una fruta\nCaminar 20 minutos"}
-          value={habitos}
-          onChange={(e) => setHabitos(e.target.value)}
         />
       </label>
 
