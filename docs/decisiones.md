@@ -1675,3 +1675,10 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Historial:** «Mi historial» (14 o 30 días): por cosa, una fila de cuadros (hecho / no se hizo / hoy aún por hacer / aún no estaba apuntada), «N de M días» y la racha de días seguidos 🔥 (hoy sin hacer no rompe la racha: el día no ha acabado), y cuántos días salió completo.
 - **Datos:** reutiliza los hábitos de Cuidarse (D-182), que salen de esa tarjeta y pasan aquí; no hay migración y lo que ya estaba apuntado sigue. Cada cosa guarda `desde` (el día en que se apuntó) para que los días anteriores no cuenten como «no». El historial se guarda **6 meses** (antes 5 semanas). Quitar una cosa de la lista borra su historial (se avisa). Sigue siendo personal: no va al servidor, ni a la búsqueda, ni a la IA, ni al calendario.
 - **Pendiente:** corregir el día de ayer (marcar algo olvidado) no se puede aún; ver más de 30 días o por semanas; avisos del móvil para esta lista.
+
+## D-187 · «Mi día»: marcar ayer y aviso del móvil
+
+- **Petición (Diego):** poder marcar lo que se olvidó de ayer y un aviso a la hora que se elija.
+- **Ayer:** «¿Se te olvidó marcar algo de ayer?» abre la lista de ayer con sus casillas. Lo marcado un día anterior cuenta aunque la cosa se apuntara después (el historial lo muestra como hecho).
+- **Aviso:** en «Cambiar mi lista», «Avisarme en el móvil si me falta algo» (de 18 a 23 h, o no avisar). A esa hora llega «✅ Diego: tu lista del día — Te faltan 2 cosas de tu lista de hoy», solo si falta algo. **Sin decir cuáles**: el servidor solo recibe cuántas cosas hay y cuántas se hicieron, nunca sus nombres.
+- **Independiente de los avisos de agua y ejercicio** (D-183): quien solo quiere el de la lista entra en el resumen del servidor sin recibir los otros. Migración `20261123000000_mi_dia_avisos.sql`.

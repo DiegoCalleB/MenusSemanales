@@ -24,6 +24,7 @@ const base = (dias: Cuidado["dias"], ejercicio: Cuidado["ejercicio"]): Cuidado =
   habitos: [],
   ejercicio,
   avisos: false,
+  avisoDia: null,
   dias,
 });
 
@@ -92,19 +93,30 @@ describe("cuidado", () => {
       habitos: [],
       ejercicio: { nombre: "Ejercicio", dias: [2] },
       avisos: true,
+      avisoDia: null,
     });
+    expect(
+      validarAjustes({ metaAgua: 8, habitos: [], ejercicio: null, avisos: false, avisoDia: 21 }),
+    ).toMatchObject({ avisoDia: 21 });
+    expect(
+      validarAjustes({ metaAgua: 8, habitos: [], ejercicio: null, avisos: false, avisoDia: 24 }),
+    ).toBeNull();
   });
 
   describe("avisos del móvil (D-183)", () => {
     const personas = [{ id: "d", nombre: "Diego" }];
     // 2026-11-04 es miércoles (3).
     const hoy = "2026-11-04";
-    const base = (agua: number, ejercicio = false) => [
+    const base = (agua: number, ejercicio = false, extra: object = {}) => [
       {
         personaId: "d",
         metaAgua: 8,
         ejercicio: { nombre: "Correr", dias: [1, 3, 5] },
-        dias: [{ fecha: hoy, agua, ejercicio }],
+        avisos: true,
+        avisoDia: null,
+        totalLista: 0,
+        dias: [{ fecha: hoy, agua, ejercicio, lista: 0 }],
+        ...extra,
       },
     ];
 
@@ -124,9 +136,46 @@ describe("cuidado", () => {
       expect(recordatoriosDeCuidado(base(8), personas, "2026-11-05", 18)).toHaveLength(0);
     });
 
+    it("sin pedir los avisos de agua y ejercicio no manda esos, pero sí el de la lista", () => {
+      const sin = base(0, false, { avisos: false });
+      expect(recordatoriosDeCuidado(sin, personas, hoy, 11)).toHaveLength(0);
+      expect(recordatoriosDeCuidado(sin, personas, hoy, 18)).toHaveLength(0);
+    });
+
+    it("recuerda «Mi día» a su hora si queda algo, sin decir qué (D-187)", () => {
+      const lista = (hechas: number) =>
+        base(8, true, {
+          avisos: false,
+          avisoDia: 21,
+          totalLista: 4,
+          dias: [{ fecha: hoy, agua: 8, ejercicio: true, lista: hechas }],
+        });
+      const r = recordatoriosDeCuidado(lista(1), personas, hoy, 21);
+      expect(r).toHaveLength(1);
+      expect(r[0]).toMatchObject({ tipo: "lista" });
+      expect(r[0]!.texto).toContain("faltan 3 cosas");
+      expect(notificacionDeCuidado(r[0]!).titulo).toBe("✅ Diego: tu lista del día");
+      // Todo hecho, otra hora, o sin lista: nada.
+      expect(recordatoriosDeCuidado(lista(4), personas, hoy, 21)).toHaveLength(0);
+      expect(recordatoriosDeCuidado(lista(1), personas, hoy, 20)).toHaveLength(0);
+      expect(
+        recordatoriosDeCuidado(base(0, false, { avisoDia: 21, totalLista: 0 }), personas, hoy, 21),
+      ).toHaveLength(0);
+    });
+
     it("sin datos de hoy cuenta cero vasos y la notificación lleva el nombre", () => {
       const r = recordatoriosDeCuidado(
-        [{ personaId: "d", metaAgua: 8, ejercicio: null, dias: [] }],
+        [
+          {
+            personaId: "d",
+            metaAgua: 8,
+            ejercicio: null,
+            avisos: true,
+            avisoDia: null,
+            totalLista: 0,
+            dias: [],
+          },
+        ],
         personas,
         hoy,
         11,

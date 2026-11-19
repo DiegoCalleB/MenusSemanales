@@ -3272,10 +3272,20 @@ test.describe("Hoy como tablero fijo (D-180)", () => {
     await bloque.getByRole("button", { name: "Regar las plantas" }).click();
     await expect(bloque).toContainText("¡Día completo!");
 
+    await bloque.getByText("¿Se te olvidó marcar algo de ayer?").click();
+    const ayer = bloque.getByRole("button", { name: "Ayer: Leer" });
+    await ayer.click();
+    await expect(ayer).toHaveAttribute("aria-pressed", "true");
+
+    // El panel de la lista sigue abierto tras guardar.
+    await bloque.getByLabel("Avisarme en el móvil si me falta algo").selectOption("21");
+    await bloque.getByRole("button", { name: "Guardar mi lista" }).click();
+    await expect(bloque.getByLabel("Avisarme en el móvil si me falta algo")).toHaveValue("21");
+
     await bloque.getByText("Mi historial").click();
     const historial = bloque.getByRole("list", { name: "Historial por cosa" });
     await expect(historial.getByRole("listitem")).toHaveCount(3);
-    await expect(historial).toContainText("Leer · 1 de 1 días");
+    await expect(historial).toContainText("Leer · 2 de 2 días");
     await bloque.getByRole("button", { name: "30 días" }).click();
     await expect(bloque.getByRole("button", { name: "30 días" })).toHaveAttribute(
       "aria-pressed",
