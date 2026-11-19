@@ -11,6 +11,8 @@ export interface Habito {
   nombre: string;
   /** El día en que se apuntó (antes de eso no cuenta como «no hecho»). Las antiguas no lo tienen. */
   desde?: FechaIso;
+  /** El bloque del día al que pertenece («Mañana», «Noche»…), si la lista lo agrupa (D-193). */
+  bloque?: string;
 }
 
 export interface DiaDeCuidado {
@@ -42,6 +44,7 @@ export const MAX_META_AGUA = 20;
 export const MAX_VASOS_AL_DIA = 30;
 export const MAX_HABITOS = 15;
 export const MAX_NOMBRE_HABITO = 40;
+export const MAX_BLOQUES = 6;
 const DIAS_QUE_SE_GUARDAN = 180;
 
 export const diaVacio = (): DiaDeCuidado => ({ agua: 0, habitos: [], ejercicio: false });
@@ -132,6 +135,8 @@ export function validarAjustes(entrada: {
 }): {
   metaAgua: number;
   habitos: string[];
+  /** El bloque de cada hábito (mismo orden que `habitos`); `undefined` si no está en ninguno. */
+  bloques: Array<string | undefined>;
   ejercicio: { nombre: string; dias: number[] } | null;
   avisos: boolean;
   avisoDia: number | null;
@@ -147,10 +152,30 @@ export function validarAjustes(entrada: {
   ) {
     return null;
   }
-  const habitos = [
-    ...new Set(entrada.habitos.map((h) => h.replace(/\s+/g, " ").trim()).filter((h) => h !== "")),
-  ];
-  if (habitos.length > MAX_HABITOS || habitos.some((h) => h.length > MAX_NOMBRE_HABITO)) {
+  // Una línea que acaba en «:» abre un bloque («Mañana:»); lo que sigue pertenece a él (D-193).
+  const habitos: string[] = [];
+  const bloques: Array<string | undefined> = [];
+  const titulos = new Set<string>();
+  let bloque: string | undefined;
+  for (const linea of entrada.habitos) {
+    const limpia = linea.replace(/\s+/g, " ").trim();
+    if (limpia === "") continue;
+    if (limpia.endsWith(":")) {
+      const titulo = limpia.slice(0, -1).trim();
+      if (titulo === "" || titulo.length > MAX_NOMBRE_HABITO) return null;
+      titulos.add(titulo);
+      bloque = titulo;
+      continue;
+    }
+    if (habitos.includes(limpia)) continue;
+    habitos.push(limpia);
+    bloques.push(bloque);
+  }
+  if (
+    habitos.length > MAX_HABITOS ||
+    titulos.size > MAX_BLOQUES ||
+    habitos.some((h) => h.length > MAX_NOMBRE_HABITO)
+  ) {
     return null;
   }
   let ejercicio: { nombre: string; dias: number[] } | null = null;
@@ -165,10 +190,37 @@ export function validarAjustes(entrada: {
   return {
     metaAgua: entrada.metaAgua,
     habitos,
+    bloques,
     ejercicio,
     avisos: entrada.avisos === true,
     avisoDia,
   };
+}
+
+/** La lista como se escribe en el formulario: una cosa por línea y «Bloque:» al empezar cada bloque. */
+export function textoDeHabitos(habitos: readonly Habito[]): string {
+  const lineas: string[] = [];
+  let ultimo: string | undefined;
+  for (const h of habitos) {
+    if (h.bloque !== undefined && h.bloque !== ultimo) lineas.push(`${h.bloque}:`);
+    ultimo = h.bloque;
+    lineas.push(h.nombre);
+  }
+  return lineas.join("\n");
+}
+
+/** Los hábitos agrupados por bloques consecutivos (`titulo` vacío = sin bloque). */
+export function habitosPorBloque(
+  habitos: readonly Habito[],
+): Array<{ titulo: string; habitos: Habito[] }> {
+  const grupos: Array<{ titulo: string; habitos: Habito[] }> = [];
+  for (const h of habitos) {
+    const titulo = h.bloque ?? "";
+    const g = grupos[grupos.length - 1];
+    if (g && g.titulo === titulo) g.habitos.push(h);
+    else grupos.push({ titulo, habitos: [h] });
+  }
+  return grupos;
 }
 
 /** A qué horas (de Madrid) se recuerda el agua y el ejercicio (D-183). */

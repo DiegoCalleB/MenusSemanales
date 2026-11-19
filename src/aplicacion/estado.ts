@@ -2373,10 +2373,12 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
       const habitos = datos.habitos.map((nombre, i) => {
         const previo = actual.habitos.find((h) => h.nombre === nombre);
         const desde = previo ? previo.desde : e.hoy;
+        const bloque = datos.bloques[i];
         return {
           id: previo?.id ?? `h${e.siguienteId}-${i}`,
           nombre,
           ...(desde ? { desde } : {}),
+          ...(bloque ? { bloque } : {}),
         };
       });
       const vivos = new Set(habitos.map((h) => h.id));

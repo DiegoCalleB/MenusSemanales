@@ -12,6 +12,8 @@ import {
   semanaDeEjercicio,
   semanasSeguidas,
   tocaEjercicio,
+  habitosPorBloque,
+  textoDeHabitos,
   validarAjustes,
 } from "./cuidado";
 
@@ -91,6 +93,7 @@ describe("cuidado", () => {
     ).toEqual({
       metaAgua: 8,
       habitos: [],
+      bloques: [],
       ejercicio: { nombre: "Ejercicio", dias: [2] },
       avisos: true,
       avisoDia: null,
@@ -101,6 +104,31 @@ describe("cuidado", () => {
     expect(
       validarAjustes({ metaAgua: 8, habitos: [], ejercicio: null, avisos: false, avisoDia: 24 }),
     ).toBeNull();
+  });
+
+  it("los bloques: una línea con «:» agrupa lo que sigue y no cuenta como cosa (D-193)", () => {
+    const r = validarAjustes({
+      metaAgua: 8,
+      habitos: ["Antes", "Mañana:", "Skincare", " Meditar ", "Noche:", "Leer", "leer", "Skincare"],
+      ejercicio: null,
+      avisos: false,
+    });
+    expect(r?.habitos).toEqual(["Antes", "Skincare", "Meditar", "Leer", "leer"]);
+    expect(r?.bloques).toEqual([undefined, "Mañana", "Mañana", "Noche", "Noche"]);
+    expect(
+      validarAjustes({
+        metaAgua: 8,
+        habitos: ["x".repeat(41) + ":"],
+        ejercicio: null,
+        avisos: false,
+      }),
+    ).toBeNull();
+    const hs = [
+      { id: "a", nombre: "Skincare", bloque: "Mañana" },
+      { id: "b", nombre: "Leer", bloque: "Noche" },
+    ];
+    expect(textoDeHabitos(hs)).toBe("Mañana:\nSkincare\nNoche:\nLeer");
+    expect(habitosPorBloque(hs).map((g) => g.titulo)).toEqual(["Mañana", "Noche"]);
   });
 
   describe("avisos del móvil (D-183)", () => {

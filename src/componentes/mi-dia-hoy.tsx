@@ -1,13 +1,15 @@
 "use client";
 
-import { type FormEvent, useState } from "react";
+import { Fragment, type FormEvent, useState } from "react";
 import {
   type CeldaDeHistorial,
   MAX_HABITOS,
   MAX_NOMBRE_HABITO,
   cuidadoDe,
   diaDe,
+  habitosPorBloque,
   historialDeHabitos,
+  textoDeHabitos,
   resumenDelDia,
 } from "@/dominio/cuidado";
 import { sumarDias } from "@/dominio/fechas";
@@ -50,29 +52,38 @@ export function MiDiaHoy() {
               : `${hoy.hechos} de ${hoy.total} hechas hoy`}
           </p>
           <ul aria-label="Mi lista de hoy" className="flex flex-col">
-            {c.habitos.map((h) => {
-              const hecho = dia.habitos.includes(h.id);
-              return (
-                <li key={h.id}>
-                  <button
-                    type="button"
-                    aria-pressed={hecho}
-                    className={`flex min-h-11 w-full items-center gap-3 rounded-xl text-left text-base ${hecho ? "text-tinta-suave line-through" : ""}`}
-                    onClick={() =>
-                      despachar({
-                        tipo: "cuidado/habito",
-                        personaId: yo.id,
-                        fecha: estado.hoy,
-                        id: h.id,
-                      })
-                    }
-                  >
-                    <span aria-hidden="true">{hecho ? "✅" : "⬜"}</span>
-                    <span>{h.nombre}</span>
-                  </button>
-                </li>
-              );
-            })}
+            {habitosPorBloque(c.habitos).map((g) => (
+              <Fragment key={g.titulo || "sin-bloque"}>
+                {g.titulo && (
+                  <li className="text-tinta-suave pt-2 text-sm font-bold tracking-wide uppercase">
+                    {g.titulo}
+                  </li>
+                )}
+                {g.habitos.map((h) => {
+                  const hecho = dia.habitos.includes(h.id);
+                  return (
+                    <li key={h.id}>
+                      <button
+                        type="button"
+                        aria-pressed={hecho}
+                        className={`flex min-h-11 w-full items-center gap-3 rounded-xl text-left text-base ${hecho ? "text-tinta-suave line-through" : ""}`}
+                        onClick={() =>
+                          despachar({
+                            tipo: "cuidado/habito",
+                            personaId: yo.id,
+                            fecha: estado.hoy,
+                            id: h.id,
+                          })
+                        }
+                      >
+                        <span aria-hidden="true">{hecho ? "✅" : "⬜"}</span>
+                        <span>{h.nombre}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </Fragment>
+            ))}
           </ul>
 
           <details>
@@ -188,7 +199,7 @@ function ListaDeCosas({ personaId }: { personaId: string }) {
   const { estado } = useHogar();
   const guardar = useGuardar();
   const c = cuidadoDe(estado.cuidado, personaId);
-  const [texto, setTexto] = useState(c.habitos.map((h) => h.nombre).join("\n"));
+  const [texto, setTexto] = useState(textoDeHabitos(c.habitos));
   const [aviso, setAviso] = useState(c.avisoDia === null ? "" : String(c.avisoDia));
   const [problema, setProblema] = useState("");
   const [guardado, setGuardado] = useState(false);
@@ -220,14 +231,15 @@ function ListaDeCosas({ personaId }: { personaId: string }) {
         <textarea
           className="campo"
           rows={5}
-          maxLength={(MAX_NOMBRE_HABITO + 1) * MAX_HABITOS}
-          placeholder={"Leer\nSubir escaleras\nRegar las plantas\nLimpiar el arenero"}
+          maxLength={(MAX_NOMBRE_HABITO + 1) * (MAX_HABITOS + 6)}
+          placeholder={"Mañana:\nSkincare\nMeditar 5 min\nNoche:\nLeer\nEscribir una línea del día"}
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
         />
       </label>
       <p className="text-tinta-suave -mt-2 text-sm">
-        Si quitas una, se borra también su historial.
+        Si quitas una, se borra también su historial. Para agrupar, escribe una línea que acabe en
+        «:» (por ejemplo «Mañana:») y pon debajo lo que va en ese bloque.
       </p>
       <label className="flex flex-col gap-1 text-base font-semibold">
         Avisarme en el móvil si me falta algo
