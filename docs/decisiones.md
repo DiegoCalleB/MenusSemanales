@@ -1660,3 +1660,10 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **App:** en «Comprar online», «📋 Copiar el pedido para la extensión» copia un JSON (`formato: hecho-pedido`) con los artículos pendientes que tienen producto guardado; los demás siguen en el asistente paso a paso (`pedidoParaExtension`).
 - **Extensión** (`extension-mercadona/`, Manifest V3, solo `tienda.mercadona.es`): se pega el pedido, abre cada producto, pulsa «Añadir» y al final enseña cuántos se añadieron y cuáles no. Solo acepta enlaces https del propio dominio. Una unidad por producto.
 - **Límites:** solo ordenador (Chrome/Edge). **No se ha podido probar contra la tienda real** (no es alcanzable desde el entorno de desarrollo): la forma del botón «Añadir» está supuesta por su texto y puede necesitar ajuste con la primera prueba. Las condiciones de uso de Mercadona respecto a automatizar el carrito no se han comprobado. Siempre hay que revisar la cesta antes de pagar.
+
+## D-185 · «Hecho» en la notificación de la medicación
+
+- **Petición (Diego):** poder marcar la medicación como tomada desde la propia notificación («💊 Diego: Vitamina D y K»), sin abrir la app.
+- **Cómo:** reutiliza el botón «Hecho» de la mochila (D-151). Al mandar el recordatorio, el servidor pide un código de un solo uso (36 h) con las dosis de esa notificación; el botón lo usa para añadir el día a `tomadas` en el documento del hogar, sin sesión, y los móviles reciben el cambio en directo. Pulsar dos veces o desde dos móviles no duplica nada.
+- **Alcance del código:** cada cosa lleva `tipo` (`mochila` por defecto o `medicacion`). Un código solo marca lo que iba en su notificación, por persona y nombre: la dosis de otra persona o una cosa de la mochila con el mismo nombre no se tocan. Migración `20261122000000_hecho_medicacion.sql`.
+- **Si no se puede crear el código**, la notificación sale igual, sin botón (marcar en «Hoy» sigue valiendo).

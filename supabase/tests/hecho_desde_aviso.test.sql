@@ -69,5 +69,43 @@ select pg_temp.falla('anon no lee los códigos',
   $q$select * from privado.aviso_accion$q$, '42501');
 select pg_temp.fin();
 
+-- «Tomada» desde la notificación de la medicación (D-185).
+select pg_temp.como('aaaaaaaa-0000-0000-0000-00000000000a');
+insert into _s values ('hogarB', public.crear_hogar('Hogar B')::text);
+select public.guardar_estado_hogar((select v from _s where clave = 'hogarB')::uuid, 0, $j${
+  "medicacion": [
+    {"id":"x1","personaId":"diego","nombre":"Vitamina D","hora":8,"dias":[1,2,3,4,5,6,7],"tomadas":["2026-11-18"]},
+    {"id":"x2","personaId":"ana","nombre":"Vitamina D","hora":8,"dias":[1,2,3,4,5,6,7],"tomadas":[]}
+  ],
+  "mochila": [{"id":"m1","personaId":"diego","texto":"Vitamina D","dias":[4],"fecha":null,"antes":1,"preparadas":[],"soloConCole":true}]
+}$j$::jsonb);
+insert into _s select 'tokenB', public.enlace_calendario((select v from _s where clave = 'hogarB')::uuid);
+select pg_temp.fin();
+
+select pg_temp.como(null);
+select pg_temp.igual('Un tipo que no existe no vale',
+  (public.crear_accion_aviso((select v from _s where clave = 'secreto'), (select v from _s where clave = 'tokenB'),
+     '[{"texto":"Vitamina D","personaId":"diego","para":"2026-11-19","tipo":"otro"}]') is null)::int, 1);
+insert into _s select 'codigoB', public.crear_accion_aviso((select v from _s where clave = 'secreto'),
+  (select v from _s where clave = 'tokenB'),
+  '[{"texto":"Vitamina D","personaId":"diego","para":"2026-11-19","tipo":"medicacion"}]');
+select pg_temp.igual('El botón marca la dosis de hoy, una sola',
+  public.marcar_hecho_desde_aviso((select v from _s where clave = 'codigoB')), 1);
+select pg_temp.igual('Otra vez, ninguna',
+  public.marcar_hecho_desde_aviso((select v from _s where clave = 'codigoB')), 0);
+select pg_temp.fin();
+
+select pg_temp.como('aaaaaaaa-0000-0000-0000-00000000000a');
+select pg_temp.igual('La de Diego suma hoy (y la de ayer sigue)',
+  (select ((estado->'medicacion'->0->'tomadas') = '["2026-11-18","2026-11-19"]'::jsonb)::int
+     from public.hogar_estado where hogar_id = (select v from _s where clave = 'hogarB')::uuid), 1);
+select pg_temp.igual('La de Ana, no (es de otra persona)',
+  (select ((estado->'medicacion'->1->'tomadas') = '[]'::jsonb)::int
+     from public.hogar_estado where hogar_id = (select v from _s where clave = 'hogarB')::uuid), 1);
+select pg_temp.igual('Lo de la mochila con el mismo nombre no se toca',
+  (select ((estado->'mochila'->0->'preparadas') = '[]'::jsonb)::int
+     from public.hogar_estado where hogar_id = (select v from _s where clave = 'hogarB')::uuid), 1);
+select pg_temp.fin();
+
 rollback;
 \echo 'hecho_desde_aviso: OK'

@@ -14,7 +14,11 @@ import {
   resumenDelDia,
 } from "@/dominio/avisos";
 import { notificacionDeCuidado, recordatoriosDeCuidado } from "@/dominio/cuidado";
-import { notificacionDeMedicacion, recordatoriosDeMedicacion } from "@/dominio/medicacion";
+import {
+  cosasParaMarcarMedicacion,
+  notificacionDeMedicacion,
+  recordatoriosDeMedicacion,
+} from "@/dominio/medicacion";
 import { hoyEnMadrid, leerResumenDelCalendario } from "@/infraestructura/calendario-suscrito";
 import { enviarPush, generarClavesVapid, pushConfigurado } from "@/infraestructura/avisos/push";
 import {
@@ -53,7 +57,7 @@ const TOKEN = /^[0-9a-f]{64}$/;
 
 type CuentaPush = { enviadas: number; caducadas: number; fallos: number };
 
-type Mensaje = { titulo: string; cuerpo: string; tag: string };
+type Mensaje = { titulo: string; cuerpo: string; tag: string; hecho?: string };
 
 /**
  * Manda cada recordatorio a los móviles de esa persona (los de su cuenta) o, si ninguno está
@@ -99,12 +103,14 @@ type Resumen = NonNullable<Awaited<ReturnType<typeof leerResumenDelCalendario>>>
  * esa persona. Lo ya marcado como tomado hoy no avisa. La base de datos llama cada hora, así que
  * llega pasados unos minutos.
  */
-function recordarMedicacion(
+async function recordarMedicacion(
   resumen: Resumen,
   hoy: string,
   hora: number,
   token: string,
   claves: ClavesVapid | null,
+  /** El secreto de la base de datos: con él, la notificación lleva el botón «Hecho» (D-185). */
+  secreto: string | null,
 ) {
   const entrada = entradaDeProyeccion(resumen, hoy);
   const recordatorios = recordatoriosDeMedicacion(
@@ -113,12 +119,19 @@ function recordarMedicacion(
     hoy,
     hora,
   );
-  return mandarPorPersona(
-    recordatorios.map((r) => ({ personaId: r.personaId, mensaje: notificacionDeMedicacion(r) })),
-    token,
-    claves,
-    "medicación",
-  );
+  const aEnviar = [];
+  for (const r of recordatorios) {
+    const hecho = secreto
+      ? await crearAccionDeAviso(secreto, token, cosasParaMarcarMedicacion(r, hoy)).catch(
+          () => null,
+        )
+      : null;
+    aEnviar.push({
+      personaId: r.personaId,
+      mensaje: { ...notificacionDeMedicacion(r), ...(hecho ? { hecho } : {}) },
+    });
+  }
+  return mandarPorPersona(aEnviar, token, claves, "medicación");
 }
 
 /**
@@ -302,7 +315,14 @@ export async function POST(request: Request) {
     try {
       const r = await leerResumenDelCalendario(token);
       if (r) {
-        medicacion = await recordarMedicacion(r, hoy, hora, token, claves);
+        medicacion = await recordarMedicacion(
+          r,
+          hoy,
+          hora,
+          token,
+          claves,
+          porBaseDeDatos ? dado : null,
+        );
         cuidado = await recordarCuidado(r, hoy, hora, token, claves);
       }
     } catch {

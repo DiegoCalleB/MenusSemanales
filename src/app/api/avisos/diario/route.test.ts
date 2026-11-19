@@ -469,6 +469,27 @@ describe("medicación (D-166)", () => {
     });
   });
 
+  it("la notificación de la medicación lleva el botón «Hecho» con su código (D-185)", async () => {
+    m.accion.mockResolvedValue("e".repeat(64));
+    m.leer.mockResolvedValue(conMedicacion());
+    m.subs.mockResolvedValue([movil("diego", "diego")]);
+    await pedir(`Bearer ${TOKEN}`, "", { token: TOKEN });
+    expect(m.accion).toHaveBeenCalledWith(TOKEN, TOKEN, [
+      {
+        texto: "Pastilla",
+        personaId: "diego",
+        para: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+        tipo: "medicacion",
+      },
+    ]);
+    expect(m.push.mock.calls[0]?.[1]).toMatchObject({ hecho: "e".repeat(64) });
+    // Sin código, sale igual, sin botón.
+    m.accion.mockResolvedValue(null);
+    m.push.mockClear();
+    await pedir(`Bearer ${TOKEN}`, "", { token: TOKEN });
+    expect(m.push.mock.calls[0]?.[1]).not.toHaveProperty("hecho");
+  });
+
   it("si ningún móvil está vinculado a esa persona, avisa a todos los del hogar", async () => {
     m.leer.mockResolvedValue(conMedicacion());
     m.subs.mockResolvedValue([movil("a", null), movil("b", "ana")]);
