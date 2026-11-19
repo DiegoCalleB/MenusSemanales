@@ -27,6 +27,7 @@ describe("pilares de la app", () => {
       "/cuenta": "mas",
       "/compartir": "mas",
       "/personas": "mas",
+      "/objetivos": "mas",
     };
     for (const [ruta, pilar] of Object.entries(rutas)) expect(pilarDe(ruta)?.id, ruta).toBe(pilar);
     expect(pilarDe("/no-existe")).toBeNull();
