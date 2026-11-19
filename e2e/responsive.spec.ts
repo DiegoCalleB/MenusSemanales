@@ -3301,7 +3301,7 @@ test.describe("Hoy como tablero fijo (D-180)", () => {
     await cargar(pagina, "/");
     const barra = pagina.getByRole("search", { name: "Apuntar rápido" });
     await barra.getByLabel("Escribe lo que quieras apuntar").fill("leche y pañales");
-    await barra.getByRole("button", { name: /Apuntar/ }).click();
+    await barra.getByRole("button", { name: "Anotar" }).click();
     const caja = pagina.getByRole("dialog", { name: "Apuntar" });
     await expect(caja).toBeVisible();
     await expect(caja.locator("textarea")).toHaveValue("leche y pañales");
@@ -3340,6 +3340,22 @@ test.describe("Hoy como tablero fijo (D-180)", () => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     await cargar(pagina, "/");
     await expect(pagina.getByText(/^Miércoles 4: .*cena/)).toBeVisible();
+    await contexto.close();
+  });
+
+  test("revisión de la semana (D-191): enseña lo hecho, lo que se quedó y lo que viene", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/");
+    await pagina.getByRole("link", { name: /Revisión de la semana/ }).click();
+    await expect(
+      pagina.getByRole("heading", { level: 1, name: /Revisión de la semana/ }),
+    ).toBeVisible();
+    await expect(pagina.getByRole("region", { name: /Lo que hiciste/ })).toBeVisible();
+    await expect(pagina.getByRole("region", { name: /Lo que se quedó/ })).toBeVisible();
+    await expect(pagina.getByRole("region", { name: /Lo que viene/ })).toBeVisible();
+    await expect(pagina.getByRole("link", { name: /Planear la semana/ })).toBeVisible();
     await contexto.close();
   });
 });

@@ -1686,7 +1686,7 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 ## D-188 · Barra de captura en «Hoy»
 
 - **Petición (Diego):** soltar lo que se le ocurra desde la portada, sin buscar dónde va.
-- **Qué hay:** una barra arriba de Hoy («Apunta lo que sea: compra, cita, pendiente…» + «✨ Apuntar»). Al enviarla se abre la misma caja de ＋ (D-178) con el texto ya puesto: la IA lo reparte entre compra, citas, pendientes y papeles y **nada se apunta sin verlo antes**. Sin la IA (sin cuenta, tope diario), la caja explica que se usen Compra, Evento o Pendiente.
+- **Qué hay:** una barra arriba de Hoy («Apunta lo que sea: compra, cita, pendiente…» + «✨ Anotar»). Al enviarla se abre la misma caja de ＋ (D-178) con el texto ya puesto: la IA lo reparte entre compra, citas, pendientes y papeles y **nada se apunta sin verlo antes**. Sin la IA (sin cuenta, tope diario), la caja explica que se usen Compra, Evento o Pendiente.
 - **Cómo:** la barra y el botón ＋ se hablan con un evento del navegador (`hecho-apuntar`), sin estado compartido nuevo.
 
 ## D-189 · Qué se usa de «Hoy» y apartados que se pliegan solos

@@ -32,7 +32,7 @@ export function BarraDeCaptura() {
         placeholder="Apunta lo que sea: compra, cita, pendiente…"
       />
       <button type="submit" className="boton shrink-0">
-        <span aria-hidden="true">✨ </span>Apuntar
+        <span aria-hidden="true">✨ </span>Anotar
       </button>
     </form>
   );
