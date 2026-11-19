@@ -25,7 +25,14 @@ select public.guardar_estado_hogar((select id from _ids where clave = 'HA'), 0,
                      "fecha":"2026-12-04","repiteMeses":12,"avisos":[30,7,1],"notas":"no sale",
                      "hechoEn":null,"renovado":["2025-12-04"]}],
     "pendientes":[{"id":"p1","texto":"Llamar al fontanero","personaId":null,"importante":true,
-                   "creadoEn":"2026-11-01","hechoEn":null,"secreto":"no sale"}]}'::jsonb);
+                   "creadoEn":"2026-11-01","hechoEn":null,"secreto":"no sale"}],
+    "cuidado":[{"personaId":"dddddddd-0000-0000-0000-000000000001","metaAgua":8,"avisos":true,
+                "habitos":[{"id":"h1","nombre":"Hábito secreto"}],
+                "ejercicio":{"nombre":"Correr","dias":[1,3,5]},
+                "dias":{"2020-01-01":{"agua":3,"habitos":["h1"],"ejercicio":true},
+                        "2099-01-01":{"agua":4,"habitos":["h1"],"ejercicio":false}}},
+               {"personaId":"dddddddd-0000-0000-0000-000000000002","metaAgua":8,"avisos":false,
+                "habitos":[],"ejercicio":null,"dias":{}}]}'::jsonb);
 insert into _t select 'A', public.enlace_calendario((select id from _ids where clave = 'HA'));
 -- Menú del cole (D-141): uno de hoy (sale) y uno de hace un mes (no sale).
 select public.aplicar_cambios_cole((select id from _ids where clave = 'HA'), jsonb_build_object(
@@ -77,9 +84,9 @@ select pg_temp.igual('No sale nada del documento viejo',
   (select (j::text !~ 'Del documento' and j::text !~ 'Viejo')::int from _r where clave = 'r'), 1);
 select pg_temp.igual('Solo las claves de siempre',
   (select (select count(*)::int from jsonb_object_keys(j) k where k in
-     ('agenda','almuerzos','casa','cenas','cole','cumples','diasCole','eventos','medicacion','mochila','pendientes','personas','vencimientos')) from _r where clave = 'r'), 13);
+     ('agenda','almuerzos','casa','cenas','cole','cuidado','cumples','diasCole','eventos','medicacion','mochila','pendientes','personas','vencimientos')) from _r where clave = 'r'), 14);
 select pg_temp.igual('Y ninguna más',
-  (select count(*)::int from _r, jsonb_object_keys(j) where clave = 'r'), 13);
+  (select count(*)::int from _r, jsonb_object_keys(j) where clave = 'r'), 14);
 -- Medicación (D-166): para el servidor de los avisos, solo lo necesario.
 select pg_temp.igual('La medicación sale con persona, nombre, hora, días y tomadas, y nada más',
   (select ((j->'medicacion'->0->>'nombre') = 'Pastilla' and (j->'medicacion'->0->>'hora') = '21'
@@ -119,6 +126,17 @@ select pg_temp.igual('Qué llevar sale del documento',
         and (j->'mochila'->0->>'antes')::int = 1)::int from _r where clave = 'r'), 1);
 select pg_temp.igual('De qué llevar no sale nada más',
   (select (j::text !~ 'no sale' and j::text !~ '2026-11-06')::int from _r where clave = 'r'), 1);
+-- Cuidarse (D-183): solo quien pidió avisos, solo agua y ejercicio de los últimos días, nunca hábitos.
+select pg_temp.igual('Cuidarse sale solo de quien pidió avisos, con su meta y su ejercicio',
+  (select (jsonb_array_length(j->'cuidado') = 1
+        and (j->'cuidado'->0->>'personaId') = 'dddddddd-0000-0000-0000-000000000001'
+        and (j->'cuidado'->0->>'metaAgua')::int = 8
+        and (j->'cuidado'->0->'ejercicio'->>'nombre') = 'Correr')::int from _r where clave = 'r'), 1);
+select pg_temp.igual('De Cuidarse salen el agua y el ejercicio recientes, y nada de hábitos',
+  (select (jsonb_array_length(j->'cuidado'->0->'dias') = 1
+        and (j->'cuidado'->0->'dias'->0->>'agua')::int = 4
+        and not (j->'cuidado'->0->'dias'->0 ? 'habitos')
+        and (j::text !~ 'Hábito secreto'))::int from _r where clave = 'r'), 1);
 select pg_temp.igual('Token inventado: nada',
   (select (public.estado_para_calendario(repeat('0', 64)) is null)::int), 1);
 

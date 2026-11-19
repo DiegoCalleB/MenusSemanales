@@ -174,3 +174,42 @@ export function nombreDeProducto(enlace: string): string {
     return "Producto guardado";
   }
 }
+
+/**
+ * El pedido para la extensión del navegador (D-184): la lista de lo que falta con el producto que se
+ * guardó de cada artículo. La extensión lo pega, abre cada producto en la tienda, con la sesión de
+ * quien compra, y pulsa «Añadir». Solo van los que tienen producto guardado y aún no están en la
+ * cesta; el resto se queda para el asistente paso a paso.
+ */
+export interface PedidoParaExtension {
+  texto: string;
+  incluidos: number;
+  /** Artículos pendientes que no llevan producto guardado (no van en el pedido). */
+  sinProducto: string[];
+}
+
+export function pedidoParaExtension(
+  supermercado: Supermercado,
+  articulos: ReadonlyArray<{ clave: string; nombre: string }>,
+  productoDe: (nombre: string) => string | undefined,
+  hechos: readonly string[],
+): PedidoParaExtension {
+  const lista: Array<{ nombre: string; enlace: string }> = [];
+  const sinProducto: string[] = [];
+  for (const a of articulos) {
+    if (hechos.includes(a.clave)) continue;
+    const enlace = enlaceDeProducto(supermercado, productoDe(a.nombre) ?? "");
+    if (enlace) lista.push({ nombre: a.nombre, enlace });
+    else sinProducto.push(a.nombre);
+  }
+  return {
+    texto: JSON.stringify({
+      formato: "hecho-pedido",
+      version: 1,
+      tienda: supermercado.id,
+      articulos: lista,
+    }),
+    incluidos: lista.length,
+    sinProducto,
+  };
+}

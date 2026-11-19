@@ -1643,3 +1643,35 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Tono:** nunca reproches ni rachas rotas.
 - **Privacidad:** vive en el documento del hogar (`cuidado`), se guardan solo cinco semanas y no entra en la búsqueda, ni en el contexto de la IA, ni en el calendario.
 - **Pendiente (backlog):** avisos al móvil (agua a media mañana y por la tarde, aviso del día de ejercicio), cenas más sanas con 👍 y conexión con apps de salud.
+
+## D-183 · Avisos al móvil de «Cuidarse»
+
+- **Petición (Diego):** que Cuidarse (D-182) avise en el móvil, no solo se vea al abrir la app.
+- **Opt-in por persona:** casilla «Avisarme en el móvil» en los ajustes de Cuidarse (`avisos`, apagada por defecto; lo guardado antes cuenta como apagado). Nadie recibe avisos sin pedirlos.
+- **Qué avisa** (hora de Madrid, la base de datos llama cada hora como con la medicación): agua a las 11 h si lleva menos de un cuarto de la meta y a las 17 h si menos del 60 %; ejercicio a las 18 h si hoy toca y no lo ha marcado. Si va bien, no avisa. Sin reproches ni rachas rotas.
+- **A quién:** a los móviles vinculados a esa persona; si ninguno lo está, a los del hogar (igual que la medicación). Una notificación por persona y tipo (`tag`), que no tapa los demás avisos.
+- **Privacidad:** `estado_para_calendario` añade `cuidado` **solo de quien pidió avisos** y solo meta de agua, ejercicio (nombre y días) y agua/ejercicio de los últimos días. Nunca los hábitos. No entra en el calendario suscrito, la búsqueda ni la IA. Migración `20261121000000_cuidarse.sql`.
+- **Código:** `recordatoriosDeCuidado` y `notificacionDeCuidado` en `src/dominio/cuidado.ts`; la ruta de avisos reparte medicación y cuidado con un mismo envío por persona.
+
+## D-184 · Llenar la cesta de Mercadona con una extensión del navegador
+
+- **Petición (Diego):** que los productos guardados («⭐ Mi producto») acaben en la cesta sin ir uno a uno.
+- **Por qué una extensión:** no hay API (D-127/D-131) ni se guarda la contraseña. Una extensión corre **en el navegador de quien compra, con su sesión**: la app no ve la cuenta de nadie.
+- **App:** en «Comprar online», «📋 Copiar el pedido para la extensión» copia un JSON (`formato: hecho-pedido`) con los artículos pendientes que tienen producto guardado; los demás siguen en el asistente paso a paso (`pedidoParaExtension`).
+- **Extensión** (`extension-mercadona/`, Manifest V3, solo `tienda.mercadona.es`): se pega el pedido, abre cada producto, pulsa «Añadir» y al final enseña cuántos se añadieron y cuáles no. Solo acepta enlaces https del propio dominio. Una unidad por producto.
+- **Límites:** solo ordenador (Chrome/Edge). **No se ha podido probar contra la tienda real** (no es alcanzable desde el entorno de desarrollo): la forma del botón «Añadir» está supuesta por su texto y puede necesitar ajuste con la primera prueba. Las condiciones de uso de Mercadona respecto a automatizar el carrito no se han comprobado. Siempre hay que revisar la cesta antes de pagar.
+
+## D-185 · «Hecho» en la notificación de la medicación
+
+- **Petición (Diego):** poder marcar la medicación como tomada desde la propia notificación («💊 Diego: Vitamina D y K»), sin abrir la app.
+- **Cómo:** reutiliza el botón «Hecho» de la mochila (D-151). Al mandar el recordatorio, el servidor pide un código de un solo uso (36 h) con las dosis de esa notificación; el botón lo usa para añadir el día a `tomadas` en el documento del hogar, sin sesión, y los móviles reciben el cambio en directo. Pulsar dos veces o desde dos móviles no duplica nada.
+- **Alcance del código:** cada cosa lleva `tipo` (`mochila` por defecto o `medicacion`). Un código solo marca lo que iba en su notificación, por persona y nombre: la dosis de otra persona o una cosa de la mochila con el mismo nombre no se tocan. Migración `20261122000000_hecho_medicacion.sql`.
+- **Si no se puede crear el código**, la notificación sale igual, sin botón (marcar en «Hoy» sigue valiendo).
+
+## D-186 · «Mi día»: lista diaria con historial
+
+- **Petición (Diego):** una checklist en la portada con lo que hay que hacer **todos los días** (leer, ejercicio, subir escaleras, regar las plantas, limpiar el arenero…), marcarla al final del día y guardar **qué días se hizo cada cosa y cuáles no**.
+- **Qué hay:** tarjeta «✅ Mi día» en Hoy, justo antes de Cuidarse, solo para el perfil abierto. Casillas grandes, «N de M hechas hoy» y «🎉 ¡Día completo!». «Cambiar mi lista»: una cosa por línea, hasta 15.
+- **Historial:** «Mi historial» (14 o 30 días): por cosa, una fila de cuadros (hecho / no se hizo / hoy aún por hacer / aún no estaba apuntada), «N de M días» y la racha de días seguidos 🔥 (hoy sin hacer no rompe la racha: el día no ha acabado), y cuántos días salió completo.
+- **Datos:** reutiliza los hábitos de Cuidarse (D-182), que salen de esa tarjeta y pasan aquí; no hay migración y lo que ya estaba apuntado sigue. Cada cosa guarda `desde` (el día en que se apuntó) para que los días anteriores no cuenten como «no». El historial se guarda **6 meses** (antes 5 semanas). Quitar una cosa de la lista borra su historial (se avisa). Sigue siendo personal: no va al servidor, ni a la búsqueda, ni a la IA, ni al calendario.
+- **Pendiente:** corregir el día de ayer (marcar algo olvidado) no se puede aún; ver más de 30 días o por semanas; avisos del móvil para esta lista.

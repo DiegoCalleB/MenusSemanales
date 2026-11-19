@@ -3220,7 +3220,7 @@ test.describe("Hoy como tablero fijo (D-180)", () => {
     for (const r of [izq!, der!, papeles!]) expect(r.x + r.width).toBeLessThanOrEqual(1280);
     await contexto.close();
   });
-  test("cuidarse (D-182): se suman vasos, se ajusta la meta y se marcan ejercicio y hábitos", async ({
+  test("cuidarse (D-182): se suman vasos, se ajusta la meta y se marca el ejercicio", async ({
     browser,
   }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
@@ -3233,10 +3233,9 @@ test.describe("Hoy como tablero fijo (D-180)", () => {
     await bloque.getByRole("button", { name: "− Quitar" }).click();
     await expect(bloque).toContainText("Agua: 1 de 8 vasos");
 
-    await bloque.getByText("Ajustar mi meta, ejercicio y hábitos").click();
+    await bloque.getByText("Ajustar mi meta de agua y mi ejercicio").click();
     const form = bloque.getByRole("form", { name: "Ajustes de cuidarse" });
     await form.getByLabel("Vasos de agua al día").fill("6");
-    await form.getByLabel(/Hábitos sanos/).fill("Una fruta");
     await form.getByLabel("Quiero hacer ejercicio").check();
     await form.getByLabel("Qué ejercicio").fill("Caminar");
     await form.getByRole("button", { name: "martes" }).click();
@@ -3246,13 +3245,42 @@ test.describe("Hoy como tablero fijo (D-180)", () => {
     await form.getByRole("button", { name: "Guardar" }).click();
     await expect(bloque).toContainText("Agua: 1 de 6 vasos");
 
-    const fruta = bloque.getByRole("button", { name: "Una fruta" });
-    await fruta.click();
-    await expect(fruta).toHaveAttribute("aria-pressed", "true");
     const camina = bloque.getByRole("button", { name: /Hoy toca: Caminar/ });
     await camina.click();
     await expect(camina).toHaveAttribute("aria-pressed", "true");
     await expect(bloque).toContainText("1 de");
+    await contexto.close();
+  });
+
+  test("mi día (D-186): lista diaria con casillas, historial y racha", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/");
+    const bloque = pagina.getByRole("region", { name: /Mi día/ });
+    await bloque.getByText("Apuntar lo que quiero hacer cada día").click();
+    const form = bloque.getByRole("form", { name: "Mi lista de cada día" });
+    await form
+      .getByLabel(/Lo que quiero hacer cada día/)
+      .fill("Leer\nSubir escaleras\nRegar las plantas");
+    await form.getByRole("button", { name: "Guardar mi lista" }).click();
+    await expect(bloque).toContainText("0 de 3 hechas hoy");
+
+    const leer = bloque.getByRole("button", { name: "Leer" });
+    await leer.click();
+    await expect(leer).toHaveAttribute("aria-pressed", "true");
+    await bloque.getByRole("button", { name: "Subir escaleras" }).click();
+    await expect(bloque).toContainText("2 de 3 hechas hoy");
+    await bloque.getByRole("button", { name: "Regar las plantas" }).click();
+    await expect(bloque).toContainText("¡Día completo!");
+
+    await bloque.getByText("Mi historial").click();
+    const historial = bloque.getByRole("list", { name: "Historial por cosa" });
+    await expect(historial.getByRole("listitem")).toHaveCount(3);
+    await expect(historial).toContainText("Leer · 1 de 1 días");
+    await bloque.getByRole("button", { name: "30 días" }).click();
+    await expect(bloque.getByRole("button", { name: "30 días" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     await contexto.close();
   });
 });

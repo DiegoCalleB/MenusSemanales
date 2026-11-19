@@ -12,6 +12,7 @@ import {
   type RevisionProducto,
   marcarEnCesta,
   nombreDeProducto,
+  pedidoParaExtension,
   podarProgreso,
   revisarEnlaceDeProducto,
   quitarDeCesta,
@@ -150,6 +151,7 @@ export function ComprarOnline({
     void Promise.resolve().then(() => setGuardado(leerProgreso(hoy)));
   }, [hoy]);
 
+  const [copiado, setCopiado] = useState(false);
   const [productos, setProductos] = useState<ProductosOnline>({});
   useEffect(() => {
     void Promise.resolve().then(() => setProductos(leerProductos()));
@@ -179,6 +181,16 @@ export function ComprarOnline({
     guardarProductos(resto);
   }
   const productoDe = (nombre: string): string | undefined => productos[claveDeProducto(nombre)];
+  const pedido = pedidoParaExtension(super_, articulos, productoDe, progreso.hechos);
+
+  async function copiarPedido() {
+    try {
+      await navigator.clipboard.writeText(pedido.texto);
+      setCopiado(true);
+    } catch {
+      setCopiado(false);
+    }
+  }
 
   function cambiar(f: (p: ProgresoOnline) => ProgresoOnline) {
     const nuevo = f(progreso);
@@ -210,6 +222,19 @@ export function ComprarOnline({
         >
           Abrir la tienda de {super_.nombre} ↗
         </a>
+
+        {pedido.incluidos > 0 && (
+          <div className="flex flex-col gap-1">
+            <button type="button" className="boton-suave w-fit" onClick={() => void copiarPedido()}>
+              <span aria-hidden="true">📋 </span>Copiar el pedido para la extensión
+            </button>
+            <p role="status" className="text-tinta-suave text-sm">
+              {copiado
+                ? `Copiado: ${pedido.incluidos} ${pedido.incluidos === 1 ? "producto" : "productos"}. Pégalo en la extensión de Chrome.`
+                : `${pedido.incluidos} con producto guardado${pedido.sinProducto.length > 0 ? `; ${pedido.sinProducto.length} sin él se hacen paso a paso` : ""}. Solo en ordenador.`}
+            </p>
+          </div>
+        )}
 
         <div
           role="group"

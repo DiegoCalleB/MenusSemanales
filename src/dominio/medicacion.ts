@@ -101,8 +101,17 @@ export function recordatoriosDeMedicacion(
 export function notificacionDeMedicacion(r: RecordatorioDeMedicacion) {
   return {
     titulo: `💊 ${r.persona ? `${r.persona}: ` : ""}${r.nombres.join(" y ")}`.slice(0, 100),
-    cuerpo: `Son las ${horaTexto(r.hora)}. Márcalo como tomado en «Hoy».`,
+    cuerpo: `Son las ${horaTexto(r.hora)}. Toca «Hecho» cuando la tomes, o márcalo en «Hoy».`,
     // Una por persona: la de una no tapa la de otra (ni los demás avisos del día).
     tag: `medicacion-${r.personaId}`.replace(/[^a-z0-9-]/gi, "").slice(0, 40),
   };
 }
+
+/** Lo que el botón «Hecho» de esa notificación marca como tomado (D-185): las dosis de hoy. */
+export const cosasParaMarcarMedicacion = (r: RecordatorioDeMedicacion, hoy: FechaIso) =>
+  r.nombres.map((nombre) => ({
+    texto: nombre,
+    personaId: r.personaId,
+    para: hoy,
+    tipo: "medicacion" as const,
+  }));

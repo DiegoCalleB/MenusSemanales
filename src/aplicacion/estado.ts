@@ -51,6 +51,7 @@ import {
 import { MAX_NOMBRE_MEDICAMENTO, type Medicamento, podarTomadas } from "@/dominio/medicacion";
 import {
   type Cuidado,
+  MAX_HABITOS,
   MAX_VASOS_AL_DIA,
   cuidadoDe,
   diaDe,
@@ -467,6 +468,7 @@ export type Accion =
       metaAgua: number;
       habitos: string[];
       ejercicio: { nombre: string; dias: number[] } | null;
+      avisos: boolean;
     }
   /** «Nos gusta» (1), «no es para nosotros» (-1) o quitar el voto (0) de un plan del barrio (D-171). */
   | { tipo: "barrio/voto"; id: string; rasgos: string[]; voto: 1 | -1 | 0 }
@@ -2359,15 +2361,23 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
         return {
           ...e,
           siguienteId: e.siguienteId + 1,
-          aviso: error(e, "Revisa los ajustes: meta de 1 a 20 vasos y hasta 6 hábitos cortos."),
+          aviso: error(
+            e,
+            `Revisa los ajustes: meta de 1 a 20 vasos y hasta ${MAX_HABITOS} cosas cortas en la lista.`,
+          ),
         };
       }
       const actual = cuidadoDe(e.cuidado, accion.personaId);
       // Un hábito con el mismo nombre conserva su id (y lo ya marcado).
-      const habitos = datos.habitos.map((nombre, i) => ({
-        id: actual.habitos.find((h) => h.nombre === nombre)?.id ?? `h${e.siguienteId}-${i}`,
-        nombre,
-      }));
+      const habitos = datos.habitos.map((nombre, i) => {
+        const previo = actual.habitos.find((h) => h.nombre === nombre);
+        const desde = previo ? previo.desde : e.hoy;
+        return {
+          id: previo?.id ?? `h${e.siguienteId}-${i}`,
+          nombre,
+          ...(desde ? { desde } : {}),
+        };
+      });
       const vivos = new Set(habitos.map((h) => h.id));
       const dias = Object.fromEntries(
         Object.entries(actual.dias).map(([f, d]) => [
@@ -2381,6 +2391,7 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
           metaAgua: datos.metaAgua,
           habitos,
           ejercicio: datos.ejercicio,
+          avisos: datos.avisos,
           dias,
         }),
         siguienteId: e.siguienteId + 1,
