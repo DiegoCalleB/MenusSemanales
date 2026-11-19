@@ -3272,15 +3272,90 @@ test.describe("Hoy como tablero fijo (D-180)", () => {
     await bloque.getByRole("button", { name: "Regar las plantas" }).click();
     await expect(bloque).toContainText("¡Día completo!");
 
+    await bloque.getByText("¿Se te olvidó marcar algo de ayer?").click();
+    const ayer = bloque.getByRole("button", { name: "Ayer: Leer" });
+    await ayer.click();
+    await expect(ayer).toHaveAttribute("aria-pressed", "true");
+
+    // El panel de la lista sigue abierto tras guardar.
+    await bloque.getByLabel("Avisarme en el móvil si me falta algo").selectOption("21");
+    await bloque.getByRole("button", { name: "Guardar mi lista" }).click();
+    await expect(bloque.getByLabel("Avisarme en el móvil si me falta algo")).toHaveValue("21");
+
     await bloque.getByText("Mi historial").click();
     const historial = bloque.getByRole("list", { name: "Historial por cosa" });
     await expect(historial.getByRole("listitem")).toHaveCount(3);
-    await expect(historial).toContainText("Leer · 1 de 1 días");
+    await expect(historial).toContainText("Leer · 2 de 2 días");
     await bloque.getByRole("button", { name: "30 días" }).click();
     await expect(bloque.getByRole("button", { name: "30 días" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
+    await contexto.close();
+  });
+
+  test("barra de captura (D-188): lo escrito en Hoy abre la caja de apuntar con ese texto", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/");
+    const barra = pagina.getByRole("search", { name: "Apuntar rápido" });
+    await barra.getByLabel("Escribe lo que quieras apuntar").fill("leche y pañales");
+    await barra.getByRole("button", { name: "Anotar" }).click();
+    const caja = pagina.getByRole("dialog", { name: "Apuntar" });
+    await expect(caja).toBeVisible();
+    await expect(caja.locator("textarea")).toHaveValue("leche y pañales");
+    await contexto.close();
+  });
+
+  test("apartados sin uso (D-189): se pliegan solos tras dos semanas y un toque los despliega", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await pagina.addInitScript(() => {
+      window.localStorage.setItem(
+        "menus-semanales:uso-hoy",
+        JSON.stringify({
+          "sec-cuidarse": { nombre: "💧 Cuidarse", visto: "2026-10-01", usos: {} },
+        }),
+      );
+    });
+    await cargar(pagina, "/");
+    const bloque = pagina.getByRole("region", { name: /Cuidarse/ });
+    await expect(bloque).toContainText("sin usar hace 2 semanas");
+    await expect(bloque).not.toContainText("Agua:");
+    await bloque.getByRole("button", { name: /Cuidarse/ }).click();
+    await expect(bloque).toContainText("Agua: 0 de 8 vasos");
+
+    // El panel de la cuenta lo cuenta.
+    await cargar(pagina, "/cuenta");
+    await pagina.getByText("Qué usáis de «Hoy»").click();
+    await expect(pagina.getByRole("list", { name: "Uso de los apartados" })).toContainText(
+      "Cuidarse",
+    );
+    await contexto.close();
+  });
+
+  test("hoy en una frase (D-190): la línea de arriba resume el día", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/");
+    await expect(pagina.getByText(/^Miércoles 4: .*cena/)).toBeVisible();
+    await contexto.close();
+  });
+
+  test("revisión de la semana (D-191): enseña lo hecho, lo que se quedó y lo que viene", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/");
+    await pagina.getByRole("link", { name: /Revisión de la semana/ }).click();
+    await expect(
+      pagina.getByRole("heading", { level: 1, name: /Revisión de la semana/ }),
+    ).toBeVisible();
+    await expect(pagina.getByRole("region", { name: /Lo que hiciste/ })).toBeVisible();
+    await expect(pagina.getByRole("region", { name: /Lo que se quedó/ })).toBeVisible();
+    await expect(pagina.getByRole("region", { name: /Lo que viene/ })).toBeVisible();
+    await expect(pagina.getByRole("link", { name: /Planear la semana/ })).toBeVisible();
     await contexto.close();
   });
 });

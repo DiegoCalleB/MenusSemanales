@@ -8,6 +8,7 @@ import { enlaceWhatsApp } from "@/dominio/compartir";
 import { DiagnosticoAcceso } from "../diagnostico-acceso";
 import { PanelRespaldo } from "../panel-respaldo";
 import { PanelTablas } from "../panel-tablas";
+import { PanelUso } from "../panel-uso";
 import { MODO_DATOS, useCuenta, useHogar } from "../proveedor-hogar";
 
 const ETIQUETA_SYNC = {
@@ -164,6 +165,7 @@ export function CuentaVista({ version }: { version?: string }) {
       )}
 
       <AjusteEstampado />
+      <PanelUso />
       <PanelRespaldo />
       <PanelTablas />
       {version && (

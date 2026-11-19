@@ -2242,6 +2242,27 @@ describe("Cuidarse (D-182)", () => {
     expect(c.habitos.map((h) => h.nombre)).toEqual(["Fruta", "Caminar 20 min"]);
     expect(c.ejercicio).toEqual({ nombre: "Correr", dias: [1, 3] });
     expect(c.avisos).toBe(true);
+    expect(c.avisoDia).toBeNull();
+    // La hora del aviso de «Mi día» se guarda y, si no se manda, se conserva.
+    e = reducir(e, {
+      tipo: "cuidado/ajustes",
+      personaId: yo,
+      metaAgua: 6,
+      habitos: ["Fruta", "Caminar 20 min"],
+      ejercicio: { nombre: "Correr", dias: [1, 3] },
+      avisos: true,
+      avisoDia: 21,
+    });
+    expect(e.cuidado[0]!.avisoDia).toBe(21);
+    e = reducir(e, {
+      tipo: "cuidado/ajustes",
+      personaId: yo,
+      metaAgua: 6,
+      habitos: ["Fruta", "Caminar 20 min"],
+      ejercicio: { nombre: "Correr", dias: [1, 3] },
+      avisos: true,
+    });
+    expect(e.cuidado[0]!.avisoDia).toBe(21);
     const fruta = c.habitos[0]!.id;
     e = reducir(e, { tipo: "cuidado/habito", personaId: yo, fecha: e0.hoy, id: fruta });
     expect(e.cuidado[0]!.dias[e0.hoy]!.habitos).toEqual([fruta]);

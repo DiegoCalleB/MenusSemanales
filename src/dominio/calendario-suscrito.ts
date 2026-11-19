@@ -106,6 +106,11 @@ export const proyeccionSchema = z.object({
       z.object({
         personaId: z.string(),
         metaAgua: z.number().int().min(1).max(20).catch(8),
+        avisos: z.boolean().catch(false),
+        miDia: z
+          .object({ hora: z.number().int().min(0).max(23), total: z.number().int().min(0).max(30) })
+          .nullable()
+          .catch(null),
         ejercicio: z
           .object({
             nombre: z.string().trim().min(1).max(60),
@@ -119,6 +124,7 @@ export const proyeccionSchema = z.object({
               fecha,
               agua: z.number().int().min(0).max(30).catch(0),
               ejercicio: z.boolean().catch(false),
+              lista: z.number().int().min(0).max(30).catch(0),
             }),
           )
           .catch([]),

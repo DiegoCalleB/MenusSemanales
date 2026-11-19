@@ -10,6 +10,7 @@ import {
   historialDeHabitos,
   resumenDelDia,
 } from "@/dominio/cuidado";
+import { sumarDias } from "@/dominio/fechas";
 import { useGuardar } from "./editar";
 import { useHogar } from "./proveedor-hogar";
 import { SeccionHoy } from "./seccion-hoy";
@@ -40,7 +41,7 @@ export function MiDiaHoy() {
   const vacio = c.habitos.length === 0;
 
   return (
-    <SeccionHoy id="sec-mi-dia" emoji="✅" titulo="Mi día" compacta={vacio}>
+    <SeccionHoy id="sec-mi-dia" emoji="✅" titulo="Mi día" compacta={vacio} plegable>
       {!vacio && (
         <>
           <p role="status" className="text-base font-semibold">
@@ -73,6 +74,39 @@ export function MiDiaHoy() {
               );
             })}
           </ul>
+
+          <details>
+            <summary className="text-marca-fuerte flex min-h-11 cursor-pointer items-center text-base font-semibold">
+              ¿Se te olvidó marcar algo de ayer?
+            </summary>
+            <ul aria-label="Mi lista de ayer" className="flex flex-col pb-1">
+              {c.habitos.map((h) => {
+                const ayer = sumarDias(estado.hoy, -1);
+                const hecho = diaDe(c, ayer).habitos.includes(h.id);
+                return (
+                  <li key={h.id}>
+                    <button
+                      type="button"
+                      aria-pressed={hecho}
+                      aria-label={`Ayer: ${h.nombre}`}
+                      className={`flex min-h-11 w-full items-center gap-3 rounded-xl text-left text-base ${hecho ? "text-tinta-suave line-through" : ""}`}
+                      onClick={() =>
+                        despachar({
+                          tipo: "cuidado/habito",
+                          personaId: yo.id,
+                          fecha: ayer,
+                          id: h.id,
+                        })
+                      }
+                    >
+                      <span aria-hidden="true">{hecho ? "✅" : "⬜"}</span>
+                      <span>{h.nombre}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </details>
 
           <details>
             <summary className="text-marca-fuerte flex min-h-11 cursor-pointer items-center text-base font-semibold">
@@ -155,6 +189,7 @@ function ListaDeCosas({ personaId }: { personaId: string }) {
   const guardar = useGuardar();
   const c = cuidadoDe(estado.cuidado, personaId);
   const [texto, setTexto] = useState(c.habitos.map((h) => h.nombre).join("\n"));
+  const [aviso, setAviso] = useState(c.avisoDia === null ? "" : String(c.avisoDia));
   const [problema, setProblema] = useState("");
   const [guardado, setGuardado] = useState(false);
 
@@ -167,6 +202,7 @@ function ListaDeCosas({ personaId }: { personaId: string }) {
       habitos: texto.split("\n"),
       ejercicio: c.ejercicio,
       avisos: c.avisos,
+      avisoDia: aviso === "" ? null : Number(aviso),
     });
     setProblema(motivo ?? "");
     setGuardado(!motivo);
@@ -192,6 +228,20 @@ function ListaDeCosas({ personaId }: { personaId: string }) {
       </label>
       <p className="text-tinta-suave -mt-2 text-sm">
         Si quitas una, se borra también su historial.
+      </p>
+      <label className="flex flex-col gap-1 text-base font-semibold">
+        Avisarme en el móvil si me falta algo
+        <select className="campo w-fit" value={aviso} onChange={(e) => setAviso(e.target.value)}>
+          <option value="">No avisar</option>
+          {[18, 19, 20, 21, 22, 23].map((h) => (
+            <option key={h} value={h}>
+              A las {h}:00
+            </option>
+          ))}
+        </select>
+      </label>
+      <p className="text-tinta-suave -mt-2 text-sm">
+        Solo dice cuántas te faltan, no cuáles. Hace falta tener activadas las notificaciones.
       </p>
       {problema && (
         <p role="alert" className="bg-aviso-fondo text-aviso-texto rounded-2xl p-2 text-sm">

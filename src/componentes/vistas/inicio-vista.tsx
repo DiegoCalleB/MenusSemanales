@@ -21,6 +21,8 @@ import { ComidaDelDia } from "../comida-del-dia";
 import { LoDeHoy } from "../lo-de-hoy";
 import { NuevaCita } from "../nueva-cita";
 import { ActivarAvisosHoy } from "../activar-avisos-hoy";
+import { BarraDeCaptura } from "../barra-de-captura";
+import { FraseDeHoy } from "../frase-de-hoy";
 import { CuidarseHoy } from "../cuidarse-hoy";
 import { MiDiaHoy } from "../mi-dia-hoy";
 import { MedicacionHoy } from "../medicacion-hoy";
@@ -101,6 +103,25 @@ export function InicioVista() {
           </section>
         );
       })}
+      {proximos.length > 0 && (
+        <ul aria-label="Cuenta atrás" className="flex flex-wrap gap-2">
+          {proximos.map((p) => (
+            <li
+              key={p.clave}
+              className="bg-suave-1 border-borde rounded-full border px-3 py-1 text-sm font-bold"
+            >
+              <span aria-hidden="true">{p.emoji} </span>
+              {p.titulo}
+              {p.hora && ` (${p.hora})`} · {p.dias <= 1 ? p.texto : `en ${p.texto}`}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <BarraDeCaptura />
+
+      <FraseDeHoy />
+
       <ResumenHoy />
 
       <ActivarAvisosHoy />
@@ -159,6 +180,9 @@ export function InicioVista() {
             </details>
           </section>
 
+          {/* Lo de cada día va justo bajo la cena: en el móvil, una sola columna, no debe quedar al fondo. */}
+          <MiDiaHoy />
+
           {diaCole && (
             <section aria-labelledby="cole-hoy" className="flex flex-col gap-2">
               <h2 id="cole-hoy" className="text-lg font-extrabold">
@@ -171,8 +195,6 @@ export function InicioVista() {
           )}
 
           <MedicacionHoy />
-
-          <MiDiaHoy />
 
           <CuidarseHoy />
 
@@ -206,20 +228,7 @@ export function InicioVista() {
             </div>
             {apuntandoCita && <NuevaCita alGuardar={() => setApuntandoCita(false)} />}
             {proximos.length > 0 ? (
-              <ul aria-label="Cuenta atrás" className="flex flex-col gap-1">
-                {proximos.map((p) => (
-                  <li key={p.clave} className="flex items-baseline justify-between gap-3 text-base">
-                    <span className="min-w-0 font-semibold">
-                      <span aria-hidden="true">{p.emoji} </span>
-                      {p.titulo}
-                      {p.hora && ` (${p.hora})`}
-                    </span>{" "}
-                    <span className="text-tinta-suave shrink-0 text-sm font-bold">
-                      {p.dias <= 1 ? p.texto : `en ${p.texto}`}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              <p className="text-tinta-suave text-sm">Las próximas fechas salen arriba del todo.</p>
             ) : (
               <Vacio>Nada en el calendario de los próximos días.</Vacio>
             )}
@@ -333,6 +342,22 @@ export function InicioVista() {
         </span>
         {diaSemanaIso(estado.hoy) >= 6 && (
           <span className="text-tinta-suave text-sm">cenas, citas, mochila y compra</span>
+        )}
+      </Link>
+
+      <Link
+        href="/repaso"
+        className={
+          diaSemanaIso(estado.hoy) === 7
+            ? "tarjeta flex items-center justify-between gap-3"
+            : "boton-suave w-fit"
+        }
+      >
+        <span className="text-base font-semibold">
+          <span aria-hidden="true">🔎 </span>Revisión de la semana
+        </span>
+        {diaSemanaIso(estado.hoy) === 7 && (
+          <span className="text-tinta-suave text-sm">dos minutos: qué hiciste y qué viene</span>
         )}
       </Link>
 

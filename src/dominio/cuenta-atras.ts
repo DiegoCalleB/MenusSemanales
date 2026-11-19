@@ -95,6 +95,12 @@ export function cuentaAtras(
     });
   }
   return lista
-    .sort((a, b) => a.dias - b.dias || a.titulo.localeCompare(b.titulo, "es"))
+    .sort(
+      (a, b) =>
+        a.dias - b.dias ||
+        // El mismo día, de más pronto a más tarde (lo de todo el día, primero).
+        (a.hora ?? "").localeCompare(b.hora ?? "") ||
+        a.titulo.localeCompare(b.titulo, "es"),
+    )
     .slice(0, max);
 }

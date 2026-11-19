@@ -26,7 +26,7 @@ select public.guardar_estado_hogar((select id from _ids where clave = 'HA'), 0,
                      "hechoEn":null,"renovado":["2025-12-04"]}],
     "pendientes":[{"id":"p1","texto":"Llamar al fontanero","personaId":null,"importante":true,
                    "creadoEn":"2026-11-01","hechoEn":null,"secreto":"no sale"}],
-    "cuidado":[{"personaId":"dddddddd-0000-0000-0000-000000000001","metaAgua":8,"avisos":true,
+    "cuidado":[{"personaId":"dddddddd-0000-0000-0000-000000000001","metaAgua":8,"avisos":true,"avisoDia":21,
                 "habitos":[{"id":"h1","nombre":"Hábito secreto"}],
                 "ejercicio":{"nombre":"Correr","dias":[1,3,5]},
                 "dias":{"2020-01-01":{"agua":3,"habitos":["h1"],"ejercicio":true},
@@ -137,6 +137,11 @@ select pg_temp.igual('De Cuidarse salen el agua y el ejercicio recientes, y nada
         and (j->'cuidado'->0->'dias'->0->>'agua')::int = 4
         and not (j->'cuidado'->0->'dias'->0 ? 'habitos')
         and (j::text !~ 'Hábito secreto'))::int from _r where clave = 'r'), 1);
+select pg_temp.igual('De Mi día salen la hora del aviso, cuántas cosas hay y cuántas se hicieron, no cuáles',
+  (select ((j->'cuidado'->0->'miDia'->>'hora')::int = 21
+        and (j->'cuidado'->0->'miDia'->>'total')::int = 1
+        and (j->'cuidado'->0->>'avisos') = 'true'
+        and (j->'cuidado'->0->'dias'->0->>'lista')::int = 1)::int from _r where clave = 'r'), 1);
 select pg_temp.igual('Token inventado: nada',
   (select (public.estado_para_calendario(repeat('0', 64)) is null)::int), 1);
 

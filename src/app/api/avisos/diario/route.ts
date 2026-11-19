@@ -145,7 +145,20 @@ function recordarCuidado(
   token: string,
   claves: ClavesVapid | null,
 ) {
-  const recordatorios = recordatoriosDeCuidado(resumen.cuidado ?? [], resumen.personas, hoy, hora);
+  const recordatorios = recordatoriosDeCuidado(
+    (resumen.cuidado ?? []).map((c) => ({
+      personaId: c.personaId,
+      metaAgua: c.metaAgua,
+      ejercicio: c.ejercicio,
+      avisos: c.avisos,
+      avisoDia: c.miDia?.hora ?? null,
+      totalLista: c.miDia?.total ?? 0,
+      dias: c.dias,
+    })),
+    resumen.personas,
+    hoy,
+    hora,
+  );
   return mandarPorPersona(
     recordatorios.map((r) => ({ personaId: r.personaId, mensaje: notificacionDeCuidado(r) })),
     token,

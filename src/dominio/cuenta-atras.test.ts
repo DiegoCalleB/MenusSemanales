@@ -68,3 +68,16 @@ describe("cuentaAtras: cumpleaños repetidos", () => {
     expect(r.map((x) => x.titulo)).toEqual(["Ana (41)"]);
   });
 });
+
+describe("el mismo día, de más pronto a más tarde", () => {
+  it("ordena por hora (lo de todo el día primero)", () => {
+    const l = cuentaAtras([], {}, "2026-11-19", {
+      externos: [
+        { fecha: "2026-11-20", titulo: "Concierto", hora: "21:00" },
+        { fecha: "2026-11-20", titulo: "Cine en el colegio", hora: "16:00" },
+        { fecha: "2026-11-20", titulo: "Todo el día", hora: null },
+      ],
+    });
+    expect(l.map((x) => x.titulo)).toEqual(["Todo el día", "Cine en el colegio", "Concierto"]);
+  });
+});

@@ -8,6 +8,7 @@ import { ApuntarEventoRapido } from "./apuntar-evento-rapido";
 import { CapturaRapida } from "./captura-rapida";
 import { EntradaCompra } from "./entrada-compra";
 import { NuevoPendiente } from "./pendientes";
+import { EVENTO_APUNTAR } from "./barra-de-captura";
 import { useHogar } from "./proveedor-hogar";
 
 /**
@@ -21,6 +22,19 @@ export function AnadirRapido() {
   // En «Compra» ya está el campo para la lista: allí se abre directamente en «Evento».
   const [que, setQue] = useState<"todo" | "compra" | "evento" | "pendiente">("todo");
   const panel = useRef<HTMLDivElement>(null);
+  // Lo que se escribió en la barra de la portada (D-188); cada envío abre una caja nueva.
+  const [semilla, setSemilla] = useState({ texto: "", n: 0 });
+
+  useEffect(() => {
+    const alApuntar = (e: Event) => {
+      const texto = (e as CustomEvent<{ texto?: string }>).detail?.texto ?? "";
+      setQue("todo");
+      setSemilla((s) => ({ texto, n: s.n + 1 }));
+      setAbierto(true);
+    };
+    window.addEventListener(EVENTO_APUNTAR, alApuntar);
+    return () => window.removeEventListener(EVENTO_APUNTAR, alApuntar);
+  }, []);
 
   useEffect(() => {
     if (!abierto) return;
@@ -72,7 +86,11 @@ export function AnadirRapido() {
             </button>
           </div>
           {que === "todo" ? (
-            <CapturaRapida alTerminar={() => setAbierto(false)} />
+            <CapturaRapida
+              key={semilla.n}
+              inicial={semilla.texto}
+              alTerminar={() => setAbierto(false)}
+            />
           ) : que === "compra" ? (
             <EntradaCompra yaEnLista={yaEnLista} />
           ) : que === "pendiente" ? (

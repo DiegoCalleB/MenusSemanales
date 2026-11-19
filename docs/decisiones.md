@@ -1675,3 +1675,41 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Historial:** «Mi historial» (14 o 30 días): por cosa, una fila de cuadros (hecho / no se hizo / hoy aún por hacer / aún no estaba apuntada), «N de M días» y la racha de días seguidos 🔥 (hoy sin hacer no rompe la racha: el día no ha acabado), y cuántos días salió completo.
 - **Datos:** reutiliza los hábitos de Cuidarse (D-182), que salen de esa tarjeta y pasan aquí; no hay migración y lo que ya estaba apuntado sigue. Cada cosa guarda `desde` (el día en que se apuntó) para que los días anteriores no cuenten como «no». El historial se guarda **6 meses** (antes 5 semanas). Quitar una cosa de la lista borra su historial (se avisa). Sigue siendo personal: no va al servidor, ni a la búsqueda, ni a la IA, ni al calendario.
 - **Pendiente:** corregir el día de ayer (marcar algo olvidado) no se puede aún; ver más de 30 días o por semanas; avisos del móvil para esta lista.
+
+## D-187 · «Mi día»: marcar ayer y aviso del móvil
+
+- **Petición (Diego):** poder marcar lo que se olvidó de ayer y un aviso a la hora que se elija.
+- **Ayer:** «¿Se te olvidó marcar algo de ayer?» abre la lista de ayer con sus casillas. Lo marcado un día anterior cuenta aunque la cosa se apuntara después (el historial lo muestra como hecho).
+- **Aviso:** en «Cambiar mi lista», «Avisarme en el móvil si me falta algo» (de 18 a 23 h, o no avisar). A esa hora llega «✅ Diego: tu lista del día — Te faltan 2 cosas de tu lista de hoy», solo si falta algo. **Sin decir cuáles**: el servidor solo recibe cuántas cosas hay y cuántas se hicieron, nunca sus nombres.
+- **Independiente de los avisos de agua y ejercicio** (D-183): quien solo quiere el de la lista entra en el resumen del servidor sin recibir los otros. Migración `20261123000000_mi_dia_avisos.sql`.
+
+## D-188 · Barra de captura en «Hoy»
+
+- **Petición (Diego):** soltar lo que se le ocurra desde la portada, sin buscar dónde va.
+- **Qué hay:** una barra arriba de Hoy («Apunta lo que sea: compra, cita, pendiente…» + «✨ Anotar»). Al enviarla se abre la misma caja de ＋ (D-178) con el texto ya puesto: la IA lo reparte entre compra, citas, pendientes y papeles y **nada se apunta sin verlo antes**. Sin la IA (sin cuenta, tope diario), la caja explica que se usen Compra, Evento o Pendiente.
+- **Cómo:** la barra y el botón ＋ se hablan con un evento del navegador (`hecho-apuntar`), sin estado compartido nuevo.
+
+## D-189 · Qué se usa de «Hoy» y apartados que se pliegan solos
+
+- **Petición (Diego):** ver qué se toca y qué no, y recortar sin intuición; que lo que no se use se apague solo.
+- **Contador local:** cada apartado de Hoy cuenta sus toques por día, **solo en cada móvil** (`localStorage`): no se guarda qué se tocó ni quién, ni sale de ahí. Se guardan 45 días. Cuenta → «Qué usáis de “Hoy”» los enseña (toques de las dos últimas semanas) y permite empezar a contar de nuevo.
+- **Plegado automático:** un apartado **que lleva dos semanas sin tocarse**, y que no tiene nada pendiente, se pliega en una línea («Cuidarse · sin usar hace 2 semanas · Mostrar»); un toque lo despliega y cuenta como uso. Un apartado recién llegado no se pliega hasta cumplir las dos semanas. Solo lo personal y opcional: **Cuidarse, Mi día, Pendientes y Papeles** (Papeles y Pendientes nunca con algo dentro). Medicación, tiempo, mochila y mañana no se pliegan nunca.
+- **Pendiente:** ordenar o ocultar apartados a mano («Hoy personalizable», backlog).
+
+## D-190 · «Hoy» en una frase
+
+- **Petición (Diego):** una frase de resumen arriba de la portada.
+- **Qué hay:** «Miércoles 4: es el cumple de Ana, tienes pediatra a las 17:00, hay que dejar preparado flauta de Emma y en casa tocan 2 cosas.» Sale en orden de importancia (cumples, citas, lo que hay que dejar preparado, casa, cena), con un máximo de cuatro cosas, y si no hay nada especial dice solo la cena.
+- **Por qué sin IA:** con plantillas es **al instante, gratis, funciona sin conexión** y es siempre exacta; una IA añadiría espera, gasto del tope diario y mandar datos de la casa fuera. Nunca lleva medicación, regalos ni lo personal de Cuidarse. Si más adelante se quiere un tono más natural, se puede pulir con IA sobre esta misma frase.
+
+## D-191 · Revisión de la semana
+
+- **Petición (Diego):** una revisión de dos minutos que mantenga el sistema vivo.
+- **Qué hay:** pantalla `/repaso` («🔎 Revisión de la semana», en Hoy; el domingo sale como tarjeta destacada). **Lo que hiciste** (tareas de casa y pendientes hechos esta semana y, de quien tiene el móvil abierto, días con «Mi día» completo, agua y ejercicio), **lo que se quedó** (pendientes que llevan una semana o más) y **lo que viene** (citas de los próximos 7 días, cumples y papeles de los próximos 14), con el botón de «Planear la semana».
+- **Sin datos nuevos:** todo sale de lo que la app ya sabe (`repasoDeLaSemana`, puro y probado).
+
+## D-192 · Las próximas fechas, otra vez arriba del todo; y el mismo día, por hora
+
+- **Petición (Diego):** le gustaba más cuando arriba del todo salían las próximas fechas más cercanas.
+- **Qué cambia:** la fila de «cuenta atrás» (🎂 Ana · en 6 días, 📅 Cine · mañana…) vuelve a ir **encima de todo** en Hoy, antes de la barra de captura. Se quita la lista duplicada de la tarjeta «Citas y eventos» (D-181), que ahora solo lleva sus botones.
+- **Orden del mismo día:** los eventos de un mismo día salen de **más pronto a más tarde** (lo de todo el día, primero), en la lista de «Apuntado» de Fechas (antes por título) y en la cuenta atrás de Hoy y de Fechas. En el resto de listas (mañana, plan de la semana, avisos) ya era así.

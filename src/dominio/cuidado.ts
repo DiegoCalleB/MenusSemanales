@@ -31,6 +31,8 @@ export interface Cuidado {
   ejercicio: { nombre: string; dias: number[] } | null;
   /** ¿Quiere avisos en el móvil (agua a media mañana y tarde, y el día de ejercicio)? */
   avisos: boolean;
+  /** Hora (0–23, de Madrid) a la que recordar «Mi día» si queda algo sin hacer; `null` sin aviso (D-187). */
+  avisoDia: number | null;
   /** Lo hecho por día (solo los últimos, para no crecer sin fin). */
   dias: Record<FechaIso, DiaDeCuidado>;
 }
@@ -48,13 +50,20 @@ export const diaVacio = (): DiaDeCuidado => ({ agua: 0, habitos: [], ejercicio: 
 export const cuidadoDe = (lista: readonly Cuidado[], personaId: string): Cuidado => {
   const c = lista.find((x) => x.personaId === personaId);
   // Lo guardado antes de los avisos no tiene el campo: cuenta como «sin avisos».
-  if (c) return { ...c, avisos: c.avisos === true };
+  if (c) {
+    return {
+      ...c,
+      avisos: c.avisos === true,
+      avisoDia: typeof c.avisoDia === "number" ? c.avisoDia : null,
+    };
+  }
   return {
     personaId,
     metaAgua: META_AGUA_POR_DEFECTO,
     habitos: [],
     ejercicio: null,
     avisos: false,
+    avisoDia: null,
     dias: {},
   };
 };
@@ -119,12 +128,18 @@ export function validarAjustes(entrada: {
   habitos: readonly string[];
   ejercicio: { nombre: string; dias: readonly number[] } | null;
   avisos: boolean;
+  avisoDia?: number | null;
 }): {
   metaAgua: number;
   habitos: string[];
   ejercicio: { nombre: string; dias: number[] } | null;
   avisos: boolean;
+  avisoDia: number | null;
 } | null {
+  const avisoDia = entrada.avisoDia ?? null;
+  if (avisoDia !== null && (!Number.isInteger(avisoDia) || avisoDia < 0 || avisoDia > 23)) {
+    return null;
+  }
   if (
     !Number.isInteger(entrada.metaAgua) ||
     entrada.metaAgua < 1 ||
@@ -147,7 +162,13 @@ export function validarAjustes(entrada: {
     if (nombre.length > MAX_NOMBRE_HABITO) return null;
     if (dias.length > 0) ejercicio = { nombre, dias };
   }
-  return { metaAgua: entrada.metaAgua, habitos, ejercicio, avisos: entrada.avisos === true };
+  return {
+    metaAgua: entrada.metaAgua,
+    habitos,
+    ejercicio,
+    avisos: entrada.avisos === true,
+    avisoDia,
+  };
 }
 
 /** A qué horas (de Madrid) se recuerda el agua y el ejercicio (D-183). */
@@ -159,13 +180,18 @@ export interface CuidadoParaAvisos {
   personaId: string;
   metaAgua: number;
   ejercicio: { nombre: string; dias: readonly number[] } | null;
-  dias: ReadonlyArray<{ fecha: FechaIso; agua: number; ejercicio: boolean }>;
+  /** ¿Quiere los avisos de agua y ejercicio? */
+  avisos: boolean;
+  /** Hora del aviso de «Mi día» (D-187), o null. El servidor no sabe qué hay en la lista, solo cuántas. */
+  avisoDia: number | null;
+  totalLista: number;
+  dias: ReadonlyArray<{ fecha: FechaIso; agua: number; ejercicio: boolean; lista: number }>;
 }
 
 export interface RecordatorioDeCuidado {
   personaId: string;
   persona: string;
-  tipo: "agua" | "ejercicio";
+  tipo: "agua" | "ejercicio" | "lista";
   texto: string;
 }
 
@@ -186,7 +212,16 @@ export function recordatoriosDeCuidado(
     const dia = c.dias.find((d) => d.fecha === hoy);
     const agua = dia?.agua ?? 0;
     const minimo = hora === HORAS_DE_AGUA[0] ? 0.25 : hora === HORAS_DE_AGUA[1] ? 0.6 : 0;
-    if (minimo > 0 && agua < c.metaAgua * minimo) {
+    if (c.avisoDia === hora && c.totalLista > 0 && (dia?.lista ?? 0) < c.totalLista) {
+      const faltan = c.totalLista - (dia?.lista ?? 0);
+      out.push({
+        personaId: c.personaId,
+        persona,
+        tipo: "lista",
+        texto: `Te ${faltan === 1 ? "falta 1 cosa" : `faltan ${faltan} cosas`} de tu lista de hoy. Ábrela en «Hoy» → «Mi día».`,
+      });
+    }
+    if (c.avisos && minimo > 0 && agua < c.metaAgua * minimo) {
       out.push({
         personaId: c.personaId,
         persona,
@@ -195,6 +230,7 @@ export function recordatoriosDeCuidado(
       });
     }
     if (
+      c.avisos &&
       hora === HORA_DE_EJERCICIO &&
       c.ejercicio &&
       c.ejercicio.dias.includes(diaSemanaIso(hoy)) &&
@@ -215,7 +251,7 @@ export function recordatoriosDeCuidado(
 export function notificacionDeCuidado(r: RecordatorioDeCuidado) {
   return {
     titulo:
-      `${r.tipo === "agua" ? "💧" : "🏃"} ${r.persona ? `${r.persona}: ` : ""}${r.tipo === "agua" ? "agua" : "ejercicio"}`.slice(
+      `${r.tipo === "agua" ? "💧" : r.tipo === "lista" ? "✅" : "🏃"} ${r.persona ? `${r.persona}: ` : ""}${r.tipo === "agua" ? "agua" : r.tipo === "lista" ? "tu lista del día" : "ejercicio"}`.slice(
         0,
         100,
       ),
@@ -232,7 +268,8 @@ const aplica = (h: Habito, fecha: FechaIso) => h.desde === undefined || fecha >=
 /** Cuántas cosas de la lista se hicieron ese día, de cuántas había apuntadas. */
 export function resumenDelDia(c: Cuidado, fecha: FechaIso): { hechos: number; total: number } {
   const dia = diaDe(c, fecha);
-  const vivos = c.habitos.filter((h) => aplica(h, fecha));
+  // Lo marcado cuenta aunque se apuntara después (por ejemplo, algo olvidado de ayer).
+  const vivos = c.habitos.filter((h) => aplica(h, fecha) || dia.habitos.includes(h.id));
   return { hechos: vivos.filter((h) => dia.habitos.includes(h.id)).length, total: vivos.length };
 }
 
@@ -275,8 +312,8 @@ export function historialDeHabitos(
   const fechas = Array.from({ length: n }, (_, i) => sumarDias(hoy, i - (n - 1)));
   const filas = c.habitos.map((habito) => {
     const celdas = fechas.map((f): CeldaDeHistorial => {
-      if (!aplica(habito, f)) return "antes";
       if (diaDe(c, f).habitos.includes(habito.id)) return "hecho";
+      if (!aplica(habito, f)) return "antes";
       return f === hoy ? "pendiente" : "no";
     });
     return {
