@@ -40,6 +40,7 @@ export function InicioVista() {
   const { estado, despachar } = useHogar();
   const [yoId] = useYo();
   const [apuntandoCita, setApuntandoCita] = useState(false);
+  const [verTodas, setVerTodas] = useState(false);
   const yo = estado.personas.find((p) => p.id === yoId && p.activa);
   const misTareas = yo ? resumenDeTareas(estado.tareas, yo.id, estado.hoy) : null;
   const cenas = comidasDe(estado, estado.hoy);
@@ -104,18 +105,29 @@ export function InicioVista() {
         );
       })}
       {proximos.length > 0 && (
-        <ul aria-label="Cuenta atrás" className="flex flex-wrap gap-2">
-          {proximos.map((p) => (
-            <li
-              key={p.clave}
-              className="bg-suave-1 border-borde rounded-full border px-3 py-1 text-sm font-bold"
+        <div className="flex flex-col gap-2">
+          <ul aria-label="Cuenta atrás" className="flex flex-wrap gap-2">
+            {proximos.map((p, i) => (
+              <li
+                key={p.clave}
+                className={`bg-suave-1 border-borde rounded-full border px-3 py-1 text-sm font-bold ${i >= 2 && !verTodas ? "hidden sm:block" : ""}`}
+              >
+                <span aria-hidden="true">{p.emoji} </span>
+                {p.titulo}
+                {p.hora && ` (${p.hora})`} · {p.dias <= 1 ? p.texto : `en ${p.texto}`}
+              </li>
+            ))}
+          </ul>
+          {proximos.length > 2 && !verTodas && (
+            <button
+              type="button"
+              className="boton-suave w-fit sm:hidden"
+              onClick={() => setVerTodas(true)}
             >
-              <span aria-hidden="true">{p.emoji} </span>
-              {p.titulo}
-              {p.hora && ` (${p.hora})`} · {p.dias <= 1 ? p.texto : `en ${p.texto}`}
-            </li>
-          ))}
-        </ul>
+              +{proximos.length - 2} más
+            </button>
+          )}
+        </div>
       )}
 
       <BarraDeCaptura />

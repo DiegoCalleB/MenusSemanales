@@ -60,9 +60,12 @@ export function ResumenHoy() {
   ];
 
   return (
-    <ul aria-label="De un vistazo" className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+    <ul
+      aria-label="De un vistazo"
+      className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-5 sm:overflow-visible sm:px-0 sm:pb-0"
+    >
       {fichas.map((f) => (
-        <li key={f.id}>
+        <li key={f.id} className="w-28 shrink-0 sm:w-auto">
           <button
             type="button"
             className={`border-borde flex min-h-16 w-full flex-col items-center justify-center rounded-2xl border px-1 py-2 text-center ${f.n === 0 ? "bg-fondo text-tinta-suave" : f.aviso ? "bg-aviso-fondo text-aviso-texto" : "bg-superficie"}`}
