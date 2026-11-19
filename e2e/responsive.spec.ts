@@ -3358,8 +3358,10 @@ test.describe("Hoy como tablero fijo (D-180)", () => {
     await contexto.close();
   });
 
-  test("hoy en una frase (D-190): la línea de arriba resume el día", async ({ browser }) => {
-    const { contexto, pagina } = await abrir(browser, 390, 844);
+  test("hoy en una frase (D-190): la línea de arriba resume el día (D-194: no en el móvil)", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 1024, 800);
     await cargar(pagina, "/");
     await expect(pagina.getByText(/^Miércoles 4: .*cena/)).toBeVisible();
     await contexto.close();

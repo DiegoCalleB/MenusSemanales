@@ -8,7 +8,7 @@ import { diasHasta } from "@/dominio/cumples";
 import { useHogar } from "./proveedor-hogar";
 import { useYo } from "./yo";
 
-/** La frase de arriba de «Hoy» (D-190): lo importante del día en una línea. */
+/** La frase de arriba de «Hoy» (D-190): lo importante del día en una línea. En el móvil no sale (D-194): repetiría las píldoras de arriba. */
 export function FraseDeHoy() {
   const { estado } = useHogar();
   const [yoId] = useYo();
@@ -25,5 +25,5 @@ export function FraseDeHoy() {
     ).length,
     cena: comidasDe(estado, estado.hoy).map((c) => c.plato.nombre),
   });
-  return <p className="px-1 text-base font-semibold">{frase}</p>;
+  return <p className="hidden px-1 text-base font-semibold sm:block">{frase}</p>;
 }

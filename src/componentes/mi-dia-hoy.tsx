@@ -129,7 +129,13 @@ export function MiDiaHoy() {
       )}
 
       <details>
-        <summary className="text-marca-fuerte flex min-h-11 cursor-pointer items-center text-base font-semibold">
+        <summary
+          className={
+            vacio
+              ? "boton w-fit cursor-pointer"
+              : "text-marca-fuerte flex min-h-11 cursor-pointer items-center text-base font-semibold"
+          }
+        >
           {vacio ? "Apuntar lo que quiero hacer cada día" : "Cambiar mi lista"}
         </summary>
         <ListaDeCosas key={`${yo.id}-${c.habitos.map((h) => h.id).join(",")}`} personaId={yo.id} />

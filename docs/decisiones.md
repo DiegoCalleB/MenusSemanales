@@ -1718,3 +1718,8 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 
 - **Petición (Diego):** agrupar la lista diaria en tres bloques (mañana, día, noche).
 - **Qué hay:** en «Cambiar mi lista», una línea que acaba en «:» (por ejemplo «Mañana:») abre un bloque y lo que va debajo pertenece a él. En Hoy se ve como un título con sus cosas. Los títulos no cuentan como cosas (siguen siendo hasta 15, y hasta 6 bloques) y no cambian el historial ni los avisos: el servidor sigue recibiendo solo cuántas son. Sin títulos, todo sigue como antes.
+
+## D-194 · Hoy más corto en el móvil
+
+- **Petición (Diego):** reducir lo de arriba de Hoy en el móvil.
+- **Qué cambia (solo por debajo de 640 px):** la cuenta atrás enseña las 2 fechas más próximas y un botón «+N más»; la frase de resumen se oculta (repetía las píldoras); «De un vistazo» pasa a una fila deslizable; «Mi día» sube justo debajo de la cena; si la lista está vacía, «Apuntar lo que quiero hacer cada día» es un botón. En pantallas anchas todo sigue igual.
