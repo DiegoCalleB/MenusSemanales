@@ -2383,3 +2383,104 @@ describe("Hoy a tu manera (D-196)", () => {
     expect(normalizar(viejo).ajustesHoy).toEqual([]);
   });
 });
+
+describe("objetivos: pasos y repetición (D-198)", () => {
+  const base = () => estadoInicialDemo();
+  const persona = () => base().personas[0]!.id;
+  it("apunta el paso, lo hace, y lo que se repite guarda el último día", () => {
+    let e = reducir(base(), {
+      tipo: "objetivo/importar",
+      personaId: persona(),
+      texto: "Hasta diciembre\nPublicar más juegos\nPlan con Lucía (cada semana)",
+    });
+    const [juegos, plan] = e.objetivos;
+    expect(plan).toMatchObject({ cada: 7, creadoEn: e.hoy, siguiente: null, movidoEn: null });
+    e = reducir(e, { tipo: "objetivo/paso", id: juegos!.id, texto: "  Elegir el motor  " });
+    expect(e.objetivos[0]?.siguiente).toBe("Elegir el motor");
+    expect(reducir(e, { tipo: "objetivo/paso", id: juegos!.id, texto: "" }).aviso?.tipo).toBe(
+      "error",
+    );
+    e = reducir(e, { tipo: "objetivo/movido", id: juegos!.id });
+    expect(e.objetivos[0]).toMatchObject({ siguiente: null, movidoEn: e.hoy });
+    e = reducir(e, { tipo: "objetivo/paso", id: juegos!.id, texto: null });
+    expect(e.objetivos[0]?.siguiente).toBeNull();
+  });
+  it("un objetivo de antes de D-198 se completa con alta de hoy, sin paso y sin repetir", () => {
+    const e0 = base();
+    const viejo = {
+      ...e0,
+      objetivos: [
+        { id: "o", personaId: persona(), texto: "Viejo", hasta: "2026-12-31", hechoEn: null },
+      ],
+    } as unknown as EstadoHogar;
+    expect(normalizar(viejo).objetivos[0]).toMatchObject({
+      creadoEn: e0.hoy,
+      siguiente: null,
+      movidoEn: null,
+      cada: null,
+    });
+  });
+});
+
+describe("notas e ideas, y recuerdos (D-199)", () => {
+  const base = () => estadoInicialDemo();
+  const [uno, dos] = [base().personas[0]!.id, base().personas[1]!.id];
+  it("apunta una idea, la pasa a pendiente, archiva y borra; los recuerdos no pasan a pendiente", () => {
+    let e = reducir(base(), {
+      tipo: "nota/anadir",
+      personaId: uno,
+      nota: "idea",
+      texto: "Llamar a la abuela",
+      sobre: null,
+    });
+    e = reducir(e, {
+      tipo: "nota/anadir",
+      personaId: uno,
+      nota: "idea",
+      texto: "Idea suelta",
+      sobre: null,
+    });
+    e = reducir(e, {
+      tipo: "nota/anadir",
+      personaId: uno,
+      nota: "recuerdo",
+      texto: "Dijo «pelota» por primera vez",
+      sobre: dos,
+    });
+    expect(e.notas.map((n) => n.tipo)).toEqual(["idea", "idea", "recuerdo"]);
+    expect(new Set(e.notas.map((n) => n.id)).size).toBe(3);
+
+    const [idea, otra, recuerdo] = e.notas;
+    e = reducir(e, { tipo: "nota/a-pendiente", id: idea!.id });
+    expect(e.pendientes.at(-1)).toMatchObject({
+      texto: "Llamar a la abuela",
+      personaId: uno,
+      hechoEn: null,
+    });
+    expect(e.notas[0]?.procesadaEn).toBe(e.hoy);
+    const antes = e.pendientes.length;
+    expect(reducir(e, { tipo: "nota/a-pendiente", id: recuerdo!.id }).pendientes).toHaveLength(
+      antes,
+    );
+
+    e = reducir(e, { tipo: "nota/archivar", id: otra!.id, archivada: true });
+    expect(e.notas[1]?.procesadaEn).toBe(e.hoy);
+    e = reducir(e, { tipo: "nota/archivar", id: otra!.id, archivada: false });
+    expect(e.notas[1]?.procesadaEn).toBeNull();
+    e = reducir(e, { tipo: "nota/borrar", id: otra!.id });
+    expect(e.notas).toHaveLength(2);
+  });
+  it("rechaza lo que no vale y un estado de antes se completa", () => {
+    expect(
+      reducir(base(), {
+        tipo: "nota/anadir",
+        personaId: uno,
+        nota: "idea",
+        texto: " ",
+        sobre: null,
+      }).aviso?.tipo,
+    ).toBe("error");
+    const viejo = { ...base(), notas: undefined } as unknown as EstadoHogar;
+    expect(normalizar(viejo).notas).toEqual([]);
+  });
+});

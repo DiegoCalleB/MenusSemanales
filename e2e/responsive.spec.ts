@@ -46,6 +46,7 @@ const RUTAS = [
   "/despensa",
   "/reparto",
   "/objetivos",
+  "/notas",
 ] as const;
 const PUNTO_DE_CORTE = 768; // md de Tailwind
 
@@ -1353,6 +1354,7 @@ test.describe("flujos en móvil", () => {
       ["Fechas", "Papeles", "/papeles"],
       ["Más", "Cuenta", "/cuenta"],
       ["Más", "Objetivos", "/objetivos"],
+      ["Más", "Notas", "/notas"],
       ["Más", "Enviar", "/compartir"],
     ];
     for (const [pilar, pestana, ruta] of recorrido) {
@@ -3467,8 +3469,88 @@ test.describe("Hoy como tablero fijo (D-180)", () => {
     const tarjeta = pagina.locator("#sec-objetivos");
     await expect(tarjeta.getByText(/Hasta el 31 de diciembre de 2026/)).toBeVisible();
     await tarjeta.getByRole("button", { name: "Viaje a Marruecos" }).click();
-    await expect(tarjeta.getByText(/1 de 2/)).toBeVisible();
     await expect(tarjeta.getByRole("button", { name: "Viaje a Marruecos" })).toHaveCount(0);
+    await expect(tarjeta.getByRole("button", { name: "Publicar más juegos" })).toBeVisible();
+    await contexto.close();
+  });
+
+  test("Hoy según la hora (D-197): por la mañana sube el cole; por la tarde, la compra", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    const y = async (id: string) => (await pagina.locator(id).boundingBox())?.y ?? 0;
+    await cargar(pagina, "/?momento=tarde");
+    expect(await y("#sec-compra")).toBeLessThan(await y("#sec-mi-dia"));
+    await cargar(pagina, "/?momento=noche");
+    expect(await y("#sec-mi-dia")).toBeLessThan(await y("#sec-compra"));
+    // La cena de hoy siempre es lo primero.
+    expect(await y("#hoy")).toBeLessThan(await y("#sec-compra"));
+    // Si la persona ordena a su manera, manda su orden y no la hora: se guarda el de la noche…
+    await pagina.getByRole("button", { name: /Personalizar Hoy/ }).click();
+    await pagina.getByRole("button", { name: "Bajar Mi día" }).click();
+    // …y por la tarde la compra ya no se adelanta.
+    await cargar(pagina, "/?momento=tarde");
+    expect(await y("#sec-mi-dia")).toBeLessThan(await y("#sec-compra"));
+    await contexto.close();
+  });
+
+  test("objetivos (D-198): siguiente paso, repetición y la revisión", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/objetivos");
+    await pagina.getByText("Pegar una lista de golpe").click();
+    await pagina
+      .getByLabel("Lista de objetivos")
+      .fill("Hasta 31 diciembre 2026\nPublicar más juegos\nPlan a solas con Lucía (cada semana)");
+    await pagina.getByRole("button", { name: "Apuntar la lista" }).click();
+    const fin = pagina.getByRole("region", { name: "Hasta el 31 de diciembre de 2026" });
+    await expect(fin.getByText(/cada semana/)).toBeVisible();
+
+    await fin.getByRole("button", { name: "Siguiente paso de «Publicar más juegos»" }).click();
+    await fin.getByLabel(/Escribe el siguiente paso/).fill("Elegir el motor");
+    await fin.getByRole("button", { name: "Guardar", exact: true }).click();
+    await expect(fin.getByText("Elegir el motor")).toBeVisible();
+
+    // Aparece en Hoy, junto a su objetivo.
+    await cargar(pagina, "/");
+    await expect(pagina.locator("#sec-objetivos").getByText("Elegir el motor")).toBeVisible();
+
+    // El paso hecho lo limpia y pide el siguiente.
+    await cargar(pagina, "/objetivos");
+    await fin.getByRole("button", { name: "Paso hecho: Elegir el motor" }).click();
+    await expect(fin.getByLabel(/Escribe el siguiente paso/)).toBeVisible();
+    await expect(fin.getByText("Elegir el motor")).toHaveCount(0);
+
+    // Lo que se repite se hace sin completarlo.
+    await fin.getByRole("button", { name: "Hecho hoy: Plan a solas con Lucía" }).click();
+    await expect(fin.getByText(/última vez hoy/)).toBeVisible();
+    await contexto.close();
+  });
+
+  test("notas (D-199): idea → pendiente, recuerdo con persona, bandeja en la revisión", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/");
+    const tarjeta = pagina.locator("#sec-notas");
+    await tarjeta.getByLabel("Apuntar una idea o un recuerdo").fill("Llamar al electricista");
+    await tarjeta.getByRole("button", { name: /Idea/ }).click();
+    await tarjeta.getByLabel("Apuntar una idea o un recuerdo").fill("Hoy dijo «pelota»");
+    await tarjeta.getByRole("button", { name: /Recuerdo/ }).click();
+
+    await pagina.getByRole("link", { name: "Revisión de la semana" }).click();
+    await expect(pagina.getByText(/1 idea sin resolver/)).toBeVisible();
+    await pagina.getByRole("link", { name: "Vaciar la bandeja" }).click();
+    await expect(pagina.getByRole("heading", { level: 1, name: /Notas e ideas/ })).toBeVisible();
+    await expect(
+      pagina.getByRole("list", { name: "Recuerdos" }).getByText("Hoy dijo «pelota»"),
+    ).toBeVisible();
+    await pagina.getByRole("button", { name: "Pasar a pendiente: Llamar al electricista" }).click();
+    await expect(pagina.getByText("Bandeja vacía.")).toBeVisible();
+
+    // Es personal: no sale en el buscador.
+    await cargar(pagina, "/buscar");
+    await pagina.getByRole("searchbox").fill("electricista");
+    await expect(pagina.getByText("pelota")).toHaveCount(0);
     await contexto.close();
   });
 });

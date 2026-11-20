@@ -36,6 +36,7 @@ import { type CosaQueLlevar, MAX_ANTES, podarPreparadas } from "@/dominio/mochil
 import { type VotoBarrio, conVoto } from "@/dominio/gustos-barrio";
 import {
   MAX_PENDIENTES,
+  MAX_TEXTO_PENDIENTE,
   type Pendiente,
   sinHechosViejos,
   validarPendiente,
@@ -46,8 +47,10 @@ import {
   leerLista,
   mismoObjetivo,
   validarObjetivo,
+  validarPaso,
 } from "@/dominio/objetivos";
 import { type AjusteHoy, limpiarAjuste } from "@/dominio/hoy";
+import { MAX_NOTAS, type Nota, type TipoNota, validarNota } from "@/dominio/notas";
 import {
   type CategoriaVencimiento,
   MAX_VENCIMIENTOS,
@@ -246,6 +249,8 @@ export interface EstadoHogar {
   objetivos: Objetivo[];
   /** Qué tarjetas ve cada persona en «Hoy» y en qué orden (D-196). */
   ajustesHoy: AjusteHoy[];
+  /** Notas, ideas y recuerdos de cada persona (D-199): personales, no salen de la app. */
+  notas: Nota[];
   /** Cuidarse (D-182): agua, ejercicio y hábitos de cada persona. En el documento del hogar. */
   cuidado: Cuidado[];
   /** Los días para los que ya se dejó preparado el paraguas y la ropa de lluvia (D-176). */
@@ -466,7 +471,30 @@ export type Accion =
   /** Quita de la lista los que ya están hechos. */
   | { tipo: "pendiente/limpiar" }
   /** Objetivos a plazos (D-195). */
-  | { tipo: "objetivo/anadir"; personaId: string; texto: string; hasta: FechaIso }
+  | {
+      tipo: "objetivo/anadir";
+      personaId: string;
+      texto: string;
+      hasta: FechaIso;
+      cada?: number | null;
+    }
+  /** Apunta (o quita, con null) el siguiente paso de un objetivo (D-198). */
+  | { tipo: "objetivo/paso"; id: string; texto: string | null }
+  /** Anota que se avanzó hoy: se hizo el paso o, si se repite, se hizo. Limpia el paso. */
+  | { tipo: "objetivo/movido"; id: string }
+  /** Notas e ideas, y recuerdos (D-199). */
+  | {
+      tipo: "nota/anadir";
+      personaId: string;
+      nota: TipoNota;
+      texto: string;
+      sobre: string | null;
+    }
+  /** Una idea de la bandeja se convierte en un pendiente (y sale de la bandeja). */
+  | { tipo: "nota/a-pendiente"; id: string }
+  /** Una idea resuelta (o no) sale de la bandeja sin borrarse; con `false`, vuelve. */
+  | { tipo: "nota/archivar"; id: string; archivada: boolean }
+  | { tipo: "nota/borrar"; id: string }
   /** Hoy a tu manera (D-196): qué tarjetas se ven y en qué orden, para una persona. */
   | { tipo: "hoy/ajustar"; personaId: string; orden: string[]; ocultas: string[] }
   | { tipo: "hoy/restablecer"; personaId: string }
@@ -975,7 +1003,9 @@ const normalizarCampos = (e: EstadoHogar): EstadoHogar =>
   Array.isArray(e.vencimientos) &&
   Array.isArray(e.pendientes) &&
   Array.isArray(e.objetivos) &&
+  e.objetivos.every((o) => typeof o.creadoEn === "string" && o.cada !== undefined) &&
   Array.isArray(e.ajustesHoy) &&
+  Array.isArray(e.notas) &&
   Array.isArray(e.lluviaPreparada) &&
   Array.isArray(e.cuidado) &&
   Array.isArray(e.diasCole) &&
@@ -1002,8 +1032,18 @@ const normalizarCampos = (e: EstadoHogar): EstadoHogar =>
         gustosBarrio: Array.isArray(e.gustosBarrio) ? e.gustosBarrio : [],
         vencimientos: Array.isArray(e.vencimientos) ? e.vencimientos : [],
         pendientes: Array.isArray(e.pendientes) ? e.pendientes : [],
-        objetivos: Array.isArray(e.objetivos) ? e.objetivos : [],
+        // Los objetivos de antes de D-198 no llevaban fecha de alta, paso ni repetición.
+        objetivos: Array.isArray(e.objetivos)
+          ? e.objetivos.map((o) => ({
+              ...o,
+              creadoEn: typeof o.creadoEn === "string" ? o.creadoEn : e.hoy,
+              siguiente: o.siguiente ?? null,
+              movidoEn: o.movidoEn ?? null,
+              cada: o.cada ?? null,
+            }))
+          : [],
         ajustesHoy: Array.isArray(e.ajustesHoy) ? e.ajustesHoy : [],
+        notas: Array.isArray(e.notas) ? e.notas : [],
         lluviaPreparada: Array.isArray(e.lluviaPreparada) ? e.lluviaPreparada : [],
         cuidado: Array.isArray(e.cuidado) ? e.cuidado : [],
         diasCole: Array.isArray(e.diasCole) ? e.diasCole : [],
@@ -2453,15 +2493,17 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
       });
       const personas = new Set(e.personas.map((p) => p.id));
       if (!personas.has(accion.personaId)) return fallo("Esa persona no está en la familia.");
-      let nuevos: Array<{ texto: string; hasta: FechaIso }>;
+      let nuevos: Array<{ texto: string; hasta: FechaIso; cada: number | null }>;
       if (accion.tipo === "objetivo/anadir") {
         const r = validarObjetivo(accion, personas);
         if (!r.ok) return fallo(r.motivo);
-        nuevos = [{ texto: r.datos.texto, hasta: r.datos.hasta }];
+        nuevos = [{ texto: r.datos.texto, hasta: r.datos.hasta, cada: r.datos.cada }];
       } else {
         const r = leerLista(accion.texto, e.hoy);
         if (!r.ok) return fallo(r.motivo);
-        nuevos = r.grupos.flatMap((g) => g.textos.map((texto) => ({ texto, hasta: g.hasta })));
+        nuevos = r.grupos.flatMap((g) =>
+          g.items.map((it) => ({ texto: it.texto, hasta: g.hasta, cada: it.cada })),
+        );
       }
       const suyos = e.objetivos.filter((o) => o.personaId === accion.personaId);
       const sinRepetir = nuevos.filter((n) => !suyos.some((o) => mismoObjetivo(n, o)));
@@ -2478,11 +2520,95 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
             texto: n.texto,
             hasta: n.hasta,
             hechoEn: null,
+            creadoEn: e.hoy,
+            siguiente: null,
+            movidoEn: null,
+            cada: n.cada,
           })),
         ],
         siguienteId: e.siguienteId + 1,
       };
     }
+
+    case "nota/anadir": {
+      const fallo = (t: string): EstadoHogar => ({
+        ...e,
+        siguienteId: e.siguienteId + 1,
+        aviso: error(e, t),
+      });
+      const r = validarNota(
+        {
+          personaId: accion.personaId,
+          tipo: accion.nota,
+          texto: accion.texto,
+          sobre: accion.sobre,
+        },
+        new Set(e.personas.map((p) => p.id)),
+      );
+      if (!r.ok) return fallo(r.motivo);
+      if (e.notas.length >= MAX_NOTAS)
+        return fallo("Ya hay demasiadas notas: borra o archiva alguna.");
+      return {
+        ...e,
+        notas: [
+          ...e.notas,
+          {
+            id: `nota-${e.siguienteId}`,
+            personaId: r.datos.personaId,
+            tipo: r.datos.tipo,
+            texto: r.datos.texto,
+            sobre: r.datos.sobre,
+            creadoEn: e.hoy,
+            procesadaEn: null,
+          },
+        ],
+        siguienteId: e.siguienteId + 1,
+      };
+    }
+
+    case "nota/a-pendiente": {
+      const nota = e.notas.find((n) => n.id === accion.id);
+      if (!nota || nota.tipo !== "idea") return e;
+      const vivos = sinHechosViejos(e.pendientes, e.hoy);
+      if (vivos.length >= MAX_PENDIENTES)
+        return {
+          ...e,
+          siguienteId: e.siguienteId + 1,
+          aviso: error(e, "Ya hay demasiados pendientes: haz o quita alguno."),
+        };
+      const linea = nota.texto.replace(/\s+/g, " ").trim();
+      const texto =
+        linea.length > MAX_TEXTO_PENDIENTE ? `${linea.slice(0, MAX_TEXTO_PENDIENTE - 1)}…` : linea;
+      return {
+        ...e,
+        pendientes: [
+          ...vivos,
+          {
+            id: `pen-${e.siguienteId}`,
+            texto,
+            personaId: nota.personaId,
+            importante: false,
+            creadoEn: e.hoy,
+            hechoEn: null,
+          },
+        ],
+        notas: e.notas.map((n) => (n.id === nota.id ? { ...n, procesadaEn: e.hoy } : n)),
+        siguienteId: e.siguienteId + 1,
+      };
+    }
+
+    case "nota/archivar":
+      return {
+        ...e,
+        notas: e.notas.map((n) =>
+          n.id === accion.id && n.tipo === "idea"
+            ? { ...n, procesadaEn: accion.archivada ? e.hoy : null }
+            : n,
+        ),
+      };
+
+    case "nota/borrar":
+      return { ...e, notas: e.notas.filter((n) => n.id !== accion.id) };
 
     case "hoy/ajustar": {
       if (!e.personas.some((p) => p.id === accion.personaId)) return e;
@@ -2495,6 +2621,29 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
 
     case "hoy/restablecer":
       return { ...e, ajustesHoy: e.ajustesHoy.filter((a) => a.personaId !== accion.personaId) };
+
+    case "objetivo/paso": {
+      const o = e.objetivos.find((x) => x.id === accion.id);
+      if (!o) return e;
+      let siguiente: string | null = null;
+      if (accion.texto !== null) {
+        const r = validarPaso(accion.texto);
+        if (!r.ok) return { ...e, siguienteId: e.siguienteId + 1, aviso: error(e, r.motivo) };
+        siguiente = r.texto;
+      }
+      return {
+        ...e,
+        objetivos: e.objetivos.map((x) => (x.id === accion.id ? { ...x, siguiente } : x)),
+      };
+    }
+
+    case "objetivo/movido":
+      return {
+        ...e,
+        objetivos: e.objetivos.map((x) =>
+          x.id === accion.id ? { ...x, movidoEn: e.hoy, siguiente: null } : x,
+        ),
+      };
 
     case "objetivo/hecho":
       return {

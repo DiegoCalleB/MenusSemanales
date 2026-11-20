@@ -1,14 +1,24 @@
 "use client";
 
 import { type FormEvent, useState } from "react";
-import { MAX_TEXTO_OBJETIVO, cuantoQueda, plazoLargo, porPlazo } from "@/dominio/objetivos";
+import {
+  DIAS_PARADO,
+  MAX_TEXTO_OBJETIVO,
+  type Objetivo,
+  cuantoQueda,
+  diasSinMoverse,
+  haceCuanto,
+  plazoLargo,
+  porPlazo,
+  textoCada,
+} from "@/dominio/objetivos";
 import { Campo, Formulario, useGuardar } from "../editar";
 import { useHogar } from "../proveedor-hogar";
 import { useYo } from "../yo";
 
 const EJEMPLO = `Hasta 31 diciembre 2026
 Publicar más juegos
-Viaje a Marruecos
+Plan a solas con cada hija (cada semana)
 
 Hasta marzo 2027
 Dar a conocer mi proyecto`;
@@ -77,31 +87,9 @@ function Objetivos({
               </p>
             </div>
             <ul aria-label={`Objetivos ${titulo}`} className="flex flex-col">
-              {g.objetivos.map((o) => {
-                const hecho = o.hechoEn !== null;
-                return (
-                  <li key={o.id} className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      aria-pressed={hecho}
-                      className={`flex min-h-11 flex-1 items-center gap-3 rounded-xl text-left text-base ${hecho ? "text-tinta-suave line-through" : ""}`}
-                      onClick={() => despachar({ tipo: "objetivo/hecho", id: o.id, hecho: !hecho })}
-                    >
-                      <span aria-hidden="true">{hecho ? "✅" : "⬜"}</span>
-                      <span>{o.texto}</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="boton-icono"
-                      aria-label={`Quitar «${o.texto}»`}
-                      title="Quitar"
-                      onClick={() => despachar({ tipo: "objetivo/borrar", id: o.id })}
-                    >
-                      <span aria-hidden="true">🗑️</span>
-                    </button>
-                  </li>
-                );
-              })}
+              {g.objetivos.map((o) => (
+                <FilaObjetivo key={o.id} o={o} hoy={estado.hoy} despachar={despachar} />
+              ))}
             </ul>
             <AnadirA hasta={g.hasta} titulo={titulo} personaId={personaId} />
           </section>
@@ -126,6 +114,182 @@ function Objetivos({
   );
 }
 
+const OPCIONES_CADA: ReadonlyArray<[string, string]> = [
+  ["", "No se repite"],
+  ["7", "Cada semana"],
+  ["14", "Cada 2 semanas"],
+  ["30", "Cada mes"],
+];
+
+function FilaObjetivo({
+  o,
+  hoy,
+  despachar,
+}: {
+  o: Objetivo;
+  hoy: string;
+  despachar: ReturnType<typeof useHogar>["despachar"];
+}) {
+  const guardar = useGuardar();
+  const [editando, setEditando] = useState(false);
+  const [paso, setPaso] = useState(o.siguiente ?? "");
+  const [problema, setProblema] = useState("");
+  const hecho = o.hechoEn !== null;
+  const dias = diasSinMoverse(o, hoy);
+  const repite = o.cada !== null;
+  const toca = repite && !hecho && dias >= (o.cada ?? 0);
+  const parado = !repite && !hecho && dias >= DIAS_PARADO;
+
+  function enviarPaso(e: FormEvent) {
+    e.preventDefault();
+    const motivo = guardar({ tipo: "objetivo/paso", id: o.id, texto: paso });
+    setProblema(motivo ?? "");
+    if (!motivo) setEditando(false);
+  }
+
+  return (
+    <li className="flex flex-col">
+      <div className="flex items-center gap-1">
+        {repite ? (
+          <span className="flex min-h-11 flex-1 items-center gap-3 text-base">
+            <span aria-hidden="true">🔁</span>
+            <span>
+              {o.texto}
+              <span
+                className={`block text-sm ${toca ? "text-aviso-texto font-semibold" : "text-tinta-suave"}`}
+              >
+                {textoCada(o.cada ?? 0)} ·{" "}
+                {o.movidoEn
+                  ? `última vez ${haceCuanto(dias)}`
+                  : toca
+                    ? `sin hacer ${haceCuanto(dias)}`
+                    : "aún no toca"}
+              </span>
+            </span>
+          </span>
+        ) : (
+          <button
+            type="button"
+            aria-pressed={hecho}
+            className={`flex min-h-11 flex-1 items-center gap-3 rounded-xl text-left text-base ${hecho ? "text-tinta-suave line-through" : ""}`}
+            onClick={() => despachar({ tipo: "objetivo/hecho", id: o.id, hecho: !hecho })}
+          >
+            <span aria-hidden="true">{hecho ? "✅" : "⬜"}</span>
+            <span>
+              {o.texto}
+              {parado && (
+                <span className="text-aviso-texto block text-sm font-semibold">
+                  Sin moverse {haceCuanto(dias)}
+                </span>
+              )}
+            </span>
+          </button>
+        )}
+        {repite && !hecho && (
+          <button
+            type="button"
+            className="boton-suave"
+            aria-label={`Hecho hoy: ${o.texto}`}
+            onClick={() => despachar({ tipo: "objetivo/movido", id: o.id })}
+          >
+            Hecho hoy
+          </button>
+        )}
+        <button
+          type="button"
+          className="boton-icono"
+          aria-label={`Quitar «${o.texto}»`}
+          title="Quitar"
+          onClick={() => despachar({ tipo: "objetivo/borrar", id: o.id })}
+        >
+          <span aria-hidden="true">🗑️</span>
+        </button>
+      </div>
+      {!hecho && !repite && !editando && (
+        <div className="flex flex-wrap items-center gap-2 pb-1 pl-9">
+          {o.siguiente ? (
+            <>
+              <span className="text-tinta-suave text-sm">
+                <span aria-hidden="true">→ </span>
+                {o.siguiente}
+              </span>
+              <button
+                type="button"
+                className="boton-suave"
+                aria-label={`Paso hecho: ${o.siguiente}`}
+                onClick={() => {
+                  despachar({ tipo: "objetivo/movido", id: o.id });
+                  setPaso("");
+                  setEditando(true);
+                }}
+              >
+                ✓ Paso hecho
+              </button>
+              <button
+                type="button"
+                className="text-marca-fuerte min-h-11 px-1 text-sm font-semibold underline"
+                aria-label={`Cambiar el paso de «${o.texto}»`}
+                onClick={() => {
+                  setPaso(o.siguiente ?? "");
+                  setEditando(true);
+                }}
+              >
+                Cambiar
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="text-marca-fuerte min-h-11 px-1 text-sm font-semibold underline"
+              aria-label={`Siguiente paso de «${o.texto}»`}
+              onClick={() => setEditando(true)}
+            >
+              ＋ Siguiente paso
+            </button>
+          )}
+        </div>
+      )}
+      {editando && (
+        <form
+          onSubmit={enviarPaso}
+          noValidate
+          aria-label={`Siguiente paso de ${o.texto}`}
+          className="flex flex-col gap-2 pb-2 pl-9"
+        >
+          <div className="flex gap-2">
+            <input
+              className="campo min-w-0 flex-1"
+              aria-label={`Escribe el siguiente paso de «${o.texto}»`}
+              value={paso}
+              maxLength={MAX_TEXTO_OBJETIVO}
+              placeholder="La próxima cosa concreta que harás"
+              onChange={(e) => setPaso(e.target.value)}
+            />
+            <button type="submit" className="boton-suave">
+              Guardar
+            </button>
+            <button
+              type="button"
+              className="boton-suave"
+              onClick={() => {
+                setEditando(false);
+                setProblema("");
+              }}
+            >
+              Ahora no
+            </button>
+          </div>
+          {problema && (
+            <p role="alert" className="bg-aviso-fondo text-aviso-texto rounded-2xl p-2 text-sm">
+              {problema}
+            </p>
+          )}
+        </form>
+      )}
+    </li>
+  );
+}
+
 function AnadirA({
   hasta,
   titulo,
@@ -137,10 +301,17 @@ function AnadirA({
 }) {
   const guardar = useGuardar();
   const [texto, setTexto] = useState("");
+  const [cada, setCada] = useState("");
   const [problema, setProblema] = useState("");
   function enviar(e: FormEvent) {
     e.preventDefault();
-    const motivo = guardar({ tipo: "objetivo/anadir", personaId, texto, hasta });
+    const motivo = guardar({
+      tipo: "objetivo/anadir",
+      personaId,
+      texto,
+      hasta,
+      cada: cada ? Number(cada) : null,
+    });
     setProblema(motivo ?? "");
     if (!motivo) setTexto("");
   }
@@ -164,6 +335,18 @@ function AnadirA({
           Añadir
         </button>
       </div>
+      <select
+        className="campo w-fit"
+        aria-label={`Se repite ${titulo}`}
+        value={cada}
+        onChange={(e) => setCada(e.target.value)}
+      >
+        {OPCIONES_CADA.map(([v, t]) => (
+          <option key={v} value={v}>
+            {t}
+          </option>
+        ))}
+      </select>
       {problema && (
         <p role="alert" className="bg-aviso-fondo text-aviso-texto rounded-2xl p-2 text-sm">
           {problema}
@@ -230,7 +413,8 @@ function PegarLista({ personaId }: { personaId: string }) {
       >
         <p className="text-tinta-suave text-sm">
           Una línea con el plazo («Hasta 31 diciembre 2026», «Hasta marzo 2027») y debajo sus
-          objetivos, uno por línea.
+          objetivos, uno por línea. Si algo se repite, añade «(cada semana)», «(cada 2 semanas)» o
+          «(cada mes)» al final.
         </p>
         <textarea
           className="campo min-h-40"
