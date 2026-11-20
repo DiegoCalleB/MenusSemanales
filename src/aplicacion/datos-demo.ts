@@ -456,6 +456,7 @@ export function estadoInicialDemo(): EstadoHogar {
     vencimientos: [],
     pendientes: [],
     objetivos: [],
+    ajustesHoy: [],
     lluviaPreparada: [],
     cuidado: [],
     puntuacionesCitas: {},

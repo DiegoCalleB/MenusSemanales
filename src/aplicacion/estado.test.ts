@@ -2360,3 +2360,26 @@ describe("objetivos a plazos (D-195)", () => {
     expect(normalizar(viejo).objetivos).toEqual([]);
   });
 });
+
+describe("Hoy a tu manera (D-196)", () => {
+  const base = () => estadoInicialDemo();
+  it("guarda el orden y lo oculto de una persona, lo limpia y se puede restablecer", () => {
+    const id = base().personas[0]!.id;
+    let e = reducir(base(), {
+      tipo: "hoy/ajustar",
+      personaId: id,
+      orden: ["compra", "inventada"],
+      ocultas: ["cole", "cena"],
+    });
+    expect(e.ajustesHoy).toHaveLength(1);
+    expect(e.ajustesHoy[0]?.orden[0]).toBe("compra");
+    expect(e.ajustesHoy[0]?.orden).not.toContain("inventada");
+    expect(e.ajustesHoy[0]?.ocultas).toEqual(["cole"]);
+    e = reducir(e, { tipo: "hoy/ajustar", personaId: id, orden: [], ocultas: [] });
+    expect(e.ajustesHoy).toHaveLength(1);
+    e = reducir(e, { tipo: "hoy/restablecer", personaId: id });
+    expect(e.ajustesHoy).toEqual([]);
+    const viejo = { ...base(), ajustesHoy: undefined } as unknown as EstadoHogar;
+    expect(normalizar(viejo).ajustesHoy).toEqual([]);
+  });
+});

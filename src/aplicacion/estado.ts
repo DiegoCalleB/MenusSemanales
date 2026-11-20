@@ -47,6 +47,7 @@ import {
   mismoObjetivo,
   validarObjetivo,
 } from "@/dominio/objetivos";
+import { type AjusteHoy, limpiarAjuste } from "@/dominio/hoy";
 import {
   type CategoriaVencimiento,
   MAX_VENCIMIENTOS,
@@ -243,6 +244,8 @@ export interface EstadoHogar {
   pendientes: Pendiente[];
   /** Objetivos a plazos de cada persona (D-195): personales, no salen de la app. */
   objetivos: Objetivo[];
+  /** Qué tarjetas ve cada persona en «Hoy» y en qué orden (D-196). */
+  ajustesHoy: AjusteHoy[];
   /** Cuidarse (D-182): agua, ejercicio y hábitos de cada persona. En el documento del hogar. */
   cuidado: Cuidado[];
   /** Los días para los que ya se dejó preparado el paraguas y la ropa de lluvia (D-176). */
@@ -464,6 +467,9 @@ export type Accion =
   | { tipo: "pendiente/limpiar" }
   /** Objetivos a plazos (D-195). */
   | { tipo: "objetivo/anadir"; personaId: string; texto: string; hasta: FechaIso }
+  /** Hoy a tu manera (D-196): qué tarjetas se ven y en qué orden, para una persona. */
+  | { tipo: "hoy/ajustar"; personaId: string; orden: string[]; ocultas: string[] }
+  | { tipo: "hoy/restablecer"; personaId: string }
   /** Pega una lista escrita a mano («Hasta 31 diciembre 2026» y debajo los objetivos). */
   | { tipo: "objetivo/importar"; personaId: string; texto: string }
   | { tipo: "objetivo/hecho"; id: string; hecho: boolean }
@@ -969,6 +975,7 @@ const normalizarCampos = (e: EstadoHogar): EstadoHogar =>
   Array.isArray(e.vencimientos) &&
   Array.isArray(e.pendientes) &&
   Array.isArray(e.objetivos) &&
+  Array.isArray(e.ajustesHoy) &&
   Array.isArray(e.lluviaPreparada) &&
   Array.isArray(e.cuidado) &&
   Array.isArray(e.diasCole) &&
@@ -996,6 +1003,7 @@ const normalizarCampos = (e: EstadoHogar): EstadoHogar =>
         vencimientos: Array.isArray(e.vencimientos) ? e.vencimientos : [],
         pendientes: Array.isArray(e.pendientes) ? e.pendientes : [],
         objetivos: Array.isArray(e.objetivos) ? e.objetivos : [],
+        ajustesHoy: Array.isArray(e.ajustesHoy) ? e.ajustesHoy : [],
         lluviaPreparada: Array.isArray(e.lluviaPreparada) ? e.lluviaPreparada : [],
         cuidado: Array.isArray(e.cuidado) ? e.cuidado : [],
         diasCole: Array.isArray(e.diasCole) ? e.diasCole : [],
@@ -2475,6 +2483,18 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
         siguienteId: e.siguienteId + 1,
       };
     }
+
+    case "hoy/ajustar": {
+      if (!e.personas.some((p) => p.id === accion.personaId)) return e;
+      const ajuste = limpiarAjuste(accion.personaId, accion.orden, accion.ocultas);
+      return {
+        ...e,
+        ajustesHoy: [...e.ajustesHoy.filter((a) => a.personaId !== accion.personaId), ajuste],
+      };
+    }
+
+    case "hoy/restablecer":
+      return { ...e, ajustesHoy: e.ajustesHoy.filter((a) => a.personaId !== accion.personaId) };
 
     case "objetivo/hecho":
       return {

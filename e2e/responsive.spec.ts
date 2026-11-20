@@ -3420,4 +3420,55 @@ test.describe("Hoy como tablero fijo (D-180)", () => {
     await expect(pagina.getByText("Viaje a Marruecos")).toHaveCount(0);
     await contexto.close();
   });
+
+  test("Hoy a tu manera (D-196): ocultar una tarjeta, volver a mostrarla y subir otra", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/");
+    await expect(pagina.locator("#sec-compra")).toBeVisible();
+    await pagina.getByRole("button", { name: /Personalizar Hoy/ }).click();
+    const lista = pagina.getByRole("list", { name: "Tarjetas de Hoy" });
+    // La cena no se oculta.
+    await expect(lista.getByRole("button", { name: /La cena de hoy: / })).toHaveCount(0);
+
+    await lista.getByRole("button", { name: /Falta por comprar: / }).click();
+    await expect(pagina.locator("#sec-compra")).toHaveCount(0);
+    await lista.getByRole("button", { name: /Falta por comprar: / }).click();
+    await expect(pagina.locator("#sec-compra")).toBeVisible();
+
+    // Subir «Falta por comprar» por encima de «Toca en casa» (en el móvil van seguidas).
+    await lista.getByRole("button", { name: "Subir Falta por comprar" }).click();
+    const y = async (id: string) => (await pagina.locator(id).boundingBox())?.y ?? 0;
+    expect(await y("#sec-compra")).toBeLessThan(await y("#sec-casa"));
+
+    // Se queda al recargar.
+    await pagina.reload({ waitUntil: "networkidle" });
+    expect(await y("#sec-compra")).toBeLessThan(await y("#sec-casa"));
+    await pagina.getByRole("button", { name: /Personalizar Hoy/ }).click();
+    await pagina.getByRole("button", { name: "Volver a como estaba" }).click();
+    expect(await y("#sec-compra")).toBeGreaterThan(await y("#sec-casa"));
+    await contexto.close();
+  });
+
+  test("objetivos en Hoy (D-195): el plazo más próximo, para marcar ahí mismo", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/objetivos");
+    await pagina.getByText("Pegar una lista de golpe").click();
+    await pagina
+      .getByLabel("Lista de objetivos")
+      .fill(
+        "Hasta 31 diciembre 2026\nPublicar más juegos\nViaje a Marruecos\nHasta marzo 2027\nOtro",
+      );
+    await pagina.getByRole("button", { name: "Apuntar la lista" }).click();
+    await cargar(pagina, "/");
+    const tarjeta = pagina.locator("#sec-objetivos");
+    await expect(tarjeta.getByText(/Hasta el 31 de diciembre de 2026/)).toBeVisible();
+    await tarjeta.getByRole("button", { name: "Viaje a Marruecos" }).click();
+    await expect(tarjeta.getByText(/1 de 2/)).toBeVisible();
+    await expect(tarjeta.getByRole("button", { name: "Viaje a Marruecos" })).toHaveCount(0);
+    await contexto.close();
+  });
 });

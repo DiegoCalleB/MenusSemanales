@@ -1731,3 +1731,11 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Privacidad:** como Mi día y Cuidarse, es personal. Va en el documento del hogar, pero no está en el buscador, la IA, el calendario ni los avisos del servidor.
 - **Datos:** `objetivos` en el documento del hogar (sin migración; un estado antiguo se completa con una lista vacía). Hasta 300 en el hogar; los conseguidos se quedan, como un cuaderno.
 - **Pendiente (idea):** un resumen de objetivos en Hoy, y revisarlos en la revisión de la semana.
+
+## D-196 · Hoy a tu manera, y Objetivos en Hoy
+
+- **Petición (Diego):** poner los objetivos en Hoy; poder quitar y añadir tarjetas en Hoy y ordenarlas.
+- **Objetivos en Hoy:** tarjeta «🎯 Objetivos» con el plazo más próximo que tenga algo por conseguir (cuánto queda y «N de M»), sus 3 primeros objetivos para marcarlos ahí mismo y un enlace a la pantalla completa. Sin objetivos, una línea que invita a apuntarlos. Solo se ve en el móvil de quien es.
+- **Personalizar Hoy:** botón «⚙️ Personalizar Hoy» al final de la portada. Para cada tarjeta (cena, Mi día, cole, medicación, cuidarse, tiempo, qué llevar, mañana, citas, pendientes, objetivos, casa, compra, papeles, cumples, lo de hoy): **Ocultar/Mostrar** y **subir/bajar**. Se guarda al momento y **por persona** (en el documento del hogar, `ajustesHoy`; así lo ves igual en todos tus dispositivos), y hay «Volver a como estaba». La cena de hoy no se oculta (es la cabecera). Una tarjeta nueva en el futuro aparece sola al final.
+- **Orden:** en el móvil, las tarjetas van una tras otra en el orden elegido. En pantallas anchas cada tarjeta sigue en su columna y el orden vale dentro de ella.
+- **Fuera de esto:** la fila de arriba (cuenta atrás, captura, «De un vistazo») no es personalizable por ahora. Si se oculta una tarjeta a la que apunta «De un vistazo», ese enlace no lleva a ningún sitio.
