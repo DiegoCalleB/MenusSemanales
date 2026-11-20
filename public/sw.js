@@ -11,7 +11,7 @@
  *    guardado, que nunca cambia con el mismo nombre.
  *  - No toca NUNCA: lo que no sea GET, lo de otros dominios (Supabase) ni `/api/`.
  */
-const VERSION = "v2";
+const VERSION = "v3";
 const CACHE_PAGINAS = `hecho-paginas-${VERSION}`;
 const CACHE_ESTATICOS = `hecho-estaticos-${VERSION}`;
 /** Lo último que se ha compartido con la app desde otra (WhatsApp…), para que lo lea la página. */
@@ -32,6 +32,7 @@ const RUTAS = [
   "/mochila",
   "/medicacion",
   "/reparto",
+  "/objetivos",
   "/fechas",
   "/calendario",
   "/cumples",
