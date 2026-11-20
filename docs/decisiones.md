@@ -1723,3 +1723,11 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 
 - **Petición (Diego):** reducir lo de arriba de Hoy en el móvil.
 - **Qué cambia (solo por debajo de 640 px):** la cuenta atrás enseña las 2 fechas más próximas y un botón «+N más»; la frase de resumen se oculta (repetía las píldoras); «De un vistazo» pasa a una fila deslizable; «Mi día» sube justo debajo de la cena; si la lista está vacía, «Apuntar lo que quiero hacer cada día» es un botón. En pantallas anchas todo sigue igual.
+
+## D-195 · Objetivos a plazos
+
+- **Petición (Diego):** para que la app sea un «segundo cerebro», una lista de objetivos a distintos plazos («hasta 31 de diciembre de 2026», «hasta marzo de 2027»), y poder hacer este tipo de planificaciones.
+- **Qué hay:** pantalla nueva **Más → Objetivos**. Cada persona ve solo los suyos, agrupados por plazo (el que vence antes, primero), con cuánto queda y «N de M conseguidos». Se marcan al conseguirlos, se quitan, se añaden a un plazo o se abre un plazo nuevo con fecha. «Pegar una lista de golpe» entiende lo escrito a mano: una línea de plazo («Objetivos hasta 31 diciembre 2026», «Hasta marzo 2027» = fin de mes) y debajo los objetivos.
+- **Privacidad:** como Mi día y Cuidarse, es personal. Va en el documento del hogar, pero no está en el buscador, la IA, el calendario ni los avisos del servidor.
+- **Datos:** `objetivos` en el documento del hogar (sin migración; un estado antiguo se completa con una lista vacía). Hasta 300 en el hogar; los conseguidos se quedan, como un cuaderno.
+- **Pendiente (idea):** un resumen de objetivos en Hoy, y revisarlos en la revisión de la semana.

@@ -41,6 +41,13 @@ import {
   validarPendiente,
 } from "@/dominio/pendientes";
 import {
+  MAX_OBJETIVOS,
+  type Objetivo,
+  leerLista,
+  mismoObjetivo,
+  validarObjetivo,
+} from "@/dominio/objetivos";
+import {
   type CategoriaVencimiento,
   MAX_VENCIMIENTOS,
   type Vencimiento,
@@ -234,6 +241,8 @@ export interface EstadoHogar {
   vencimientos: Vencimiento[];
   /** Pendientes sin fecha (D-175): lo que hay que hacer «algún día». */
   pendientes: Pendiente[];
+  /** Objetivos a plazos de cada persona (D-195): personales, no salen de la app. */
+  objetivos: Objetivo[];
   /** Cuidarse (D-182): agua, ejercicio y hábitos de cada persona. En el documento del hogar. */
   cuidado: Cuidado[];
   /** Los días para los que ya se dejó preparado el paraguas y la ropa de lluvia (D-176). */
@@ -453,6 +462,12 @@ export type Accion =
   | { tipo: "pendiente/borrar"; id: string }
   /** Quita de la lista los que ya están hechos. */
   | { tipo: "pendiente/limpiar" }
+  /** Objetivos a plazos (D-195). */
+  | { tipo: "objetivo/anadir"; personaId: string; texto: string; hasta: FechaIso }
+  /** Pega una lista escrita a mano («Hasta 31 diciembre 2026» y debajo los objetivos). */
+  | { tipo: "objetivo/importar"; personaId: string; texto: string }
+  | { tipo: "objetivo/hecho"; id: string; hecho: boolean }
+  | { tipo: "objetivo/borrar"; id: string }
   /** Marca (o desmarca) como preparado el paraguas y la ropa de lluvia para el día `para` (D-176). */
   | { tipo: "lluvia/preparar"; para: FechaIso }
   /** Suma (1) o quita (-1) un vaso de agua de esa persona ese día (D-182). */
@@ -953,6 +968,7 @@ const normalizarCampos = (e: EstadoHogar): EstadoHogar =>
   Array.isArray(e.gustosBarrio) &&
   Array.isArray(e.vencimientos) &&
   Array.isArray(e.pendientes) &&
+  Array.isArray(e.objetivos) &&
   Array.isArray(e.lluviaPreparada) &&
   Array.isArray(e.cuidado) &&
   Array.isArray(e.diasCole) &&
@@ -979,6 +995,7 @@ const normalizarCampos = (e: EstadoHogar): EstadoHogar =>
         gustosBarrio: Array.isArray(e.gustosBarrio) ? e.gustosBarrio : [],
         vencimientos: Array.isArray(e.vencimientos) ? e.vencimientos : [],
         pendientes: Array.isArray(e.pendientes) ? e.pendientes : [],
+        objetivos: Array.isArray(e.objetivos) ? e.objetivos : [],
         lluviaPreparada: Array.isArray(e.lluviaPreparada) ? e.lluviaPreparada : [],
         cuidado: Array.isArray(e.cuidado) ? e.cuidado : [],
         diasCole: Array.isArray(e.diasCole) ? e.diasCole : [],
@@ -2418,6 +2435,57 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
           .sort(),
       };
     }
+
+    case "objetivo/anadir":
+    case "objetivo/importar": {
+      const fallo = (t: string): EstadoHogar => ({
+        ...e,
+        siguienteId: e.siguienteId + 1,
+        aviso: error(e, t),
+      });
+      const personas = new Set(e.personas.map((p) => p.id));
+      if (!personas.has(accion.personaId)) return fallo("Esa persona no está en la familia.");
+      let nuevos: Array<{ texto: string; hasta: FechaIso }>;
+      if (accion.tipo === "objetivo/anadir") {
+        const r = validarObjetivo(accion, personas);
+        if (!r.ok) return fallo(r.motivo);
+        nuevos = [{ texto: r.datos.texto, hasta: r.datos.hasta }];
+      } else {
+        const r = leerLista(accion.texto, e.hoy);
+        if (!r.ok) return fallo(r.motivo);
+        nuevos = r.grupos.flatMap((g) => g.textos.map((texto) => ({ texto, hasta: g.hasta })));
+      }
+      const suyos = e.objetivos.filter((o) => o.personaId === accion.personaId);
+      const sinRepetir = nuevos.filter((n) => !suyos.some((o) => mismoObjetivo(n, o)));
+      if (sinRepetir.length === 0) return fallo("Eso ya lo tenías apuntado.");
+      if (e.objetivos.length + sinRepetir.length > MAX_OBJETIVOS)
+        return fallo("Ya hay demasiados objetivos: quita alguno.");
+      return {
+        ...e,
+        objetivos: [
+          ...e.objetivos,
+          ...sinRepetir.map((n, i) => ({
+            id: `obj-${e.siguienteId}-${i}`,
+            personaId: accion.personaId,
+            texto: n.texto,
+            hasta: n.hasta,
+            hechoEn: null,
+          })),
+        ],
+        siguienteId: e.siguienteId + 1,
+      };
+    }
+
+    case "objetivo/hecho":
+      return {
+        ...e,
+        objetivos: e.objetivos.map((o) =>
+          o.id === accion.id ? { ...o, hechoEn: accion.hecho ? e.hoy : null } : o,
+        ),
+      };
+
+    case "objetivo/borrar":
+      return { ...e, objetivos: e.objetivos.filter((o) => o.id !== accion.id) };
 
     case "pendiente/borrar":
       return { ...e, pendientes: e.pendientes.filter((x) => x.id !== accion.id) };

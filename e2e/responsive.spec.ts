@@ -45,6 +45,7 @@ const RUTAS = [
   "/compra",
   "/despensa",
   "/reparto",
+  "/objetivos",
 ] as const;
 const PUNTO_DE_CORTE = 768; // md de Tailwind
 
@@ -1351,6 +1352,7 @@ test.describe("flujos en móvil", () => {
       ["Fechas", "Barrio", "/barrio"],
       ["Fechas", "Papeles", "/papeles"],
       ["Más", "Cuenta", "/cuenta"],
+      ["Más", "Objetivos", "/objetivos"],
       ["Más", "Enviar", "/compartir"],
     ];
     for (const [pilar, pestana, ruta] of recorrido) {
@@ -3380,6 +3382,42 @@ test.describe("Hoy como tablero fijo (D-180)", () => {
     await expect(pagina.getByRole("region", { name: /Lo que se quedó/ })).toBeVisible();
     await expect(pagina.getByRole("region", { name: /Lo que viene/ })).toBeVisible();
     await expect(pagina.getByRole("link", { name: /Planear la semana/ })).toBeVisible();
+    await contexto.close();
+  });
+
+  test("objetivos (D-195): pegar una lista por plazos, marcar uno y añadir otro", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/objetivos");
+    await pagina.getByText("Pegar una lista de golpe").click();
+    await pagina
+      .getByLabel("Lista de objetivos")
+      .fill(
+        "Objetivos hasta 31 diciembre 2026\nPublicar más juegos\nViaje a Marruecos\n\nObjetivo hasta Marzo 2027\nEstudiar marketing digital",
+      );
+    await pagina.getByRole("button", { name: "Apuntar la lista" }).click();
+    const fin = pagina.getByRole("region", { name: "Hasta el 31 de diciembre de 2026" });
+    const marzo = pagina.getByRole("region", { name: "Hasta el 31 de marzo de 2027" });
+    await expect(
+      fin.getByRole("button", { name: "Publicar más juegos", exact: true }),
+    ).toBeVisible();
+    await expect(
+      marzo.getByRole("button", { name: "Estudiar marketing digital", exact: true }),
+    ).toBeVisible();
+
+    await fin.getByRole("button", { name: "Viaje a Marruecos", exact: true }).click();
+    await expect(fin.getByText(/1 de 2 conseguidos/)).toBeVisible();
+
+    await fin.getByLabel(/Nuevo objetivo/).fill("Regalitos");
+    await fin.getByRole("button", { name: "Añadir", exact: true }).click();
+    await expect(fin.getByRole("button", { name: "Regalitos", exact: true })).toBeVisible();
+    await expect(fin.getByText(/1 de 3 conseguidos/)).toBeVisible();
+
+    // Es personal: no aparece en el buscador.
+    await cargar(pagina, "/buscar");
+    await pagina.getByRole("searchbox").fill("Marruecos");
+    await expect(pagina.getByText("Viaje a Marruecos")).toHaveCount(0);
     await contexto.close();
   });
 });

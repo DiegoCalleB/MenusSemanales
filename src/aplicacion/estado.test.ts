@@ -2302,3 +2302,61 @@ describe("Cuidarse (D-182)", () => {
     expect(normalizar(viejo).cuidado).toEqual([]);
   });
 });
+
+describe("objetivos a plazos (D-195)", () => {
+  const base = () => estadoInicialDemo();
+  const persona = () => base().personas[0]!.id;
+  it("pega una lista, la agrupa, marca como conseguido y borra", () => {
+    let e = reducir(base(), {
+      tipo: "objetivo/importar",
+      personaId: persona(),
+      texto:
+        "Hasta 31 diciembre 2026\nPublicar más juegos\nViaje a Marruecos\n\nHasta marzo 2027\nPublicar más juegos",
+    });
+    expect(e.aviso?.tipo).not.toBe("error");
+    expect(e.objetivos.map((o) => [o.texto, o.hasta])).toEqual([
+      ["Publicar más juegos", "2026-12-31"],
+      ["Viaje a Marruecos", "2026-12-31"],
+      ["Publicar más juegos", "2027-03-31"],
+    ]);
+    expect(new Set(e.objetivos.map((o) => o.id)).size).toBe(3);
+    const id = e.objetivos[0]!.id;
+    e = reducir(e, { tipo: "objetivo/hecho", id, hecho: true });
+    expect(e.objetivos[0]?.hechoEn).toBe(e.hoy);
+    e = reducir(e, { tipo: "objetivo/hecho", id, hecho: false });
+    expect(e.objetivos[0]?.hechoEn).toBeNull();
+    e = reducir(e, { tipo: "objetivo/borrar", id });
+    expect(e.objetivos).toHaveLength(2);
+  });
+  it("no repite, rechaza lo que no vale y un estado de antes se completa", () => {
+    const uno = reducir(base(), {
+      tipo: "objetivo/anadir",
+      personaId: persona(),
+      texto: "Viaje a Marruecos",
+      hasta: "2026-12-31",
+    });
+    expect(uno.objetivos).toHaveLength(1);
+    const repetido = reducir(uno, {
+      tipo: "objetivo/anadir",
+      personaId: persona(),
+      texto: "viaje a marruecos",
+      hasta: "2026-12-31",
+    });
+    expect(repetido.aviso?.tipo).toBe("error");
+    expect(repetido.objetivos).toHaveLength(1);
+    expect(
+      reducir(base(), {
+        tipo: "objetivo/anadir",
+        personaId: persona(),
+        texto: "",
+        hasta: "2026-12-31",
+      }).aviso?.tipo,
+    ).toBe("error");
+    expect(
+      reducir(base(), { tipo: "objetivo/importar", personaId: persona(), texto: "sin plazo" }).aviso
+        ?.tipo,
+    ).toBe("error");
+    const viejo = { ...base(), objetivos: undefined } as unknown as EstadoHogar;
+    expect(normalizar(viejo).objetivos).toEqual([]);
+  });
+});
