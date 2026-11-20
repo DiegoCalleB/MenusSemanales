@@ -12,6 +12,7 @@ import { enlaceWhatsApp } from "@/dominio/compartir";
 import { useHogar } from "../proveedor-hogar";
 import { AyudaInstalarIos } from "../instalar-ios";
 import { useYo } from "../yo";
+import { useMomento } from "../usar-momento";
 import { useCalendarioFamilia } from "../usar-calendario-familia";
 import { almuerzosDe } from "@/dominio/almuerzos";
 import { quePideHoy } from "@/dominio/casa";
@@ -26,6 +27,7 @@ import { FraseDeHoy } from "../frase-de-hoy";
 import { CuidarseHoy } from "../cuidarse-hoy";
 import { MiDiaHoy } from "../mi-dia-hoy";
 import { ObjetivosHoy } from "../objetivos-hoy";
+import { NotasHoy } from "../notas-hoy";
 import { PersonalizarHoy } from "../personalizar-hoy";
 import { TARJETAS, ajusteDe, ocultasDe, ordenDe } from "@/dominio/hoy";
 import { MedicacionHoy } from "../medicacion-hoy";
@@ -176,6 +178,7 @@ export function InicioVista() {
     ),
     pendientes: <PendientesHoy />,
     objetivos: <ObjetivosHoy />,
+    notas: <NotasHoy />,
     casa: (
       <SeccionHoy
         id="sec-casa"
@@ -266,7 +269,8 @@ export function InicioVista() {
     "lo-de-hoy": estado.personas.some((p) => p.activa) ? <LoDeHoy /> : null,
   };
   const ajuste = ajusteDe(estado.ajustesHoy, yo?.id ?? null);
-  const orden = ordenDe(ajuste);
+  const momento = useMomento();
+  const orden = ordenDe(ajuste, momento);
   const ocultas = ocultasDe(ajuste);
   /** Las tarjetas de una columna, en el orden elegido (en el móvil van todas seguidas, igual). */
   const columna = (c: "izquierda" | "derecha") =>

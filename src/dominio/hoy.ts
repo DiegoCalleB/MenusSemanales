@@ -1,3 +1,5 @@
+import { type Momento, SUBEN } from "./momento";
+
 /**
  * Hoy a tu manera (D-196): cada persona elige qué tarjetas ve en «Hoy» y en qué orden. Lo que no se
  * toca queda como siempre; una tarjeta nueva aparece sola al final. La cena de hoy no se quita (es la
@@ -33,6 +35,7 @@ export const TARJETAS: readonly TarjetaHoy[] = [
   { id: "compra", nombre: "Falta por comprar", emoji: "🛒", columna: "derecha" },
   { id: "papeles", nombre: "Papeles", emoji: "📄", columna: "derecha" },
   { id: "cumples", nombre: "Próximos cumples", emoji: "🎁", columna: "derecha" },
+  { id: "notas", nombre: "Notas e ideas", emoji: "💡", columna: "derecha" },
   { id: "lo-de-hoy", nombre: "Lo de hoy", emoji: "🙌", columna: "derecha" },
 ];
 
@@ -52,12 +55,22 @@ export const ajusteDe = (
   personaId: string | null,
 ): AjusteHoy | null => ajustes.find((a) => a.personaId === personaId) ?? null;
 
-/** El orden completo: lo elegido primero y, detrás, lo que falte, en el orden de siempre. */
-export function ordenDe(ajuste: AjusteHoy | null): string[] {
+/**
+ * El orden completo. Con ajuste, lo elegido primero y, detrás, lo que falte en el orden de siempre.
+ * Sin ajuste (nadie lo ha tocado), el de siempre, salvo que se sepa el momento del día (D-197): la
+ * cena de hoy, luego lo que toca ahora y después lo demás.
+ */
+export function ordenDe(ajuste: AjusteHoy | null, momento: Momento | null = null): string[] {
+  const deSiempre = TARJETAS.map((t) => t.id);
+  if (!ajuste && momento) {
+    const fijas = deSiempre.filter((id) => FIJAS.has(id));
+    const suben = SUBEN[momento].filter((id) => IDS.has(id) && !FIJAS.has(id));
+    return [...fijas, ...suben, ...deSiempre.filter((id) => !FIJAS.has(id) && !suben.includes(id))];
+  }
   const elegidas = (ajuste?.orden ?? []).filter(
     (id, i, todas) => IDS.has(id) && todas.indexOf(id) === i,
   );
-  return [...elegidas, ...TARJETAS.map((t) => t.id).filter((id) => !elegidas.includes(id))];
+  return [...elegidas, ...deSiempre.filter((id) => !elegidas.includes(id))];
 }
 
 export const ocultasDe = (ajuste: AjusteHoy | null): Set<string> =>

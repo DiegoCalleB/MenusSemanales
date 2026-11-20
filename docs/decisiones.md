@@ -1739,3 +1739,24 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Personalizar Hoy:** botón «⚙️ Personalizar Hoy» al final de la portada. Para cada tarjeta (cena, Mi día, cole, medicación, cuidarse, tiempo, qué llevar, mañana, citas, pendientes, objetivos, casa, compra, papeles, cumples, lo de hoy): **Ocultar/Mostrar** y **subir/bajar**. Se guarda al momento y **por persona** (en el documento del hogar, `ajustesHoy`; así lo ves igual en todos tus dispositivos), y hay «Volver a como estaba». La cena de hoy no se oculta (es la cabecera). Una tarjeta nueva en el futuro aparece sola al final.
 - **Orden:** en el móvil, las tarjetas van una tras otra en el orden elegido. En pantallas anchas cada tarjeta sigue en su columna y el orden vale dentro de ella.
 - **Fuera de esto:** la fila de arriba (cuenta atrás, captura, «De un vistazo») no es personalizable por ahora. Si se oculta una tarjeta a la que apunta «De un vistazo», ese enlace no lleva a ningún sitio.
+
+## D-197 · Hoy según el momento del día
+
+- **Petición (Diego):** que Hoy enseñe primero lo que toca ahora (idea del segundo cerebro).
+- **Qué hay:** si la persona no ha personalizado su Hoy, la cena de hoy va siempre primera y, detrás, lo que toca según la hora: **mañana (5–13 h)** Mi día, cole, tiempo, medicación, qué llevar, cuidarse; **tarde (13–20 h)** citas, pendientes, casa, compra, papeles; **noche (20–5 h)** lo de mañana, qué llevar, Mi día, objetivos, notas, medicación. El resto, en el orden de siempre.
+- **Reglas:** si la persona ordena o oculta algo en «Personalizar Hoy», manda su orden y la hora ya no cuenta; «Volver a como estaba» lo devuelve. En los datos de ejemplo (las pruebas) no depende del reloj; `?momento=manana|tarde|noche` lo fuerza.
+
+## D-198 · Objetivos con siguiente paso y objetivos que se repiten
+
+- **Petición (Diego):** que un objetivo no sea solo un deseo, y poder cuidar cosas como «ser el mejor padre del mundo» (un plan a solas con cada hija).
+- **Siguiente paso:** cada objetivo puede llevar una acción concreta («Elegir el motor»). «✓ Paso hecho» la anota (último día que se movió) y pide la siguiente. En Hoy sale bajo su objetivo.
+- **Parado:** un objetivo en marcha que lleva 14 días sin moverse se marca en su pantalla y sale en la revisión de la semana, junto con cuántos no tienen siguiente paso.
+- **Se repite:** al pegar la lista, «Plan a solas con Lucía (cada semana)» (también «cada 2 semanas», «cada mes», «cada 10 días»), o con el desplegable al añadir. No se «completa»: «Hecho hoy» anota el día y, pasado el tiempo, vuelve a salir en Hoy («toca») y en la revisión.
+- **Datos:** `creadoEn`, `siguiente`, `movidoEn` y `cada` en cada objetivo; los de antes se completan solos.
+
+## D-199 · Notas e ideas, y recuerdos
+
+- **Petición (Diego):** lo que falta a un segundo cerebro: apuntar algo suelto sin pensar dónde va, y guardar recuerdos de las niñas.
+- **Qué hay:** pantalla **Más → Notas** y tarjeta «💡 Notas e ideas» en Hoy (apuntar en un segundo, con el número de ideas en la bandeja). Una **idea** espera en la **bandeja** hasta la revisión: pasa a **pendiente**, se archiva (y se puede recuperar) o se borra. Un **recuerdo** lleva su fecha y, si se quiere, **sobre quién** (con filtro). «Un día como hoy» enseña en Hoy los recuerdos de hace 1, 3 y 6 meses y de cada año. La revisión de la semana avisa si hay ideas sin resolver.
+- **Privacidad:** personal, como Mi día y Objetivos: no está en el buscador, la IA, el calendario ni los avisos; solo texto, sin fotos.
+- **Datos:** `notas` en el documento del hogar (hasta 400, 500 letras cada una); sin migración.

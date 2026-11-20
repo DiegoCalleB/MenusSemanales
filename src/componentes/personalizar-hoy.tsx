@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { TARJETAS, ajusteDe, mover, ocultasDe, ordenDe } from "@/dominio/hoy";
 import { useHogar } from "./proveedor-hogar";
+import { useMomento } from "./usar-momento";
 import { useYo } from "./yo";
 
 /**
@@ -13,11 +14,12 @@ export function PersonalizarHoy() {
   const { estado, despachar } = useHogar();
   const [yoId] = useYo();
   const [abierto, setAbierto] = useState(false);
+  const momento = useMomento();
   const yo = estado.personas.find((p) => p.id === yoId && p.activa);
   if (!yo) return null;
 
   const ajuste = ajusteDe(estado.ajustesHoy, yo.id);
-  const orden = ordenDe(ajuste);
+  const orden = ordenDe(ajuste, momento);
   const ocultas = ocultasDe(ajuste);
   const guardar = (nuevoOrden: string[], nuevasOcultas: Set<string>) =>
     despachar({
@@ -47,7 +49,10 @@ export function PersonalizarHoy() {
       </div>
       <p className="text-tinta-suave text-sm">
         Elige qué tarjetas ves y en qué orden. Es solo para ti. En pantallas anchas, cada tarjeta
-        sigue en su columna y el orden vale dentro de ella.
+        sigue en su columna y el orden vale dentro de ella.{" "}
+        {ajuste
+          ? "«Volver a como estaba» devuelve el orden automático según la hora del día."
+          : "Mientras no lo cambies, Hoy pone primero lo que toca según la hora: por la mañana el cole, por la tarde las citas y la compra, por la noche lo de mañana."}
       </p>
       <ul aria-label="Tarjetas de Hoy" className="flex flex-col">
         {orden.map((id, i) => {

@@ -5,6 +5,8 @@ import { cuidadoDe } from "@/dominio/cuidado";
 import { fechaLegible } from "@/aplicacion/buscar";
 import { repasoDeLaSemana } from "@/dominio/repaso";
 import { textoEspera } from "@/dominio/pendientes";
+import { bandeja } from "@/dominio/notas";
+import { haceCuanto, parados, quePideHacer, sinPaso, textoCada } from "@/dominio/objetivos";
 import { useHogar } from "../proveedor-hogar";
 import { useYo } from "../yo";
 
@@ -27,6 +29,15 @@ export function RepasoVista() {
     vencimientos: estado.vencimientos,
     cumples: estado.cumples,
   });
+  const misObjetivos = yo
+    ? {
+        parados: parados(estado.objetivos, yo.id, estado.hoy).slice(0, 4),
+        tocan: quePideHacer(estado.objetivos, yo.id, estado.hoy).slice(0, 4),
+        sinPaso: sinPaso(estado.objetivos, yo.id),
+        hay: estado.objetivos.some((o) => o.personaId === yo.id && o.hechoEn === null),
+      }
+    : null;
+  const enBandeja = yo ? bandeja(estado.notas, yo.id).length : 0;
   const nadaHecho =
     r.hecho.casa.length === 0 &&
     r.hecho.pendientes.length === 0 &&
@@ -114,6 +125,61 @@ export function RepasoVista() {
           Ver todos los pendientes
         </Link>
       </section>
+
+      {misObjetivos?.hay && (
+        <section aria-labelledby="rv-objetivos" className="tarjeta flex flex-col gap-2">
+          <h2 id="rv-objetivos" className="text-lg font-extrabold">
+            <span aria-hidden="true">🎯 </span>Tus objetivos
+          </h2>
+          {misObjetivos.parados.length === 0 && misObjetivos.tocan.length === 0 ? (
+            <p className="text-tinta-suave text-base">Nada parado: todo se está moviendo. 👏</p>
+          ) : (
+            <ul aria-label="Objetivos que piden algo" className="flex flex-col gap-1">
+              {misObjetivos.tocan.map(({ objetivo: o, dias }) => (
+                <li key={o.id} className="text-base">
+                  🔁 {o.texto}{" "}
+                  <span className="text-tinta-suave text-sm">
+                    · {textoCada(o.cada ?? 0)}, sin hacer {haceCuanto(dias)}
+                  </span>
+                </li>
+              ))}
+              {misObjetivos.parados.map(({ objetivo: o, dias }) => (
+                <li key={o.id} className="text-base">
+                  ⏸️ {o.texto}{" "}
+                  <span className="text-tinta-suave text-sm">· sin moverse {haceCuanto(dias)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {misObjetivos.sinPaso > 0 && (
+            <p className="text-tinta-suave text-sm">
+              {plural(misObjetivos.sinPaso, "objetivo no tiene", "objetivos no tienen")} todavía un
+              siguiente paso.
+            </p>
+          )}
+          <Link
+            href="/objetivos"
+            className="text-marca-fuerte inline-flex min-h-11 items-center text-base font-semibold underline"
+          >
+            Ponerles el siguiente paso
+          </Link>
+        </section>
+      )}
+
+      {enBandeja > 0 && (
+        <section aria-labelledby="rv-bandeja" className="tarjeta flex flex-col gap-2">
+          <h2 id="rv-bandeja" className="text-lg font-extrabold">
+            <span aria-hidden="true">📥 </span>Tu bandeja de ideas
+          </h2>
+          <p className="text-base">
+            Hay {plural(enBandeja, "idea", "ideas")} sin resolver. Pásalas a pendiente, archívalas o
+            bórralas.
+          </p>
+          <Link href="/notas" className="boton w-fit">
+            Vaciar la bandeja
+          </Link>
+        </section>
+      )}
 
       <section aria-labelledby="rv-viene" className="tarjeta flex flex-col gap-2">
         <h2 id="rv-viene" className="text-lg font-extrabold">

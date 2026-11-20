@@ -756,6 +756,7 @@ export function estadoModoDiego(hoy: string): EstadoHogar {
     pendientes: [],
     objetivos: [],
     ajustesHoy: [],
+    notas: [],
     lluviaPreparada: [],
     cuidado: [],
     puntuacionesCitas: {},
