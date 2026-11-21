@@ -3474,23 +3474,47 @@ test.describe("Hoy como tablero fijo (D-180)", () => {
     await contexto.close();
   });
 
-  test("Hoy según la hora (D-197): por la mañana sube el cole; por la tarde, la compra", async ({
+  test("Hoy simple (D-200): a la vista solo lo que toca a esta hora; lo demás, en «Más cosas»", async ({
     browser,
   }) => {
     const { contexto, pagina } = await abrir(browser, 390, 844);
     const y = async (id: string) => (await pagina.locator(id).boundingBox())?.y ?? 0;
     await cargar(pagina, "/?momento=tarde");
-    expect(await y("#sec-compra")).toBeLessThan(await y("#sec-mi-dia"));
-    await cargar(pagina, "/?momento=noche");
-    expect(await y("#sec-mi-dia")).toBeLessThan(await y("#sec-compra"));
+    await expect(pagina.locator("#sec-compra")).toBeVisible();
+    await expect(pagina.locator("#sec-mi-dia")).toBeHidden();
+    await expect(pagina.getByRole("list", { name: "De un vistazo" })).toHaveCount(0);
     // La cena de hoy siempre es lo primero.
     expect(await y("#hoy")).toBeLessThan(await y("#sec-compra"));
-    // Si la persona ordena a su manera, manda su orden y no la hora: se guarda el de la noche…
+    await pagina.getByText(/Más cosas/).click();
+    await expect(pagina.locator("#sec-mi-dia")).toBeVisible();
+
+    await cargar(pagina, "/?momento=noche");
+    await expect(pagina.locator("#sec-mi-dia")).toBeVisible();
+    await expect(pagina.locator("#sec-compra")).toBeHidden();
+
+    // Quien ordena a su manera lo ve todo, en su orden, sin importar la hora.
     await pagina.getByRole("button", { name: /Personalizar Hoy/ }).click();
     await pagina.getByRole("button", { name: "Bajar Mi día" }).click();
-    // …y por la tarde la compra ya no se adelanta.
     await cargar(pagina, "/?momento=tarde");
+    await expect(pagina.locator("#sec-compra")).toBeVisible();
+    await expect(pagina.locator("#sec-mi-dia")).toBeVisible();
     expect(await y("#sec-mi-dia")).toBeLessThan(await y("#sec-compra"));
+    await contexto.close();
+  });
+
+  test("compartido (D-200): lo que se comparte puede guardarse como idea (p. ej. desde Keep)", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await pagina.goto("/compartido?text=Idea%20para%20un%20juego%20de%20plataformas", {
+      waitUntil: "networkidle",
+    });
+    await pagina.getByRole("button", { name: /Es una idea/ }).click();
+    await expect(pagina.getByText("Guardada como idea en tus notas.")).toBeVisible();
+    await cargar(pagina, "/notas");
+    await expect(
+      pagina.getByRole("list", { name: "Ideas en la bandeja" }).getByText(/juego de plataformas/),
+    ).toBeVisible();
     await contexto.close();
   });
 

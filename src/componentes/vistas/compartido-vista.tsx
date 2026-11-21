@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { ItemCircular } from "@/dominio/ia-circular";
 import { LeerCircular } from "../leer-circular";
 import { useHogar } from "../proveedor-hogar";
+import { useYo } from "../yo";
 
 /** Dónde deja el service worker la foto o el PDF compartido (ver `public/sw.js`). */
 const CACHE_COMPARTIDO = "hecho-compartido";
@@ -51,6 +52,8 @@ const fechaCorta = (f: string) =>
  */
 export function CompartidoVista() {
   const { estado, despachar } = useHogar();
+  const [yoId] = useYo();
+  const yo = estado.personas.find((p) => p.id === yoId && p.activa);
   const [apuntadas, setApuntadas] = useState<readonly ItemCircular[]>([]);
   const [quitadas, setQuitadas] = useState<ReadonlySet<number>>(new Set());
   const params = useSearchParams();
@@ -186,6 +189,25 @@ export function CompartidoVista() {
               }}
             >
               🛒 Es para la compra
+            </button>
+          )}
+
+          {texto && yo && (
+            <button
+              type="button"
+              className="boton-suave w-fit"
+              onClick={() => {
+                despachar({
+                  tipo: "nota/anadir",
+                  personaId: yo.id,
+                  nota: "idea",
+                  texto: texto.slice(0, 500),
+                  sobre: null,
+                });
+                setHecho("Guardada como idea en tus notas.");
+              }}
+            >
+              💡 Es una idea (a mis notas)
             </button>
           )}
 

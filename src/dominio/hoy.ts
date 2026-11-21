@@ -98,3 +98,19 @@ export function mover(orden: readonly string[], id: string, sentido: -1 | 1): st
   [nuevo[i], nuevo[j]] = [nuevo[j] as string, nuevo[i] as string];
   return nuevo;
 }
+
+/** En el modo simple, cuántas tarjetas del momento se ven a la vista (además de la cena de hoy). */
+export const TARJETAS_A_LA_VISTA = 4;
+
+/**
+ * El modo simple (D-200): mientras nadie haya personalizado su Hoy y se sepa la hora, solo se ven la
+ * cena y las pocas tarjetas que tocan ahora; el resto está plegado en «Más cosas». Devuelve los ids
+ * a la vista; null si no hay modo simple (se ve todo, como siempre).
+ */
+export function aLaVista(ajuste: AjusteHoy | null, momento: Momento | null): Set<string> | null {
+  if (ajuste || !momento) return null;
+  return new Set([
+    ...TARJETAS.filter((t) => t.fija).map((t) => t.id),
+    ...SUBEN[momento].slice(0, TARJETAS_A_LA_VISTA),
+  ]);
+}
