@@ -1767,3 +1767,9 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Qué cambia:** mientras nadie haya personalizado su Hoy (y se sepa la hora), se ven solo la **cena de hoy** y **4 tarjetas** del momento del día (D-197); el resto de tarjetas, el enlace a planear la semana y la revisión están plegados en **«Más cosas · N»**. Sin «De un vistazo» ni frase de resumen, y la cuenta atrás solo con lo de hoy y mañana. Quien ordena u oculta en «Personalizar Hoy» ve todo, a su manera. En los datos de ejemplo (pruebas) no cambia nada, salvo con `?momento=`.
 - **Compartir → idea:** al compartir un texto a ¡Hecho! (p. ej. una nota de Google Keep) hay un botón «💡 Es una idea (a mis notas)», además de las fechas y la compra.
 - **Pendiente (acordado, sin hacer):** sincronizar los pendientes con Todoist (en los dos sentidos, con clave personal puesta por Diego en el servidor) cuando tenga cuenta; reenviar correos a una dirección de la app para convertirlos en nota o pendiente. Google Keep no tiene API pública para cuentas personales: se usa «Compartir».
+
+## D-201 · El día cambia a las 4:00
+
+- **Petición (Diego):** el cambio de día, a las 4:00 y no a las 00:00: a las 00:30 todavía es «hoy» para quien sigue despierto y la app hablaba como si ya fuera mañana.
+- **Qué cambia:** «hoy» es la fecha del reloj menos 4 horas (`hoyDeAhora`, en `dominio/dia.ts`, probado con invierno y verano). Entre las 00:00 y las 4:00 la app sigue en el día de antes: Hoy, la cena, Mi día, Cuidarse, la medicación tomada, la mochila y los plazos. El momento del día de Hoy encaja (noche de 20 a 4 h). Con la app abierta, el día cambia solo a las 4:00 (se revisa cada minuto y al volver a ella). La bienvenida de Ana usa la misma regla.
+- **Fuera:** los avisos del servidor (7, 9 y 20 h) siguen con la fecha de Madrid; no se ven afectados. Una medicación que se avise de madrugada contaría por el día natural.

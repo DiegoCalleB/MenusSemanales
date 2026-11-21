@@ -12,7 +12,7 @@ export const NOMBRE_MOMENTO: Record<Momento, string> = {
 };
 
 export function momentoDeHora(hora: number): Momento {
-  if (hora >= 5 && hora < 13) return "manana";
+  if (hora >= 4 && hora < 13) return "manana";
   if (hora >= 13 && hora < 20) return "tarde";
   return "noche";
 }
