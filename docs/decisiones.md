@@ -1760,3 +1760,10 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Qué hay:** pantalla **Más → Notas** y tarjeta «💡 Notas e ideas» en Hoy (apuntar en un segundo, con el número de ideas en la bandeja). Una **idea** espera en la **bandeja** hasta la revisión: pasa a **pendiente**, se archiva (y se puede recuperar) o se borra. Un **recuerdo** lleva su fecha y, si se quiere, **sobre quién** (con filtro). «Un día como hoy» enseña en Hoy los recuerdos de hace 1, 3 y 6 meses y de cada año. La revisión de la semana avisa si hay ideas sin resolver.
 - **Privacidad:** personal, como Mi día y Objetivos: no está en el buscador, la IA, el calendario ni los avisos; solo texto, sin fotos.
 - **Datos:** `notas` en el documento del hogar (hasta 400, 500 letras cada una); sin migración.
+
+## D-200 · Hoy simple
+
+- **Petición (Diego):** «necesito simplificar, hay demasiada información».
+- **Qué cambia:** mientras nadie haya personalizado su Hoy (y se sepa la hora), se ven solo la **cena de hoy** y **4 tarjetas** del momento del día (D-197); el resto de tarjetas, el enlace a planear la semana y la revisión están plegados en **«Más cosas · N»**. Sin «De un vistazo» ni frase de resumen, y la cuenta atrás solo con lo de hoy y mañana. Quien ordena u oculta en «Personalizar Hoy» ve todo, a su manera. En los datos de ejemplo (pruebas) no cambia nada, salvo con `?momento=`.
+- **Compartir → idea:** al compartir un texto a ¡Hecho! (p. ej. una nota de Google Keep) hay un botón «💡 Es una idea (a mis notas)», además de las fechas y la compra.
+- **Pendiente (acordado, sin hacer):** sincronizar los pendientes con Todoist (en los dos sentidos, con clave personal puesta por Diego en el servidor) cuando tenga cuenta; reenviar correos a una dirección de la app para convertirlos en nota o pendiente. Google Keep no tiene API pública para cuentas personales: se usa «Compartir».

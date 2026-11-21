@@ -29,7 +29,7 @@ import { MiDiaHoy } from "../mi-dia-hoy";
 import { ObjetivosHoy } from "../objetivos-hoy";
 import { NotasHoy } from "../notas-hoy";
 import { PersonalizarHoy } from "../personalizar-hoy";
-import { TARJETAS, ajusteDe, ocultasDe, ordenDe } from "@/dominio/hoy";
+import { TARJETAS, aLaVista, ajusteDe, ocultasDe, ordenDe } from "@/dominio/hoy";
 import { MedicacionHoy } from "../medicacion-hoy";
 import { PapelesHoy } from "../papeles-hoy";
 import { PendientesHoy } from "../pendientes-hoy";
@@ -273,83 +273,22 @@ export function InicioVista() {
   const orden = ordenDe(ajuste, momento);
   const ocultas = ocultasDe(ajuste);
   /** Las tarjetas de una columna, en el orden elegido (en el móvil van todas seguidas, igual). */
-  const columna = (c: "izquierda" | "derecha") =>
-    TARJETAS.filter((t) => t.columna === c && !ocultas.has(t.id)).map((t) => (
+  const vista = aLaVista(ajuste, momento);
+  const nPlegadas = vista
+    ? TARJETAS.filter((t) => !vista.has(t.id) && !ocultas.has(t.id)).length
+    : 0;
+  const columna = (c: "izquierda" | "derecha", plegadas = false) =>
+    TARJETAS.filter(
+      (t) =>
+        t.columna === c && !ocultas.has(t.id) && (vista === null || vista.has(t.id) !== plegadas),
+    ).map((t) => (
       <div key={t.id} style={{ order: orden.indexOf(t.id) }} className="empty:hidden">
         {tarjetas[t.id]}
       </div>
     ));
 
-  return (
-    <div className="flex flex-col gap-4">
-      {felicitaciones.map((f) => {
-        const esMio = !!yo && f.cumple.personaId === yo.id;
-        return (
-          <section
-            key={f.cumple.id}
-            aria-label={`Cumpleaños de ${f.cumple.nombre}`}
-            className="from-suave-2 to-suave-3 border-borde flex flex-col gap-2 rounded-3xl border bg-linear-to-br p-4 text-center sm:p-6"
-          >
-            <p aria-hidden="true" className="fiesta text-5xl">
-              🎂
-            </p>
-            <h2 className="text-2xl font-extrabold">
-              {esMio ? `¡Feliz cumpleaños, ${f.cumple.nombre}!` : `Hoy cumple ${f.cumple.nombre}`}
-            </h2>
-            <p className="text-base font-semibold">{esMio ? f.paraEl : f.paraLosDemas}</p>
-            {!esMio && (
-              <a
-                className="boton mx-auto"
-                href={enlaceWhatsApp(f.mensaje)}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Felicitar por WhatsApp
-              </a>
-            )}
-          </section>
-        );
-      })}
-      {proximos.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <ul aria-label="Cuenta atrás" className="flex flex-wrap gap-2">
-            {proximos.map((p, i) => (
-              <li
-                key={p.clave}
-                className={`bg-suave-1 border-borde rounded-full border px-3 py-1 text-sm font-bold ${i >= 2 && !verTodas ? "hidden sm:block" : ""}`}
-              >
-                <span aria-hidden="true">{p.emoji} </span>
-                {p.titulo}
-                {p.hora && ` (${p.hora})`} · {p.dias <= 1 ? p.texto : `en ${p.texto}`}
-              </li>
-            ))}
-          </ul>
-          {proximos.length > 2 && !verTodas && (
-            <button
-              type="button"
-              className="boton-suave w-fit sm:hidden"
-              onClick={() => setVerTodas(true)}
-            >
-              +{proximos.length - 2} más
-            </button>
-          )}
-        </div>
-      )}
-
-      <BarraDeCaptura />
-
-      <FraseDeHoy />
-
-      <ResumenHoy />
-
-      <ActivarAvisosHoy />
-
-      {/* El tablero (D-181, D-196): dos columnas en pantallas anchas; en el móvil, todas las tarjetas seguidas. El orden y lo que se ve lo elige cada persona. */}
-      <div className="grid gap-4 md:grid-cols-2 md:items-start">
-        <div className="contents md:flex md:flex-col md:gap-4">{columna("izquierda")}</div>
-        <div className="contents md:flex md:flex-col md:gap-4">{columna("derecha")}</div>
-      </div>
-
+  const enlacesFinales = (
+    <>
       <Link
         href="/semana"
         className={
@@ -381,6 +320,99 @@ export function InicioVista() {
           <span className="text-tinta-suave text-sm">dos minutos: qué hiciste y qué viene</span>
         )}
       </Link>
+    </>
+  );
+
+  return (
+    <div className="flex flex-col gap-4">
+      {felicitaciones.map((f) => {
+        const esMio = !!yo && f.cumple.personaId === yo.id;
+        return (
+          <section
+            key={f.cumple.id}
+            aria-label={`Cumpleaños de ${f.cumple.nombre}`}
+            className="from-suave-2 to-suave-3 border-borde flex flex-col gap-2 rounded-3xl border bg-linear-to-br p-4 text-center sm:p-6"
+          >
+            <p aria-hidden="true" className="fiesta text-5xl">
+              🎂
+            </p>
+            <h2 className="text-2xl font-extrabold">
+              {esMio ? `¡Feliz cumpleaños, ${f.cumple.nombre}!` : `Hoy cumple ${f.cumple.nombre}`}
+            </h2>
+            <p className="text-base font-semibold">{esMio ? f.paraEl : f.paraLosDemas}</p>
+            {!esMio && (
+              <a
+                className="boton mx-auto"
+                href={enlaceWhatsApp(f.mensaje)}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Felicitar por WhatsApp
+              </a>
+            )}
+          </section>
+        );
+      })}
+      {(vista ? proximos.filter((p) => p.dias <= 2) : proximos).length > 0 && (
+        <div className="flex flex-col gap-2">
+          <ul aria-label="Cuenta atrás" className="flex flex-wrap gap-2">
+            {proximos.map((p, i) => (
+              <li
+                key={p.clave}
+                className={`bg-suave-1 border-borde rounded-full border px-3 py-1 text-sm font-bold ${i >= 2 && !verTodas ? "hidden sm:block" : ""}`}
+              >
+                <span aria-hidden="true">{p.emoji} </span>
+                {p.titulo}
+                {p.hora && ` (${p.hora})`} · {p.dias <= 1 ? p.texto : `en ${p.texto}`}
+              </li>
+            ))}
+          </ul>
+          {proximos.length > 2 && !verTodas && (
+            <button
+              type="button"
+              className="boton-suave w-fit sm:hidden"
+              onClick={() => setVerTodas(true)}
+            >
+              +{proximos.length - 2} más
+            </button>
+          )}
+        </div>
+      )}
+
+      <BarraDeCaptura />
+
+      {!vista && <FraseDeHoy />}
+
+      {!vista && <ResumenHoy />}
+
+      <ActivarAvisosHoy />
+
+      {/* El tablero (D-181, D-196): dos columnas en pantallas anchas; en el móvil, todas las tarjetas seguidas. El orden y lo que se ve lo elige cada persona. */}
+      <div className="grid gap-4 md:grid-cols-2 md:items-start">
+        <div className="contents md:flex md:flex-col md:gap-4">{columna("izquierda")}</div>
+        <div className="contents md:flex md:flex-col md:gap-4">{columna("derecha")}</div>
+      </div>
+
+      {vista ? (
+        <details className="tarjeta flex flex-col">
+          <summary className="text-marca-fuerte flex min-h-11 cursor-pointer items-center text-base font-semibold">
+            Más cosas · {nPlegadas}
+          </summary>
+          <div className="flex flex-col gap-4 pt-2">
+            <div className="grid gap-4 md:grid-cols-2 md:items-start">
+              <div className="contents md:flex md:flex-col md:gap-4">
+                {columna("izquierda", true)}
+              </div>
+              <div className="contents md:flex md:flex-col md:gap-4">
+                {columna("derecha", true)}
+              </div>
+            </div>
+            {enlacesFinales}
+          </div>
+        </details>
+      ) : (
+        enlacesFinales
+      )}
 
       <PersonalizarHoy />
 

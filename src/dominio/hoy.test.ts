@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TARJETAS, limpiarAjuste, mover, ocultasDe, ordenDe } from "./hoy";
+import { TARJETAS, aLaVista, limpiarAjuste, mover, ocultasDe, ordenDe } from "./hoy";
 
 const IDS = TARJETAS.map((t) => t.id);
 
@@ -27,5 +27,17 @@ describe("Hoy a tu manera (D-196)", () => {
     expect(mover(["a", "b", "c"], "b", 1)).toEqual(["a", "c", "b"]);
     expect(mover(["a", "b", "c"], "a", -1)).toEqual(["a", "b", "c"]);
     expect(mover(["a", "b", "c"], "c", 1)).toEqual(["a", "b", "c"]);
+  });
+  it("modo simple: la cena y 4 del momento; sin hora o con ajuste, se ve todo", () => {
+    expect([...(aLaVista(null, "tarde") ?? [])]).toEqual([
+      "cena",
+      "citas",
+      "pendientes",
+      "casa",
+      "compra",
+    ]);
+    expect(aLaVista(null, "manana")?.has("mi-dia")).toBe(true);
+    expect(aLaVista(null, null)).toBeNull();
+    expect(aLaVista({ personaId: "a", orden: [], ocultas: [] }, "tarde")).toBeNull();
   });
 });

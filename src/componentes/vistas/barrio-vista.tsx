@@ -153,7 +153,7 @@ export function BarrioVista() {
                               href={p.enlace}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex min-h-11 items-center underline"
+                              className="inline-flex min-h-11 min-w-11 items-center underline"
                               title="Buscar más información"
                             >
                               {p.titulo}
@@ -254,7 +254,7 @@ export function BarrioVista() {
                       href={p.enlace}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex min-h-11 items-center underline"
+                      className="inline-flex min-h-11 min-w-11 items-center underline"
                       title="Buscar más información"
                     >
                       {p.titulo}
