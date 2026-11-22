@@ -299,7 +299,16 @@ export function recordatoriosDeCuidado(
   return out;
 }
 
-/** La notificación del móvil: «💧 Diego, agua» o «🏃 Diego, ejercicio». */
+/** Lo que el botón de esa notificación marca (D-202): un vaso de agua o el ejercicio de hoy. */
+export const cosasParaMarcarCuidado = (r: RecordatorioDeCuidado, hoy: FechaIso) =>
+  r.tipo === "agua" || r.tipo === "ejercicio"
+    ? [{ texto: r.tipo, personaId: r.personaId, para: hoy, tipo: r.tipo }]
+    : [];
+
+/**
+ * La notificación del móvil: «💧 Diego: agua» o «🏃 Diego: ejercicio». El agua y el ejercicio llevan
+ * un botón («+1 vaso», «Hecho») que lo apunta sin abrir la app (D-202).
+ */
 export function notificacionDeCuidado(r: RecordatorioDeCuidado) {
   return {
     titulo:
@@ -309,6 +318,11 @@ export function notificacionDeCuidado(r: RecordatorioDeCuidado) {
       ),
     cuerpo: r.texto.slice(0, 240),
     tag: `cuidado-${r.personaId}-${r.tipo}`.replace(/[^a-z0-9-]/gi, "").slice(0, 40),
+    ...(r.tipo === "agua"
+      ? { boton: "💧 +1 vaso", confirmacion: "💧 Un vaso más apuntado" }
+      : r.tipo === "ejercicio"
+        ? { boton: "✅ Hecho", confirmacion: "🏃 Ejercicio apuntado" }
+        : {}),
   };
 }
 

@@ -100,6 +100,12 @@ function codigoHecho(v) {
   return typeof v === "string" && /^[0-9a-f]{64}$/.test(v) ? v : null;
 }
 
+/** El texto de un botón o de una confirmación (D-202): corto, sin saltos de línea; si no, el de siempre. */
+function textoCorto(v, porDefecto, max) {
+  const t = typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, max) : "";
+  return t || porDefecto;
+}
+
 /** ¿Es un archivo que se guarda y se sirve «primero lo guardado»? */
 function esEstatico(ruta) {
   return ruta.startsWith("/_next/static/") || SUELTOS.includes(ruta);
@@ -286,14 +292,23 @@ if (typeof self !== "undefined" && typeof self.addEventListener === "function") 
       typeof datos.titulo === "string" && datos.titulo ? datos.titulo.slice(0, 100) : "¡Hecho!";
     const cuerpo = typeof datos.cuerpo === "string" ? datos.cuerpo.slice(0, 300) : "";
     const hecho = codigoHecho(datos.hecho);
+    const boton = textoCorto(datos.boton, "✅ Hecho", 24);
+    const confirmacion = textoCorto(datos.confirmacion, "✅ Apuntado como preparado", 60);
     evento.waitUntil(
       self.registration.showNotification(titulo, {
         body: cuerpo,
         icon: "/icon-192.png",
         badge: "/icon-192.png",
         tag: etiquetaDeAviso(datos.tag),
-        data: { url: rutaDeLaApp(datos.url), hecho },
-        ...(hecho ? { actions: [{ action: "hecho", title: "✅ Hecho" }] } : {}),
+        data: {
+          url: rutaDeLaApp(datos.url),
+          hecho,
+          confirmacion,
+          // Si no se pudo marcar, se abre la pantalla de lo que era: la mochila, o Hoy (agua, ejercicio).
+          rutaHecho:
+            typeof datos.confirmacion === "string" && datos.confirmacion ? "/" : "/mochila",
+        },
+        ...(hecho ? { actions: [{ action: "hecho", title: boton }] } : {}),
       }),
     );
   });
@@ -304,7 +319,7 @@ if (typeof self !== "undefined" && typeof self.addEventListener === "function") 
       return self.clients.openWindow(url);
     });
 
-  async function marcarHecho(codigo) {
+  async function marcarHecho(codigo, confirmacion, ruta) {
     try {
       const r = await fetch("/api/avisos/hecho", {
         method: "POST",
@@ -312,17 +327,17 @@ if (typeof self !== "undefined" && typeof self.addEventListener === "function") 
         body: JSON.stringify({ codigo }),
       });
       if (!r.ok) throw new Error("no-marcado");
-      await self.registration.showNotification("✅ Apuntado como preparado", {
+      await self.registration.showNotification(confirmacion, {
         body: "Ya sale marcado en la app.",
         icon: "/icon-192.png",
         badge: "/icon-192.png",
         tag: "avisos-diarios",
         silent: true,
-        data: { url: "/mochila" },
+        data: { url: ruta },
       });
     } catch {
-      // Sin conexión o el código ya no vale: se abre la mochila para marcarlo a mano.
-      await abrirApp("/mochila");
+      // Sin conexión o el código ya no vale: se abre la pantalla para marcarlo a mano.
+      await abrirApp(ruta);
     }
   }
 
@@ -331,7 +346,13 @@ if (typeof self !== "undefined" && typeof self.addEventListener === "function") 
     const datos = evento.notification.data || {};
     const hecho = codigoHecho(datos.hecho);
     if (evento.action === "hecho" && hecho) {
-      evento.waitUntil(marcarHecho(hecho));
+      evento.waitUntil(
+        marcarHecho(
+          hecho,
+          textoCorto(datos.confirmacion, "✅ Apuntado como preparado", 60),
+          rutaDeLaApp(datos.rutaHecho || "/mochila"),
+        ),
+      );
       return;
     }
     evento.waitUntil(abrirApp(typeof datos.url === "string" ? datos.url : "/"));
@@ -346,6 +367,7 @@ if (typeof module !== "undefined" && module.exports) {
     esEstatico,
     destinoCompartido,
     codigoHecho,
+    textoCorto,
     rutaDeLaApp,
     etiquetaDeAviso,
     RUTAS,

@@ -13,7 +13,12 @@ import {
   notificacionDelDia,
   resumenDelDia,
 } from "@/dominio/avisos";
-import { notificacionDeCuidado, recordatoriosDeCuidado } from "@/dominio/cuidado";
+import {
+  cosasParaMarcarCuidado,
+  notificacionDeCuidado,
+  recordatoriosDeCuidado,
+} from "@/dominio/cuidado";
+import { notificacionDeObjetivos, recordatoriosDeObjetivos } from "@/dominio/objetivos";
 import {
   cosasParaMarcarMedicacion,
   notificacionDeMedicacion,
@@ -57,7 +62,15 @@ const TOKEN = /^[0-9a-f]{64}$/;
 
 type CuentaPush = { enviadas: number; caducadas: number; fallos: number };
 
-type Mensaje = { titulo: string; cuerpo: string; tag: string; hecho?: string };
+type Mensaje = {
+  titulo: string;
+  cuerpo: string;
+  tag: string;
+  hecho?: string;
+  boton?: string;
+  confirmacion?: string;
+  url?: string;
+};
 
 /**
  * Manda cada recordatorio a los móviles de esa persona (los de su cuenta) o, si ninguno está
@@ -138,12 +151,14 @@ async function recordarMedicacion(
  * Cuidarse (D-183): el agua a las 11 y a las 17 h si va corto y el ejercicio a las 18 h si hoy toca
  * y no está hecho, solo a quien lo pidió (el servidor solo recibe a esas personas).
  */
-function recordarCuidado(
+async function recordarCuidado(
   resumen: Resumen,
   hoy: string,
   hora: number,
   token: string,
   claves: ClavesVapid | null,
+  /** El secreto de la base de datos: con él, el agua y el ejercicio llevan su botón (D-202). */
+  secreto: string | null,
 ) {
   const recordatorios = recordatoriosDeCuidado(
     (resumen.cuidado ?? []).map((c) => ({
@@ -159,11 +174,47 @@ function recordarCuidado(
     hoy,
     hora,
   );
+  const aEnviar = [];
+  for (const r of recordatorios) {
+    const cosas = cosasParaMarcarCuidado(r, hoy);
+    const hecho =
+      secreto && cosas.length > 0
+        ? await crearAccionDeAviso(secreto, token, cosas).catch(() => null)
+        : null;
+    aEnviar.push({
+      personaId: r.personaId,
+      mensaje: { ...notificacionDeCuidado(r), ...(hecho ? { hecho } : {}) },
+    });
+  }
+  return mandarPorPersona(aEnviar, token, claves, "cuidado");
+}
+
+/**
+ * Objetivos (D-203): a mediodía, lo que se repite y ya toca; el domingo a las 19 h, la revisión. Solo a
+ * quien pidió los avisos de Cuidarse, y solo con números: el servidor no conoce los textos.
+ */
+function recordarObjetivos(
+  resumen: Resumen,
+  hoy: string,
+  hora: number,
+  token: string,
+  claves: ClavesVapid | null,
+) {
+  const conAvisos = new Set(
+    (resumen.cuidado ?? []).filter((c) => c.avisos).map((c) => c.personaId),
+  );
+  const recordatorios = recordatoriosDeObjetivos(
+    resumen.objetivos ?? [],
+    resumen.personas,
+    conAvisos,
+    hoy,
+    hora,
+  );
   return mandarPorPersona(
-    recordatorios.map((r) => ({ personaId: r.personaId, mensaje: notificacionDeCuidado(r) })),
+    recordatorios.map((r) => ({ personaId: r.personaId, mensaje: notificacionDeObjetivos(r) })),
     token,
     claves,
-    "cuidado",
+    "objetivos",
   );
 }
 
@@ -324,6 +375,7 @@ export async function POST(request: Request) {
   // La medicación va por su cuenta, a la hora que tenga cada una (D-166).
   let medicacion: CuentaPush | null = null;
   let cuidado: CuentaPush | null = null;
+  let objetivos: CuentaPush | null = null;
   if (quierePush) {
     try {
       const r = await leerResumenDelCalendario(token);
@@ -336,7 +388,8 @@ export async function POST(request: Request) {
           claves,
           porBaseDeDatos ? dado : null,
         );
-        cuidado = await recordarCuidado(r, hoy, hora, token, claves);
+        cuidado = await recordarCuidado(r, hoy, hora, token, claves, porBaseDeDatos ? dado : null);
+        objetivos = await recordarObjetivos(r, hoy, hora, token, claves);
       }
     } catch {
       /* sin esto, el resto de avisos sigue igual */
@@ -345,11 +398,17 @@ export async function POST(request: Request) {
   const aparte = {
     ...(medicacion ? { medicacion } : {}),
     ...(cuidado ? { cuidado } : {}),
+    ...(objetivos ? { objetivos } : {}),
   };
   if (!momento) {
-    return medicacion || cuidado
+    return medicacion || cuidado || objetivos
       ? responder(
-          { enviado: (medicacion?.enviadas ?? 0) + (cuidado?.enviadas ?? 0) > 0, ...aparte },
+          {
+            enviado:
+              (medicacion?.enviadas ?? 0) + (cuidado?.enviadas ?? 0) + (objetivos?.enviadas ?? 0) >
+              0,
+            ...aparte,
+          },
           200,
         )
       : responder({ enviado: false, motivo: "no-es-la-hora" }, 200);

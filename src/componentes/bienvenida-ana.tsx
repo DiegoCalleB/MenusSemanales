@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { TEXTO_BIENVENIDA_ANA, tocaBienvenidaAna } from "@/dominio/bienvenida";
+import { hoyDeAhora } from "@/dominio/dia";
 import { CintaAnimal, useFondoCebra } from "./cinta-animal";
 import { maullar } from "./maullido";
 import { useHogar } from "./proveedor-hogar";
@@ -21,7 +22,7 @@ function leerVistas(): number {
 
 /** La fecha de hoy en Madrid (YYYY-MM-DD), del reloj real: el regalo no sale antes de su día. */
 function hoyReal(): string {
-  return new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Madrid" }).format(new Date());
+  return hoyDeAhora(new Date(), "Europe/Madrid");
 }
 
 const CONFETI: ReadonlyArray<readonly [string, string]> = [

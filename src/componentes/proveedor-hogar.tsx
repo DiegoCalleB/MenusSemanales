@@ -17,6 +17,7 @@ import { estadoInicialDemo } from "@/aplicacion/datos-demo";
 import { estadoModoDiego } from "@/aplicacion/datos-diego";
 import { type Accion, type EstadoHogar, conIdBase, reducir } from "@/aplicacion/estado";
 import { AVISO_CAMBIO, riesgoDeGuardado } from "@/aplicacion/guardado";
+import { hoyDeAhora } from "@/dominio/dia";
 import { esAccionSincronizable } from "@/aplicacion/sincronizacion";
 import { crearAlmacenLocal } from "@/infraestructura/almacen-local";
 import { calendariosEscolaresDe, registrarCursos } from "@/dominio/calendario-escolar";
@@ -29,8 +30,8 @@ import { type CuentaContexto, NUBE_DISPONIBLE, olvidarPendientes, useNube } from
 export const MODO_DATOS: "diego" | "ejemplo" =
   process.env.NEXT_PUBLIC_DATOS === "ejemplo" ? "ejemplo" : "diego";
 
-/** Fecha de hoy en el dispositivo (AAAA-MM-DD, hora local). */
-const hoyLocal = (): string => new Intl.DateTimeFormat("sv-SE").format(new Date());
+/** Fecha de hoy en el dispositivo (AAAA-MM-DD, hora local); el día cambia a las 4:00 (D-201). */
+const hoyLocal = (): string => hoyDeAhora(new Date());
 const FECHA_BASE = "2026-11-01";
 
 const estadoInicial = () =>
@@ -168,6 +169,25 @@ export function ProveedorHogar({
     }
     almacenActual.current?.guardar(estado);
   }, [estado]);
+
+  // Con la app abierta, el día cambia solo a las 4:00 (D-201): se revisa cada minuto y al volver a ella.
+  const hoyActual = useRef(estado.hoy);
+  useEffect(() => {
+    hoyActual.current = estado.hoy;
+  });
+  useEffect(() => {
+    if (MODO_DATOS !== "diego") return;
+    const revisar = () => {
+      const hoy = hoyLocal();
+      if (hoy !== hoyActual.current) despacharLocal({ tipo: "hogar/hoy", fecha: hoy });
+    };
+    const t = window.setInterval(revisar, 60_000);
+    document.addEventListener("visibilitychange", revisar);
+    return () => {
+      window.clearInterval(t);
+      document.removeEventListener("visibilitychange", revisar);
+    };
+  }, []);
 
   const valor = useMemo<ContextoHogar>(
     () => ({

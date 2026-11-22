@@ -10,6 +10,7 @@ const sw = require("../../public/sw.js") as {
   esEstatico: (ruta: string) => boolean;
   destinoCompartido: (campos: Record<string, unknown>, hayArchivo: boolean) => string;
   codigoHecho: (v: unknown) => string | null;
+  textoCorto: (v: unknown, porDefecto: string, max: number) => string;
   rutaDeLaApp: (v: unknown) => string;
   etiquetaDeAviso: (v: unknown) => string;
   RUTAS: string[];
@@ -96,5 +97,13 @@ describe("compartir con la app desde otra (D-138)", () => {
     expect(sw.etiquetaDeAviso("con espacios")).toBe("avisos-diarios");
     expect(sw.etiquetaDeAviso(undefined)).toBe("avisos-diarios");
     expect(sw.etiquetaDeAviso("x".repeat(60))).toBe("avisos-diarios");
+  });
+
+  it("el texto de un botón es corto, de una línea, o el de siempre (D-202)", () => {
+    expect(sw.textoCorto("💧 +1 vaso", "✅ Hecho", 24)).toBe("💧 +1 vaso");
+    expect(sw.textoCorto("  uno\n dos  ", "✅ Hecho", 24)).toBe("uno dos");
+    expect(sw.textoCorto("x".repeat(100), "✅ Hecho", 24)).toHaveLength(24);
+    expect(sw.textoCorto("", "✅ Hecho", 24)).toBe("✅ Hecho");
+    expect(sw.textoCorto(42, "✅ Hecho", 24)).toBe("✅ Hecho");
   });
 });

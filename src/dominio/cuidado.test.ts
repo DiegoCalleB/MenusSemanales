@@ -4,6 +4,7 @@ import {
   animoDeAgua,
   cuidadoDe,
   historialDeHabitos,
+  cosasParaMarcarCuidado,
   notificacionDeCuidado,
   rachaDeHabito,
   resumenDelDia,
@@ -212,6 +213,18 @@ describe("cuidado", () => {
       expect(notificacionDeCuidado(r[0]!)).toMatchObject({
         titulo: "💧 Diego: agua",
         tag: "cuidado-d-agua",
+        boton: "💧 +1 vaso",
+      });
+      // El botón del agua suma un vaso de esa persona hoy; el de la lista no lleva botón (D-202).
+      expect(cosasParaMarcarCuidado(r[0]!, hoy)).toEqual([
+        { texto: "agua", personaId: "d", para: hoy, tipo: "agua" },
+      ]);
+      const lista = { ...r[0]!, tipo: "lista" as const };
+      expect(cosasParaMarcarCuidado(lista, hoy)).toEqual([]);
+      expect(notificacionDeCuidado(lista)).not.toHaveProperty("boton");
+      expect(notificacionDeCuidado({ ...r[0]!, tipo: "ejercicio" })).toMatchObject({
+        boton: "✅ Hecho",
+        confirmacion: "🏃 Ejercicio apuntado",
       });
     });
   });
