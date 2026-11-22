@@ -12,6 +12,8 @@ const m = vi.hoisted(() => ({
   guardarClaves: vi.fn(),
   tiempo: vi.fn(),
   accion: vi.fn(),
+  guardarPosp: vi.fn(),
+  pospuestos: vi.fn(),
 }));
 vi.mock("@/infraestructura/tiempo", () => ({ leerPrevision: m.tiempo }));
 vi.mock("@/infraestructura/metropolitano", () => ({ leerEventosEstadio: async () => [] }));
@@ -20,6 +22,8 @@ vi.mock("@/infraestructura/avisos/claves", () => ({
   comprobarSecretoDeAvisos: m.comprobar,
   guardarClavesDeAvisos: m.guardarClaves,
   crearAccionDeAviso: m.accion,
+  guardarAvisoPospuesto: m.guardarPosp,
+  leerAvisosPospuestos: m.pospuestos,
 }));
 vi.mock("@/infraestructura/avisos/resend", () => ({
   CorreoNoConfigurado: class CorreoNoConfigurado extends Error {},
@@ -75,6 +79,8 @@ beforeEach(() => {
   m.pushActivo.v = false;
   m.push.mockReset().mockResolvedValue("ok");
   m.subs.mockReset().mockResolvedValue([]);
+  m.guardarPosp.mockReset().mockResolvedValue(false);
+  m.pospuestos.mockReset().mockResolvedValue([]);
   m.olvidar.mockReset().mockResolvedValue(undefined);
   m.comprobar.mockReset().mockResolvedValue({ valido: false });
   m.guardarClaves.mockReset();
@@ -488,6 +494,74 @@ describe("medicación (D-166)", () => {
     m.push.mockClear();
     await pedir(`Bearer ${TOKEN}`, "", { token: TOKEN });
     expect(m.push.mock.calls[0]?.[1]).not.toHaveProperty("hecho");
+  });
+
+  it("la notificación lleva «Posponer 1 hora» si se pudo guardar el mensaje (D-204)", async () => {
+    m.accion.mockResolvedValue("e".repeat(64));
+    m.guardarPosp.mockResolvedValue(true);
+    m.leer.mockResolvedValue(conMedicacion());
+    m.subs.mockResolvedValue([movil("diego", "diego")]);
+    await pedir(`Bearer ${TOKEN}`, "", { token: TOKEN });
+    // El mensaje se guarda con el código, sin el código dentro, y dice si llevaba «Hecho».
+    expect(m.guardarPosp).toHaveBeenCalledWith(TOKEN, "e".repeat(64), "diego", {
+      titulo: "💊 Diego: Pastilla",
+      cuerpo: expect.any(String),
+      tag: "medicacion-diego",
+      conHecho: true,
+    });
+    expect(m.push.mock.calls[0]?.[1]).toMatchObject({
+      hecho: "e".repeat(64),
+      posponer: "e".repeat(64),
+    });
+    // Sin poder guardarlo, sale sin el botón.
+    m.guardarPosp.mockResolvedValue(false);
+    m.push.mockClear();
+    await pedir(`Bearer ${TOKEN}`, "", { token: TOKEN });
+    expect(m.push.mock.calls[0]?.[1]).not.toHaveProperty("posponer");
+  });
+
+  it("lo pospuesto vuelve a salir a los móviles de esa persona, hasta 3 veces (D-204)", async () => {
+    m.leer.mockResolvedValue(resumen);
+    m.subs.mockResolvedValue([movil("diego", "diego"), movil("ana", "ana")]);
+    m.pospuestos.mockResolvedValue([
+      {
+        codigo: "c".repeat(64),
+        persona: "diego",
+        pospuestas: 1,
+        mensaje: {
+          titulo: "💧 Diego: agua",
+          cuerpo: "Llevas 0 de 8",
+          tag: "cuidado-diego-agua",
+          boton: "💧 +1 vaso",
+          conHecho: true,
+        },
+      },
+      {
+        codigo: "d".repeat(64),
+        persona: "diego",
+        pospuestas: 3,
+        mensaje: {
+          titulo: "🎯 Diego: objetivos",
+          cuerpo: "Te toca",
+          tag: "objetivos-diego-toca",
+          url: "/objetivos",
+        },
+      },
+      { codigo: "f".repeat(64), persona: "diego", pospuestas: 1, mensaje: { raro: true } },
+    ]);
+    const r = await pedir(`Bearer ${TOKEN}`, "", { token: TOKEN });
+    expect((await r.json()).pospuestos.enviadas).toBe(2);
+    expect(m.push).toHaveBeenCalledTimes(2);
+    expect(m.push.mock.calls[0]?.[0].endpoint).toBe("https://push.test/diego");
+    expect(m.push.mock.calls[0]?.[1]).toMatchObject({
+      titulo: "💧 Diego: agua",
+      hecho: "c".repeat(64),
+      posponer: "c".repeat(64),
+      boton: "💧 +1 vaso",
+    });
+    // A la tercera vez ya no se ofrece posponer otra vez.
+    expect(m.push.mock.calls[1]?.[1]).not.toHaveProperty("posponer");
+    expect(m.push.mock.calls[1]?.[1]).toMatchObject({ url: "/objetivos" });
   });
 
   it("si ningún móvil está vinculado a esa persona, avisa a todos los del hogar", async () => {

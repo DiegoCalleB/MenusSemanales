@@ -50,6 +50,7 @@ import {
   validarPaso,
 } from "@/dominio/objetivos";
 import { type AjusteHoy, limpiarAjuste } from "@/dominio/hoy";
+import { type AvisosCfg, limpiarCfg } from "@/dominio/avisos-personales";
 import { MAX_NOTAS, type Nota, type TipoNota, validarNota } from "@/dominio/notas";
 import {
   type CategoriaVencimiento,
@@ -520,6 +521,8 @@ export type Accion =
       avisos: boolean;
       avisoDia?: number | null;
     }
+  /** Qué avisos del móvil quiere una persona y a qué horas (D-204). */
+  | { tipo: "cuidado/avisos"; personaId: string; avisos: boolean; cfg: AvisosCfg }
   /** «Nos gusta» (1), «no es para nosotros» (-1) o quitar el voto (0) de un plan del barrio (D-171). */
   | { tipo: "barrio/voto"; id: string; rasgos: string[]; voto: 1 | -1 | 0 }
   /** Marca (o desmarca) como tomado ese día. */
@@ -2418,6 +2421,16 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
         nuevo = { ...dia, ejercicio: !dia.ejercicio };
       }
       return conCuidado(e, { ...actual, dias: { ...actual.dias, [accion.fecha]: nuevo } });
+    }
+
+    case "cuidado/avisos": {
+      if (!e.personas.some((p) => p.id === accion.personaId && p.activa)) return e;
+      const actual = cuidadoDe(e.cuidado, accion.personaId);
+      return conCuidado(e, {
+        ...actual,
+        avisos: accion.avisos === true,
+        avisosCfg: limpiarCfg(accion.cfg),
+      });
     }
 
     case "cuidado/ajustes": {

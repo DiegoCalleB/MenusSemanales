@@ -107,6 +107,8 @@ export const proyeccionSchema = z.object({
         personaId: z.string(),
         metaAgua: z.number().int().min(1).max(20).catch(8),
         avisos: z.boolean().catch(false),
+        /** Qué avisos y a qué horas (D-204): solo interruptores y horas. */
+        cfg: z.unknown().optional(),
         miDia: z
           .object({ hora: z.number().int().min(0).max(23), total: z.number().int().min(0).max(30) })
           .nullable()

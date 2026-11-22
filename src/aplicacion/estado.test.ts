@@ -2484,3 +2484,48 @@ describe("notas e ideas, y recuerdos (D-199)", () => {
     expect(normalizar(viejo).notas).toEqual([]);
   });
 });
+
+describe("avisos personales (D-204)", () => {
+  it("guarda qué avisos quiere una persona y a qué horas; limpia lo que no vale", () => {
+    const e0 = estadoInicialDemo();
+    const id = e0.personas[0]!.id;
+    const e = reducir(e0, {
+      tipo: "cuidado/avisos",
+      personaId: id,
+      avisos: true,
+      cfg: {
+        agua: { on: true, horas: [10, 23, 15] },
+        ejercicio: { on: false, hora: 19 },
+        objetivos: { on: true, hora: 13 },
+        revision: { on: true, hora: 3 },
+      },
+    });
+    const c = e.cuidado.find((x) => x.personaId === id)!;
+    expect(c.avisos).toBe(true);
+    expect(c.avisosCfg).toEqual({
+      agua: { on: true, horas: [10, 15] },
+      ejercicio: { on: false, hora: 19 },
+      objetivos: { on: true, hora: 13 },
+      revision: { on: true, hora: 19 },
+    });
+    const off = reducir(e, {
+      tipo: "cuidado/avisos",
+      personaId: id,
+      avisos: false,
+      cfg: c.avisosCfg!,
+    });
+    expect(off.cuidado.find((x) => x.personaId === id)?.avisos).toBe(false);
+    // Lo de otras personas y los hábitos no se tocan.
+    const ajustes = reducir(off, {
+      tipo: "cuidado/ajustes",
+      personaId: id,
+      metaAgua: 6,
+      habitos: ["Leer"],
+      ejercicio: null,
+      avisos: true,
+    });
+    expect(ajustes.cuidado.find((x) => x.personaId === id)?.avisosCfg?.agua.horas).toEqual([
+      10, 15,
+    ]);
+  });
+});

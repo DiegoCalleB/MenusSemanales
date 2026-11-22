@@ -115,3 +115,55 @@ export async function marcarHechoDesdeAviso(codigo: string): Promise<number | nu
   const v = await rpc("marcar_hecho_desde_aviso", { p_codigo: codigo });
   return typeof v === "number" && Number.isInteger(v) && v >= 0 ? v : null;
 }
+
+/** Guarda el mensaje de una notificación junto a su código, para poder posponerla (D-204). */
+export async function guardarAvisoPospuesto(
+  secreto: string,
+  codigo: string,
+  personaId: string,
+  mensaje: Record<string, unknown>,
+): Promise<boolean> {
+  if (!SECRETO.test(secreto) || !CODIGO.test(codigo)) return false;
+  try {
+    const v = await rpc("recordar_aviso", {
+      p_secreto: secreto,
+      p_codigo: codigo,
+      p_persona: personaId,
+      p_mensaje: mensaje,
+    });
+    return v === true;
+  } catch {
+    return false;
+  }
+}
+
+/** El botón «Posponer»: true si el aviso se dejó para dentro de una hora. */
+export async function posponerAviso(codigo: string): Promise<boolean | null> {
+  if (!CODIGO.test(codigo)) return false;
+  const v = await rpc("posponer_aviso", { p_codigo: codigo });
+  return typeof v === "boolean" ? v : null;
+}
+
+const pospuestos = z.array(
+  z.object({
+    codigo: z.string().regex(CODIGO),
+    persona: z.string().nullable(),
+    mensaje: z.record(z.string(), z.unknown()),
+    pospuestas: z.number().int().min(0).max(10),
+  }),
+);
+
+/** Lo pospuesto que ya toca volver a mandar (se entrega una sola vez). */
+export async function leerAvisosPospuestos(
+  secreto: string,
+  token: string,
+): Promise<Array<z.infer<typeof pospuestos>[number]>> {
+  if (!SECRETO.test(secreto)) return [];
+  try {
+    const v = await rpc("avisos_pospuestos", { p_secreto: secreto, p_token: token });
+    const p = pospuestos.safeParse(v);
+    return p.success ? p.data : [];
+  } catch {
+    return [];
+  }
+}

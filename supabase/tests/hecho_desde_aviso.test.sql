@@ -112,7 +112,7 @@ select pg_temp.como('aaaaaaaa-0000-0000-0000-00000000000a');
 insert into _s values ('hogarC', public.crear_hogar('Hogar C')::text);
 select public.guardar_estado_hogar((select v from _s where clave = 'hogarC')::uuid, 0, $j${
   "cuidado": [
-    {"personaId":"diego","metaAgua":8,"avisos":true,"habitos":[{"id":"h1","nombre":"Leer"}],
+    {"personaId":"diego","metaAgua":8,"avisos":true,"avisosCfg":{"agua":{"on":true,"horas":[10,15]}},"habitos":[{"id":"h1","nombre":"Leer"}],
      "ejercicio":{"nombre":"Correr","dias":[1,3,5]},
      "dias":{"2026-11-18":{"agua":3,"ejercicio":false,"habitos":["h1"]}}},
     {"personaId":"ana","metaAgua":6,"avisos":true,"habitos":[],"ejercicio":null,"dias":{}}
@@ -183,6 +183,60 @@ select pg_temp.igual('Ana: nada toca todavía',
            = '{"personaId":"ana","tocan":0,"parados":0,"bandeja":0}'::jsonb)::int), 1);
 select pg_temp.igual('Nunca sale el texto de un objetivo ni de una nota',
   (select (position('SECRETO' in public.estado_para_calendario((select v from _s where clave = 'tokenD'))::text) = 0)::int), 1);
+select pg_temp.fin();
+
+-- Avisos personales y «Posponer» (D-204).
+select pg_temp.como(null);
+select pg_temp.igual('El resumen lleva la configuración de avisos de quien los pidió',
+  (select (public.estado_para_calendario((select v from _s where clave = 'tokenC'))->'cuidado'->0->'cfg'
+           = '{"agua":{"on":true,"horas":[10,15]}}'::jsonb)::int), 1);
+insert into _s select 'codigoP', public.crear_accion_aviso((select v from _s where clave = 'secreto'),
+  (select v from _s where clave = 'tokenC'),
+  '[{"texto":"-","personaId":"diego","para":"2026-11-19"}]');
+select pg_temp.igual('Sin guardar el mensaje, no se puede posponer',
+  (not public.posponer_aviso((select v from _s where clave = 'codigoP')))::int, 1);
+select pg_temp.igual('Sin el secreto no se guarda el mensaje',
+  (not public.recordar_aviso(repeat('0', 64), (select v from _s where clave = 'codigoP'), 'diego',
+     '{"titulo":"x","cuerpo":"y","tag":"t"}'::jsonb))::int, 1);
+select pg_temp.igual('Con el secreto, sí',
+  public.recordar_aviso((select v from _s where clave = 'secreto'), (select v from _s where clave = 'codigoP'), 'diego',
+     '{"titulo":"💧 Diego: agua","cuerpo":"Llevas 0 de 8","tag":"cuidado-diego-agua"}'::jsonb)::int, 1);
+select pg_temp.igual('Un código inventado no se pospone',
+  (not public.posponer_aviso(repeat('b', 64)))::int, 1);
+select pg_temp.igual('El botón pospone',
+  public.posponer_aviso((select v from _s where clave = 'codigoP'))::int, 1);
+select pg_temp.igual('Pulsarlo otra vez mientras está pospuesto no cambia nada',
+  (not public.posponer_aviso((select v from _s where clave = 'codigoP')))::int, 1);
+select pg_temp.igual('Aún no toca: no sale',
+  jsonb_array_length(public.avisos_pospuestos((select v from _s where clave = 'secreto'), (select v from _s where clave = 'tokenC'))), 0);
+select pg_temp.fin();
+
+-- Pasa el tiempo.
+update privado.aviso_accion set repetir_en = now() - interval '1 minute' where codigo = (select v from _s where clave = 'codigoP');
+select pg_temp.como(null);
+select pg_temp.igual('Sin el secreto no se recoge nada',
+  jsonb_array_length(public.avisos_pospuestos(repeat('0', 64), (select v from _s where clave = 'tokenC'))), 0);
+select pg_temp.igual('Con el secreto sale una vez, con su código y su mensaje',
+  (select (jsonb_array_length(r) = 1
+           and r->0->>'codigo' = (select v from _s where clave = 'codigoP')
+           and r->0->>'persona' = 'diego'
+           and r->0->'mensaje'->>'tag' = 'cuidado-diego-agua'
+           and (r->0->>'pospuestas')::int = 1)::int
+     from (select public.avisos_pospuestos((select v from _s where clave = 'secreto'), (select v from _s where clave = 'tokenC')) as r) t), 1);
+select pg_temp.igual('Y no vuelve a salir',
+  jsonb_array_length(public.avisos_pospuestos((select v from _s where clave = 'secreto'), (select v from _s where clave = 'tokenC'))), 0);
+-- Hasta 3 veces.
+select pg_temp.igual('Se puede posponer otra vez (2)', public.posponer_aviso((select v from _s where clave = 'codigoP'))::int, 1);
+select pg_temp.fin();
+update privado.aviso_accion set repetir_en = now() - interval '1 minute' where codigo = (select v from _s where clave = 'codigoP');
+select pg_temp.como(null);
+select public.avisos_pospuestos((select v from _s where clave = 'secreto'), (select v from _s where clave = 'tokenC'));
+select pg_temp.igual('Y otra (3)', public.posponer_aviso((select v from _s where clave = 'codigoP'))::int, 1);
+select pg_temp.fin();
+update privado.aviso_accion set repetir_en = now() - interval '1 minute' where codigo = (select v from _s where clave = 'codigoP');
+select pg_temp.como(null);
+select public.avisos_pospuestos((select v from _s where clave = 'secreto'), (select v from _s where clave = 'tokenC'));
+select pg_temp.igual('A la cuarta, no', (not public.posponer_aviso((select v from _s where clave = 'codigoP')))::int, 1);
 select pg_temp.fin();
 
 rollback;

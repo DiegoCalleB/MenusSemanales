@@ -18,6 +18,7 @@ import {
   notificacionDeCuidado,
   recordatoriosDeCuidado,
 } from "@/dominio/cuidado";
+import { limpiarCfg } from "@/dominio/avisos-personales";
 import { notificacionDeObjetivos, recordatoriosDeObjetivos } from "@/dominio/objetivos";
 import {
   cosasParaMarcarMedicacion,
@@ -30,7 +31,9 @@ import {
   type ClavesVapid,
   comprobarSecretoDeAvisos,
   crearAccionDeAviso,
+  guardarAvisoPospuesto,
   guardarClavesDeAvisos,
+  leerAvisosPospuestos,
 } from "@/infraestructura/avisos/claves";
 import { CorreoNoConfigurado, enviarCorreo } from "@/infraestructura/avisos/resend";
 import { leerSuscripciones, olvidarSuscripcion } from "@/infraestructura/avisos/suscripciones";
@@ -63,6 +66,7 @@ const TOKEN = /^[0-9a-f]{64}$/;
 type CuentaPush = { enviadas: number; caducadas: number; fallos: number };
 
 type Mensaje = {
+  posponer?: string;
   titulo: string;
   cuerpo: string;
   tag: string;
@@ -73,6 +77,34 @@ type Mensaje = {
 };
 
 /**
+ * A la notificación le añade el botón «Posponer 1 hora» (D-204): guarda su mensaje junto al código de
+ * un solo uso (el del botón «Hecho», si lo lleva; si no, uno nuevo que solo sirve para posponer).
+ * Si algo falla, sale como antes, sin el botón.
+ */
+async function conPosponer(
+  secreto: string | null,
+  token: string,
+  hoy: string,
+  personaId: string,
+  mensaje: Mensaje,
+): Promise<Mensaje> {
+  if (!secreto) return mensaje;
+  const codigo =
+    mensaje.hecho ??
+    (await crearAccionDeAviso(secreto, token, [{ texto: "-", personaId, para: hoy }]).catch(
+      () => null,
+    ));
+  if (!codigo) return mensaje;
+  const { hecho, posponer: _antes, ...resto } = mensaje;
+  void _antes;
+  const guardado = await guardarAvisoPospuesto(secreto, codigo, personaId, {
+    ...resto,
+    conHecho: Boolean(hecho),
+  });
+  return guardado ? { ...mensaje, posponer: codigo } : mensaje;
+}
+
+/**
  * Manda cada recordatorio a los móviles de esa persona (los de su cuenta) o, si ninguno está
  * vinculado, a todos los del hogar. Los móviles caducados se olvidan.
  */
@@ -81,17 +113,22 @@ async function mandarPorPersona(
   token: string,
   claves: ClavesVapid | null,
   etiqueta: string,
+  /** Con esto, cada notificación lleva el botón «Posponer 1 hora» (D-204). */
+  posponer: { secreto: string | null; hoy: string } | null = null,
 ): Promise<CuentaPush | null> {
   if (recordatorios.length === 0) return null;
   const cuenta: CuentaPush = { enviadas: 0, caducadas: 0, fallos: 0 };
   try {
     const moviles = await leerSuscripciones(token);
     for (const rec of recordatorios) {
+      const mensaje = posponer
+        ? await conPosponer(posponer.secreto, token, posponer.hoy, rec.personaId, rec.mensaje)
+        : rec.mensaje;
       const suyos = moviles.filter((m) => m.persona_id === rec.personaId);
       for (const s of suyos.length > 0 ? suyos : moviles) {
         const r = await enviarPush(
           { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
-          rec.mensaje,
+          mensaje,
           undefined,
           claves,
         );
@@ -144,7 +181,7 @@ async function recordarMedicacion(
       mensaje: { ...notificacionDeMedicacion(r), ...(hecho ? { hecho } : {}) },
     });
   }
-  return mandarPorPersona(aEnviar, token, claves, "medicación");
+  return mandarPorPersona(aEnviar, token, claves, "medicación", { secreto, hoy });
 }
 
 /**
@@ -166,6 +203,7 @@ async function recordarCuidado(
       metaAgua: c.metaAgua,
       ejercicio: c.ejercicio,
       avisos: c.avisos,
+      cfg: c.cfg,
       avisoDia: c.miDia?.hora ?? null,
       totalLista: c.miDia?.total ?? 0,
       dias: c.dias,
@@ -186,7 +224,7 @@ async function recordarCuidado(
       mensaje: { ...notificacionDeCuidado(r), ...(hecho ? { hecho } : {}) },
     });
   }
-  return mandarPorPersona(aEnviar, token, claves, "cuidado");
+  return mandarPorPersona(aEnviar, token, claves, "cuidado", { secreto, hoy });
 }
 
 /**
@@ -199,9 +237,10 @@ function recordarObjetivos(
   hora: number,
   token: string,
   claves: ClavesVapid | null,
+  secreto: string | null,
 ) {
-  const conAvisos = new Set(
-    (resumen.cuidado ?? []).filter((c) => c.avisos).map((c) => c.personaId),
+  const conAvisos = new Map(
+    (resumen.cuidado ?? []).filter((c) => c.avisos).map((c) => [c.personaId, limpiarCfg(c.cfg)]),
   );
   const recordatorios = recordatoriosDeObjetivos(
     resumen.objetivos ?? [],
@@ -215,7 +254,39 @@ function recordarObjetivos(
     token,
     claves,
     "objetivos",
+    { secreto, hoy },
   );
+}
+
+/**
+ * Lo pospuesto (D-204): los avisos a los que alguien pulsó «Posponer 1 hora» y ya toca volver a
+ * mandar, a los móviles de esa persona. Cada uno puede posponerse hasta 3 veces seguidas.
+ */
+async function reenviarPospuestos(
+  token: string,
+  claves: ClavesVapid | null,
+  secreto: string | null,
+) {
+  if (!secreto) return null;
+  const lista = await leerAvisosPospuestos(secreto, token);
+  const mensajes = lista.flatMap((p) => {
+    const m = p.mensaje;
+    if (typeof m.titulo !== "string" || typeof m.cuerpo !== "string" || typeof m.tag !== "string") {
+      return [];
+    }
+    const mensaje: Mensaje = {
+      titulo: m.titulo,
+      cuerpo: m.cuerpo,
+      tag: m.tag,
+      ...(typeof m.url === "string" ? { url: m.url } : {}),
+      ...(typeof m.boton === "string" ? { boton: m.boton } : {}),
+      ...(typeof m.confirmacion === "string" ? { confirmacion: m.confirmacion } : {}),
+      ...(m.conHecho === true ? { hecho: p.codigo } : {}),
+      ...(p.pospuestas < 3 ? { posponer: p.codigo } : {}),
+    };
+    return [{ personaId: p.persona ?? "", mensaje }];
+  });
+  return mandarPorPersona(mensajes, token, claves, "pospuestos");
 }
 
 /**
@@ -376,6 +447,7 @@ export async function POST(request: Request) {
   let medicacion: CuentaPush | null = null;
   let cuidado: CuentaPush | null = null;
   let objetivos: CuentaPush | null = null;
+  let pospuestos: CuentaPush | null = null;
   if (quierePush) {
     try {
       const r = await leerResumenDelCalendario(token);
@@ -389,7 +461,15 @@ export async function POST(request: Request) {
           porBaseDeDatos ? dado : null,
         );
         cuidado = await recordarCuidado(r, hoy, hora, token, claves, porBaseDeDatos ? dado : null);
-        objetivos = await recordarObjetivos(r, hoy, hora, token, claves);
+        objetivos = await recordarObjetivos(
+          r,
+          hoy,
+          hora,
+          token,
+          claves,
+          porBaseDeDatos ? dado : null,
+        );
+        pospuestos = await reenviarPospuestos(token, claves, porBaseDeDatos ? dado : null);
       }
     } catch {
       /* sin esto, el resto de avisos sigue igual */
@@ -399,13 +479,17 @@ export async function POST(request: Request) {
     ...(medicacion ? { medicacion } : {}),
     ...(cuidado ? { cuidado } : {}),
     ...(objetivos ? { objetivos } : {}),
+    ...(pospuestos ? { pospuestos } : {}),
   };
   if (!momento) {
-    return medicacion || cuidado || objetivos
+    return medicacion || cuidado || objetivos || pospuestos
       ? responder(
           {
             enviado:
-              (medicacion?.enviadas ?? 0) + (cuidado?.enviadas ?? 0) + (objetivos?.enviadas ?? 0) >
+              (medicacion?.enviadas ?? 0) +
+                (cuidado?.enviadas ?? 0) +
+                (objetivos?.enviadas ?? 0) +
+                (pospuestos?.enviadas ?? 0) >
               0,
             ...aparte,
           },

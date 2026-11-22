@@ -1,3 +1,4 @@
+import { type AvisosCfg, CFG_POR_DEFECTO } from "./avisos-personales";
 import { type FechaIso, diaSemanaIso, diasEntre } from "./fechas";
 
 /**
@@ -331,9 +332,9 @@ export function haceCuanto(dias: number): string {
 }
 
 /** A qué hora avisa lo que se repite y ya toca (a mediodía: aún se puede hacer algo esa tarde). */
-export const HORA_OBJETIVOS = 12;
+export const HORA_OBJETIVOS = CFG_POR_DEFECTO.objetivos.hora;
 /** A qué hora avisa la revisión del domingo. */
-export const HORA_REVISION = 19;
+export const HORA_REVISION = CFG_POR_DEFECTO.revision.hora;
 
 /** Lo que el servidor sabe de una persona (D-203): solo cuántos, nunca el texto. */
 export interface CuentasDeObjetivos {
@@ -360,15 +361,17 @@ const cosas = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno 
 export function recordatoriosDeObjetivos(
   cuentas: readonly CuentasDeObjetivos[],
   personas: ReadonlyArray<{ id: string; nombre: string }>,
-  conAvisos: ReadonlySet<string>,
+  /** De quién avisar (quien pidió los avisos) y qué avisos quiere y a qué hora. */
+  conAvisos: ReadonlyMap<string, AvisosCfg>,
   hoy: FechaIso,
   hora: number,
 ): RecordatorioDeObjetivos[] {
   const out: RecordatorioDeObjetivos[] = [];
   for (const c of cuentas) {
-    if (!conAvisos.has(c.personaId)) continue;
+    const cfg = conAvisos.get(c.personaId);
+    if (!cfg) continue;
     const persona = personas.find((p) => p.id === c.personaId)?.nombre ?? "";
-    if (hora === HORA_OBJETIVOS && c.tocan > 0) {
+    if (cfg.objetivos.on && hora === cfg.objetivos.hora && c.tocan > 0) {
       out.push({
         personaId: c.personaId,
         persona,
@@ -379,7 +382,12 @@ export function recordatoriosDeObjetivos(
             : `Te tocan ${c.tocan} cosas de tus objetivos que se repiten. ¿Alguna esta tarde?`,
       });
     }
-    if (hora === HORA_REVISION && diaSemanaIso(hoy) === 7 && c.parados + c.bandeja + c.tocan > 0) {
+    if (
+      cfg.revision.on &&
+      hora === cfg.revision.hora &&
+      diaSemanaIso(hoy) === 7 &&
+      c.parados + c.bandeja + c.tocan > 0
+    ) {
       const partes = [
         c.bandeja > 0 ? `${cosas(c.bandeja, "idea sin resolver", "ideas sin resolver")}` : "",
         c.parados > 0 ? `${cosas(c.parados, "objetivo parado", "objetivos parados")}` : "",
