@@ -107,5 +107,83 @@ select pg_temp.igual('Lo de la mochila con el mismo nombre no se toca',
      from public.hogar_estado where hogar_id = (select v from _s where clave = 'hogarB')::uuid), 1);
 select pg_temp.fin();
 
+-- «+1 vaso» y «Hecho» del ejercicio desde la notificación de Cuidarse (D-202).
+select pg_temp.como('aaaaaaaa-0000-0000-0000-00000000000a');
+insert into _s values ('hogarC', public.crear_hogar('Hogar C')::text);
+select public.guardar_estado_hogar((select v from _s where clave = 'hogarC')::uuid, 0, $j${
+  "cuidado": [
+    {"personaId":"diego","metaAgua":8,"avisos":true,"habitos":[{"id":"h1","nombre":"Leer"}],
+     "ejercicio":{"nombre":"Correr","dias":[1,3,5]},
+     "dias":{"2026-11-18":{"agua":3,"ejercicio":false,"habitos":["h1"]}}},
+    {"personaId":"ana","metaAgua":6,"avisos":true,"habitos":[],"ejercicio":null,"dias":{}}
+  ]
+}$j$::jsonb);
+insert into _s select 'tokenC', public.enlace_calendario((select v from _s where clave = 'hogarC')::uuid);
+select pg_temp.fin();
+
+select pg_temp.como(null);
+insert into _s select 'codigoAgua', public.crear_accion_aviso((select v from _s where clave = 'secreto'),
+  (select v from _s where clave = 'tokenC'),
+  '[{"texto":"agua","personaId":"diego","para":"2026-11-19","tipo":"agua"}]');
+select pg_temp.igual('El agua del código es un código válido',
+  ((select v from _s where clave = 'codigoAgua') ~ '^[0-9a-f]{64}$')::int, 1);
+select pg_temp.igual('El botón suma un vaso',
+  public.marcar_hecho_desde_aviso((select v from _s where clave = 'codigoAgua')), 1);
+select pg_temp.igual('Otro toque en el mismo aviso no suma otro (un solo uso)',
+  (public.marcar_hecho_desde_aviso((select v from _s where clave = 'codigoAgua')) is null)::int, 1);
+insert into _s select 'codigoEj', public.crear_accion_aviso((select v from _s where clave = 'secreto'),
+  (select v from _s where clave = 'tokenC'),
+  '[{"texto":"ejercicio","personaId":"diego","para":"2026-11-19","tipo":"ejercicio"},{"texto":"agua","personaId":"ana","para":"2026-11-19","tipo":"agua"}]');
+select pg_temp.igual('El ejercicio de Diego y un vaso de Ana',
+  public.marcar_hecho_desde_aviso((select v from _s where clave = 'codigoEj')), 2);
+select pg_temp.fin();
+
+select pg_temp.como('aaaaaaaa-0000-0000-0000-00000000000a');
+select pg_temp.igual('Diego: un vaso hoy, día completo, y lo de ayer intacto',
+  (select ((estado->'cuidado'->0->'dias'->'2026-11-19') = '{"agua":1,"ejercicio":true,"habitos":[]}'::jsonb
+       and (estado->'cuidado'->0->'dias'->'2026-11-18') = '{"agua":3,"ejercicio":false,"habitos":["h1"]}'::jsonb)::int
+     from public.hogar_estado where hogar_id = (select v from _s where clave = 'hogarC')::uuid), 1);
+select pg_temp.igual('Ana: un vaso, sin ejercicio, y sin tocar lo de Diego',
+  (select ((estado->'cuidado'->1->'dias'->'2026-11-19') = '{"agua":1,"ejercicio":false,"habitos":[]}'::jsonb)::int
+     from public.hogar_estado where hogar_id = (select v from _s where clave = 'hogarC')::uuid), 1);
+select pg_temp.igual('Los hábitos y los ajustes no cambian',
+  (select ((estado->'cuidado'->0->'habitos') = '[{"id":"h1","nombre":"Leer"}]'::jsonb
+       and (estado->'cuidado'->0->>'metaAgua') = '8')::int
+     from public.hogar_estado where hogar_id = (select v from _s where clave = 'hogarC')::uuid), 1);
+select pg_temp.fin();
+
+-- Objetivos y notas en el resumen del servidor: solo cuántos (D-203).
+select pg_temp.como('aaaaaaaa-0000-0000-0000-00000000000a');
+insert into _s values ('hogarD', public.crear_hogar('Hogar D')::text);
+select public.guardar_estado_hogar((select v from _s where clave = 'hogarD')::uuid, 0, jsonb_build_object(
+  'objetivos', jsonb_build_array(
+    jsonb_build_object('id','o1','personaId','diego','texto','SECRETO uno','hasta','2026-12-31','hechoEn',null,
+      'creadoEn',to_char(current_date - 20,'YYYY-MM-DD'),'siguiente',null,'movidoEn',to_char(current_date - 9,'YYYY-MM-DD'),'cada',7),
+    jsonb_build_object('id','o2','personaId','diego','texto','SECRETO dos','hasta','2026-12-31','hechoEn',null,
+      'creadoEn',to_char(current_date - 30,'YYYY-MM-DD'),'siguiente',null,'movidoEn',null,'cada',null),
+    jsonb_build_object('id','o3','personaId','diego','texto','SECRETO tres','hasta','2026-12-31','hechoEn',null,
+      'creadoEn',to_char(current_date - 3,'YYYY-MM-DD'),'siguiente',null,'movidoEn',null,'cada',null),
+    jsonb_build_object('id','o4','personaId','diego','texto','SECRETO hecho','hasta','2026-12-31','hechoEn','2026-11-01',
+      'creadoEn',to_char(current_date - 90,'YYYY-MM-DD'),'siguiente',null,'movidoEn',null,'cada',null),
+    jsonb_build_object('id','o5','personaId','ana','texto','SECRETO ana','hasta','2026-12-31','hechoEn',null,
+      'creadoEn',to_char(current_date - 2,'YYYY-MM-DD'),'siguiente',null,'movidoEn',null,'cada',7)),
+  'notas', jsonb_build_array(
+    jsonb_build_object('id','n1','personaId','diego','tipo','idea','texto','SECRETO nota','sobre',null,'creadoEn','2026-11-01','procesadaEn',null),
+    jsonb_build_object('id','n2','personaId','diego','tipo','idea','texto','SECRETO otra','sobre',null,'creadoEn','2026-11-01','procesadaEn','2026-11-02'),
+    jsonb_build_object('id','n3','personaId','diego','tipo','recuerdo','texto','SECRETO recuerdo','sobre','ana','creadoEn','2026-11-01','procesadaEn',null))));
+insert into _s select 'tokenD', public.enlace_calendario((select v from _s where clave = 'hogarD')::uuid);
+select pg_temp.fin();
+
+select pg_temp.como(null);
+select pg_temp.igual('Diego: 1 que se repite y ya toca, 1 parado (14+ días) y 1 idea sin resolver',
+  (select (public.estado_para_calendario((select v from _s where clave = 'tokenD'))->'objetivos'->1
+           = '{"personaId":"diego","tocan":1,"parados":1,"bandeja":1}'::jsonb)::int), 1);
+select pg_temp.igual('Ana: nada toca todavía',
+  (select (public.estado_para_calendario((select v from _s where clave = 'tokenD'))->'objetivos'->0
+           = '{"personaId":"ana","tocan":0,"parados":0,"bandeja":0}'::jsonb)::int), 1);
+select pg_temp.igual('Nunca sale el texto de un objetivo ni de una nota',
+  (select (position('SECRETO' in public.estado_para_calendario((select v from _s where clave = 'tokenD'))::text) = 0)::int), 1);
+select pg_temp.fin();
+
 rollback;
 \echo 'hecho_desde_aviso: OK'

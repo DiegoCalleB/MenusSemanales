@@ -1773,3 +1773,19 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Petición (Diego):** el cambio de día, a las 4:00 y no a las 00:00: a las 00:30 todavía es «hoy» para quien sigue despierto y la app hablaba como si ya fuera mañana.
 - **Qué cambia:** «hoy» es la fecha del reloj menos 4 horas (`hoyDeAhora`, en `dominio/dia.ts`, probado con invierno y verano). Entre las 00:00 y las 4:00 la app sigue en el día de antes: Hoy, la cena, Mi día, Cuidarse, la medicación tomada, la mochila y los plazos. El momento del día de Hoy encaja (noche de 20 a 4 h). Con la app abierta, el día cambia solo a las 4:00 (se revisa cada minuto y al volver a ella). La bienvenida de Ana usa la misma regla.
 - **Fuera:** los avisos del servidor (7, 9 y 20 h) siguen con la fecha de Madrid; no se ven afectados. Una medicación que se avise de madrugada contaría por el día natural.
+
+## D-202 · Botones «+1 vaso» y «Hecho» en las notificaciones de Cuidarse
+
+- **Petición (Diego):** más notificaciones (agua, ejercicio) pensadas para completar las cosas; plan de notificaciones.
+- **Qué hay:** la notificación del agua lleva el botón **«💧 +1 vaso»** y la del ejercicio **«✅ Hecho»**: se apuntan sin abrir la app, con una confirmación («💧 Un vaso más apuntado»). Es el mismo mecanismo que la mochila (D-151) y la medicación (D-185): un código de un solo uso que vale 36 horas. El del agua se borra al usarlo (otro toque no suma otro vaso); el ejercicio no se duplica.
+- **Datos:** en el documento del hogar, de esa persona y ese día (suma 1 al agua, hasta 30, o marca el ejercicio). Los hábitos y los ajustes no se tocan. Migración `20261124000000_hecho_cuidarse`.
+- **Si no se aplica la migración:** las notificaciones salen igual, sin botón.
+- **Horas (sin cambios):** agua a las 11 y a las 17 h solo si vas corto; ejercicio a las 18 h solo si hoy toca y no está hecho; solo a quien activó los avisos en Cuidarse (Ana, de momento, no).
+
+## D-203 · Avisos de objetivos: lo que toca a mediodía y la revisión del domingo
+
+- **Mediodía (12:00):** si hay objetivos que se repiten y ya tocan («Plan a solas con Lucía»): «Hoy te toca algo de tus objetivos que se repiten. ¿Lo haces esta tarde?». Al tocarla abre Objetivos.
+- **Domingo (19:00):** un solo aviso de revisión con lo que haya: ideas sin resolver, objetivos parados (14 días) y lo que toca. Abre la revisión de la semana. Si no hay nada, no avisa.
+- **Privacidad:** el servidor solo recibe, por persona, **tres números** (cuántos tocan, cuántos parados, cuántas ideas): nunca el texto de un objetivo ni de una nota (probado en SQL). Por eso el aviso no nombra el objetivo y no lleva botón: se resuelve al abrir la app.
+- **Quién:** solo quien activó «Avisarme en el móvil» en Cuidarse (un único interruptor para agua, ejercicio y objetivos). Migración `20261124010000_objetivos_avisos`.
+- **Plan completo de notificaciones (Diego):** pocas y accionables; nada entre las 22 y las 7 h (ninguna se manda a esas horas). Hechas: botones (fase 1) y avisos de objetivos (fase 2). **Pendiente (fase 3):** pantalla única de Avisos (interruptor y hora de cada uno, tope diario) y «Posponer 1 hora» (el service worker no puede programar un aviso futuro: haría falta guardarlo en el servidor).

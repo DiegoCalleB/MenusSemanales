@@ -1,4 +1,4 @@
-import { type FechaIso, diasEntre } from "./fechas";
+import { type FechaIso, diaSemanaIso, diasEntre } from "./fechas";
 
 /**
  * Objetivos a plazos (D-195): lo que cada persona quiere conseguir «hasta el 31 de diciembre», «hasta
@@ -328,4 +328,84 @@ export function haceCuanto(dias: number): string {
   if (dias < 14) return `hace ${dias} días`;
   if (dias < 60) return `hace ${Math.floor(dias / 7)} semanas`;
   return `hace ${Math.floor(dias / 30)} meses`;
+}
+
+/** A qué hora avisa lo que se repite y ya toca (a mediodía: aún se puede hacer algo esa tarde). */
+export const HORA_OBJETIVOS = 12;
+/** A qué hora avisa la revisión del domingo. */
+export const HORA_REVISION = 19;
+
+/** Lo que el servidor sabe de una persona (D-203): solo cuántos, nunca el texto. */
+export interface CuentasDeObjetivos {
+  personaId: string;
+  tocan: number;
+  parados: number;
+  bandeja: number;
+}
+
+export interface RecordatorioDeObjetivos {
+  personaId: string;
+  persona: string;
+  tipo: "toca" | "revision";
+  texto: string;
+}
+
+const cosas = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
+
+/**
+ * Qué recordar a esa hora (D-203), solo a quien pidió avisos. A mediodía: lo que se repite y ya toca.
+ * El domingo, a las 19: la revisión (ideas sin resolver, objetivos parados, lo que toca). Nunca
+ * nombra un objetivo (el servidor no los conoce) y no avisa si no hay nada.
+ */
+export function recordatoriosDeObjetivos(
+  cuentas: readonly CuentasDeObjetivos[],
+  personas: ReadonlyArray<{ id: string; nombre: string }>,
+  conAvisos: ReadonlySet<string>,
+  hoy: FechaIso,
+  hora: number,
+): RecordatorioDeObjetivos[] {
+  const out: RecordatorioDeObjetivos[] = [];
+  for (const c of cuentas) {
+    if (!conAvisos.has(c.personaId)) continue;
+    const persona = personas.find((p) => p.id === c.personaId)?.nombre ?? "";
+    if (hora === HORA_OBJETIVOS && c.tocan > 0) {
+      out.push({
+        personaId: c.personaId,
+        persona,
+        tipo: "toca",
+        texto:
+          c.tocan === 1
+            ? "Hoy te toca algo de tus objetivos que se repiten. ¿Lo haces esta tarde?"
+            : `Te tocan ${c.tocan} cosas de tus objetivos que se repiten. ¿Alguna esta tarde?`,
+      });
+    }
+    if (hora === HORA_REVISION && diaSemanaIso(hoy) === 7 && c.parados + c.bandeja + c.tocan > 0) {
+      const partes = [
+        c.bandeja > 0 ? `${cosas(c.bandeja, "idea sin resolver", "ideas sin resolver")}` : "",
+        c.parados > 0 ? `${cosas(c.parados, "objetivo parado", "objetivos parados")}` : "",
+        c.tocan > 0 ? `${cosas(c.tocan, "cosa que toca", "cosas que tocan")}` : "",
+      ].filter(Boolean);
+      out.push({
+        personaId: c.personaId,
+        persona,
+        tipo: "revision",
+        texto: `${partes.join(", ")}. Dos minutos en la revisión de la semana.`,
+      });
+    }
+  }
+  return out;
+}
+
+/** La notificación del móvil: «🎯 Diego: objetivos» o «🔎 Diego: revisión del domingo». */
+export function notificacionDeObjetivos(r: RecordatorioDeObjetivos) {
+  return {
+    titulo:
+      `${r.tipo === "toca" ? "🎯" : "🔎"} ${r.persona ? `${r.persona}: ` : ""}${r.tipo === "toca" ? "objetivos" : "revisión del domingo"}`.slice(
+        0,
+        100,
+      ),
+    cuerpo: r.texto.slice(0, 240),
+    tag: `objetivos-${r.personaId}-${r.tipo}`.replace(/[^a-z0-9-]/gi, "").slice(0, 40),
+    url: r.tipo === "toca" ? "/objetivos" : "/repaso",
+  };
 }

@@ -132,6 +132,18 @@ export const proyeccionSchema = z.object({
     )
     .catch([])
     .optional(),
+  /** Objetivos y notas (D-203): solo cuántos por persona, nunca el texto. Opcional. */
+  objetivos: z
+    .array(
+      z.object({
+        personaId: z.string(),
+        tocan: z.number().int().min(0).max(300).catch(0),
+        parados: z.number().int().min(0).max(300).catch(0),
+        bandeja: z.number().int().min(0).max(400).catch(0),
+      }),
+    )
+    .catch([])
+    .optional(),
   /** Pendientes sin fecha (D-175), solo para el recordatorio del domingo. Opcional. */
   pendientes: z
     .array(

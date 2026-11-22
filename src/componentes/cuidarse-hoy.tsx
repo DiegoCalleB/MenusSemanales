@@ -218,8 +218,10 @@ function AjustesDeCuidado({ personaId }: { personaId: string }) {
         Avisarme en el móvil
       </label>
       <p className="text-tinta-suave -mt-2 text-sm">
-        Agua a las 11 y a las 17 h si vas corto, y el ejercicio a las 18 h si hoy toca y no lo has
-        hecho. Hace falta tener activadas las notificaciones.
+        Agua a las 11 y a las 17 h si vas corto (con botón «+1 vaso»), el ejercicio a las 18 h si
+        hoy toca y no lo has hecho (con botón «Hecho»), a mediodía lo que se repite en tus objetivos
+        y, el domingo a las 19 h, la revisión de la semana. Hace falta tener activadas las
+        notificaciones.
       </p>
 
       {problema && (

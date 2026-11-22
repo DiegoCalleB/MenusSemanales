@@ -82,7 +82,7 @@ export interface CosaHecha {
   personaId: string | null;
   para: string;
   /** Qué es: lo de la mochila (por defecto) o una dosis de medicación (D-185). */
-  tipo?: "mochila" | "medicacion";
+  tipo?: "mochila" | "medicacion" | "agua" | "ejercicio";
 }
 
 const CODIGO = /^[0-9a-f]{64}$/;
