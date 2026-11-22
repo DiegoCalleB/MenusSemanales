@@ -1,4 +1,5 @@
 import { type FechaIso, diaSemanaIso, sumarDias } from "./fechas";
+import { type AvisosCfg, limpiarCfg, minimoDeAgua } from "./avisos-personales";
 
 /**
  * Cuidarse (D-182): agua, ejercicio y hábitos sanos de cada persona de la familia. Es personal y
@@ -33,6 +34,8 @@ export interface Cuidado {
   ejercicio: { nombre: string; dias: number[] } | null;
   /** ¿Quiere avisos en el móvil (agua a media mañana y tarde, y el día de ejercicio)? */
   avisos: boolean;
+  /** Qué avisos quiere y a qué horas (D-204); sin esto, los de siempre. */
+  avisosCfg?: AvisosCfg;
   /** Hora (0–23, de Madrid) a la que recordar «Mi día» si queda algo sin hacer; `null` sin aviso (D-187). */
   avisoDia: number | null;
   /** Lo hecho por día (solo los últimos, para no crecer sin fin). */
@@ -234,6 +237,8 @@ export interface CuidadoParaAvisos {
   ejercicio: { nombre: string; dias: readonly number[] } | null;
   /** ¿Quiere los avisos de agua y ejercicio? */
   avisos: boolean;
+  /** Qué avisos y a qué horas (D-204), tal como llega (se limpia al usarlo). */
+  cfg?: unknown;
   /** Hora del aviso de «Mi día» (D-187), o null. El servidor no sabe qué hay en la lista, solo cuántas. */
   avisoDia: number | null;
   totalLista: number;
@@ -263,7 +268,8 @@ export function recordatoriosDeCuidado(
     const persona = personas.find((p) => p.id === c.personaId)?.nombre ?? "";
     const dia = c.dias.find((d) => d.fecha === hoy);
     const agua = dia?.agua ?? 0;
-    const minimo = hora === HORAS_DE_AGUA[0] ? 0.25 : hora === HORAS_DE_AGUA[1] ? 0.6 : 0;
+    const cfg = limpiarCfg(c.cfg);
+    const minimo = cfg.agua.on && cfg.agua.horas.includes(hora) ? minimoDeAgua(hora) : 0;
     if (c.avisoDia === hora && c.totalLista > 0 && (dia?.lista ?? 0) < c.totalLista) {
       const faltan = c.totalLista - (dia?.lista ?? 0);
       out.push({
@@ -283,7 +289,8 @@ export function recordatoriosDeCuidado(
     }
     if (
       c.avisos &&
-      hora === HORA_DE_EJERCICIO &&
+      cfg.ejercicio.on &&
+      hora === cfg.ejercicio.hora &&
       c.ejercicio &&
       c.ejercicio.dias.includes(diaSemanaIso(hoy)) &&
       !dia?.ejercicio

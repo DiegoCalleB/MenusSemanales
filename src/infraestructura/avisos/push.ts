@@ -32,6 +32,8 @@ export async function enviarPush(
     boton?: string;
     /** Lo que se enseña al pulsarlo («💧 Un vaso más apuntado»). */
     confirmacion?: string;
+    /** El código del botón «Posponer 1 hora» (D-204), si la notificación lo lleva. */
+    posponer?: string;
     url?: string;
     tag?: string;
   },

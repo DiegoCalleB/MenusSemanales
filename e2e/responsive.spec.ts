@@ -47,6 +47,7 @@ const RUTAS = [
   "/reparto",
   "/objetivos",
   "/notas",
+  "/avisos",
 ] as const;
 const PUNTO_DE_CORTE = 768; // md de Tailwind
 
@@ -1355,6 +1356,7 @@ test.describe("flujos en móvil", () => {
       ["Más", "Cuenta", "/cuenta"],
       ["Más", "Objetivos", "/objetivos"],
       ["Más", "Notas", "/notas"],
+      ["Más", "Avisos", "/avisos"],
       ["Más", "Enviar", "/compartir"],
     ];
     for (const [pilar, pestana, ruta] of recorrido) {
@@ -3575,6 +3577,42 @@ test.describe("Hoy como tablero fijo (D-180)", () => {
     await cargar(pagina, "/buscar");
     await pagina.getByRole("searchbox").fill("electricista");
     await expect(pagina.getByText("pelota")).toHaveCount(0);
+    await contexto.close();
+  });
+
+  test("avisos (D-204): elegir qué avisos y a qué hora, y que se quede", async ({ browser }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/avisos");
+    const form = pagina.getByRole("form", { name: "Mis avisos" });
+    await form.getByLabel("Avisos del móvil").check();
+    // Agua: a las 11 y 17 de partida; se añade las 15 y se quita las 11.
+    await expect(form.getByRole("button", { name: "Agua a las 11:00" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await form.getByRole("button", { name: "Agua a las 15:00" }).click();
+    await form.getByRole("button", { name: "Agua a las 11:00" }).click();
+    await form.getByLabel("Hora del aviso de ejercicio").selectOption("20");
+    await form.getByRole("checkbox", { name: "Aviso de objetivos" }).uncheck();
+    // No hay horas de noche.
+    await expect(form.getByRole("button", { name: "Agua a las 22:00" })).toHaveCount(0);
+    await expect(form.getByRole("button", { name: "Agua a las 06:00" })).toHaveCount(0);
+    await form.getByRole("button", { name: "Guardar" }).click();
+    await expect(form.getByText("Guardado ✓")).toBeVisible();
+
+    await pagina.reload({ waitUntil: "networkidle" });
+    const otra = pagina.getByRole("form", { name: "Mis avisos" });
+    await expect(otra.getByLabel("Avisos del móvil")).toBeChecked();
+    await expect(otra.getByRole("button", { name: "Agua a las 15:00" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await expect(otra.getByRole("button", { name: "Agua a las 11:00" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    await expect(otra.getByLabel("Hora del aviso de ejercicio")).toHaveValue("20");
+    await expect(otra.getByRole("checkbox", { name: "Aviso de objetivos" })).not.toBeChecked();
     await contexto.close();
   });
 });

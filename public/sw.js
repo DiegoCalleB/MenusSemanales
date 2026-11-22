@@ -11,7 +11,7 @@
  *    guardado, que nunca cambia con el mismo nombre.
  *  - No toca NUNCA: lo que no sea GET, lo de otros dominios (Supabase) ni `/api/`.
  */
-const VERSION = "v4";
+const VERSION = "v5";
 const CACHE_PAGINAS = `hecho-paginas-${VERSION}`;
 const CACHE_ESTATICOS = `hecho-estaticos-${VERSION}`;
 /** Lo último que se ha compartido con la app desde otra (WhatsApp…), para que lo lea la página. */
@@ -34,6 +34,7 @@ const RUTAS = [
   "/reparto",
   "/objetivos",
   "/notas",
+  "/avisos",
   "/fechas",
   "/calendario",
   "/cumples",
@@ -292,6 +293,7 @@ if (typeof self !== "undefined" && typeof self.addEventListener === "function") 
       typeof datos.titulo === "string" && datos.titulo ? datos.titulo.slice(0, 100) : "¡Hecho!";
     const cuerpo = typeof datos.cuerpo === "string" ? datos.cuerpo.slice(0, 300) : "";
     const hecho = codigoHecho(datos.hecho);
+    const posponer = codigoHecho(datos.posponer);
     const boton = textoCorto(datos.boton, "✅ Hecho", 24);
     const confirmacion = textoCorto(datos.confirmacion, "✅ Apuntado como preparado", 60);
     evento.waitUntil(
@@ -303,12 +305,20 @@ if (typeof self !== "undefined" && typeof self.addEventListener === "function") 
         data: {
           url: rutaDeLaApp(datos.url),
           hecho,
+          posponer,
           confirmacion,
           // Si no se pudo marcar, se abre la pantalla de lo que era: la mochila, o Hoy (agua, ejercicio).
           rutaHecho:
             typeof datos.confirmacion === "string" && datos.confirmacion ? "/" : "/mochila",
         },
-        ...(hecho ? { actions: [{ action: "hecho", title: boton }] } : {}),
+        ...(hecho || posponer
+          ? {
+              actions: [
+                ...(hecho ? [{ action: "hecho", title: boton }] : []),
+                ...(posponer ? [{ action: "posponer", title: "⏰ Luego" }] : []),
+              ],
+            }
+          : {}),
       }),
     );
   });
@@ -341,10 +351,37 @@ if (typeof self !== "undefined" && typeof self.addEventListener === "function") 
     }
   }
 
+  /** «Posponer 1 hora» (D-204): la base de datos lo deja para dentro de una hora. */
+  async function posponerAviso(codigo, ruta) {
+    try {
+      const r = await fetch("/api/avisos/posponer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ codigo }),
+      });
+      if (!r.ok) throw new Error("no-pospuesto");
+      await self.registration.showNotification("⏰ Te lo recuerdo en una hora", {
+        icon: "/icon-192.png",
+        badge: "/icon-192.png",
+        tag: "avisos-diarios",
+        silent: true,
+        data: { url: ruta },
+      });
+    } catch {
+      // Sin conexión o ya no vale: se abre la app.
+      await abrirApp(ruta);
+    }
+  }
+
   self.addEventListener("notificationclick", (evento) => {
     evento.notification.close();
     const datos = evento.notification.data || {};
     const hecho = codigoHecho(datos.hecho);
+    const posponer = codigoHecho(datos.posponer);
+    if (evento.action === "posponer" && posponer) {
+      evento.waitUntil(posponerAviso(posponer, rutaDeLaApp(datos.url)));
+      return;
+    }
     if (evento.action === "hecho" && hecho) {
       evento.waitUntil(
         marcarHecho(

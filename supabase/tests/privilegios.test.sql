@@ -55,6 +55,9 @@ select pg_temp.igual('anon solo puede ejecutar las funciones con token del calen
                             'anotar_comprobacion_calendario',
                             -- «Hecho» desde la notificación (D-151): crear, con el secreto; usar, con el código.
                             'crear_accion_aviso', 'marcar_hecho_desde_aviso',
+                            -- «Posponer» desde la notificación (D-204): guardar el mensaje y recoger lo
+                            -- pospuesto, con el secreto; posponer, con el código de un solo uso.
+                            'recordar_aviso', 'avisos_pospuestos', 'posponer_aviso',
                             -- Circulares por correo (D-147): con el código de la dirección del hogar.
                             'guardar_circular_correo',
                             -- Menú del cole automático (D-173): solo con el secreto de los avisos.

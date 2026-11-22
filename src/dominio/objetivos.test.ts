@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { CFG_POR_DEFECTO } from "./avisos-personales";
 import {
   HORA_OBJETIVOS,
   HORA_REVISION,
@@ -181,7 +182,8 @@ describe("repetición, pasos y parados (D-198)", () => {
   });
 });
 
-describe("avisos de objetivos (D-203)", () => {
+describe("avisos de objetivos (D-203, D-204)", () => {
+  const quien = (...ids: string[]) => new Map(ids.map((id) => [id, CFG_POR_DEFECTO] as const));
   const personas = [
     { id: "d", nombre: "Diego" },
     { id: "a", nombre: "Ana" },
@@ -192,13 +194,7 @@ describe("avisos de objetivos (D-203)", () => {
   ];
   const domingo = "2026-11-22";
   it("a mediodía avisa de lo que toca, solo a quien pidió avisos y sin nombrar nada", () => {
-    const r = recordatoriosDeObjetivos(
-      cuentas,
-      personas,
-      new Set(["d"]),
-      "2026-11-19",
-      HORA_OBJETIVOS,
-    );
+    const r = recordatoriosDeObjetivos(cuentas, personas, quien("d"), "2026-11-19", HORA_OBJETIVOS);
     expect(r).toHaveLength(1);
     expect(r[0]).toMatchObject({ personaId: "d", tipo: "toca" });
     expect(r[0]!.texto).toContain("2 cosas");
@@ -207,36 +203,39 @@ describe("avisos de objetivos (D-203)", () => {
       url: "/objetivos",
       tag: "objetivos-d-toca",
     });
-    expect(recordatoriosDeObjetivos(cuentas, personas, new Set(["d"]), "2026-11-19", 11)).toEqual(
-      [],
-    );
+    expect(recordatoriosDeObjetivos(cuentas, personas, quien("d"), "2026-11-19", 11)).toEqual([]);
   });
   it("el domingo a las 19 h manda la revisión; otros días u horas, no", () => {
-    const r = recordatoriosDeObjetivos(
-      cuentas,
-      personas,
-      new Set(["d", "a"]),
-      domingo,
-      HORA_REVISION,
-    );
+    const r = recordatoriosDeObjetivos(cuentas, personas, quien("d", "a"), domingo, HORA_REVISION);
     expect(r.map((x) => x.tipo)).toEqual(["revision", "revision"]);
     expect(r[0]!.texto).toBe(
       "3 ideas sin resolver, 1 objetivo parado, 2 cosas que tocan. Dos minutos en la revisión de la semana.",
     );
     expect(notificacionDeObjetivos(r[0]!).url).toBe("/repaso");
     expect(
-      recordatoriosDeObjetivos(cuentas, personas, new Set(["d"]), "2026-11-21", HORA_REVISION),
+      recordatoriosDeObjetivos(cuentas, personas, quien("d"), "2026-11-21", HORA_REVISION),
     ).toEqual([]);
-    expect(recordatoriosDeObjetivos(cuentas, personas, new Set(["d"]), domingo, 18)).toEqual([]);
+    expect(recordatoriosDeObjetivos(cuentas, personas, quien("d"), domingo, 18)).toEqual([]);
     // Sin nada que decir, no avisa.
     expect(
       recordatoriosDeObjetivos(
         [{ personaId: "d", tocan: 0, parados: 0, bandeja: 0 }],
         personas,
-        new Set(["d"]),
+        quien("d"),
         domingo,
         HORA_REVISION,
       ),
     ).toEqual([]);
+  });
+  it("respeta lo que cada uno ha elegido: interruptor y hora (D-204)", () => {
+    const cfg = {
+      ...CFG_POR_DEFECTO,
+      objetivos: { on: true, hora: 15 },
+      revision: { on: false, hora: 19 },
+    };
+    const m = new Map([["d", cfg]]);
+    expect(recordatoriosDeObjetivos(cuentas, personas, m, "2026-11-19", 12)).toEqual([]);
+    expect(recordatoriosDeObjetivos(cuentas, personas, m, "2026-11-19", 15)).toHaveLength(1);
+    expect(recordatoriosDeObjetivos(cuentas, personas, m, domingo, HORA_REVISION)).toEqual([]);
   });
 });
