@@ -457,7 +457,6 @@ export function estadoInicialDemo(): EstadoHogar {
     pendientes: [],
     objetivos: [],
     ajustesHoy: [],
-    todoistPorCerrar: [],
     notas: [],
     lluviaPreparada: [],
     cuidado: [],

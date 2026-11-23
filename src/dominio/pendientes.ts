@@ -18,8 +18,6 @@ export interface Pendiente {
   creadoEn: FechaIso;
   /** El día en que se hizo; null si sigue pendiente. */
   hechoEn: FechaIso | null;
-  /** La tarea de Todoist con la que se sincroniza (D-205), si la hay. */
-  todoistId?: string;
 }
 
 export const MAX_TEXTO_PENDIENTE = 120;
