@@ -1798,3 +1798,14 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Posponer 1 hora:** las notificaciones llevan un botón «⏰ Luego». La base de datos deja ese aviso para dentro de unos 50 minutos y la llamada de cada hora lo vuelve a mandar (con sus mismos botones), hasta 3 veces seguidas. Guarda el mensaje que ya iba en la notificación junto a su código de un solo uso. Migración `20261125000000_avisos_personales` (3 funciones nuevas: `recordar_aviso`, `posponer_aviso`, `avisos_pospuestos`; y la `cfg` en el resumen).
 - **Sin migración aplicada:** las notificaciones salen como antes, sin «Luego», y las horas de la pantalla no llegan al servidor (valen las de siempre).
 - **Hecho:** el plan de notificaciones queda completo (fases 1, 2 y 3).
+
+## D-206 · Semana 1 del plan de simplificar: dos espacios, laboratorio y Todoist aparcado
+
+- **Petición (Diego):** «se me está complicando demasiado la app»; plan en 4 semanas (semana 1: ordenar, sin añadir nada).
+- **Dos espacios.** **Familia** (lo compartido) y **Yo** (lo personal). Cada persona tiene un modo: el primer adulto de la familia (quien la mantiene, Diego) empieza en **completo**; los demás (Ana) en **familia**. Se cambia en «Personalizar Hoy» → «Mi espacio personal».
+  - **Modo familia:** Hoy enseña a la vista solo la cena, cole y mochila, las citas, la compra (y la medicación, si la hay). Lo demás de la familia, plegado en «Más cosas». Mi día, cuidarse, objetivos y notas no salen, y en «Más» no hay pestaña «Yo».
+  - **Yo** (`/yo`, pestaña en «Más»): Mi día, cuidarse, objetivos y notas juntos, con enlaces a Objetivos, Notas y Mis avisos (que ahora cuelgan de «Yo» en vez de ser tres pestañas).
+- **Laboratorio** (para toda la casa, en «Personalizar Hoy»): Barrio, Premios, Reparto, Metropolitano y el enlace del regalo se apagan sin borrar nada. Con él apagado no salen sus pestañas ni sus datos en el calendario, el buscador ni la campanita. En la familia empieza **apagado**; en los datos de ejemplo (pruebas), encendido. Las páginas siguen existiendo si se entra por enlace. **Pendiente:** el resumen del servidor aún puede mencionar un partido o un plan del finde.
+- **Todoist, aparcado:** la sincronización (D-205) no se publica. El código queda guardado en el commit `cea670b` de la rama de desarrollo.
+- **Sin migraciones.** `modos` y `laboratorio` van en el documento del hogar.
+- **Semanas 2 y 3:** no se toca nada; la app cuenta qué se usa. Preguntas para Ana: ¿para qué abres la app?, ¿qué te sobra o te molesta?, ¿qué echas de menos? **Semana 4:** revisión de 15 minutos y regla «una entra, una sale».

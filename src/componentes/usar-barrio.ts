@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useHogar } from "./proveedor-hogar";
 import type { PlanBarrio } from "@/dominio/barrio";
 
 /** Lo último que respondió el servidor y cuándo: se pregunta una vez por sesión y hora. */
@@ -46,5 +47,7 @@ export function usePlanesDelBarrio(esperaMs = 0): PlanBarrio[] {
       clearTimeout(t);
     };
   }, [esperaMs]);
-  return planes;
+  // Con el laboratorio apagado (D-206), como si no hubiera nada.
+  const { estado } = useHogar();
+  return estado.laboratorio ? planes : [];
 }

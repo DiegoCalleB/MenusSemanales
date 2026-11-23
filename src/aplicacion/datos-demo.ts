@@ -13,6 +13,9 @@ import { TEXTO_MENU_COLE_NOVIEMBRE_2026 } from "@/dominio/menu-cole-ejemplo";
 import type { Ocurrencia } from "@/dominio/reparto";
 import { type EstadoHogar, todoRevisado } from "./estado";
 
+// En los datos de ejemplo (las pruebas) está todo encendido, también el laboratorio (D-206).
+const LABORATORIO_INICIAL = true;
+
 /**
  * Datos de demostración de una familia de cuatro (dos adultos y dos niñas). Sirven para que las
  * pantallas funcionen sin cuenta; no se guardan en ningún sitio. «Hoy» es fijo (miércoles) para que
@@ -457,6 +460,8 @@ export function estadoInicialDemo(): EstadoHogar {
     pendientes: [],
     objetivos: [],
     ajustesHoy: [],
+    modos: {},
+    laboratorio: LABORATORIO_INICIAL,
     notas: [],
     lluviaPreparada: [],
     cuidado: [],

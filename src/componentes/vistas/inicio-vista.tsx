@@ -13,6 +13,8 @@ import { useHogar } from "../proveedor-hogar";
 import { AyudaInstalarIos } from "../instalar-ios";
 import { useYo } from "../yo";
 import { useMomento } from "../usar-momento";
+import { useModo } from "../usar-modo";
+import { HOY_FAMILIA, TARJETAS_PERSONALES } from "@/dominio/modo";
 import { useCalendarioFamilia } from "../usar-calendario-familia";
 import { almuerzosDe } from "@/dominio/almuerzos";
 import { quePideHoy } from "@/dominio/casa";
@@ -273,14 +275,16 @@ export function InicioVista() {
   const orden = ordenDe(ajuste, momento);
   const ocultas = ocultasDe(ajuste);
   /** Las tarjetas de una columna, en el orden elegido (en el móvil van todas seguidas, igual). */
-  const vista = aLaVista(ajuste, momento);
-  const nPlegadas = vista
-    ? TARJETAS.filter((t) => !vista.has(t.id) && !ocultas.has(t.id)).length
-    : 0;
+  const { modo, laboratorio } = useModo();
+  // Modo familia (D-206): a la vista, lo de la familia; lo personal no sale; lo demás, en «Más cosas».
+  const vista: Set<string> | null =
+    modo === "familia" ? new Set<string>(HOY_FAMILIA) : aLaVista(ajuste, momento);
+  const fuera = new Set<string>([...ocultas, ...(modo === "familia" ? TARJETAS_PERSONALES : [])]);
+  const nPlegadas = vista ? TARJETAS.filter((t) => !vista.has(t.id) && !fuera.has(t.id)).length : 0;
   const columna = (c: "izquierda" | "derecha", plegadas = false) =>
     TARJETAS.filter(
       (t) =>
-        t.columna === c && !ocultas.has(t.id) && (vista === null || vista.has(t.id) !== plegadas),
+        t.columna === c && !fuera.has(t.id) && (vista === null || vista.has(t.id) !== plegadas),
     ).map((t) => (
       <div key={t.id} style={{ order: orden.indexOf(t.id) }} className="empty:hidden">
         {tarjetas[t.id]}
@@ -418,7 +422,7 @@ export function InicioVista() {
 
       <AyudaInstalarIos />
 
-      {yo?.id === "diego" && (
+      {laboratorio && yo?.id === "diego" && (
         <Link href="/regalo" className="boton-suave w-fit">
           <span aria-hidden="true">🎁</span> Preparar un regalo
         </Link>
