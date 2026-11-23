@@ -9,7 +9,14 @@ import { BotonAvisos } from "./avisos-campana";
 import { BotonBuscar } from "./boton-buscar";
 import { BotonPerfil } from "./perfiles";
 import { BotonTema } from "./tema";
-import { PILARES, pestanaActiva, pilarDe } from "./pilares";
+import { pestanaActiva, pilarDe, pilaresPara } from "./pilares";
+import { useModo } from "./usar-modo";
+
+/** Los pilares como los ve quien tiene el móvil (D-206). */
+function usePilares() {
+  const { modo, laboratorio } = useModo();
+  return pilaresPara(modo, laboratorio);
+}
 
 /** Cuántas cosas faltan por comprar (lo calculado y lo apuntado a mano): para acordarse al verlo. */
 function usePendientesDeCompra(): number {
@@ -36,14 +43,15 @@ function Contador({ n, flotante = false }: { n: number; flotante?: boolean }) {
 export function NavegacionInferior() {
   const ruta = usePathname();
   const pendientes = usePendientesDeCompra();
-  const actual = pilarDe(ruta)?.id;
+  const pilares = usePilares();
+  const actual = pilarDe(ruta, pilares)?.id;
   return (
     <nav
       aria-label="Principal"
       className="border-borde bg-superficie fixed inset-x-0 bottom-0 z-30 border-t pb-[env(safe-area-inset-bottom)] md:hidden"
     >
       <ul className="mx-auto grid max-w-lg grid-cols-5">
-        {PILARES.map(({ id, href, texto, Icono }) => {
+        {pilares.map(({ id, href, texto, Icono }) => {
           const esActivo = actual === id;
           return (
             <li key={id}>
@@ -77,7 +85,8 @@ export function NavegacionInferior() {
 export function NavegacionLateral() {
   const ruta = usePathname();
   const pendientes = usePendientesDeCompra();
-  const pilar = pilarDe(ruta);
+  const pilares = usePilares();
+  const pilar = pilarDe(ruta, pilares);
   const actual = pilar?.id;
   const apartado = pilar ? pestanaActiva(pilar, ruta) : null;
   return (
@@ -96,7 +105,7 @@ export function NavegacionLateral() {
       </Link>
       <nav aria-label="Principal">
         <ul className="flex flex-col gap-1">
-          {PILARES.map(({ id, href, texto, Icono, pestanas }) => {
+          {pilares.map(({ id, href, texto, Icono, pestanas }) => {
             const esActivo = actual === id;
             return (
               <li key={id}>
@@ -160,7 +169,8 @@ export function NavegacionLateral() {
 export function Pestanas() {
   const ruta = usePathname();
   const pendientes = usePendientesDeCompra();
-  const pilar = pilarDe(ruta);
+  const pilares = usePilares();
+  const pilar = pilarDe(ruta, pilares);
   if (!pilar || pilar.pestanas.length === 0) return null;
   const activa = pestanaActiva(pilar, ruta);
   return (

@@ -68,30 +68,62 @@ export const PILARES: readonly Pilar[] = [
     pestanas: [
       { href: "/cuenta", texto: "Cuenta" },
       { href: "/personas", texto: "Familia" },
-      { href: "/objetivos", texto: "Objetivos" },
-      { href: "/notas", texto: "Notas" },
-      { href: "/avisos", texto: "Avisos" },
+      { href: "/yo", texto: "Yo" },
       { href: "/compartir", texto: "Enviar" },
     ],
   },
 ];
 
+/** Pantallas que cuelgan de otra pestaña (D-206): lo personal está en «Yo». */
+const DENTRO_DE: Record<string, string> = {
+  "/objetivos": "/yo",
+  "/notas": "/yo",
+  "/avisos": "/yo",
+};
+
+/** Las pestañas del laboratorio (D-206): solo se ven con él encendido. */
+export const PESTANAS_LABORATORIO = ["/barrio", "/reparto"] as const;
+
+/**
+ * Los pilares tal como los ve cada uno (D-206): sin «Yo» en modo familia y sin las pestañas del
+ * laboratorio si está apagado.
+ */
+export function pilaresPara(modo: "familia" | "completo", laboratorio: boolean): Pilar[] {
+  return PILARES.map((p) => ({
+    ...p,
+    pestanas: p.pestanas.filter(
+      (t) =>
+        !(modo === "familia" && t.href === "/yo") &&
+        !(!laboratorio && (PESTANAS_LABORATORIO as readonly string[]).includes(t.href)),
+    ),
+  }));
+}
+
 const coincide = (ruta: string, href: string) =>
   href === "/" ? ruta === "/" : ruta === href || ruta.startsWith(`${href}/`);
 
 /** A qué pilar pertenece una ruta (la portada es «Hoy»). */
-export function pilarDe(ruta: string): Pilar | null {
-  if (ruta === "/") return PILARES[0] ?? null;
+export function pilarDe(ruta: string, pilares: readonly Pilar[] = PILARES): Pilar | null {
+  const base = Object.entries(DENTRO_DE).find(([r]) => coincide(ruta, r))?.[1];
+  if (base) return pilarDe(base, pilares);
+  if (ruta === "/") return pilares[0] ?? null;
   // «Llego tarde» ya no es una pestaña (se llega desde la portada y desde Cena), pero sigue siendo de Comer.
-  if (ruta === "/menu/emergencia") return PILARES.find((p) => p.id === "comer") ?? null;
+  if (ruta === "/menu/emergencia") return pilares.find((p) => p.id === "comer") ?? null;
   // Lo compartido desde otra app acaba en fechas; el plan de la semana es de «Hoy».
-  if (ruta === "/compartido") return PILARES.find((p) => p.id === "fechas") ?? null;
-  if (ruta === "/semana") return PILARES[0] ?? null;
-  return PILARES.find((p) => p.pestanas.some((t) => coincide(ruta, t.href))) ?? null;
+  if (ruta === "/compartido") return pilares.find((p) => p.id === "fechas") ?? null;
+  if (ruta === "/semana") return pilares[0] ?? null;
+  return (
+    pilares.find((p) => p.pestanas.some((t) => coincide(ruta, t.href))) ??
+    // Una pestaña escondida (laboratorio, «Yo» en modo familia) sigue siendo de su pilar.
+    PILARES.find((p) => p.pestanas.some((t) => coincide(ruta, t.href))) ??
+    null
+  );
 }
 
 /** La pestaña que está abierta: la de ruta más específica (/menu/cole gana a /menu). */
 export function pestanaActiva(pilar: Pilar, ruta: string): Pestana | null {
+  const base = Object.entries(DENTRO_DE).find(([r]) => coincide(ruta, r))?.[1];
+  if (base) return pestanaActiva(pilar, base);
   return (
     pilar.pestanas
       .filter((t) => coincide(ruta, t.href))

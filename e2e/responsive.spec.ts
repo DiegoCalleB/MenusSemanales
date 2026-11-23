@@ -48,6 +48,7 @@ const RUTAS = [
   "/objetivos",
   "/notas",
   "/avisos",
+  "/yo",
 ] as const;
 const PUNTO_DE_CORTE = 768; // md de Tailwind
 
@@ -1354,9 +1355,7 @@ test.describe("flujos en móvil", () => {
       ["Fechas", "Barrio", "/barrio"],
       ["Fechas", "Papeles", "/papeles"],
       ["Más", "Cuenta", "/cuenta"],
-      ["Más", "Objetivos", "/objetivos"],
-      ["Más", "Notas", "/notas"],
-      ["Más", "Avisos", "/avisos"],
+      ["Más", "Yo", "/yo"],
       ["Más", "Enviar", "/compartir"],
     ];
     for (const [pilar, pestana, ruta] of recorrido) {
@@ -3613,6 +3612,55 @@ test.describe("Hoy como tablero fijo (D-180)", () => {
     );
     await expect(otra.getByLabel("Hora del aviso de ejercicio")).toHaveValue("20");
     await expect(otra.getByRole("checkbox", { name: "Aviso de objetivos" })).not.toBeChecked();
+    await contexto.close();
+  });
+
+  test("modo familia (D-206): Ana ve lo de la familia, sin lo personal, y puede encenderlo", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844, "light", "ana");
+    // Su bienvenida ya la vio (esta prueba no va de eso).
+    await pagina.addInitScript(() =>
+      window.localStorage.setItem("menus-semanales:bienvenida-ana:vistas", "99"),
+    );
+    await cargar(pagina, "/");
+    await expect(pagina.locator("#sec-compra")).toBeVisible();
+    await expect(pagina.locator("#sec-mi-dia")).toHaveCount(0);
+    await expect(pagina.locator("#sec-objetivos")).toHaveCount(0);
+    await expect(pagina.locator("#sec-notas")).toHaveCount(0);
+    // Lo demás de la familia, plegado en «Más cosas».
+    await expect(pagina.locator("#sec-casa")).toBeHidden();
+    await pagina.getByText(/Más cosas/).click();
+    await expect(pagina.locator("#sec-casa")).toBeVisible();
+    // Sin pestaña «Yo» en Más.
+    await pagina.goto("/cuenta", { waitUntil: "networkidle" });
+    await expect(pagina.getByRole("link", { name: "Yo", exact: true })).toHaveCount(0);
+    // Ella misma puede encender su espacio personal.
+    await pagina.goto("/", { waitUntil: "networkidle" });
+    await pagina.getByRole("button", { name: /Personalizar Hoy/ }).click();
+    await pagina.getByLabel(/Mi espacio personal/).check();
+    await expect(pagina.locator("#sec-mi-dia")).toHaveCount(1);
+    await contexto.close();
+  });
+
+  test("Yo y laboratorio (D-206): lo personal en un sitio; el laboratorio se apaga para todos", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/yo");
+    await expect(pagina.locator("#sec-mi-dia")).toBeVisible();
+    await expect(pagina.getByRole("link", { name: /Objetivos/ })).toBeVisible();
+    await expect(pagina.getByRole("link", { name: /Mis avisos/ })).toBeVisible();
+    // En los datos de ejemplo el laboratorio está encendido: Fechas → Barrio se ve.
+    await cargar(pagina, "/fechas");
+    await expect(pagina.getByRole("link", { name: "Barrio", exact: true })).toHaveCount(1);
+    await cargar(pagina, "/");
+    await pagina.getByRole("button", { name: /Personalizar Hoy/ }).click();
+    await pagina.getByLabel(/Laboratorio/).uncheck();
+    await cargar(pagina, "/fechas");
+    await expect(pagina.getByRole("link", { name: "Barrio", exact: true })).toHaveCount(0);
+    await cargar(pagina, "/casa");
+    await expect(pagina.getByRole("link", { name: "Reparto", exact: true })).toHaveCount(0);
     await contexto.close();
   });
 });

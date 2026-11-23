@@ -50,6 +50,7 @@ import {
   validarPaso,
 } from "@/dominio/objetivos";
 import { type AjusteHoy, limpiarAjuste } from "@/dominio/hoy";
+import { type Modo, esModo } from "@/dominio/modo";
 import { type AvisosCfg, limpiarCfg } from "@/dominio/avisos-personales";
 import { MAX_NOTAS, type Nota, type TipoNota, validarNota } from "@/dominio/notas";
 import {
@@ -250,6 +251,10 @@ export interface EstadoHogar {
   objetivos: Objetivo[];
   /** Qué tarjetas ve cada persona en «Hoy» y en qué orden (D-196). */
   ajustesHoy: AjusteHoy[];
+  /** El espacio de cada persona (D-206): «familia» o «completo» (con su espacio personal). */
+  modos: Record<string, Modo>;
+  /** El laboratorio (D-206): barrio, premios, reparto, Metropolitano y regalo, encendidos o no. */
+  laboratorio: boolean;
   /** Notas, ideas y recuerdos de cada persona (D-199): personales, no salen de la app. */
   notas: Nota[];
   /** Cuidarse (D-182): agua, ejercicio y hábitos de cada persona. En el documento del hogar. */
@@ -496,6 +501,10 @@ export type Accion =
   /** Una idea resuelta (o no) sale de la bandeja sin borrarse; con `false`, vuelve. */
   | { tipo: "nota/archivar"; id: string; archivada: boolean }
   | { tipo: "nota/borrar"; id: string }
+  /** Modo familia o completo de una persona (D-206). */
+  | { tipo: "persona/modo"; personaId: string; modo: Modo }
+  /** Enciende o apaga el laboratorio para toda la casa (D-206). */
+  | { tipo: "hogar/laboratorio"; encendido: boolean }
   /** Hoy a tu manera (D-196): qué tarjetas se ven y en qué orden, para una persona. */
   | { tipo: "hoy/ajustar"; personaId: string; orden: string[]; ocultas: string[] }
   | { tipo: "hoy/restablecer"; personaId: string }
@@ -1008,6 +1017,9 @@ const normalizarCampos = (e: EstadoHogar): EstadoHogar =>
   Array.isArray(e.objetivos) &&
   e.objetivos.every((o) => typeof o.creadoEn === "string" && o.cada !== undefined) &&
   Array.isArray(e.ajustesHoy) &&
+  typeof e.modos === "object" &&
+  e.modos !== null &&
+  typeof e.laboratorio === "boolean" &&
   Array.isArray(e.notas) &&
   Array.isArray(e.lluviaPreparada) &&
   Array.isArray(e.cuidado) &&
@@ -1046,6 +1058,12 @@ const normalizarCampos = (e: EstadoHogar): EstadoHogar =>
             }))
           : [],
         ajustesHoy: Array.isArray(e.ajustesHoy) ? e.ajustesHoy : [],
+        modos:
+          typeof e.modos === "object" && e.modos !== null
+            ? Object.fromEntries(Object.entries(e.modos).filter(([, m]) => esModo(m)))
+            : {},
+        // Antes de D-206 todo estaba encendido; al llegar, el laboratorio se apaga.
+        laboratorio: typeof e.laboratorio === "boolean" ? e.laboratorio : false,
         notas: Array.isArray(e.notas) ? e.notas : [],
         lluviaPreparada: Array.isArray(e.lluviaPreparada) ? e.lluviaPreparada : [],
         cuidado: Array.isArray(e.cuidado) ? e.cuidado : [],
@@ -2622,6 +2640,13 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
 
     case "nota/borrar":
       return { ...e, notas: e.notas.filter((n) => n.id !== accion.id) };
+
+    case "persona/modo":
+      if (!e.personas.some((p) => p.id === accion.personaId) || !esModo(accion.modo)) return e;
+      return { ...e, modos: { ...e.modos, [accion.personaId]: accion.modo } };
+
+    case "hogar/laboratorio":
+      return { ...e, laboratorio: accion.encendido === true };
 
     case "hoy/ajustar": {
       if (!e.personas.some((p) => p.id === accion.personaId)) return e;

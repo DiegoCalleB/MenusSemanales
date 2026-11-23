@@ -199,7 +199,9 @@ export function TareasVista() {
         </form>
       </section>
 
-      <PremiosPersona personaId={persona.id} nombre={persona.nombre} editando={editando} />
+      {estado.laboratorio && (
+        <PremiosPersona personaId={persona.id} nombre={persona.nombre} editando={editando} />
+      )}
     </div>
   );
 }

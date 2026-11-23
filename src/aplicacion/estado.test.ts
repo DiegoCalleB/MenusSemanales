@@ -2529,3 +2529,21 @@ describe("avisos personales (D-204)", () => {
     ]);
   });
 });
+
+describe("modo familia y laboratorio (D-206)", () => {
+  it("guarda el modo de una persona y enciende o apaga el laboratorio; un estado de antes se completa", () => {
+    const e0 = estadoInicialDemo();
+    const id = e0.personas[0]!.id;
+    let e = reducir(e0, { tipo: "persona/modo", personaId: id, modo: "familia" });
+    expect(e.modos[id]).toBe("familia");
+    expect(reducir(e, { tipo: "persona/modo", personaId: "nadie", modo: "familia" }).modos).toEqual(
+      e.modos,
+    );
+    e = reducir(e, { tipo: "hogar/laboratorio", encendido: false });
+    expect(e.laboratorio).toBe(false);
+    const viejo = { ...e0, modos: undefined, laboratorio: undefined } as unknown as EstadoHogar;
+    const n = normalizar(viejo);
+    expect(n.modos).toEqual({});
+    expect(n.laboratorio).toBe(false);
+  });
+});

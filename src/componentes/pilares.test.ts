@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PILARES, pestanaActiva, pilarDe } from "./pilares";
+import { PILARES, pestanaActiva, pilarDe, pilaresPara } from "./pilares";
 
 describe("pilares de la app", () => {
   it("son cinco, con la portada primero y «Más» al final", () => {
@@ -28,6 +28,7 @@ describe("pilares de la app", () => {
       "/compartir": "mas",
       "/personas": "mas",
       "/objetivos": "mas",
+      "/yo": "mas",
       "/notas": "mas",
       "/avisos": "mas",
     };
@@ -57,5 +58,22 @@ describe("pilares de la app", () => {
     expect(pestanaActiva(comer, "/menu/platos")?.texto).toBe("Platos");
     expect(pestanaActiva(comer, "/despensa")?.texto).toBe("Despensa");
     expect(pestanaActiva(comer, "/casa")).toBeNull();
+  });
+  it("lo personal cuelga de «Yo», y cada uno ve sus pestañas (D-206)", () => {
+    const mas = PILARES.find((p) => p.id === "mas")!;
+    for (const r of ["/objetivos", "/notas", "/avisos", "/yo"]) {
+      expect(pilarDe(r)?.id, r).toBe("mas");
+      expect(pestanaActiva(mas, r)?.href, r).toBe("/yo");
+    }
+    const familia = pilaresPara("familia", false);
+    const textos = (ps: typeof familia) => ps.flatMap((p) => p.pestanas.map((t) => t.href));
+    expect(textos(familia)).not.toContain("/yo");
+    expect(textos(familia)).not.toContain("/barrio");
+    expect(textos(familia)).not.toContain("/reparto");
+    expect(textos(pilaresPara("completo", true))).toEqual(
+      expect.arrayContaining(["/yo", "/barrio", "/reparto"]),
+    );
+    // Una pestaña escondida sigue siendo de su pilar (por si se llega por enlace).
+    expect(pilarDe("/barrio", familia)?.id).toBe("fechas");
   });
 });

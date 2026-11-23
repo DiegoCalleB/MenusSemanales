@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useHogar } from "./proveedor-hogar";
 import { type EventoEstadio } from "@/dominio/metropolitano";
 
 /** Lo último que respondió el servidor y cuándo: se pregunta una vez por sesión y hora. */
@@ -50,5 +51,7 @@ export function useEstadio(esperaMs = 0): EventoEstadio[] {
       clearTimeout(t);
     };
   }, [esperaMs]);
-  return eventos;
+  // Con el laboratorio apagado (D-206), como si no hubiera nada.
+  const { estado } = useHogar();
+  return estado.laboratorio ? eventos : [];
 }

@@ -5,6 +5,9 @@ import type { Carga, Ingrediente, Persona, Seccion, Unidad } from "@/dominio/tip
 import type { Ocurrencia } from "@/dominio/reparto";
 import type { EstadoHogar } from "./estado";
 
+// La familia empieza con el laboratorio apagado (D-206).
+const LABORATORIO_INICIAL = false;
+
 /**
  * «Modo Diego»: los datos reales de la familia de Diego, para probar la app con lo que de verdad
  * cocinan. Salen de lo que Diego ha contado y de las capturas de su app anterior
@@ -756,6 +759,8 @@ export function estadoModoDiego(hoy: string): EstadoHogar {
     pendientes: [],
     objetivos: [],
     ajustesHoy: [],
+    modos: {},
+    laboratorio: LABORATORIO_INICIAL,
     notas: [],
     lluviaPreparada: [],
     cuidado: [],

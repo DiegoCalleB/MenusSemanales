@@ -4,6 +4,7 @@ import { useState } from "react";
 import { TARJETAS, ajusteDe, mover, ocultasDe, ordenDe } from "@/dominio/hoy";
 import { useHogar } from "./proveedor-hogar";
 import { useMomento } from "./usar-momento";
+import { modoDe, TARJETAS_PERSONALES } from "@/dominio/modo";
 import { useYo } from "./yo";
 
 /**
@@ -21,6 +22,8 @@ export function PersonalizarHoy() {
   const ajuste = ajusteDe(estado.ajustesHoy, yo.id);
   const orden = ordenDe(ajuste, momento);
   const ocultas = ocultasDe(ajuste);
+  const modo = modoDe(estado.modos, estado.personas, yo.id);
+  const personales = new Set<string>(TARJETAS_PERSONALES);
   const guardar = (nuevoOrden: string[], nuevasOcultas: Set<string>) =>
     despachar({
       tipo: "hoy/ajustar",
@@ -54,10 +57,34 @@ export function PersonalizarHoy() {
           ? "«Volver a como estaba» devuelve el orden automático según la hora del día."
           : "Mientras no lo cambies, Hoy pone primero lo que toca según la hora: por la mañana el cole, por la tarde las citas y la compra, por la noche lo de mañana."}
       </p>
+      <label className="flex min-h-11 items-center gap-3 text-base font-semibold">
+        <input
+          type="checkbox"
+          className="h-5 w-5"
+          checked={modo === "completo"}
+          onChange={(e) =>
+            despachar({
+              tipo: "persona/modo",
+              personaId: yo.id,
+              modo: e.target.checked ? "completo" : "familia",
+            })
+          }
+        />
+        Mi espacio personal (Mi día, objetivos, notas)
+      </label>
+      <label className="flex min-h-11 items-center gap-3 text-base font-semibold">
+        <input
+          type="checkbox"
+          className="h-5 w-5"
+          checked={estado.laboratorio}
+          onChange={(e) => despachar({ tipo: "hogar/laboratorio", encendido: e.target.checked })}
+        />
+        Laboratorio (barrio, premios, reparto, Metropolitano): para toda la casa
+      </label>
       <ul aria-label="Tarjetas de Hoy" className="flex flex-col">
         {orden.map((id, i) => {
           const t = TARJETAS.find((x) => x.id === id);
-          if (!t) return null;
+          if (!t || (modo === "familia" && personales.has(id))) return null;
           const oculta = ocultas.has(id);
           return (
             <li key={id} className="border-borde flex items-center gap-1 border-b last:border-b-0">
