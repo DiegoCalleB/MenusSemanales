@@ -74,7 +74,7 @@ export function BotonAvisos() {
     <div ref={raiz} className="relative">
       <button
         type="button"
-        className="boton-suave relative px-3"
+        className="boton-cabecera relative"
         aria-expanded={abierto}
         aria-controls={id}
         onClick={alternar}

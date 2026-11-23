@@ -7,11 +7,12 @@
  */
 :root {
   color-scheme: light;
-  --fondo: #fff7f2;
+  --fondo: #f7f5f3;
   --superficie: #ffffff;
-  --borde: #f0dccf;
-  --tinta: #33262b;
-  --tinta-suave: #6e5c63;
+  --borde: #e6e0db;
+  --relleno: #efebe7;
+  --tinta: #2b2628;
+  --tinta-suave: #625a5d;
   --marca: #c72a63;
   --marca-fuerte: #a81f50;
   --sobre-marca: #ffffff;
@@ -21,18 +22,19 @@
   --peligro-texto: #9b1c32;
   --ok-fondo: #dff5e8;
   --ok-texto: #14633f;
-  --suave-1: #ffe3ea;
-  --suave-2: #ffe9d4;
-  --suave-3: #e1f4ee;
+  --suave-1: #fbeaf0;
+  --suave-2: #f8efe6;
+  --suave-3: #e6f3ee;
   --serie-1: #2a78d6;
   --serie-2: #eb6834;
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --fondo: #2a2027;
-  --superficie: #35292f;
-  --borde: #52414b;
+  --fondo: #1f1b1d;
+  --superficie: #2a2528;
+  --borde: #3f383c;
+  --relleno: #353034;
   --tinta: #fbeff0;
   --tinta-suave: #dcc9cf;
   --marca: #ff8fb0;
@@ -55,6 +57,7 @@
   --color-fondo: var(--fondo);
   --color-superficie: var(--superficie);
   --color-borde: var(--borde);
+  --color-relleno: var(--relleno);
   --color-tinta: var(--tinta);
   --color-tinta-suave: var(--tinta-suave);
   --color-marca: var(--marca);
@@ -120,23 +123,29 @@ body {
   .fiesta {
     animation: fiesta 1.6s ease-in-out infinite;
   }
+  /* Estilo «Calma» (D-207): tarjetas blancas sin marco, sombra casi invisible, mucho aire. */
   .tarjeta {
-    @apply border-borde bg-superficie rounded-3xl border p-4 shadow-[0_8px_24px_-14px_rgba(199,42,99,0.35)] sm:p-5;
+    @apply bg-superficie rounded-2xl p-4 shadow-[0_1px_2px_rgba(30,20,25,0.05),0_6px_20px_-12px_rgba(30,20,25,0.12)] sm:p-5;
   }
   /* Todo lo que se toca mide al menos 44 × 44 px (WCAG 2.5.5, recomendación de Apple y Google). */
   .boton {
     @apply bg-marca text-sobre-marca hover:bg-marca-fuerte inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-full px-5 text-base font-bold shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50;
   }
+  /* El secundario no lleva marco: un relleno suave. El color de marca, solo para lo principal. */
   .boton-suave {
-    @apply border-borde bg-superficie text-tinta hover:bg-fondo inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-full border px-5 text-base font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+    @apply bg-relleno text-tinta hover:bg-borde inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-full px-5 text-base font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
   }
   /* Botón solo con icono (editar, quitar…): mide 44 × 44 y no ocupa más. El nombre va en aria-label. */
   .boton-icono {
-    @apply border-borde bg-superficie text-tinta hover:bg-fondo inline-flex size-11 shrink-0 items-center justify-center rounded-full border text-lg transition-colors;
+    @apply text-tinta hover:bg-relleno inline-flex size-11 shrink-0 items-center justify-center rounded-full text-lg transition-colors;
+  }
+  /* Los botones de la cabecera (buscar, avisos, perfil, tema): sin relleno, para que no pesen (D-207). */
+  .boton-cabecera {
+    @apply text-tinta hover:bg-relleno inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-full px-2.5 text-base font-semibold transition-colors;
   }
   /* 16 px como mínimo: iOS no amplía la pantalla al enfocar un campo. */
   .campo {
-    @apply border-borde bg-superficie text-tinta placeholder:text-tinta-suave min-h-11 w-full rounded-2xl border px-4 text-base;
+    @apply border-borde bg-superficie text-tinta placeholder:text-tinta-suave focus:border-marca min-h-11 w-full rounded-xl border px-4 text-base;
   }
   /* Cintas de animal print de adorno (D-124). Son imágenes dentro de la hoja de estilos, sin estilos en línea. */
   .cinta {

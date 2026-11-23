@@ -183,10 +183,10 @@ export function Pestanas() {
               <Link
                 href={t.href}
                 aria-current={esActiva ? "page" : undefined}
-                className={`flex min-h-11 items-center rounded-full border px-4 text-base whitespace-nowrap ${
+                className={`flex min-h-11 items-center rounded-full px-4 text-base whitespace-nowrap ${
                   esActiva
-                    ? "bg-suave-1 border-marca text-marca-fuerte font-bold"
-                    : "border-borde bg-superficie text-tinta font-medium"
+                    ? "bg-superficie text-tinta font-bold shadow-[0_1px_3px_rgba(30,20,25,0.12)]"
+                    : "text-tinta-suave font-medium"
                 }`}
               >
                 {t.texto}

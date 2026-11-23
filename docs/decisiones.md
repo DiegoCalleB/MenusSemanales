@@ -1809,3 +1809,9 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Todoist, aparcado:** la sincronización (D-205) no se publica. El código queda guardado en el commit `cea670b` de la rama de desarrollo.
 - **Sin migraciones.** `modos` y `laboratorio` van en el documento del hogar.
 - **Semanas 2 y 3:** no se toca nada; la app cuenta qué se usa. Preguntas para Ana: ¿para qué abres la app?, ¿qué te sobra o te molesta?, ¿qué echas de menos? **Semana 4:** revisión de 15 minutos y regla «una entra, una sale».
+
+## D-207 · Aspecto «Calma»
+
+- **Petición (Diego):** mejorar mucho el aspecto. Elegido: estilo **Calma** (limpio, mucho aire, un solo acento usado poco) y **mantener el rosa y la cebra, más sutiles**. Solo aspecto: ninguna función cambia ni se mueve (para no estropear la medición de las semanas 2 y 3, D-206).
+- **Qué cambia:** fondo gris cálido muy claro; tarjetas blancas **sin marco** con una sombra casi invisible; botones secundarios **sin borde** (relleno suave) y el rosa solo en lo principal; botones de la cabecera sin relleno; pestañas como texto con la activa resaltada en blanco; campos con esquinas más suaves. En Hoy, la cena manda: el plato en grande y «Hoy cenáis…» como etiqueta. La cebra queda como un hilo fino en Hoy y en la compra; en la bienvenida de Ana, su cumpleaños y el regalo sigue como siempre.
+- Todo por tokens y clases comunes (`.tarjeta`, `.boton-suave`, `.boton-icono`, `.campo`, `.boton-cabecera`, `--relleno`), así que se aplica a toda la app a la vez, en claro y en oscuro.
