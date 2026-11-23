@@ -1798,3 +1798,12 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Posponer 1 hora:** las notificaciones llevan un botón «⏰ Luego». La base de datos deja ese aviso para dentro de unos 50 minutos y la llamada de cada hora lo vuelve a mandar (con sus mismos botones), hasta 3 veces seguidas. Guarda el mensaje que ya iba en la notificación junto a su código de un solo uso. Migración `20261125000000_avisos_personales` (3 funciones nuevas: `recordar_aviso`, `posponer_aviso`, `avisos_pospuestos`; y la `cfg` en el resumen).
 - **Sin migración aplicada:** las notificaciones salen como antes, sin «Luego», y las horas de la pantalla no llegan al servidor (valen las de siempre).
 - **Hecho:** el plan de notificaciones queda completo (fases 1, 2 y 3).
+
+## D-205 · Pendientes ↔ Todoist
+
+- **Petición (Diego):** conectar con Todoist (que se sincronicen las dos listas).
+- **Qué hay:** los pendientes sin fecha de la app y las tareas de un proyecto de Todoist llamado **«¡Hecho!»** (se crea solo la primera vez) son la misma lista, en los dos sentidos. Lo que apuntas en un sitio sale en el otro; lo que haces en uno se marca hecho en el otro; lo que quitas aquí se cierra allí. **Solo texto y hecho/no hecho**: ni fechas, ni prioridades, ni etiquetas. Un pendiente que se reabre aquí no se reabre en Todoist (y al revés).
+- **Quién:** solo la dueña de la cuenta de Todoist (`TODOIST_PERSONA_ID`, por defecto `diego`) ve el botón «🔄 Sincronizar con Todoist» (en Pendientes, en Hoy y en Fechas). Lo que trae de Todoist entra como pendiente suyo; lo que sube es lo suyo y lo de nadie (no lo asignado a otra persona). Se sincroniza sola al abrir Hoy y al volver a la app (como mucho cada 5 minutos).
+- **Seguridad:** el token de Todoist vive solo en el servidor (variable `TODOIST_TOKEN` en Railway); el navegador nunca lo ve. La ruta `/api/todoist` exige sesión y hogar. Si algo falla antes de leer la lista entera de Todoist, la app no cambia nada (nunca se aplica una lista a medias).
+- **Para activarlo (lo hace Diego, una vez):** en Todoist → Ajustes → Integraciones → Desarrollador, copiar el **token de API**; en Railway, añadir la variable `TODOIST_TOKEN` con ese valor (nunca en el chat ni en el código) y redesplegar. Sin la variable, no se ve nada.
+- **Datos:** `todoistId` en el pendiente y `todoistPorCerrar` en el documento del hogar; sin migración. API v1 de Todoist (`/projects`, `/tasks`, `/tasks/{id}/close`), comprobada con su especificación.

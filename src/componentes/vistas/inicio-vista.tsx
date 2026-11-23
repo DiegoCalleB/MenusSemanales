@@ -29,6 +29,7 @@ import { MiDiaHoy } from "../mi-dia-hoy";
 import { ObjetivosHoy } from "../objetivos-hoy";
 import { NotasHoy } from "../notas-hoy";
 import { PersonalizarHoy } from "../personalizar-hoy";
+import { TodoistAutomatico } from "../todoist-sincronizar";
 import { TARJETAS, aLaVista, ajusteDe, ocultasDe, ordenDe } from "@/dominio/hoy";
 import { MedicacionHoy } from "../medicacion-hoy";
 import { PapelesHoy } from "../papeles-hoy";
@@ -378,6 +379,8 @@ export function InicioVista() {
           )}
         </div>
       )}
+
+      <TodoistAutomatico />
 
       <BarraDeCaptura />
 

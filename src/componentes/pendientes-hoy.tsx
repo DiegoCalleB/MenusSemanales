@@ -4,6 +4,7 @@ import { type FormEvent, useState } from "react";
 import { MAX_TEXTO_PENDIENTE, abiertos, textoEspera } from "@/dominio/pendientes";
 import { useGuardar } from "./editar";
 import { useHogar } from "./proveedor-hogar";
+import { TodoistSincronizar } from "./todoist-sincronizar";
 import { SeccionHoy, Vacio } from "./seccion-hoy";
 
 const MAX_EN_HOY = 6;
@@ -51,6 +52,7 @@ export function PendientesHoy() {
         texto: todos.length > MAX_EN_HOY ? `Ver los ${todos.length}` : "Gestionar",
       }}
     >
+      <TodoistSincronizar />
       <form onSubmit={apuntar} noValidate aria-label="Nuevo pendiente" className="flex gap-2">
         <input
           className="campo min-w-0 flex-1"

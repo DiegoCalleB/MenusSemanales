@@ -10,6 +10,7 @@ import {
 } from "@/dominio/pendientes";
 import { BotonEditar, Campo, Formulario, useGuardar } from "./editar";
 import { useHogar } from "./proveedor-hogar";
+import { TodoistSincronizar } from "./todoist-sincronizar";
 
 type Filtro = "todos" | "nadie" | string;
 
@@ -68,6 +69,7 @@ function Pendientes() {
 
   return (
     <div className="flex flex-col gap-4">
+      <TodoistSincronizar />
       <NuevoPendiente />
 
       {hayAsignados && (

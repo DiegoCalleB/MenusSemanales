@@ -50,6 +50,7 @@ import {
   validarPaso,
 } from "@/dominio/objetivos";
 import { type AjusteHoy, limpiarAjuste } from "@/dominio/hoy";
+import { type ResultadoDeSincronizacion, esIdDeTodoist, textoDePendiente } from "@/dominio/todoist";
 import { type AvisosCfg, limpiarCfg } from "@/dominio/avisos-personales";
 import { MAX_NOTAS, type Nota, type TipoNota, validarNota } from "@/dominio/notas";
 import {
@@ -250,6 +251,8 @@ export interface EstadoHogar {
   objetivos: Objetivo[];
   /** Qué tarjetas ve cada persona en «Hoy» y en qué orden (D-196). */
   ajustesHoy: AjusteHoy[];
+  /** Tareas de Todoist que hay que cerrar en la próxima sincronización (pendientes que se quitaron). */
+  todoistPorCerrar: string[];
   /** Notas, ideas y recuerdos de cada persona (D-199): personales, no salen de la app. */
   notas: Nota[];
   /** Cuidarse (D-182): agua, ejercicio y hábitos de cada persona. En el documento del hogar. */
@@ -496,6 +499,8 @@ export type Accion =
   /** Una idea resuelta (o no) sale de la bandeja sin borrarse; con `false`, vuelve. */
   | { tipo: "nota/archivar"; id: string; archivada: boolean }
   | { tipo: "nota/borrar"; id: string }
+  /** Aplica lo que ha devuelto Todoist (D-205): vínculos nuevos, lo hecho allí y lo nuevo de allí. */
+  | ({ tipo: "todoist/aplicar"; personaId: string } & ResultadoDeSincronizacion)
   /** Hoy a tu manera (D-196): qué tarjetas se ven y en qué orden, para una persona. */
   | { tipo: "hoy/ajustar"; personaId: string; orden: string[]; ocultas: string[] }
   | { tipo: "hoy/restablecer"; personaId: string }
@@ -1008,6 +1013,7 @@ const normalizarCampos = (e: EstadoHogar): EstadoHogar =>
   Array.isArray(e.objetivos) &&
   e.objetivos.every((o) => typeof o.creadoEn === "string" && o.cada !== undefined) &&
   Array.isArray(e.ajustesHoy) &&
+  Array.isArray(e.todoistPorCerrar) &&
   Array.isArray(e.notas) &&
   Array.isArray(e.lluviaPreparada) &&
   Array.isArray(e.cuidado) &&
@@ -1046,6 +1052,7 @@ const normalizarCampos = (e: EstadoHogar): EstadoHogar =>
             }))
           : [],
         ajustesHoy: Array.isArray(e.ajustesHoy) ? e.ajustesHoy : [],
+        todoistPorCerrar: Array.isArray(e.todoistPorCerrar) ? e.todoistPorCerrar : [],
         notas: Array.isArray(e.notas) ? e.notas : [],
         lluviaPreparada: Array.isArray(e.lluviaPreparada) ? e.lluviaPreparada : [],
         cuidado: Array.isArray(e.cuidado) ? e.cuidado : [],
@@ -2669,11 +2676,68 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
     case "objetivo/borrar":
       return { ...e, objetivos: e.objetivos.filter((o) => o.id !== accion.id) };
 
-    case "pendiente/borrar":
-      return { ...e, pendientes: e.pendientes.filter((x) => x.id !== accion.id) };
+    case "pendiente/borrar": {
+      // Si estaba en Todoist, esa tarea se cierra allí en la próxima sincronización (D-205).
+      const quitada = e.pendientes.find((x) => x.id === accion.id);
+      return {
+        ...e,
+        pendientes: e.pendientes.filter((x) => x.id !== accion.id),
+        todoistPorCerrar: quitada?.todoistId
+          ? [...new Set([...e.todoistPorCerrar, quitada.todoistId])].slice(-100)
+          : e.todoistPorCerrar,
+      };
+    }
 
-    case "pendiente/limpiar":
-      return { ...e, pendientes: e.pendientes.filter((x) => x.hechoEn === null) };
+    case "pendiente/limpiar": {
+      const hechos = e.pendientes.filter((x) => x.hechoEn !== null && x.todoistId);
+      return {
+        ...e,
+        pendientes: e.pendientes.filter((x) => x.hechoEn === null),
+        todoistPorCerrar: hechos.length
+          ? [...new Set([...e.todoistPorCerrar, ...hechos.map((x) => x.todoistId!)])].slice(-100)
+          : e.todoistPorCerrar,
+      };
+    }
+
+    case "todoist/aplicar": {
+      if (!e.personas.some((p) => p.id === accion.personaId)) return e;
+      const enlaces = new Map(
+        accion.creadas.filter((c) => esIdDeTodoist(c.id)).map((c) => [c.ref, c.id]),
+      );
+      const activas = new Map(
+        accion.activas.filter((t) => esIdDeTodoist(t.id)).map((t) => [t.id, t.content]),
+      );
+      // 1. Las tareas que se crearon ahora quedan enlazadas con su pendiente.
+      let pendientes = e.pendientes.map((p) =>
+        !p.todoistId && enlaces.has(p.id) ? { ...p, todoistId: enlaces.get(p.id)! } : p,
+      );
+      // 2. Lo enlazado que ya no está abierto en Todoist se da por hecho aquí.
+      pendientes = pendientes.map((p) =>
+        p.todoistId && p.hechoEn === null && !activas.has(p.todoistId)
+          ? { ...p, hechoEn: e.hoy }
+          : p,
+      );
+      // 3. Lo nuevo de Todoist entra como pendiente de esa persona.
+      const conocidas = new Set(pendientes.flatMap((p) => (p.todoistId ? [p.todoistId] : [])));
+      const nuevas = [...activas.entries()]
+        .filter(([id, content]) => !conocidas.has(id) && textoDePendiente(content) !== "")
+        .slice(0, Math.max(0, MAX_PENDIENTES - pendientes.length))
+        .map(([id, content]): Pendiente => ({
+          id: `pen-td-${id}`,
+          texto: textoDePendiente(content),
+          personaId: accion.personaId,
+          importante: false,
+          creadoEn: e.hoy,
+          hechoEn: null,
+          todoistId: id,
+        }));
+      const cerradas = new Set(accion.cerradas);
+      return {
+        ...e,
+        pendientes: [...pendientes, ...nuevas],
+        todoistPorCerrar: e.todoistPorCerrar.filter((id) => !cerradas.has(id)),
+      };
+    }
 
     case "vencimiento/guardar": {
       const fallo = (t: string): EstadoHogar => ({
