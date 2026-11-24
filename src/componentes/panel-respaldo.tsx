@@ -11,6 +11,7 @@ import {
   textoDeRespaldo,
 } from "@/infraestructura/respaldo";
 import { useCuenta, useHogar } from "./proveedor-hogar";
+import { useAlmacenamientoProtegido } from "./almacenamiento";
 import { EVENTO_RESPALDOS } from "./usar-nube";
 
 const almacenamiento = (): Storage | null => {
@@ -47,6 +48,7 @@ const cuando = (iso: string) =>
  * sobrescribiría lo de toda la familia.
  */
 export function PanelRespaldo() {
+  const protegido = useAlmacenamientoProtegido();
   const { estado, despachar } = useHogar();
   const { fase } = useCuenta();
   const conectado = fase === "conectado";
@@ -89,6 +91,17 @@ export function PanelRespaldo() {
         Lo que hay en este móvil ({resumen(estado)}). Descárgala y guárdala: es tu seguro si se
         borran los datos del navegador o cambias de móvil.
       </p>
+      {protegido === true && (
+        <p role="status" className="text-tinta-suave text-sm">
+          ✅ El móvil guarda tus datos de forma protegida: no los borra aunque le falte espacio.
+        </p>
+      )}
+      {protegido === false && (
+        <p role="status" className="bg-aviso-fondo text-aviso-texto rounded-2xl p-3 text-sm">
+          ⚠️ El navegador podría borrar los datos de este móvil si le falta espacio. Instala la app
+          en la pantalla de inicio y descarga una copia de vez en cuando.
+        </p>
+      )}
       <div className="flex flex-wrap gap-2">
         <button
           type="button"

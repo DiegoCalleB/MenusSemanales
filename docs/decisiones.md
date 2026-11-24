@@ -1815,3 +1815,13 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Petición (Diego):** mejorar mucho el aspecto. Elegido: estilo **Calma** (limpio, mucho aire, un solo acento usado poco) y **mantener el rosa y la cebra, más sutiles**. Solo aspecto: ninguna función cambia ni se mueve (para no estropear la medición de las semanas 2 y 3, D-206).
 - **Qué cambia:** fondo gris cálido muy claro; tarjetas blancas **sin marco** con una sombra casi invisible; botones secundarios **sin borde** (relleno suave) y el rosa solo en lo principal; botones de la cabecera sin relleno; pestañas como texto con la activa resaltada en blanco; campos con esquinas más suaves. En Hoy, la cena manda: el plato en grande y «Hoy cenáis…» como etiqueta. La cebra queda como un hilo fino en Hoy y en la compra; en la bienvenida de Ana, su cumpleaños y el regalo sigue como siempre.
 - Todo por tokens y clases comunes (`.tarjeta`, `.boton-suave`, `.boton-icono`, `.campo`, `.boton-cabecera`, `--relleno`), así que se aplica a toda la app a la vez, en claro y en oscuro.
+
+## D-208 · Sin cobertura: guardar todo en el móvil
+
+- **Petición (Diego):** guardar todo en local temporalmente por si no hay cobertura.
+- **Lo que ya había (D-063, D-102, D-129):** la app es «local primero». Cada cambio se guarda en el móvil al instante y se pone en una cola; al volver internet se sube a la nube, reaplicando los cambios propios sobre lo que hayan hecho los demás. El service worker guarda todas las pantallas para abrir la app sin red, y una franja avisa «Sin conexión: los cambios aún NO están en la nube. Se guardarán al volver». Hay prueba de pantalla (apuntar compra y mochila sin conexión, recargar y volver).
+- **Huecos que se cubren ahora:**
+  1. **Almacenamiento protegido:** al abrir la app se pide al navegador que **no borre** los datos de este móvil si le falta espacio (`navigator.storage.persist()`); en «Cuenta → Copia de seguridad» se dice si está concedido o si hay que instalar la app y descargar copias.
+  2. **Lo último que se supo:** el **tiempo** (hasta 1 día de edad) y los **eventos de Google Calendar** (hasta 7 días) se guardan en el móvil con su fecha y salen sin conexión, en vez de desaparecer.
+- **Lo que necesita internet y sigue sin funcionar sin ella:** la IA (captura, preguntar, leer circulares), los planes del barrio y el Metropolitano (apagados en el laboratorio) y los avisos del móvil.
+- **Si se desinstala la app o se borran los datos del navegador antes de volver a tener cobertura,** lo no subido se pierde: por eso la copia de seguridad descargable.
