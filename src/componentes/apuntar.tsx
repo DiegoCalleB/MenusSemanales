@@ -11,6 +11,12 @@ const fechaCorta = (f: string) =>
     new Date(`${f}T12:00:00Z`),
   );
 
+/** El día de la semana en tres letras («mar», «sáb»): ocupa poco y ayuda a situarse (D-209). */
+const diaDeLaSemana = (f: string) =>
+  new Intl.DateTimeFormat("es-ES", { weekday: "short", timeZone: "UTC" })
+    .format(new Date(`${f}T12:00:00Z`))
+    .replace(".", "");
+
 /** Un apunte por línea, como en una nota del móvil. Con varias líneas pegadas pide confirmar antes. */
 export function Apuntar() {
   const { estado, despachar } = useHogar();
@@ -99,6 +105,9 @@ export function Apuntar() {
                   className="border-borde bg-fondo flex items-center justify-between gap-2 rounded-2xl border py-1.5 pr-1.5 pl-3"
                 >
                   <p className="min-w-0 text-base">
+                    <span className="text-tinta-suave text-sm font-semibold uppercase">
+                      {diaDeLaSemana(a.fecha)}{" "}
+                    </span>
                     <strong>{fechaCorta(a.fecha)}</strong> · {resumenApunte(a)}
                   </p>
                   <span className="flex shrink-0 gap-1">

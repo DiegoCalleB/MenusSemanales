@@ -1825,3 +1825,8 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
   2. **Lo último que se supo:** el **tiempo** (hasta 1 día de edad) y los **eventos de Google Calendar** (hasta 7 días) se guardan en el móvil con su fecha y salen sin conexión, en vez de desaparecer.
 - **Lo que necesita internet y sigue sin funcionar sin ella:** la IA (captura, preguntar, leer circulares), los planes del barrio y el Metropolitano (apagados en el laboratorio) y los avisos del móvil.
 - **Si se desinstala la app o se borran los datos del navegador antes de volver a tener cobertura,** lo no subido se pierde: por eso la copia de seguridad descargable.
+
+## D-209 · El día de la semana en «Apuntado»
+
+- **Petición (Diego):** indicar el día de la semana en la lista de apuntes de Fechas, sin que ocupe mucho.
+- **Qué cambia:** cada apunte empieza con el día en tres letras, pequeño y en gris, antes de la fecha: «VIE **27 nov** · Yllana · 18:00». No añade una línea ni más ancho notable.
