@@ -46,7 +46,7 @@ export function BotonTema() {
   if (!c) throw new Error("BotonTema debe usarse dentro de <ProveedorTema>");
   const oscuro = c.tema === "oscuro";
   return (
-    <button type="button" className="boton-suave" onClick={c.alternar} aria-pressed={oscuro}>
+    <button type="button" className="boton-cabecera" onClick={c.alternar} aria-pressed={oscuro}>
       <span aria-hidden="true">{oscuro ? "☀️" : "🌙"}</span>
       <span className="sr-only min-[420px]:not-sr-only">
         {oscuro ? "Tema claro" : "Tema oscuro"}

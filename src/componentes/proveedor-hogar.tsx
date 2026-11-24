@@ -21,6 +21,7 @@ import { hoyDeAhora } from "@/dominio/dia";
 import { esAccionSincronizable } from "@/aplicacion/sincronizacion";
 import { crearAlmacenLocal } from "@/infraestructura/almacen-local";
 import { calendariosEscolaresDe, registrarCursos } from "@/dominio/calendario-escolar";
+import { protegerAlmacenamiento } from "./almacenamiento";
 import { type CuentaContexto, NUBE_DISPONIBLE, olvidarPendientes, useNube } from "./usar-nube";
 
 /**
@@ -108,6 +109,11 @@ export function ProveedorHogar({
   const primera = useRef(true);
   const [cargado, fijarCargado] = useState(false);
   const almacenActual = useRef<AlmacenHogar | null>(null);
+
+  useEffect(() => {
+    // Sin cobertura, lo guardado en el móvil es lo único que hay: se pide que no se borre (D-208).
+    void protegerAlmacenamiento();
+  }, []);
 
   useEffect(() => {
     const a = almacen ?? crearAlmacenLocal(window.localStorage);

@@ -220,7 +220,7 @@ export function CompraVista() {
           aria-label="Lista vacía"
           className="from-suave-1 to-suave-3 border-borde flex flex-col items-center gap-1 overflow-hidden rounded-3xl border bg-linear-to-br px-4 pb-8 text-center"
         >
-          <CintaAnimal className="-mx-4 mb-6 self-stretch" />
+          <CintaAnimal className="-mx-4 mb-6 h-2 self-stretch" />
           <p aria-hidden="true" className="text-5xl">
             {total > 0 ? "🎉" : "🧺"}
           </p>

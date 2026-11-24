@@ -83,11 +83,8 @@ export function InicioVista() {
 
   const tarjetas: Record<string, ReactNode> = {
     cena: (
-      <section
-        aria-labelledby="hoy"
-        className="from-suave-1 to-suave-2 border-borde flex flex-col gap-3 overflow-hidden rounded-3xl border bg-linear-to-br p-4 sm:p-6"
-      >
-        <CintaAnimal className="-mx-4 -mt-4 sm:-mx-6 sm:-mt-6" />
+      <section aria-labelledby="hoy" className="tarjeta flex flex-col gap-3 overflow-hidden sm:p-6">
+        <CintaAnimal className="-mx-4 -mt-4 h-2 sm:-mx-6 sm:-mt-6" />
         <p className="text-tinta-suave text-base font-semibold">
           {yo ? `¡Hola, ${yo.nombre}! 👋` : "¡Hola! 👋"}
           <span className="block text-sm font-medium first-letter:uppercase">
@@ -99,7 +96,7 @@ export function InicioVista() {
             }).format(new Date(`${estado.hoy}T12:00:00Z`))}
           </span>
         </p>
-        <h1 id="hoy" className="text-2xl font-extrabold tracking-tight">
+        <h1 id="hoy" className="text-tinta-suave text-base font-bold">
           {cena ? "Hoy cenáis…" : "¿Qué cenamos hoy?"}
         </h1>
         {comidaHoy.length > 0 && (
@@ -108,8 +105,8 @@ export function InicioVista() {
           </p>
         )}
         {cena && (
-          <p className="flex items-center gap-2 text-xl font-bold">
-            <span aria-hidden="true" className="text-3xl">
+          <p className="flex items-center gap-3 text-2xl leading-tight font-extrabold tracking-tight">
+            <span aria-hidden="true" className="text-4xl">
               {EMOJI_GRUPO[(cena.plato as { grupo?: string }).grupo ?? "otro"] ?? "🍽️"}
             </span>
             {cenas.map((c) => c.plato.nombre).join(" + ")}

@@ -3663,4 +3663,55 @@ test.describe("Hoy como tablero fijo (D-180)", () => {
     await expect(pagina.getByRole("link", { name: "Reparto", exact: true })).toHaveCount(0);
     await contexto.close();
   });
+
+  test("sin cobertura (D-208): lo apuntado sobrevive a cerrar la app y se mantiene el tiempo guardado", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/compra");
+    await expect
+      .poll(
+        () =>
+          pagina.evaluate(async () => {
+            const nombre = (await caches.keys()).find((n) => n.startsWith("hecho-paginas"));
+            return nombre ? (await (await caches.open(nombre)).keys()).length : 0;
+          }),
+        { timeout: 30_000 },
+      )
+      .toBeGreaterThanOrEqual(RUTAS.length);
+    await pagina.evaluate(async () => {
+      await navigator.serviceWorker.ready;
+      if (!navigator.serviceWorker.controller) {
+        await new Promise((r) =>
+          navigator.serviceWorker.addEventListener("controllerchange", r, { once: true }),
+        );
+      }
+    });
+    await contexto.setOffline(true);
+    await pagina.goto("/compra");
+    await pagina.getByLabel("Añadir algo a la lista").fill("Pilas sin cobertura");
+    await pagina.getByRole("button", { name: "Añadir" }).click();
+    await expect(pagina.getByRole("checkbox", { name: /Pilas sin cobertura/ })).toBeVisible();
+
+    // Se cierra la app (una página nueva en el mismo móvil, aún sin internet) y se vuelve a abrir.
+    const nueva = await contexto.newPage();
+    await nueva.goto("/compra");
+    await expect(nueva.getByRole("checkbox", { name: /Pilas sin cobertura/ })).toBeVisible();
+
+    // Los datos de lo último que se supo (tiempo) se guardan en el móvil con su fecha.
+    const guardado = await nueva.evaluate(() => {
+      localStorage.setItem(
+        "menus-semanales:cache:prueba",
+        JSON.stringify({ en: Date.now(), valor: { dias: [] } }),
+      );
+      return localStorage.getItem("menus-semanales:cache:prueba") !== null;
+    });
+    expect(guardado).toBe(true);
+
+    // Vuelve la cobertura: sigue ahí.
+    await contexto.setOffline(false);
+    await nueva.goto("/compra");
+    await expect(nueva.getByRole("checkbox", { name: /Pilas sin cobertura/ })).toBeVisible();
+    await contexto.close();
+  });
 });

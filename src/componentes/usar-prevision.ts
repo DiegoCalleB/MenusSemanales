@@ -2,20 +2,38 @@
 
 import { useEffect, useState } from "react";
 import { type Pronostico, pronosticosDe } from "@/dominio/tiempo";
+import { UN_DIA_MS, guardarCache, leerCache } from "./cache-local";
 
 /**
  * La previsión del tiempo (D-145, D-148), pedida al servidor (no a Open-Meteo, para no abrir la
- * CSP). Vacía mientras llega o si falla: entonces no se enseña nada del tiempo.
+ * CSP). Sin conexión, se enseña lo último que se supo (hasta un día de edad, D-208); si no hay
+ * nada, no se enseña nada del tiempo.
  */
+const CLAVE = "tiempo";
+
+const desdeCrudo = (j: { dias?: unknown }) =>
+  pronosticosDe({ daily: aDaily(j.dias), hourly: aHourly(j.dias) });
+
 export function usePrevision(): Pronostico[] {
   const [dias, setDias] = useState<Pronostico[]>([]);
   useEffect(() => {
     let vivo = true;
+    // Primero lo último que se supo (si lo hay y no es viejo); luego, lo nuevo.
+    const guardado = leerCache<{ dias?: unknown }>(CLAVE, UN_DIA_MS);
+    if (guardado) {
+      const d = desdeCrudo(guardado);
+      // Después del primer pintado, para que servidor y navegador generen el mismo HTML.
+      if (d.length > 0) void Promise.resolve().then(() => vivo && setDias(d));
+    }
     fetch("/api/tiempo")
       .then((r) => (r.ok ? r.json() : null))
       .then((j: { dias?: unknown } | null) => {
         // La respuesta viene del servidor, pero se vuelve a validar: lo que no encaje no se pinta.
-        if (vivo && j) setDias(pronosticosDe({ daily: aDaily(j.dias), hourly: aHourly(j.dias) }));
+        if (!vivo || !j) return;
+        const d = desdeCrudo(j);
+        if (d.length === 0) return;
+        setDias(d);
+        guardarCache(CLAVE, { dias: j.dias });
       })
       .catch(() => {});
     return () => {

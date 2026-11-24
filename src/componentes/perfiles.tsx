@@ -88,7 +88,7 @@ export function BotonPerfil() {
   const yo = gente[indice];
   if (!yo) return null;
   return (
-    <button type="button" className="boton-suave" onClick={() => fijarYo(null)}>
+    <button type="button" className="boton-cabecera" onClick={() => fijarYo(null)}>
       <Avatar persona={yo} indice={indice} />
       <span className="sr-only min-[420px]:not-sr-only">{yo.nombre}</span>
       <span className="sr-only">. Cambiar de perfil</span>
