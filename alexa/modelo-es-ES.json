@@ -1,0 +1,53 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "hecho",
+      "intents": [
+        { "name": "AMAZON.CancelIntent", "samples": [] },
+        { "name": "AMAZON.HelpIntent", "samples": [] },
+        { "name": "AMAZON.StopIntent", "samples": [] },
+        { "name": "AMAZON.NavigateHomeIntent", "samples": [] },
+        { "name": "AMAZON.FallbackIntent", "samples": [] },
+        {
+          "name": "AnadirCompraIntent",
+          "slots": [{ "name": "producto", "type": "AMAZON.SearchQuery" }],
+          "samples": [
+            "añade {producto}",
+            "añade {producto} a la compra",
+            "añade {producto} a la lista de la compra",
+            "apunta {producto}",
+            "apunta {producto} en la compra",
+            "apunta {producto} en la lista",
+            "pon {producto} en la lista de la compra",
+            "necesitamos {producto}",
+            "tenemos que comprar {producto}"
+          ]
+        },
+        {
+          "name": "CenaIntent",
+          "slots": [],
+          "samples": [
+            "qué hay de cena",
+            "qué hay de cena hoy",
+            "qué cenamos",
+            "qué cenamos hoy",
+            "qué hay para cenar",
+            "la cena de hoy"
+          ]
+        },
+        {
+          "name": "HoyIntent",
+          "slots": [],
+          "samples": [
+            "qué tengo hoy",
+            "qué tenemos hoy",
+            "qué hay hoy",
+            "qué hay apuntado hoy",
+            "qué tengo apuntado para hoy"
+          ]
+        }
+      ],
+      "types": []
+    }
+  }
+}

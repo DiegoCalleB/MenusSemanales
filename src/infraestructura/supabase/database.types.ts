@@ -1123,6 +1123,14 @@ export type Database = {
         Args: { p_hogar_id: string; p_nueva?: boolean }
         Returns: string
       }
+      alexa_anadir_compra: {
+        Args: { p_token: string; p_texto: string }
+        Returns: string
+      }
+      recoger_compra_alexa: {
+        Args: { p_hogar_id: string }
+        Returns: Json
+      }
       circulares_pendientes: {
         Args: { p_hogar_id: string }
         Returns: Json

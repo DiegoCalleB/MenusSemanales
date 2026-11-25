@@ -139,3 +139,7 @@ export const circularesPendientes = (cliente: Cliente, hogarId: string) =>
 /** Una circular ya revisada (apuntada o descartada). */
 export const revisarCircular = (cliente: Cliente, id: string) =>
   cliente.rpc("revisar_circular_correo", { p_id: id });
+
+/** Lo que se ha pedido a Alexa para la compra (D-214), recogido una sola vez entre todos los móviles. */
+export const recogerCompraAlexa = (cliente: Cliente, hogarId: string) =>
+  cliente.rpc("recoger_compra_alexa", { p_hogar_id: hogarId });

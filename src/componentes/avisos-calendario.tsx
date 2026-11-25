@@ -41,6 +41,8 @@ export function AvisosCalendario() {
   const webcalCasa = enlaceCasa?.replace(/^https?:/, "webcal:") ?? null;
   const enlaceTiempo = enlace ? `${enlace}&solo=tiempo` : null;
   const webcalTiempo = enlaceTiempo?.replace(/^https?:/, "webcal:") ?? null;
+  // Alexa (D-214): la dirección que se pega en la skill. Lleva el mismo token que el calendario.
+  const enlaceAlexa = token ? enlaceDeApp(`/api/alexa/${token}`) : null;
 
   async function pedir(renovar: boolean) {
     if (!hogar) return;
@@ -198,6 +200,24 @@ export function AvisosCalendario() {
                 onClick={() => void copiar(enlaceTiempo)}
               >
                 Copiar el enlace del tiempo
+              </button>
+            </div>
+          </div>
+          <div className="border-borde flex flex-col gap-2 rounded-2xl border p-3">
+            <p className="text-base">
+              <span aria-hidden="true">🗣️ </span>
+              <strong>Alexa</strong>: «Alexa, dile a Hecho que añada leche», «qué hay de cena» o
+              «qué tengo hoy». Solo habla de la compra, la cena y las citas. Para activarla hay que
+              crear la skill en la consola de Alexa y pegar esta dirección (los pasos están en
+              docs/alexa.md).
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="boton-suave"
+                onClick={() => void copiar(enlaceAlexa)}
+              >
+                Copiar la dirección para Alexa
               </button>
             </div>
           </div>
