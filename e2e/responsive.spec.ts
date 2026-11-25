@@ -3714,4 +3714,54 @@ test.describe("Hoy como tablero fijo (D-180)", () => {
     await expect(nueva.getByRole("checkbox", { name: /Pilas sin cobertura/ })).toBeVisible();
     await contexto.close();
   });
+
+  test("Keep (D-210): compartir una lista solo importa lo que falta; pegar fechas; atajos", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    // Una lista de la compra compartida desde Keep: lo marcado no entra, ni el grupo «MERCADONA».
+    const lista =
+      "☐ Recogedor terraza\n☐ MERCADONA\n    ☐ Pan de leche\n    ☑ Mozzarella\n    ☐ Latas gatos";
+    await pagina.goto(`/compartido?title=Lista&text=${encodeURIComponent(lista)}`, {
+      waitUntil: "networkidle",
+    });
+    const tarjeta = pagina.getByRole("region", { name: /Lista de Keep/ });
+    await expect(tarjeta.getByText(/Faltan/)).toContainText("3");
+    await expect(tarjeta.getByText("Mozzarella")).toHaveCount(0);
+    await expect(tarjeta.getByText(/MERCADONA/)).toBeVisible();
+    await tarjeta.getByRole("button", { name: /A la compra \(3\)/ }).click();
+    await expect(pagina.getByText(/Añadidos 3 artículos a la compra/)).toBeVisible();
+    await cargar(pagina, "/compra");
+    await expect(pagina.getByRole("checkbox", { name: /Latas gatos/ })).toBeVisible();
+    await expect(pagina.getByRole("checkbox", { name: /Pan de leche/ })).toBeVisible();
+    await expect(pagina.getByRole("checkbox", { name: /Mozzarella/ })).toHaveCount(0);
+
+    // Pegar otra lista desde la compra.
+    await pagina.getByText(/Pegar una lista de Keep/).click();
+    await pagina.getByLabel("Lista de Keep").fill("☐ Detergente ropa\n☑ Queso cuña");
+    await pagina.getByRole("button", { name: /A la compra \(1\)/ }).click();
+    await expect(pagina.getByRole("checkbox", { name: /Detergente ropa/ })).toBeVisible();
+
+    // Una nota de fechas: solo lo pendiente; con fecha va a citas, sin fecha a tareas.
+    const fechas =
+      "☐ 27 Noviembre 18:00 Yllana\n☑ 28 Noviembre Mercado circular\n☐ Certificado DNI";
+    await pagina.goto(`/compartido?text=${encodeURIComponent(fechas)}`, {
+      waitUntil: "networkidle",
+    });
+    const t2 = pagina.getByRole("region", { name: /Lista de Keep/ });
+    await t2.getByRole("button", { name: /A fechas y tareas/ }).click();
+    await expect(pagina.getByText(/Apuntadas 1 fecha y 1 tarea/)).toBeVisible();
+    await cargar(pagina, "/fechas");
+    await expect(pagina.getByRole("list", { name: "Apuntes" }).getByText(/Yllana/)).toBeVisible();
+    await expect(
+      pagina.getByRole("list", { name: "Apuntes" }).getByText(/Mercado circular/),
+    ).toHaveCount(0);
+
+    // Los atajos del icono abren con el campo listo.
+    await pagina.goto("/compra?anadir=1", { waitUntil: "networkidle" });
+    await expect(pagina.getByLabel("Añadir algo a la lista")).toBeFocused();
+    await pagina.goto("/fechas?apuntar=1", { waitUntil: "networkidle" });
+    await expect(pagina.getByLabel(/Escribe como en una nota/)).toBeFocused();
+    await contexto.close();
+  });
 });

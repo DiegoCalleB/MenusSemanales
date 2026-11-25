@@ -33,9 +33,20 @@ describe("parsearAgenda", () => {
     ]);
   });
 
+  it("quita las casillas de Keep: lo marcado ya está hecho y no se apunta (D-210)", () => {
+    const r = parsearAgenda(
+      "☐ 27 Noviembre 18:00 Yllana\n☑ 28 Noviembre Mercado\n[x] Dentista\n[ ] Veterinario Punky!!!\nCertificado DNI",
+      HOY,
+    );
+    expect(r.conFecha.map((a) => [a.fecha, a.hora, a.titulo])).toEqual([
+      ["2026-11-27", "18:00", "Yllana"],
+    ]);
+    expect(r.sinFecha).toEqual(["Veterinario Punky!!!", "Certificado DNI"]);
+  });
+
   it("ignora casillas y viñetas, perdona erratas en el mes y deja lo sin fecha como tarea", () => {
     const r = parsearAgenda(
-      "[X] 23 Septimembre 19:00 Láser\n[ ] Veterinario Punky!!!\n- 17 Inscripción taller\n[X] \n[ ]\n* 4 sept. Lluvia",
+      "[ ] 23 Septimembre 19:00 Láser\n[ ] Veterinario Punky!!!\n- 17 Inscripción taller\n[ ] \n[ ]\n* 4 sept. Lluvia",
       HOY,
     );
     expect(r.conFecha.map((a) => [a.fecha, a.hora, a.titulo])).toEqual([

@@ -17,6 +17,7 @@ import { BotonesCompartir } from "../compartir-botones";
 import { ComprarOnline } from "../comprar-online";
 import { CintaAnimal } from "../cinta-animal";
 import { EntradaCompra } from "../entrada-compra";
+import { PegarListaDeKeep } from "../lista-de-keep";
 import { OrdenarConIa } from "../ordenar-con-ia";
 import { PropuestasCompra } from "../propuestas-compra";
 import { formatearCantidad } from "../formato";
@@ -296,6 +297,9 @@ export function CompraVista() {
           </ul>
         </details>
       )}
+
+      {/* Al final, para que la lista siga a la vista nada más abrir la compra (D-210). */}
+      {!modoTienda && <PegarListaDeKeep />}
     </div>
   );
 }

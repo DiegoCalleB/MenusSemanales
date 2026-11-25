@@ -1830,3 +1830,12 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 
 - **Petición (Diego):** indicar el día de la semana en la lista de apuntes de Fechas, sin que ocupe mucho.
 - **Qué cambia:** cada apunte empieza con el día en tres letras, pequeño y en gris, antes de la fecha: «VIE **27 nov** · Yllana · 18:00». No añade una línea ni más ancho notable.
+
+## D-210 · Listas de Keep → ¡Hecho!, y atajos del icono
+
+- **Petición (Diego y Ana siguen usando Keep):** pasar la lista de la compra y las próximas fechas de Keep a la app, **solo lo que no está marcado**; y que apuntar en la app sea tan cómodo como en Keep.
+- **Por qué no hay enlace con Keep:** Keep no tiene API para cuentas personales; ser colaborador de una nota no da a la app forma de leerla. Se hace con el texto de la nota, que sí se puede compartir o copiar.
+- **Compartir desde Keep** (⋮ → Enviar → «¡Hecho!»): si el texto parece una lista (casillas «☐ ☑ [ ] [x]» o varias líneas cortas), no se gasta IA: sale la tarjeta **«Lista de Keep»** con lo que falta, lo ya marcado aparte (no se importa) y los **grupos** como «MERCADONA» (un elemento con cosas hundidas debajo, o un título en mayúsculas) sin contarlos como artículo. Dos botones: **🛒 A la compra (N)** (cada línea, sin repetir lo ya apuntado) y **📅 A fechas y tareas** (con fecha → citas; sin fecha → tareas de la persona).
+- **Pegar:** en la compra, «📋 Pegar una lista de Keep»; en Fechas, la caja «Apuntar» ya entendía las líneas de una nota y ahora **omite lo marcado** (antes importaba también lo marcado con «[X]»).
+- **Atajos al mantener pulsado el icono** (Android): «Añadir a la compra» (abre con el campo listo) y «Apuntar una fecha».
+- **Límites:** no es sincronización automática: se pasa la lista cuando se quiere. Keep no se vacía solo: lo importado sigue en Keep hasta que se marque o borre allí. El formato exacto del texto que manda Keep puede variar; se entienden las casillas más habituales y, si no hay casillas, todo cuenta como pendiente.
