@@ -5,6 +5,7 @@ import { useState } from "react";
 import { enlaceGoogleCalendar, textoParaKeep } from "@/dominio/agenda";
 import { type EventoCalendario, generarIcs } from "@/dominio/compartir";
 import { type CuentaAtras, cuentaAtras } from "@/dominio/cuenta-atras";
+import { citasRepetidas } from "@/aplicacion/estado";
 import { fechasParaCompartir } from "@/aplicacion/compartir";
 import { textoFechas } from "@/dominio/compartir";
 import { Apuntar } from "../apuntar";
@@ -13,6 +14,7 @@ import { CitasPasadas } from "../citas-pasadas";
 import { Buscador } from "../buscador";
 import { PendientesSeccion } from "../pendientes";
 import { PlanesDelBarrio } from "../planes-del-barrio";
+import { Repetidas } from "../repetidas";
 import { BotonEditar, EditarCita, EditarCumple } from "../editar";
 import { LeerCircular } from "../leer-circular";
 import { BotonesCompartir } from "../compartir-botones";
@@ -79,6 +81,13 @@ export function FechasVista() {
     externos: [
       ...estado.agenda.map((a) => ({
         agendaId: a.id,
+        fecha: a.fecha,
+        titulo: a.titulo,
+        hora: a.hora,
+        hasta: a.hasta,
+      })),
+      // Lo que se repite (D-211): se calcula, no se copia.
+      ...citasRepetidas(estado, 180).map((a) => ({
         fecha: a.fecha,
         titulo: a.titulo,
         hora: a.hora,
@@ -233,6 +242,8 @@ export function FechasVista() {
           elemento y, si la vuelves a copiar y pegar aquí, se apunta igual.
         </p>
       </section>
+
+      <Repetidas />
 
       <PendientesSeccion />
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { articulosPendientes } from "@/aplicacion/estado";
+import { articulosPendientes, citasRepetidas } from "@/aplicacion/estado";
 import { quePideHoy } from "@/dominio/casa";
 import { sumarDias } from "@/dominio/fechas";
 import { abiertos } from "@/dominio/pendientes";
@@ -26,7 +26,7 @@ export function ResumenHoy() {
   const { estado } = useHogar();
   const [yoId] = useYo();
   const manana = sumarDias(estado.hoy, 1);
-  const citas = estado.agenda.filter(
+  const citas = [...estado.agenda, ...citasRepetidas(estado, 2)].filter(
     (a) => a.fecha <= manana && (a.hasta ?? a.fecha) >= estado.hoy,
   ).length;
   const pendientes = abiertos(estado.pendientes);

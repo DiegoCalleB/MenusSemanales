@@ -1,4 +1,6 @@
 import { type ProyeccionCalendario, proyeccionSchema } from "@/dominio/calendario-suscrito";
+import { sumarDias } from "@/dominio/fechas";
+import { eventosDeRepetidas } from "@/dominio/repetidas";
 
 const TOKEN = /^[0-9a-f]{64}$/;
 
@@ -28,7 +30,27 @@ export async function leerResumenDelCalendario(
   const cuerpo: unknown = await r.json();
   if (cuerpo === null) return null;
   const valido = proyeccionSchema.safeParse(cuerpo);
-  return valido.success ? valido.data : null;
+  if (!valido.success) return null;
+  return conRepetidas(valido.data);
+}
+
+/**
+ * Las fechas que se repiten (D-211) pasan a ser citas de los próximos días en lo que lee el servidor:
+ * así los avisos del móvil, el resumen del día y el calendario suscrito las tratan como cualquier
+ * cita (incluido el recordatorio del día antes). No se guardan copias: se calculan cada vez.
+ */
+export function conRepetidas(
+  p: ProyeccionCalendario,
+  hoy: string = hoyEnMadrid(),
+): ProyeccionCalendario {
+  const series = p.repetidas ?? [];
+  if (series.length === 0) return p;
+  const extra = eventosDeRepetidas(
+    series.map((s, i) => ({ id: `s${i}`, creadoEn: hoy, ...s })),
+    sumarDias(hoy, -1),
+    sumarDias(hoy, 90),
+  ).map((e) => ({ fecha: e.fecha, hasta: null, hora: e.hora, titulo: e.titulo }));
+  return { ...p, agenda: [...p.agenda, ...extra] };
 }
 
 /** Límite sencillo por dirección (por instancia): frena a quien pida el calendario sin parar. */

@@ -1839,3 +1839,12 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Pegar:** en la compra, «📋 Pegar una lista de Keep»; en Fechas, la caja «Apuntar» ya entendía las líneas de una nota y ahora **omite lo marcado** (antes importaba también lo marcado con «[X]»).
 - **Atajos al mantener pulsado el icono** (Android): «Añadir a la compra» (abre con el campo listo) y «Apuntar una fecha».
 - **Límites:** no es sincronización automática: se pasa la lista cuando se quiere. Keep no se vacía solo: lo importado sigue en Keep hasta que se marque o borre allí. El formato exacto del texto que manda Keep puede variar; se entienden las casillas más habituales y, si no hay casillas, todo cuenta como pendiente.
+
+## D-211 · Fechas que se repiten
+
+- **Petición (Diego):** Yolanda, la que viene a limpiar, viene un miércoles sí y otro no, y hay que acordarse de dejarle dinero el martes anterior; y si una semana no viene, poder pasarla a la siguiente y que luego vuelva a ser cada dos semanas.
+- **Qué hay:** en **Fechas → «🔁 Se repite»**, «＋ Algo que se repite»: qué es, la próxima vez, cada cuánto (1 a 4 semanas), hora opcional y un **recordatorio del día antes** («Dejar dinero para Yolanda»). Cae **siempre el mismo día del calendario** (no se corre por marcarla tarde, a diferencia de las tareas de Casa, que cuentan desde que se hacen). No se copian citas: se **calculan** para los próximos días y salen como cualquier cita en **Hoy** (cuenta atrás), **Mañana**, **De un vistazo**, **Próximas fechas** y el **Plan de la semana**. El recordatorio del día antes sale ese día.
+- **Posponer una semana:** pasa la próxima vez a la semana siguiente (y su recordatorio con ella) y **desde ahí vuelve a repetirse** con su ritmo (si vino el 2 y se pospone, pasa al 9 y luego al 23). Se puede pulsar otra vez. Quitar la serie la borra entera.
+- **Avisos del móvil y calendario:** el servidor las convierte en citas (también en el calendario suscrito), así que el resumen de las 9:00 y el aviso de la noche las incluyen, también el recordatorio del martes. Necesita la migración `20261126000000_repetidas_avisos` (solo lleva título, hora, próxima vez, cada cuántos días y recordatorio). **Sin ella, todo funciona en la app, pero no llega el aviso al móvil.**
+- **Datos:** `repetidas` en el documento del hogar (hasta 30).
+- **Pendiente:** el buscador, «Pregúntale a tu casa» y la revisión de la semana aún no las incluyen.

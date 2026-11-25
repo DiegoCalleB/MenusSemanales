@@ -3,7 +3,13 @@ import { proximaFecha } from "@/dominio/cumples";
 import { type FechaIso, diaSemanaIso, sumarDias } from "@/dominio/fechas";
 import { paraLlevar, paraPreparar } from "@/dominio/mochila";
 import { hayColeDe, repiteConElCole, sinColeEntreSemana } from "./cole";
-import { type EstadoHogar, articulosPendientes, articulosPropuestos, nombreDia } from "./estado";
+import {
+  type EstadoHogar,
+  articulosPendientes,
+  articulosPropuestos,
+  citasRepetidas,
+  nombreDia,
+} from "./estado";
 
 /**
  * Plan de la semana (D-137): todo lo de los próximos días en una sola pantalla para mirarlo una
@@ -73,7 +79,7 @@ export function planDeLaSemana(e: EstadoHogar): PlanDeLaSemana {
       repiteCole: repiteConElCole(e, f),
       comida: e.almuerzos.filter((a) => a.fecha === f).map((a) => a.texto),
       comidas: e.almuerzos.filter((a) => a.fecha === f).map((a) => ({ id: a.id, texto: a.texto })),
-      citas: e.agenda
+      citas: [...e.agenda, ...citasRepetidas(e, 14)]
         .filter((a) => a.fecha === f || (a.hasta !== null && a.fecha <= f && f <= a.hasta))
         .sort((a, b) => (a.hora ?? "").localeCompare(b.hora ?? ""))
         .map((a) => ({ id: a.id, titulo: a.titulo, hora: a.hora })),

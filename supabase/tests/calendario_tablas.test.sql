@@ -84,9 +84,9 @@ select pg_temp.igual('No sale nada del documento viejo',
   (select (j::text !~ 'Del documento' and j::text !~ 'Viejo')::int from _r where clave = 'r'), 1);
 select pg_temp.igual('Solo las claves de siempre',
   (select (select count(*)::int from jsonb_object_keys(j) k where k in
-     ('agenda','almuerzos','casa','cenas','cole','cuidado','cumples','diasCole','eventos','medicacion','mochila','objetivos','pendientes','personas','vencimientos')) from _r where clave = 'r'), 15);
+     ('agenda','almuerzos','casa','cenas','cole','cuidado','cumples','diasCole','eventos','medicacion','mochila','objetivos','pendientes','personas','repetidas','vencimientos')) from _r where clave = 'r'), 16);
 select pg_temp.igual('Y ninguna más',
-  (select count(*)::int from _r, jsonb_object_keys(j) where clave = 'r'), 15);
+  (select count(*)::int from _r, jsonb_object_keys(j) where clave = 'r'), 16);
 -- Medicación (D-166): para el servidor de los avisos, solo lo necesario.
 select pg_temp.igual('La medicación sale con persona, nombre, hora, días y tomadas, y nada más',
   (select ((j->'medicacion'->0->>'nombre') = 'Pastilla' and (j->'medicacion'->0->>'hora') = '21'

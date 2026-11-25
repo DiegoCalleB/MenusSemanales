@@ -2,7 +2,12 @@
 
 import Link from "next/link";
 import { type ReactNode, useState } from "react";
-import { articulosPendientes, comidasDe, proximoDiaConCole } from "@/aplicacion/estado";
+import {
+  articulosPendientes,
+  citasRepetidas,
+  comidasDe,
+  proximoDiaConCole,
+} from "@/aplicacion/estado";
 import { cuentaAtras } from "@/dominio/cuenta-atras";
 import { TarjetaCole, fechaCorta } from "../cole";
 import { EMOJI_GRUPO } from "../formato";
@@ -56,6 +61,13 @@ export function InicioVista() {
   const proximos = cuentaAtras(estado.cumples, estado.eventos, estado.hoy, {
     externos: [
       ...estado.agenda.map((a) => ({
+        fecha: a.fecha,
+        titulo: a.titulo,
+        hora: a.hora,
+        hasta: a.hasta,
+      })),
+      // Lo que se repite (D-211): se calcula, no se copia.
+      ...citasRepetidas(estado, 30).map((a) => ({
         fecha: a.fecha,
         titulo: a.titulo,
         hora: a.hora,

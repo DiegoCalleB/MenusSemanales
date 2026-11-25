@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { contarSemana } from "@/dominio/equilibrio";
-import { diaSemanaIso, sumarDias } from "@/dominio/fechas";
+import { diaSemanaIso, diasEntre, sumarDias } from "@/dominio/fechas";
 import { esUuid } from "@/dominio/identificadores";
 import { type Cumple, estadoVigente } from "@/dominio/cumples";
 import { estadoInicialDemo } from "./datos-demo";
@@ -10,6 +10,7 @@ import {
   articulosPendientes,
   articulosPropuestos,
   articulosQuitados,
+  citasRepetidas,
   catalogoOrdenado,
   cenaDeEmergenciaHoy,
   compatibilidadDe,
@@ -2548,3 +2549,40 @@ describe("modo familia y laboratorio (D-206)", () => {
     expect(n.laboratorio).toBe(false);
   });
 });
+
+describe("fechas que se repiten (D-211)", () => {
+  const base = () => estadoInicialDemo();
+  it("apunta una serie, la pospone una semana y la quita; un estado de antes se completa", () => {
+    let e = reducir(base(), {
+      tipo: "repetida/anadir",
+      titulo: "Viene Yolanda",
+      hora: null,
+      desde: e0Hoy(base()),
+      cadaDias: 14,
+      avisoAntes: "Dejar dinero para Yolanda",
+    });
+    expect(e.repetidas).toHaveLength(1);
+    const id = e.repetidas[0]!.id;
+    expect(citasRepetidas(e, 20).map((c) => c.titulo)).toEqual(
+      expect.arrayContaining(["Viene Yolanda"]),
+    );
+    const antes = e.repetidas[0]!.desde;
+    e = reducir(e, { tipo: "repetida/posponer", id });
+    expect(diasEntre(antes, e.repetidas[0]!.desde)).toBe(7);
+    e = reducir(e, { tipo: "repetida/borrar", id });
+    expect(e.repetidas).toEqual([]);
+    expect(
+      reducir(base(), {
+        tipo: "repetida/anadir",
+        titulo: "",
+        hora: null,
+        desde: "2026-11-25",
+        cadaDias: 14,
+        avisoAntes: null,
+      }).aviso?.tipo,
+    ).toBe("error");
+    const viejo = { ...base(), repetidas: undefined } as unknown as EstadoHogar;
+    expect(normalizar(viejo).repetidas).toEqual([]);
+  });
+});
+const e0Hoy = (e: EstadoHogar) => e.hoy;
