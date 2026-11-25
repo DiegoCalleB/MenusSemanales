@@ -1032,9 +1032,10 @@ describe("agenda: apuntes escritos como en una nota", () => {
   it("apunta lo que tiene fecha, pasa lo demás a tareas de la persona y avisa de lo que no entiende", () => {
     const e = con({
       tipo: "agenda/anadir",
-      texto: `[X] 17 Marzo ${anio} Excursión Alba\n[ ] Veterinario Punky\n31 Abril Mal`,
+      texto: `[ ] 17 Marzo ${anio} Excursión Alba\n[ ] Veterinario Punky\n[X] 20 Marzo ${anio} Ya hecho\n31 Abril Mal`,
       personaId: "alba",
     });
+    // Lo marcado en Keep («[X]») ya está hecho: no se apunta (D-210).
     expect(e.agenda.map((a) => [a.fecha, a.titulo])).toEqual([[`${anio}-03-17`, "Excursión Alba"]]);
     expect(e.tareas.filter((t) => t.texto === "Veterinario Punky")).toMatchObject([
       { personaId: "alba", frecuencia: "puntual" },

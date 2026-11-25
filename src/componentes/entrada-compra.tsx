@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useRef, useState, useSyncExternalStore } from "react";
+import { type FormEvent, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { HABITUALES, claveArticulo, sugerencias } from "@/dominio/habituales";
 import { IconoMas } from "./iconos";
 import { constructorVoz, nadie, problemaDeVoz } from "./voz";
@@ -21,6 +21,11 @@ export function EntradaCompra({ yaEnLista }: { yaEnLista: ReadonlySet<string> })
     () => constructorVoz() !== null,
     () => false,
   );
+
+  // El atajo del icono («Añadir a la compra», D-210) abre la lista con el campo listo para escribir.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("anadir") === "1") campo.current?.focus();
+  }, []);
 
   const sugeridas = sugerencias(texto, yaEnLista);
   const siempre = HABITUALES.filter((h) => !yaEnLista.has(claveArticulo(h)));

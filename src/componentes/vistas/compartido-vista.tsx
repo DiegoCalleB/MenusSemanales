@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { ItemCircular } from "@/dominio/ia-circular";
+import { leerListaDeKeep, pareceListaDeKeep } from "@/dominio/keep";
+import { ListaDeKeep } from "../lista-de-keep";
 import { LeerCircular } from "../leer-circular";
 import { useHogar } from "../proveedor-hogar";
 import { useYo } from "../yo";
@@ -62,6 +64,9 @@ export function CompartidoVista() {
     text: params.get("text"),
     url: params.get("url"),
   });
+  // Una lista de Keep (D-210): se enseña lo que falta y se elige adónde va, sin gastar IA.
+  const soloTexto = (params.get("text") ?? "").slice(0, 6000);
+  const lista = pareceListaDeKeep(soloTexto) ? leerListaDeKeep(soloTexto) : null;
   const conArchivo = params.get("archivo");
   const [archivo, setArchivo] = useState<File | null>(null);
   const [buscando, setBuscando] = useState(conArchivo === "1");
@@ -163,11 +168,21 @@ export function CompartidoVista() {
           )}
           {buscando && <p className="text-base">Recogiendo lo compartido…</p>}
 
+          {lista && (
+            <ListaDeKeep
+              lista={lista}
+              alTerminar={(mensaje) => {
+                setApuntadas([]);
+                setHecho(mensaje);
+              }}
+            />
+          )}
+
           {inicial && (
             <LeerCircular
               key={archivo ? "archivo" : "texto"}
               inicial={inicial}
-              automatico
+              automatico={!lista}
               alTerminar={(n, cosas) => {
                 setApuntadas(cosas);
                 setHecho(

@@ -1,4 +1,5 @@
 import { fechaEnAnio } from "./cumples";
+import { sinCasilla } from "./keep";
 import { type FechaIso, sumarDias } from "./fechas";
 
 /**
@@ -95,15 +96,20 @@ export interface AgendaLeida {
   erroneos: string[];
 }
 
-/** Lee varias líneas (una por apunte, o separadas por «;»). Ignora las casillas «[X]» de Keep. */
+/**
+ * Lee varias líneas (una por apunte, o separadas por «;»). Quita las casillas de Keep (D-210): lo que
+ * está marcado («☑», «[x]») ya está hecho y no se apunta; lo demás, sí.
+ */
 export function parsearAgenda(texto: string, hoy: FechaIso): AgendaLeida {
   const salida: AgendaLeida = { conFecha: [], sinFecha: [], erroneos: [] };
   for (const cruda of texto.split(/[\n;]/)) {
-    const linea = cruda
-      .replace(/^\s*(?:[-*•]\s*)?(?:\[[ xX]?\]\s*)?/, "")
+    const sin = sinCasilla(cruda.replace(/^\s*(?:[-*•]\s*)?(?=\[)/, ""));
+    if (sin.marca === "marcada") continue;
+    const linea = sin.texto
+      .replace(/^[-*•]\s*/, "")
       .replace(/\s+/g, " ")
       .trim();
-    if (linea === "" || linea === "[ ]" || /^\[[ xX]?\]$/.test(linea)) continue;
+    if (linea === "") continue;
 
     // «17 Marzo …», «17-19 Abril …», «17 de marzo de 2027 …»
     const largo =

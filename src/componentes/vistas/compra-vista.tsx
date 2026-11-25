@@ -17,6 +17,7 @@ import { BotonesCompartir } from "../compartir-botones";
 import { ComprarOnline } from "../comprar-online";
 import { CintaAnimal } from "../cinta-animal";
 import { EntradaCompra } from "../entrada-compra";
+import { PegarListaDeKeep } from "../lista-de-keep";
 import { OrdenarConIa } from "../ordenar-con-ia";
 import { PropuestasCompra } from "../propuestas-compra";
 import { formatearCantidad } from "../formato";
@@ -201,6 +202,8 @@ export function CompraVista() {
       {!modoTienda && (
         <EntradaCompra yaEnLista={new Set(pendientes.map((i) => claveArticulo(i.nombre)))} />
       )}
+
+      {!modoTienda && <PegarListaDeKeep />}
 
       {!modoTienda && <OrdenarConIa yaEnLista={pendientes.map((i) => i.nombre)} />}
 

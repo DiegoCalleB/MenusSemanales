@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { parsearAgenda, resumenApunte } from "@/dominio/agenda";
 import { BotonEditar, EditarCita } from "./editar";
 import { useHogar } from "./proveedor-hogar";
@@ -24,6 +24,11 @@ export function Apuntar() {
   const [texto, setTexto] = useState("");
   const [revisando, setRevisando] = useState(false);
   const [editando, setEditando] = useState<string | null>(null);
+  const campo = useRef<HTMLTextAreaElement>(null);
+  // El atajo del icono («Apuntar una fecha», D-210) abre Fechas con el campo listo para escribir.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("apuntar") === "1") campo.current?.focus();
+  }, []);
   const leido = parsearAgenda(texto, estado.hoy);
   const total = leido.conFecha.length + leido.sinFecha.length;
   const proximos = estado.agenda
@@ -52,6 +57,7 @@ export function Apuntar() {
       </label>
       <textarea
         id="apunte"
+        ref={campo}
         className="campo min-h-24"
         value={texto}
         onChange={(e) => {
