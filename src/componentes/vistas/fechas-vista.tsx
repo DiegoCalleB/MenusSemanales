@@ -86,8 +86,8 @@ export function FechasVista() {
         hora: a.hora,
         hasta: a.hasta,
       })),
-      // Lo que se repite (D-211): se calcula, no se copia.
-      ...citasRepetidas(estado, 180).map((a) => ({
+      // Lo que se repite (D-211): se calcula, no se copia, y de cada serie solo la próxima vez (D-212).
+      ...citasRepetidas(estado, 180, true).map((a) => ({
         fecha: a.fecha,
         titulo: a.titulo,
         hora: a.hora,

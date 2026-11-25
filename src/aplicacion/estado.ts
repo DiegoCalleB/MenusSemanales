@@ -648,8 +648,8 @@ function idNuevo(
 // --------------------------------------------------------------------------------------------
 
 /** Las citas «virtuales» de lo que se repite para los próximos días (D-211): no son copias guardadas. */
-export const citasRepetidas = (e: EstadoHogar, dias = 60) =>
-  eventosDeRepetidas(e.repetidas, e.hoy, sumarDias(e.hoy, dias));
+export const citasRepetidas = (e: EstadoHogar, dias = 60, soloProxima = false) =>
+  eventosDeRepetidas(e.repetidas, e.hoy, sumarDias(e.hoy, dias), { soloProxima });
 
 const catalogo = (e: EstadoHogar) => new Map(e.ingredientes.map((i) => [i.id, i]));
 

@@ -3789,7 +3789,7 @@ test.describe("Hoy como tablero fijo (D-180)", () => {
     // Sale en Hoy como cualquier cita (hoy viene), y la semana que viene no.
     await cargar(pagina, "/");
     await expect(
-      pagina.getByRole("list", { name: "Cuenta atrás" }).getByText(/Viene Yolanda/),
+      pagina.getByRole("list", { name: "Cuenta atrás" }).getByText(/Viene Yolanda · ¡hoy!/),
     ).toBeVisible();
     // Y el aviso del día antes aparece en «Mañana» cuando toca: la víspera de la siguiente vez.
     await cargar(pagina, "/fechas");

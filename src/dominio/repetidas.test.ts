@@ -49,6 +49,30 @@ describe("fechas que se repiten (D-211)", () => {
     ]);
   });
 
+  it("la vez que cae justo hoy también sale (y su recordatorio, el día antes)", () => {
+    expect(eventosDeRepetidas([yolanda], "2026-11-25", "2026-11-25").map((x) => x.titulo)).toEqual([
+      "Viene Yolanda",
+    ]);
+    expect(eventosDeRepetidas([yolanda], "2026-12-09", "2026-12-09").map((x) => x.titulo)).toEqual([
+      "Viene Yolanda",
+    ]);
+    // Mañana toca: hoy sale su recordatorio.
+    expect(eventosDeRepetidas([yolanda], "2026-12-08", "2026-12-08").map((x) => x.titulo)).toEqual([
+      "Dejar dinero para Yolanda",
+    ]);
+  });
+
+  it("en las listas largas, de cada serie solo la próxima vez y su recordatorio (D-212)", () => {
+    const largo = eventosDeRepetidas([yolanda], "2026-11-25", "2027-05-25", { soloProxima: true });
+    expect(largo.map((x) => [x.fecha, x.titulo])).toEqual([["2026-11-25", "Viene Yolanda"]]);
+    // Un día después: la siguiente vez y su recordatorio del martes.
+    const otro = eventosDeRepetidas([yolanda], "2026-11-26", "2027-05-25", { soloProxima: true });
+    expect(otro.map((x) => [x.fecha, x.titulo])).toEqual([
+      ["2026-12-08", "Dejar dinero para Yolanda"],
+      ["2026-12-09", "Viene Yolanda"],
+    ]);
+  });
+
   it("posponer: la próxima vez pasa una semana y desde ahí sigue cada 2 semanas", () => {
     const hoy = "2026-11-25";
     const p = posponerUnaSemana(yolanda, hoy);
