@@ -36,6 +36,11 @@ export function AvisosCalendario() {
   // Los planes del barrio, en otro más (D-165).
   const enlaceBarrio = enlace ? `${enlace}&solo=barrio` : null;
   const webcalBarrio = enlaceBarrio?.replace(/^https?:/, "webcal:") ?? null;
+  // La casa (con la mochila) y el tiempo, aparte para no llenar el principal (D-213).
+  const enlaceCasa = enlace ? `${enlace}&solo=casa` : null;
+  const webcalCasa = enlaceCasa?.replace(/^https?:/, "webcal:") ?? null;
+  const enlaceTiempo = enlace ? `${enlace}&solo=tiempo` : null;
+  const webcalTiempo = enlaceTiempo?.replace(/^https?:/, "webcal:") ?? null;
 
   async function pedir(renovar: boolean) {
     if (!hogar) return;
@@ -159,6 +164,40 @@ export function AvisosCalendario() {
                 onClick={() => void copiar(enlaceBarrio)}
               >
                 Copiar el enlace del barrio
+              </button>
+            </div>
+          </div>
+          <div className="border-borde flex flex-col gap-2 rounded-2xl border p-3">
+            <p className="text-base">
+              <span aria-hidden="true">🏠 </span>
+              <strong>Las tareas de casa y la mochila, en otro calendario</strong>: para ponerle
+              otro color o ocultarlo cuando no interese.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <a className="boton-suave" href={webcalCasa ?? undefined}>
+                Suscribir la casa en el iPhone
+              </a>
+              <button type="button" className="boton-suave" onClick={() => void copiar(enlaceCasa)}>
+                Copiar el enlace de la casa
+              </button>
+            </div>
+          </div>
+          <div className="border-borde flex flex-col gap-2 rounded-2xl border p-3">
+            <p className="text-base">
+              <span aria-hidden="true">🌦️ </span>
+              <strong>El tiempo, en otro calendario</strong>: el frío, la lluvia y el abrigo. Es
+              opcional: ya sale en Hoy.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <a className="boton-suave" href={webcalTiempo ?? undefined}>
+                Suscribir el tiempo en el iPhone
+              </a>
+              <button
+                type="button"
+                className="boton-suave"
+                onClick={() => void copiar(enlaceTiempo)}
+              >
+                Copiar el enlace del tiempo
               </button>
             </div>
           </div>

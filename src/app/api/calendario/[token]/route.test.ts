@@ -99,7 +99,7 @@ describe("GET /api/calendario/[token]", () => {
     expect((await pedir(TOKEN, "", "7.7.7.7")).status).toBe(404); // otra dirección: sigue bien
   });
 
-  it("el tiempo de los próximos días sale en el calendario de fechas, no en el de comidas (D-154)", async () => {
+  it("el tiempo de los próximos días sale en su calendario (D-213), no en el de fechas ni en el de comidas", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => Response.json(resumen)),
@@ -109,8 +109,11 @@ describe("GET /api/calendario/[token]", () => {
       { fecha: manana, codigo: 63, max: 14, min: 2, probLluvia: 80, lluviaMm: 5 },
     ]);
     const fechas = await (await pedir(TOKEN, "", "9.9.9.1")).text();
-    expect(fechas).toContain("Lluvia (80 %): chubasquero y botas"); // en la descripción;
-    expect(fechas).toContain("Frío (mín. 2 °C)");
+    expect(fechas).not.toContain("Lluvia");
+    const tiempo = await (await pedir(TOKEN, "?solo=tiempo", "9.9.9.3")).text();
+    expect(tiempo).toContain("X-WR-CALNAME:¡Hecho! · Tiempo");
+    expect(tiempo).toContain("Lluvia (80 %): chubasquero y botas"); // en la descripción;
+    expect(tiempo).toContain("Frío (mín. 2 °C)");
     const comidas = await (await pedir(TOKEN, "?solo=comidas", "9.9.9.2")).text();
     expect(comidas).not.toContain("Lluvia");
   });

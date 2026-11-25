@@ -73,7 +73,13 @@ export async function GET(request: Request, ctx: { params: Promise<{ token: stri
   // y cenas, o con `solo=metropolitano` los partidos y conciertos del estadio.
   const pedido = new URL(request.url).searchParams.get("solo");
   const solo =
-    pedido === "comidas" || pedido === "metropolitano" || pedido === "barrio" ? pedido : "fechas";
+    pedido === "comidas" ||
+    pedido === "metropolitano" ||
+    pedido === "barrio" ||
+    pedido === "casa" ||
+    pedido === "tiempo"
+      ? pedido
+      : "fechas";
   const ics = generarIcs(
     solo === "comidas"
       ? "¡Hecho! · Comidas"
@@ -81,7 +87,11 @@ export async function GET(request: Request, ctx: { params: Promise<{ token: stri
         ? "¡Hecho! · Metropolitano"
         : solo === "barrio"
           ? "¡Hecho! · Barrio"
-          : "¡Hecho!",
+          : solo === "casa"
+            ? "¡Hecho! · Casa"
+            : solo === "tiempo"
+              ? "¡Hecho! · Tiempo"
+              : "¡Hecho!",
     eventosSuscritos(resumen, { hoy: hoyEnMadrid(), para, solo, tiempo, estadio, barrio }),
     new Date(),
     1,

@@ -1857,3 +1857,7 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 ## D-213 · «No fui» y borrar en «Lo que ya pasó»
 
 Cada cita pasada, además de las estrellas, tiene **🚫 No fui** (se queda tachada y más pálida; «↩️ Sí fui» lo deshace) y **🗑️ Borrar** (pide confirmación). «No fui» se guarda en `puntuacionesCitas` como `-1`: sin campo nuevo ni migración. Valorar con estrellas sustituye «No fui», y al revés.
+
+## D-213b · Casa, mochila y tiempo, en calendarios aparte
+
+El calendario principal de «¡Hecho!» se llenaba. Ahora lleva solo lo importante (citas, fechas señaladas, cumpleaños, papeles, días sin cole). Aparte, con el mismo enlace y `&solo=…`: **casa** (tareas de casa y mochila), **tiempo** (opcional: ya sale en Hoy), **comidas**, **metropolitano** y **barrio**. Quien ya estaba suscrito al principal deja de ver casa, mochila y tiempo sin tocar nada; para verlos, suscribe su enlace en Más → Enviar. Sin cambios en datos ni migración.
