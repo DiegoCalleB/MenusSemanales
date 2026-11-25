@@ -63,13 +63,13 @@ export interface EventoRepetido {
 /**
  * Las citas «virtuales» de las series entre dos días: cada vez que cae y, si lleva aviso, el recordatorio
  * del día antes. Se enseñan como cualquier cita pero no existen como copias. Con `soloProxima`, de cada
- * serie solo la próxima vez (y su recordatorio): para las listas largas, que no se llenen (D-212).
+ * serie solo la próxima vez; con `recordatorioHasta`, los recordatorios solo hasta ese día (D-212).
  */
 export function eventosDeRepetidas(
   series: readonly Repetida[],
   desde: FechaIso,
   hasta: FechaIso,
-  opciones: { soloProxima?: boolean } = {},
+  opciones: { soloProxima?: boolean; recordatorioHasta?: FechaIso } = {},
 ): EventoRepetido[] {
   const salida: EventoRepetido[] = [];
   for (const r of series) {
@@ -88,7 +88,9 @@ export function eventosDeRepetidas(
         });
       }
       const antes = sumarDias(f, -1);
-      if (r.avisoAntes && antes >= desde && antes <= hasta) {
+      // Los recordatorios son para el día (o la víspera): en las listas largas no se enseñan (D-212).
+      const limite = opciones.recordatorioHasta ?? hasta;
+      if (r.avisoAntes && antes >= desde && antes <= hasta && antes <= limite) {
         salida.push({
           id: `rep-${r.id}-${f}-antes`,
           fecha: antes,

@@ -73,6 +73,28 @@ describe("fechas que se repiten (D-211)", () => {
     ]);
   });
 
+  it("los recordatorios solo hasta el día que se diga: en las listas largas no salen (D-212)", () => {
+    const sin = eventosDeRepetidas([yolanda], "2026-11-26", "2027-05-25", {
+      soloProxima: true,
+      recordatorioHasta: "2026-11-25",
+    });
+    expect(sin.map((x) => [x.fecha, x.titulo])).toEqual([["2026-12-09", "Viene Yolanda"]]);
+    // Para Hoy: el recordatorio solo si es de hoy o de mañana.
+    const lejos = eventosDeRepetidas([yolanda], "2026-12-01", "2026-12-31", {
+      soloProxima: true,
+      recordatorioHasta: "2026-12-02",
+    });
+    expect(lejos.map((x) => x.titulo)).toEqual(["Viene Yolanda"]);
+    const vispera = eventosDeRepetidas([yolanda], "2026-12-08", "2026-12-31", {
+      soloProxima: true,
+      recordatorioHasta: "2026-12-09",
+    });
+    expect(vispera.map((x) => [x.fecha, x.titulo])).toEqual([
+      ["2026-12-08", "Dejar dinero para Yolanda"],
+      ["2026-12-09", "Viene Yolanda"],
+    ]);
+  });
+
   it("posponer: la próxima vez pasa una semana y desde ahí sigue cada 2 semanas", () => {
     const hoy = "2026-11-25";
     const p = posponerUnaSemana(yolanda, hoy);

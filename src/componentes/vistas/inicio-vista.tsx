@@ -45,7 +45,7 @@ import { TiempoHoy } from "../tiempo-hoy";
 import { MananaHoy } from "../manana-hoy";
 import { ResumenHoy } from "../resumen-hoy";
 import { SeccionHoy, Vacio } from "../seccion-hoy";
-import { diaSemanaIso } from "@/dominio/fechas";
+import { diaSemanaIso, sumarDias } from "@/dominio/fechas";
 
 /** Portada: arriba, la cena y el cole de hoy; después lo pendiente y, plegado, lo demás. */
 export function InicioVista() {
@@ -67,7 +67,10 @@ export function InicioVista() {
         hasta: a.hasta,
       })),
       // Lo que se repite (D-211): se calcula, no se copia.
-      ...citasRepetidas(estado, 30, true).map((a) => ({
+      ...citasRepetidas(estado, 30, {
+        soloProxima: true,
+        recordatorioHasta: sumarDias(estado.hoy, 1),
+      }).map((a) => ({
         fecha: a.fecha,
         titulo: a.titulo,
         hora: a.hora,
