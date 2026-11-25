@@ -460,6 +460,7 @@ export function estadoInicialDemo(): EstadoHogar {
     pendientes: [],
     objetivos: [],
     ajustesHoy: [],
+    repetidas: [],
     modos: {},
     laboratorio: LABORATORIO_INICIAL,
     notas: [],

@@ -759,6 +759,7 @@ export function estadoModoDiego(hoy: string): EstadoHogar {
     pendientes: [],
     objetivos: [],
     ajustesHoy: [],
+    repetidas: [],
     modos: {},
     laboratorio: LABORATORIO_INICIAL,
     notas: [],

@@ -50,6 +50,13 @@ import {
   validarPaso,
 } from "@/dominio/objetivos";
 import { type AjusteHoy, limpiarAjuste } from "@/dominio/hoy";
+import {
+  MAX_REPETIDAS,
+  type Repetida,
+  eventosDeRepetidas,
+  posponerUnaSemana,
+  validarRepetida,
+} from "@/dominio/repetidas";
 import { type Modo, esModo } from "@/dominio/modo";
 import { type AvisosCfg, limpiarCfg } from "@/dominio/avisos-personales";
 import { MAX_NOTAS, type Nota, type TipoNota, validarNota } from "@/dominio/notas";
@@ -251,6 +258,8 @@ export interface EstadoHogar {
   objetivos: Objetivo[];
   /** Qué tarjetas ve cada persona en «Hoy» y en qué orden (D-196). */
   ajustesHoy: AjusteHoy[];
+  /** Fechas que se repiten (D-211): «viene Yolanda» cada 2 semanas, con aviso el día antes. */
+  repetidas: Repetida[];
   /** El espacio de cada persona (D-206): «familia» o «completo» (con su espacio personal). */
   modos: Record<string, Modo>;
   /** El laboratorio (D-206): barrio, premios, reparto, Metropolitano y regalo, encendidos o no. */
@@ -505,6 +514,19 @@ export type Accion =
   | { tipo: "persona/modo"; personaId: string; modo: Modo }
   /** Enciende o apaga el laboratorio para toda la casa (D-206). */
   | { tipo: "hogar/laboratorio"; encendido: boolean }
+  /** Una fecha que se repite, con aviso el día antes si se quiere (D-211). */
+  | {
+      tipo: "repetida/anadir";
+      titulo: string;
+      hora: string | null;
+      desde: FechaIso;
+      cadaDias: number;
+      avisoAntes: string | null;
+      idBase?: string;
+    }
+  /** La próxima vez no toca: se pasa una semana más tarde y desde ahí sigue su ritmo. */
+  | { tipo: "repetida/posponer"; id: string }
+  | { tipo: "repetida/borrar"; id: string }
   /** Hoy a tu manera (D-196): qué tarjetas se ven y en qué orden, para una persona. */
   | { tipo: "hoy/ajustar"; personaId: string; orden: string[]; ocultas: string[] }
   | { tipo: "hoy/restablecer"; personaId: string }
@@ -597,6 +619,7 @@ export const ACCIONES_QUE_CREAN = [
   "medicacion/guardar",
   "vencimiento/guardar",
   "pendiente/anadir",
+  "repetida/anadir",
   "premio/guardar",
   "premio/canjear",
 ] as const;
@@ -623,6 +646,10 @@ function idNuevo(
 // --------------------------------------------------------------------------------------------
 // Consultas (derivan datos del estado; no lo modifican)
 // --------------------------------------------------------------------------------------------
+
+/** Las citas «virtuales» de lo que se repite para los próximos días (D-211): no son copias guardadas. */
+export const citasRepetidas = (e: EstadoHogar, dias = 60) =>
+  eventosDeRepetidas(e.repetidas, e.hoy, sumarDias(e.hoy, dias));
 
 const catalogo = (e: EstadoHogar) => new Map(e.ingredientes.map((i) => [i.id, i]));
 
@@ -1017,6 +1044,7 @@ const normalizarCampos = (e: EstadoHogar): EstadoHogar =>
   Array.isArray(e.objetivos) &&
   e.objetivos.every((o) => typeof o.creadoEn === "string" && o.cada !== undefined) &&
   Array.isArray(e.ajustesHoy) &&
+  Array.isArray(e.repetidas) &&
   typeof e.modos === "object" &&
   e.modos !== null &&
   typeof e.laboratorio === "boolean" &&
@@ -1058,6 +1086,7 @@ const normalizarCampos = (e: EstadoHogar): EstadoHogar =>
             }))
           : [],
         ajustesHoy: Array.isArray(e.ajustesHoy) ? e.ajustesHoy : [],
+        repetidas: Array.isArray(e.repetidas) ? e.repetidas : [],
         modos:
           typeof e.modos === "object" && e.modos !== null
             ? Object.fromEntries(Object.entries(e.modos).filter(([, m]) => esModo(m)))
@@ -2647,6 +2676,36 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
 
     case "hogar/laboratorio":
       return { ...e, laboratorio: accion.encendido === true };
+
+    case "repetida/anadir": {
+      const fallo = (t: string): EstadoHogar => ({
+        ...e,
+        siguienteId: e.siguienteId + 1,
+        aviso: error(e, t),
+      });
+      const r = validarRepetida(
+        accion,
+        (f) => /^\d{4}-\d{2}-\d{2}$/.test(f) && !Number.isNaN(Date.parse(f)),
+      );
+      if (!r.ok) return fallo(r.motivo);
+      if (e.repetidas.length >= MAX_REPETIDAS)
+        return fallo("Ya hay demasiadas fechas que se repiten: quita alguna.");
+      const id = idNuevo(accion.idBase, "repetida", "0", `rep-${e.siguienteId}`);
+      return {
+        ...e,
+        repetidas: [...e.repetidas, { id, ...r.datos, creadoEn: e.hoy }],
+        siguienteId: e.siguienteId + 1,
+      };
+    }
+
+    case "repetida/posponer":
+      return {
+        ...e,
+        repetidas: e.repetidas.map((r) => (r.id === accion.id ? posponerUnaSemana(r, e.hoy) : r)),
+      };
+
+    case "repetida/borrar":
+      return { ...e, repetidas: e.repetidas.filter((r) => r.id !== accion.id) };
 
     case "hoy/ajustar": {
       if (!e.personas.some((p) => p.id === accion.personaId)) return e;

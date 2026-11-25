@@ -134,6 +134,23 @@ export const proyeccionSchema = z.object({
     )
     .catch([])
     .optional(),
+  /** Fechas que se repiten (D-211): el servidor las expande en citas para avisos y calendario. */
+  repetidas: z
+    .array(
+      z.object({
+        titulo: texto,
+        hora: z
+          .string()
+          .regex(/^\d{2}:\d{2}$/)
+          .nullable()
+          .catch(null),
+        desde: fecha,
+        cadaDias: z.number().int().min(1).max(365),
+        avisoAntes: z.string().trim().max(80).nullable().catch(null),
+      }),
+    )
+    .catch([])
+    .optional(),
   /** Objetivos y notas (D-203): solo cuántos por persona, nunca el texto. Opcional. */
   objetivos: z
     .array(

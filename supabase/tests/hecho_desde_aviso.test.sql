@@ -239,5 +239,24 @@ select public.avisos_pospuestos((select v from _s where clave = 'secreto'), (sel
 select pg_temp.igual('A la cuarta, no', (not public.posponer_aviso((select v from _s where clave = 'codigoP')))::int, 1);
 select pg_temp.fin();
 
+-- Fechas que se repiten en el resumen del servidor (D-211).
+select pg_temp.como('aaaaaaaa-0000-0000-0000-00000000000a');
+insert into _s values ('hogarR', public.crear_hogar('Hogar R')::text);
+select public.guardar_estado_hogar((select v from _s where clave = 'hogarR')::uuid, 0, $j${
+  "repetidas": [
+    {"id":"r1","titulo":"Viene Yolanda","hora":null,"desde":"2026-11-25","cadaDias":14,"avisoAntes":"Dejar dinero","creadoEn":"2026-11-25","secreto":"NO SALE"}
+  ]
+}$j$::jsonb);
+insert into _s select 'tokenR', public.enlace_calendario((select v from _s where clave = 'hogarR')::uuid);
+select pg_temp.fin();
+
+select pg_temp.como(null);
+select pg_temp.igual('El resumen lleva las fechas que se repiten, con lo justo',
+  (select (public.estado_para_calendario((select v from _s where clave = 'tokenR'))->'repetidas'
+           = '[{"titulo":"Viene Yolanda","hora":null,"desde":"2026-11-25","cadaDias":14,"avisoAntes":"Dejar dinero"}]'::jsonb)::int), 1);
+select pg_temp.igual('Y no sale nada más del documento',
+  (select (position('NO SALE' in public.estado_para_calendario((select v from _s where clave = 'tokenR'))::text) = 0)::int), 1);
+select pg_temp.fin();
+
 rollback;
 \echo 'hecho_desde_aviso: OK'

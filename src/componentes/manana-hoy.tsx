@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { hayColeDe, sinColeEntreSemana, tieneCole } from "@/aplicacion/cole";
-import { comidasDe } from "@/aplicacion/estado";
+import { citasRepetidas, comidasDe } from "@/aplicacion/estado";
 import { sumarDias } from "@/dominio/fechas";
 import { useHogar } from "./proveedor-hogar";
 import { SeccionHoy } from "./seccion-hoy";
@@ -18,7 +18,7 @@ export function MananaHoy() {
   const manana = sumarDias(estado.hoy, 1);
   const cenas = comidasDe(estado, manana);
   const sinCena = estado.saltados.includes(manana);
-  const citas = estado.agenda
+  const citas = [...estado.agenda, ...citasRepetidas(estado, 2)]
     .filter((a) => a.fecha <= manana && (a.hasta ?? a.fecha) >= manana)
     .sort((a, b) => (a.hora ?? "").localeCompare(b.hora ?? ""));
   const conCole = tieneCole(estado);

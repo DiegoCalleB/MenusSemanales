@@ -3764,4 +3764,51 @@ test.describe("Hoy como tablero fijo (D-180)", () => {
     await expect(pagina.getByLabel(/Escribe como en una nota/)).toBeFocused();
     await contexto.close();
   });
+
+  test("se repite (D-211): Yolanda cada 2 semanas, aviso el día antes, y posponer una semana", async ({
+    browser,
+  }) => {
+    const { contexto, pagina } = await abrir(browser, 390, 844);
+    await cargar(pagina, "/fechas");
+    const seccion = pagina.getByRole("region", { name: /Se repite/ });
+    await seccion.getByRole("button", { name: /Algo que se repite/ }).click();
+    const form = seccion.getByRole("form", { name: "Algo que se repite" });
+    await form.getByLabel("Qué es").fill("Viene Yolanda");
+    // «Hoy» en los datos de ejemplo es el miércoles 4 de noviembre de 2026.
+    await form.getByLabel("La próxima vez es el").fill("2026-11-04");
+    await form.getByLabel("Se repite").selectOption("14");
+    await form.getByLabel("Recordar el día antes (opcional)").fill("Dejar dinero para Yolanda");
+    await form.getByRole("button", { name: "Guardar" }).click();
+
+    const lista = seccion.getByRole("list", { name: "Fechas que se repiten" });
+    await expect(lista.getByText("Viene Yolanda")).toBeVisible();
+    await expect(lista.getByText(/cada 2 semanas/)).toBeVisible();
+    await expect(lista.getByText(/miércoles, 4 de noviembre/)).toBeVisible();
+    await expect(lista.getByText(/Dejar dinero para Yolanda/)).toBeVisible();
+
+    // Sale en Hoy como cualquier cita (hoy viene), y la semana que viene no.
+    await cargar(pagina, "/");
+    await expect(
+      pagina.getByRole("list", { name: "Cuenta atrás" }).getByText(/Viene Yolanda/),
+    ).toBeVisible();
+    // Y el aviso del día antes aparece en «Mañana» cuando toca: la víspera de la siguiente vez.
+    await cargar(pagina, "/fechas");
+    await expect(
+      pagina
+        .getByRole("list", { name: "Fechas" })
+        .getByText(/Viene Yolanda/)
+        .first(),
+    ).toBeVisible();
+
+    // Si esta vez no viene: se pospone una semana y desde ahí sigue cada 2 semanas.
+    await seccion.getByRole("button", { name: /Posponer una semana: Viene Yolanda/ }).click();
+    await expect(lista.getByText(/miércoles, 11 de noviembre/)).toBeVisible();
+    await seccion.getByRole("button", { name: /Posponer una semana: Viene Yolanda/ }).click();
+    await expect(lista.getByText(/miércoles, 18 de noviembre/)).toBeVisible();
+
+    // Se puede quitar.
+    await seccion.getByRole("button", { name: /Quitar «Viene Yolanda»/ }).click();
+    await expect(lista).toHaveCount(0);
+    await contexto.close();
+  });
 });
