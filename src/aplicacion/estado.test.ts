@@ -1100,6 +1100,13 @@ describe("agenda: apuntes escritos como en una nota", () => {
       reducir(editada, { tipo: "agenda/valorar", id: "pasado", estrellas: 0 }).puntuacionesCitas,
     ).toEqual({});
     expect(reducir(editada, { tipo: "agenda/borrar", id: "pasado" }).puntuacionesCitas).toEqual({});
+    // «No fui» (D-213): se guarda como -1, se quita con 0 y sobrevive a normalizar.
+    const noFui = reducir(e, { tipo: "agenda/valorar", id: "pasado", estrellas: -1 });
+    expect(noFui.puntuacionesCitas).toEqual({ [`${sumarDias(hoy, -3)}|excursion pasado`]: -1 });
+    expect(normalizar(noFui).puntuacionesCitas).toEqual(noFui.puntuacionesCitas);
+    expect(
+      reducir(noFui, { tipo: "agenda/valorar", id: "pasado", estrellas: 0 }).puntuacionesCitas,
+    ).toEqual({});
   });
 
   it("un estado sin puntuaciones (o con basura) se completa sin perder nada", () => {

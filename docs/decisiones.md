@@ -1853,3 +1853,7 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 
 - **Petición (Diego):** que lo de Yolanda le recuerde pero **no llene «Próximas fechas»** ni el calendario con una línea por cada vez.
 - **Qué cambia:** en **Próximas fechas** y en la **cuenta atrás de Hoy**, de cada serie solo sale **la próxima vez** ; el **recordatorio del martes no sale en «Próximas fechas»** (solo el miércoles que viene) y en Hoy solo cuando es hoy o mañana; la serie completa se ve en «🔁 Se repite». En **Hoy, Mañana, De un vistazo y el plan de la semana** sigue saliendo lo de esos días. Para el servidor (avisos del móvil y calendario suscrito), las repeticiones se calculan solo para la **próxima semana**, así que el calendario de Google no se llena. No cambia ningún dato.
+
+## D-213 · «No fui» y borrar en «Lo que ya pasó»
+
+Cada cita pasada, además de las estrellas, tiene **🚫 No fui** (se queda tachada y más pálida; «↩️ Sí fui» lo deshace) y **🗑️ Borrar** (pide confirmación). «No fui» se guarda en `puntuacionesCitas` como `-1`: sin campo nuevo ni migración. Valorar con estrellas sustituye «No fui», y al revés.
