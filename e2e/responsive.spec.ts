@@ -594,6 +594,17 @@ test.describe("flujos en móvil", () => {
       "aria-pressed",
       "false",
     );
+    // «No fui» (D-213): se marca, se deshace, y se puede borrar con confirmación.
+    await pasadas.getByRole("button", { name: "🚫 No fui" }).click();
+    await pagina.reload();
+    await expect(pasadas.getByRole("button", { name: "↩️ Sí fui" })).toBeVisible();
+    await pasadas.getByRole("button", { name: "↩️ Sí fui" }).click();
+    await pasadas.getByRole("button", { name: "Borrar Fiesta de Halloween" }).click();
+    await pasadas.getByRole("button", { name: "No", exact: true }).click();
+    await expect(pasadas.getByText("Fiesta de Halloween")).toBeVisible();
+    await pasadas.getByRole("button", { name: "Borrar Fiesta de Halloween" }).click();
+    await pasadas.getByRole("button", { name: "Sí, borrar" }).click();
+    await expect(pasadas.getByText("Fiesta de Halloween")).toHaveCount(0);
     await contexto.close();
   });
 
@@ -3789,7 +3800,7 @@ test.describe("Hoy como tablero fijo (D-180)", () => {
     // Sale en Hoy como cualquier cita (hoy viene), y la semana que viene no.
     await cargar(pagina, "/");
     await expect(
-      pagina.getByRole("list", { name: "Cuenta atrás" }).getByText(/Viene Yolanda/),
+      pagina.getByRole("list", { name: "Cuenta atrás" }).getByText(/Viene Yolanda · ¡hoy!/),
     ).toBeVisible();
     // Y el aviso del día antes aparece en «Mañana» cuando toca: la víspera de la siguiente vez.
     await cargar(pagina, "/fechas");

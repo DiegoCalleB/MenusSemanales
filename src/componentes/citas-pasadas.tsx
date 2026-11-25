@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { clavePuntuacion } from "@/aplicacion/estado";
+import { NO_FUI, clavePuntuacion } from "@/aplicacion/estado";
 import { useHogar } from "./proveedor-hogar";
 
 const fechaLarga = (f: string) =>
@@ -22,6 +22,7 @@ const DE_UNA_VEZ = 10;
 export function CitasPasadas() {
   const { estado, despachar } = useHogar();
   const [cuantas, setCuantas] = useState(DE_UNA_VEZ);
+  const [porBorrar, setPorBorrar] = useState<string | null>(null);
   const pasadas = estado.agenda
     .filter((a) => (a.hasta ?? a.fecha) < estado.hoy)
     .sort((a, b) => b.fecha.localeCompare(a.fecha) || a.titulo.localeCompare(b.titulo, "es"));
@@ -38,11 +39,16 @@ export function CitasPasadas() {
       ) : (
         <ul aria-label="Citas pasadas" className="flex flex-col gap-2">
           {pasadas.slice(0, cuantas).map((a) => {
-            const puntos = estado.puntuacionesCitas[clavePuntuacion(a)] ?? 0;
+            const valor = estado.puntuacionesCitas[clavePuntuacion(a)] ?? 0;
+            const noFui = valor === NO_FUI;
+            const puntos = noFui ? 0 : valor;
             return (
-              <li key={a.id} className="bg-suave-1 flex flex-col gap-1 rounded-2xl p-3">
+              <li
+                key={a.id}
+                className={`bg-suave-1 flex flex-col gap-1 rounded-2xl p-3 ${noFui ? "opacity-60" : ""}`}
+              >
                 <p className="text-base font-semibold">
-                  {a.titulo}
+                  <span className={noFui ? "line-through" : ""}>{a.titulo}</span>
                   <span className="text-tinta-suave block text-sm font-normal">
                     {fechaLarga(a.fecha)}
                     {a.hasta ? ` – ${fechaLarga(a.hasta)}` : ""}
@@ -73,6 +79,53 @@ export function CitasPasadas() {
                     </button>
                   ))}
                 </div>
+                {porBorrar === a.id ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-base font-semibold">¿Borrar «{a.titulo}»?</span>
+                    <button
+                      type="button"
+                      className="boton-suave"
+                      onClick={() => {
+                        despachar({ tipo: "agenda/borrar", id: a.id });
+                        setPorBorrar(null);
+                      }}
+                    >
+                      Sí, borrar
+                    </button>
+                    <button
+                      type="button"
+                      className="boton-suave"
+                      onClick={() => setPorBorrar(null)}
+                    >
+                      No
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className="boton-suave"
+                      aria-pressed={noFui}
+                      onClick={() =>
+                        despachar({
+                          tipo: "agenda/valorar",
+                          id: a.id,
+                          estrellas: noFui ? 0 : NO_FUI,
+                        })
+                      }
+                    >
+                      {noFui ? "↩️ Sí fui" : "🚫 No fui"}
+                    </button>
+                    <button
+                      type="button"
+                      className="boton-suave"
+                      aria-label={`Borrar ${a.titulo}`}
+                      onClick={() => setPorBorrar(a.id)}
+                    >
+                      🗑️ Borrar
+                    </button>
+                  </div>
+                )}
               </li>
             );
           })}

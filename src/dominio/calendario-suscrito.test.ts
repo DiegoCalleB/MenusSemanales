@@ -124,7 +124,7 @@ describe("calendario suscrito", () => {
         t("Hecha", "diego", { ultimaVez: "2026-11-01" }),
       ],
     });
-    const diego = eventosSuscritos(p, { hoy: HOY, para: "diego" });
+    const diego = eventosSuscritos(p, { hoy: HOY, para: "diego", solo: "casa" });
     expect(titulos(diego)).toEqual(["🏠 Sábanas", "🏠 Areneros", "🏠 Hecha"]);
     expect(diego.find((x) => x.titulo === "🏠 Areneros")?.fecha).toBe(HOY); // atrasada → hoy
     expect(diego.find((x) => x.titulo === "🏠 Sábanas")).toMatchObject({
@@ -132,12 +132,12 @@ describe("calendario suscrito", () => {
       aviso: true,
     });
     expect(diego.find((x) => x.titulo === "🏠 Hecha")?.fecha).toBe("2026-11-15"); // 1/11 + 14
-    expect(titulos(eventosSuscritos(p, { hoy: HOY, para: "ana" }))).toEqual([
+    expect(titulos(eventosSuscritos(p, { hoy: HOY, para: "ana", solo: "casa" }))).toEqual([
       "🏠 Areneros",
       "🏠 Toallas",
     ]);
     // Sin persona: todas.
-    expect(eventosSuscritos(p, { hoy: HOY, para: null })).toHaveLength(4);
+    expect(eventosSuscritos(p, { hoy: HOY, para: null, solo: "casa" })).toHaveLength(4);
   });
 
   it("los identificadores son estables (el calendario actualiza en vez de duplicar) y no se repiten", () => {
@@ -155,8 +155,12 @@ describe("calendario suscrito", () => {
       ],
       agenda: [{ fecha: "2026-11-12", hasta: null, hora: null, titulo: "Cita médica!" }],
     });
-    const a = eventosSuscritos(p, { hoy: HOY, para: "diego" });
-    const b = eventosSuscritos(p, { hoy: HOY, para: "diego" });
+    const juntos = () => [
+      ...eventosSuscritos(p, { hoy: HOY, para: "diego", solo: "casa" }),
+      ...eventosSuscritos(p, { hoy: HOY, para: "diego" }),
+    ];
+    const a = juntos();
+    const b = juntos();
     expect(a.map((x) => x.uid)).toEqual(b.map((x) => x.uid));
     expect(new Set(a.map((x) => x.uid)).size).toBe(a.length);
     expect(a.map((x) => x.uid)).toContain("casa-sabanas");
@@ -175,29 +179,31 @@ describe("calendario suscrito", () => {
           },
         ],
       }),
-      { hoy: HOY, para: null },
+      { hoy: HOY, para: null, solo: "casa" },
     );
     expect(movida[0]?.uid).toBe("casa-sabanas");
     expect(movida[0]?.fecha).toBe("2026-11-09");
   });
 
   it("el archivo lleva alarmas, el refresco y los identificadores", () => {
-    const e = eventosSuscritos(
-      base({
-        agenda: [{ fecha: "2026-11-12", hasta: null, hora: "18:15", titulo: "Psico" }],
-        casa: [
-          {
-            titulo: "Sábanas",
-            emoji: "🛏️",
-            cadaDias: 7,
-            responsableId: null,
-            ultimaVez: null,
-            desde: HOY,
-          },
-        ],
-      }),
-      { hoy: HOY, para: "diego" },
-    );
+    const p = base({
+      agenda: [{ fecha: "2026-11-12", hasta: null, hora: "18:15", titulo: "Psico" }],
+      casa: [
+        {
+          titulo: "Sábanas",
+          emoji: "🛏️",
+          cadaDias: 7,
+          responsableId: null,
+          ultimaVez: null,
+          desde: HOY,
+        },
+      ],
+    });
+    // Casa y citas van en calendarios distintos (D-213); aquí se juntan para mirar el archivo.
+    const e = [
+      ...eventosSuscritos(p, { hoy: HOY, para: "diego", solo: "casa" }),
+      ...eventosSuscritos(p, { hoy: HOY, para: "diego" }),
+    ];
     const ics = generarIcs("Casa", e, new Date("2026-11-02T08:00:00Z"), 1);
     expect(ics).toContain("REFRESH-INTERVAL;VALUE=DURATION:PT1H");
     expect(ics).toContain("X-PUBLISHED-TTL:PT1H");
@@ -205,6 +211,37 @@ describe("calendario suscrito", () => {
     expect(ics).toContain("TRIGGER:PT9H"); // la tarea, de todo el día: 9:00
     expect(ics).toContain("TRIGGER:-PT1H"); // la cita, con hora: una hora antes
     expect(generarIcs("x", e, new Date())).not.toContain("REFRESH-INTERVAL");
+  });
+});
+
+describe("calendarios aparte: casa y tiempo (D-213)", () => {
+  it("la casa, la mochila y el tiempo no salen en el principal ni en los demás, y cada uno en el suyo", () => {
+    const p = base({
+      casa: [
+        {
+          titulo: "Sábanas",
+          emoji: "🛏️",
+          cadaDias: 7,
+          responsableId: null,
+          ultimaVez: null,
+          desde: HOY,
+        },
+      ],
+      mochila: [{ personaId: "diego", texto: "Flauta", dias: [1], fecha: null, antes: 1 }],
+      agenda: [{ fecha: "2026-11-12", hasta: null, hora: null, titulo: "Cita médica" }],
+    });
+    const tiempo = [
+      { fecha: "2026-11-05", codigo: 61, max: 14, min: 3, probLluvia: 70, lluviaMm: 3, horas: [] },
+    ];
+    const uids = (solo?: "fechas" | "casa" | "tiempo" | "comidas") =>
+      eventosSuscritos(p, { hoy: HOY, para: null, solo, tiempo }).map((e) => e.uid ?? "");
+    expect(uids().some((u) => /^(casa|mochila|tiempo)-/.test(u))).toBe(false);
+    expect(uids()).toContain("agenda-2026-11-12-cita-medica");
+    expect(uids("casa").length).toBeGreaterThan(0);
+    expect(uids("casa").every((u) => /^(casa|mochila)-/.test(u))).toBe(true);
+    expect(uids("tiempo").length).toBeGreaterThan(0);
+    expect(uids("tiempo").every((u) => u.startsWith("tiempo-"))).toBe(true);
+    expect(uids("comidas").some((u) => /^(casa|mochila|tiempo)-/.test(u))).toBe(false);
   });
 });
 
@@ -237,7 +274,7 @@ describe("qué llevar en el calendario (D-136)", () => {
           { personaId: "emma", texto: "Patines", dias: [5], fecha: null, antes: 1 },
         ],
       }),
-      { hoy: HOY, para: "diego" },
+      { hoy: HOY, para: "diego", solo: "casa" },
     ).filter((x) => x.titulo.startsWith("🎒"));
     expect(e.slice(0, 2)).toEqual([
       expect.objectContaining({
@@ -271,7 +308,7 @@ describe("qué llevar en el calendario (D-136)", () => {
           },
         ],
       }),
-      { hoy: HOY, para: "diego" },
+      { hoy: HOY, para: "diego", solo: "casa" },
     ).filter((x) => x.titulo.startsWith("🎒"));
     expect(e).toHaveLength(8);
   });
@@ -370,9 +407,12 @@ describe("el tiempo en el calendario suscrito (D-154)", () => {
   });
 
   it("los días de cole, el paraguas con la hora; el resto, lo del día; de todo el día", () => {
-    const e = eventosSuscritos(conMochila, { hoy: "2026-11-18", para: null, tiempo }).filter((x) =>
-      x.uid?.startsWith("tiempo-"),
-    );
+    const e = eventosSuscritos(conMochila, {
+      hoy: "2026-11-18",
+      para: null,
+      solo: "tiempo",
+      tiempo,
+    }).filter((x) => x.uid?.startsWith("tiempo-"));
     expect(e.map((x) => [x.uid, x.titulo, x.hora ?? null])).toEqual([
       ["tiempo-2026-11-19-paraguas", "🌂 Paraguas 8–9 h", null],
       ["tiempo-2026-11-21-lluvia", "🌧️ Lluvia (70 %)", null],
@@ -381,7 +421,7 @@ describe("el tiempo en el calendario suscrito (D-154)", () => {
   });
 
   it("sin previsión, o en el calendario de comidas, nada del tiempo", () => {
-    const sin = eventosSuscritos(conMochila, { hoy: "2026-11-18", para: null });
+    const sin = eventosSuscritos(conMochila, { hoy: "2026-11-18", para: null, solo: "tiempo" });
     expect(sin.some((x) => x.uid?.startsWith("tiempo-"))).toBe(false);
     const comidas = eventosSuscritos(conMochila, {
       hoy: "2026-11-18",
@@ -488,6 +528,7 @@ describe("títulos cortos en el calendario (D-161)", () => {
       {
         hoy: "2026-11-18",
         para: null,
+        solo: "tiempo",
         tiempo: [
           { fecha: "2026-11-19", codigo: 61, max: 14, min: 9, probLluvia: 70, lluviaMm: 3, horas },
         ],

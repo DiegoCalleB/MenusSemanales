@@ -48,7 +48,8 @@ export function conRepetidas(
   const extra = eventosDeRepetidas(
     series.map((s, i) => ({ id: `s${i}`, creadoEn: hoy, ...s })),
     sumarDias(hoy, -1),
-    sumarDias(hoy, 90),
+    // Solo la próxima semana: lo que miran los avisos; y el calendario suscrito no se llena (D-212).
+    sumarDias(hoy, 8),
   ).map((e) => ({ fecha: e.fecha, hasta: null, hora: e.hora, titulo: e.titulo }));
   return { ...p, agenda: [...p.agenda, ...extra] };
 }

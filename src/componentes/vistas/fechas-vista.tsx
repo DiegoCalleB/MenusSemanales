@@ -6,6 +6,7 @@ import { enlaceGoogleCalendar, textoParaKeep } from "@/dominio/agenda";
 import { type EventoCalendario, generarIcs } from "@/dominio/compartir";
 import { type CuentaAtras, cuentaAtras } from "@/dominio/cuenta-atras";
 import { citasRepetidas } from "@/aplicacion/estado";
+import { sumarDias } from "@/dominio/fechas";
 import { fechasParaCompartir } from "@/aplicacion/compartir";
 import { textoFechas } from "@/dominio/compartir";
 import { Apuntar } from "../apuntar";
@@ -86,8 +87,12 @@ export function FechasVista() {
         hora: a.hora,
         hasta: a.hasta,
       })),
-      // Lo que se repite (D-211): se calcula, no se copia.
-      ...citasRepetidas(estado, 180).map((a) => ({
+      // Lo que se repite (D-211): se calcula, no se copia, y de cada serie solo la próxima vez (D-212).
+      ...citasRepetidas(estado, 180, {
+        soloProxima: true,
+        // En «Próximas fechas» solo el día que viene; el recordatorio de la víspera va en Hoy y en el aviso.
+        recordatorioHasta: sumarDias(estado.hoy, -1),
+      }).map((a) => ({
         fecha: a.fecha,
         titulo: a.titulo,
         hora: a.hora,

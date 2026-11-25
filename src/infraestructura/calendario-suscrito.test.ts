@@ -22,10 +22,11 @@ describe("fechas que se repiten en lo que lee el servidor (D-211)", () => {
         ["2026-11-30", "Dentista"],
         ["2026-11-24", "Dejar dinero para Yolanda"],
         ["2026-11-25", "Viene Yolanda"],
-        ["2026-12-08", "Dejar dinero para Yolanda"],
-        ["2026-12-09", "Viene Yolanda"],
       ]),
     );
+    // Solo la próxima semana, para no llenar el calendario suscrito (D-212).
+    expect(lista).not.toEqual(expect.arrayContaining([["2026-12-09", "Viene Yolanda"]]));
+    expect(lista.filter(([, t]) => t === "Viene Yolanda")).toHaveLength(1);
     // Sin series, no cambia nada.
     const sin = { agenda: [] } as unknown as Parameters<typeof conRepetidas>[0];
     expect(conRepetidas(sin, "2026-11-25")).toBe(sin);

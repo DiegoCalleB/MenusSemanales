@@ -355,7 +355,7 @@ export type Accion =
       hasta?: string | null;
       hora?: string | null;
     }
-  /** Puntúa una cita que ya ha pasado (D-152): de 1 a 5 estrellas; 0 la quita. */
+  /** Puntúa una cita que ya ha pasado (D-152): de 1 a 5 estrellas; 0 la quita; -1 es «no fui» (D-213). */
   | { tipo: "agenda/valorar"; id: string; estrellas: number }
   /** Pasa a «hora» la que está escrita al final del título de una cita sin hora (D-134). */
   | { tipo: "agenda/arreglarHoras" }
@@ -648,8 +648,11 @@ function idNuevo(
 // --------------------------------------------------------------------------------------------
 
 /** Las citas «virtuales» de lo que se repite para los próximos días (D-211): no son copias guardadas. */
-export const citasRepetidas = (e: EstadoHogar, dias = 60) =>
-  eventosDeRepetidas(e.repetidas, e.hoy, sumarDias(e.hoy, dias));
+export const citasRepetidas = (
+  e: EstadoHogar,
+  dias = 60,
+  opciones: { soloProxima?: boolean; recordatorioHasta?: FechaIso } = {},
+) => eventosDeRepetidas(e.repetidas, e.hoy, sumarDias(e.hoy, dias), opciones);
 
 const catalogo = (e: EstadoHogar) => new Map(e.ingredientes.map((i) => [i.id, i]));
 
@@ -994,10 +997,12 @@ export const nombreDia = (fecha: FechaIso): string => NOMBRE_DIA[diaSemanaIso(fe
 // --------------------------------------------------------------------------------------------
 
 /** La clave de la puntuación de una cita (D-152): su día y su título, sin mayúsculas ni tildes. */
+export const NO_FUI = -1;
+
 export const clavePuntuacion = (a: { fecha: FechaIso; titulo: string }) =>
   `${a.fecha}|${claveArticulo(a.titulo)}`;
 
-/** Solo puntuaciones de 1 a 5 con una clave razonable; lo demás se descarta. */
+/** Solo puntuaciones de 1 a 5 (o -1, «no fui») con una clave razonable; lo demás se descarta. */
 function puntuacionesValidas(v: unknown): Record<string, number> {
   if (typeof v !== "object" || v === null || Array.isArray(v)) return {};
   return Object.fromEntries(
@@ -1006,8 +1011,7 @@ function puntuacionesValidas(v: unknown): Record<string, number> {
         k.length <= 140 &&
         /^\d{4}-\d{2}-\d{2}\|/.test(k) &&
         Number.isInteger(n) &&
-        (n as number) >= 1 &&
-        (n as number) <= 5,
+        ((n as number) === NO_FUI || ((n as number) >= 1 && (n as number) <= 5)),
     ),
   ) as Record<string, number>;
 }
@@ -2003,7 +2007,7 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
       const a = e.agenda.find((x) => x.id === accion.id);
       const n = Math.round(accion.estrellas);
       // Solo lo que ya ha empezado (desde el mismo día) y de 0 a 5.
-      if (!a || a.fecha > e.hoy || !(n >= 0 && n <= 5)) return e;
+      if (!a || a.fecha > e.hoy || !((n >= 0 && n <= 5) || n === NO_FUI)) return e;
       const resto = { ...e.puntuacionesCitas };
       delete resto[clavePuntuacion(a)];
       return {

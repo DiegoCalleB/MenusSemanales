@@ -263,17 +263,22 @@ const limpio = (t: string) =>
  * «pensar» ni «comprar» el regalo (D-143; siguen en la app).
  */
 /** Qué calendario se pide (D-140): las fechas (lo de no olvidar) o solo las comidas y cenas. */
-export type CalendarioSuscrito = "fechas" | "comidas" | "metropolitano" | "barrio";
+export type CalendarioSuscrito =
+  "fechas" | "comidas" | "metropolitano" | "barrio" | "casa" | "tiempo";
 
 const esComida = (e: EventoCalendario) => /^(cena|comida|cole)-/.test(e.uid ?? "");
 /** Los partidos y conciertos del estadio (D-163): su propio calendario. Los avisos de choque no. */
 const esEstadio = (e: EventoCalendario) => /^estadio-/.test(e.uid ?? "");
 /** Los planes del barrio (D-165): su propio calendario. */
 const esBarrio = (e: EventoCalendario) => /^barrio-/.test(e.uid ?? "");
+/** Las tareas de casa y lo que llevar al cole (D-213): su propio calendario, para no llenar el principal. */
+const esCasa = (e: EventoCalendario) => /^(casa|mochila)-/.test(e.uid ?? "");
+/** El tiempo (D-213): su propio calendario, para ponerle otro color o no suscribirlo. */
+const esTiempo = (e: EventoCalendario) => /^tiempo-/.test(e.uid ?? "");
 
 /**
  * Los eventos de uno de los dos calendarios suscritos (D-140): «fechas» (citas, fechas señaladas,
- * cumpleaños y regalos, casa y mochila) o «comidas» (comidas y cenas). Separados, en Google cada uno
+ * cumpleaños y regalos; la casa, la mochila y el tiempo van aparte, D-213) o «comidas» (comidas y cenas). Separados, en Google cada uno
  * tiene su color y se puede ocultar.
  */
 export function eventosSuscritos(
@@ -294,7 +299,11 @@ export function eventosSuscritos(
   if (opciones.solo === "comidas") return todos.filter(esComida);
   if (opciones.solo === "metropolitano") return todos.filter(esEstadio);
   if (opciones.solo === "barrio") return todos.filter(esBarrio);
-  return todos.filter((e) => !esComida(e) && !esEstadio(e) && !esBarrio(e));
+  if (opciones.solo === "casa") return todos.filter(esCasa);
+  if (opciones.solo === "tiempo") return todos.filter(esTiempo);
+  return todos.filter(
+    (e) => !esComida(e) && !esEstadio(e) && !esBarrio(e) && !esCasa(e) && !esTiempo(e),
+  );
 }
 
 function todosLosEventos(

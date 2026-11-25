@@ -1848,3 +1848,16 @@ Los platos se pueden ver como **tarjetas** (como hasta ahora) o como **lista** c
 - **Avisos del móvil y calendario:** el servidor las convierte en citas (también en el calendario suscrito), así que el resumen de las 9:00 y el aviso de la noche las incluyen, también el recordatorio del martes. Necesita la migración `20261126000000_repetidas_avisos` (solo lleva título, hora, próxima vez, cada cuántos días y recordatorio). **Sin ella, todo funciona en la app, pero no llega el aviso al móvil.**
 - **Datos:** `repetidas` en el documento del hogar (hasta 30).
 - **Pendiente:** el buscador, «Pregúntale a tu casa» y la revisión de la semana aún no las incluyen.
+
+## D-212 · Lo que se repite no llena las listas
+
+- **Petición (Diego):** que lo de Yolanda le recuerde pero **no llene «Próximas fechas»** ni el calendario con una línea por cada vez.
+- **Qué cambia:** en **Próximas fechas** y en la **cuenta atrás de Hoy**, de cada serie solo sale **la próxima vez** ; el **recordatorio del martes no sale en «Próximas fechas»** (solo el miércoles que viene) y en Hoy solo cuando es hoy o mañana; la serie completa se ve en «🔁 Se repite». En **Hoy, Mañana, De un vistazo y el plan de la semana** sigue saliendo lo de esos días. Para el servidor (avisos del móvil y calendario suscrito), las repeticiones se calculan solo para la **próxima semana**, así que el calendario de Google no se llena. No cambia ningún dato.
+
+## D-213 · «No fui» y borrar en «Lo que ya pasó»
+
+Cada cita pasada, además de las estrellas, tiene **🚫 No fui** (se queda tachada y más pálida; «↩️ Sí fui» lo deshace) y **🗑️ Borrar** (pide confirmación). «No fui» se guarda en `puntuacionesCitas` como `-1`: sin campo nuevo ni migración. Valorar con estrellas sustituye «No fui», y al revés.
+
+## D-213b · Casa, mochila y tiempo, en calendarios aparte
+
+El calendario principal de «¡Hecho!» se llenaba. Ahora lleva solo lo importante (citas, fechas señaladas, cumpleaños, papeles, días sin cole). Aparte, con el mismo enlace y `&solo=…`: **casa** (tareas de casa y mochila), **tiempo** (opcional: ya sale en Hoy), **comidas**, **metropolitano** y **barrio**. Quien ya estaba suscrito al principal deja de ver casa, mochila y tiempo sin tocar nada; para verlos, suscribe su enlace en Más → Enviar. Sin cambios en datos ni migración.
