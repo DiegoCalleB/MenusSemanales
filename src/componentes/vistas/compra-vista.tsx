@@ -203,8 +203,6 @@ export function CompraVista() {
         <EntradaCompra yaEnLista={new Set(pendientes.map((i) => claveArticulo(i.nombre)))} />
       )}
 
-      {!modoTienda && <PegarListaDeKeep />}
-
       {!modoTienda && <OrdenarConIa yaEnLista={pendientes.map((i) => i.nombre)} />}
 
       {!modoTienda && (
@@ -299,6 +297,9 @@ export function CompraVista() {
           </ul>
         </details>
       )}
+
+      {/* Al final, para que la lista siga a la vista nada más abrir la compra (D-210). */}
+      {!modoTienda && <PegarListaDeKeep />}
     </div>
   );
 }
