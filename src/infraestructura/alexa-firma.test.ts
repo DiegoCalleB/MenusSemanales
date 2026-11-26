@@ -1,6 +1,6 @@
 import { X509Certificate, createSign, generateKeyPairSync } from "node:crypto";
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { CADENA_AMAZON_2019 } from "./pruebas/alexa-cadena-2019";
 import {
   cadenaDeConfianza,
   fechaReciente,
@@ -115,7 +115,7 @@ describe("alexa: la firma", () => {
 
 describe("alexa: la cadena de certificados", () => {
   // Un certificado real de Amazon de 2019 (público): vale solo en su época.
-  const pem = readFileSync(new URL("./pruebas/alexa-cadena-2019.pem", import.meta.url), "utf8");
+  const pem = CADENA_AMAZON_2019;
   const cadena = (
     pem.match(/-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/g) ?? []
   ).map((p) => new X509Certificate(p));
