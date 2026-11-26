@@ -9,7 +9,7 @@ import { BotonTema, ProveedorTema } from "@/componentes/tema";
 import { BotonPerfil, PuertaDePerfil } from "@/componentes/perfiles";
 import { BienvenidaAna } from "@/componentes/bienvenida-ana";
 import { BienvenidaCumple } from "@/componentes/bienvenida-cumple";
-import { AlexaCompra } from "@/componentes/alexa-compra";
+import { AlexaEntradas } from "@/componentes/alexa-entradas";
 import { LimpiarFechas } from "@/componentes/limpiar-fechas";
 import { ProveedorHogar } from "@/componentes/proveedor-hogar";
 
@@ -65,7 +65,7 @@ export default function LayoutApp({ children }: { children: ReactNode }) {
           <BienvenidaCumple />
           <BienvenidaAna />
           <LimpiarFechas />
-          <AlexaCompra />
+          <AlexaEntradas />
         </PuertaDePerfil>
       </ProveedorHogar>
     </ProveedorTema>

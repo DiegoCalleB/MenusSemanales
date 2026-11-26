@@ -111,5 +111,8 @@ describe("alexa: lo que contesta", () => {
     const sigue = respuesta("hola", true);
     expect(sigue.response.shouldEndSession).toBe(false);
     expect(sigue.response.reprompt?.outputSpeech.text).toContain("añade leche");
+    const con = respuesta("¿Apunto?", true, { atributos: { a: 1 }, repregunta: "¿Sí o no?" });
+    expect(con.sessionAttributes).toEqual({ a: 1 });
+    expect(con.response.reprompt?.outputSpeech.text).toBe("¿Sí o no?");
   });
 });

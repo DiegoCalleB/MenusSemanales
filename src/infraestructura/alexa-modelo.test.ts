@@ -1,42 +1,51 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-describe("alexa: el modelo de voz", () => {
-  const modelo = JSON.parse(
-    readFileSync(new URL("../../alexa/modelo-es-ES.json", import.meta.url), "utf8"),
-  ) as {
-    interactionModel: {
-      languageModel: {
-        invocationName: string;
-        intents: { name: string; samples: string[]; slots?: { name: string }[] }[];
-      };
-    };
-  };
-  const { intents, invocationName } = modelo.interactionModel.languageModel;
+interface Funcion {
+  name: string;
+  samples: string[];
+  slots?: { name: string }[];
+}
+const modelo = JSON.parse(
+  readFileSync(new URL("../../alexa/modelo-es-ES.json", import.meta.url), "utf8"),
+) as { interactionModel: { languageModel: { invocationName: string; intents: Funcion[] } } };
+const { intents, invocationName } = modelo.interactionModel.languageModel;
+const manejador = readFileSync(new URL("../app/api/alexa/manejar.ts", import.meta.url), "utf8");
 
-  it("tiene las tres cosas y las de siempre de Amazon", () => {
+describe("alexa: el modelo de voz de Conchi", () => {
+  it("se llama Conchi y tiene las funciones de siempre de Amazon", () => {
+    expect(invocationName).toBe("conchi");
     const nombres = intents.map((i) => i.name);
     for (const n of [
-      "AnadirCompraIntent",
-      "CenaIntent",
-      "HoyIntent",
       "AMAZON.HelpIntent",
       "AMAZON.StopIntent",
       "AMAZON.CancelIntent",
       "AMAZON.FallbackIntent",
+      "AMAZON.YesIntent",
+      "AMAZON.NoIntent",
     ]) {
       expect(nombres).toContain(n);
     }
-    expect(invocationName).toBe("hecho");
   });
 
-  it("todo lo que dice «añade» lleva el producto, y los nombres coinciden con la ruta", () => {
-    const anadir = intents.find((i) => i.name === "AnadirCompraIntent");
-    expect(anadir?.slots?.[0]?.name).toBe("producto");
-    expect(anadir?.samples.length).toBeGreaterThan(3);
-    for (const s of anadir?.samples ?? []) expect(s).toContain("{producto}");
-    const route = readFileSync(new URL("../app/api/alexa/manejar.ts", import.meta.url), "utf8");
-    for (const n of ["AnadirCompraIntent", "CenaIntent", "HoyIntent"])
-      expect(route).toContain(`"${n}"`);
+  it("cada función propia la atiende el servidor, y al revés", () => {
+    for (const i of intents.filter((x) => !x.name.startsWith("AMAZON."))) {
+      expect(manejador, i.name).toContain(`"${i.name}"`);
+    }
+    const atendidas = [...manejador.matchAll(/case "([A-Za-z]+Intent)"/g)].map((m) => m[1]);
+    const delModelo = intents.map((i) => i.name);
+    for (const a of atendidas) expect(delModelo, a).toContain(a);
+  });
+
+  it("las frases con un dato lo llevan, y ninguna frase está en dos funciones", () => {
+    for (const i of intents) {
+      const dato = i.slots?.[0]?.name;
+      for (const s of i.samples) {
+        if (dato) expect(s, `${i.name}: ${s}`).toContain(`{${dato}}`);
+        else expect(s, `${i.name}: ${s}`).not.toContain("{");
+      }
+    }
+    const todas = intents.flatMap((i) => i.samples.map((s) => s.toLowerCase()));
+    expect(new Set(todas).size).toBe(todas.length);
   });
 });

@@ -61,7 +61,7 @@ select pg_temp.igual('anon solo puede ejecutar las funciones con token del calen
                             -- Circulares por correo (D-147): con el código de la dirección del hogar.
                             'guardar_circular_correo',
                             -- Alexa → compra (D-214): con el token del calendario del hogar.
-                            'alexa_anadir_compra',
+                            'alexa_anadir_compra', 'alexa_anadir', 'alexa_usar_ia',
                             -- Menú del cole automático (D-173): solo con el secreto de los avisos.
                             'centros_con_menu_automatico', 'fuentes_menu_vistas',
                             'registrar_menu_cole_automatico')), 0);

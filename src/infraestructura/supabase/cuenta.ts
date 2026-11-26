@@ -143,3 +143,7 @@ export const revisarCircular = (cliente: Cliente, id: string) =>
 /** Lo que se ha pedido a Alexa para la compra (D-214), recogido una sola vez entre todos los móviles. */
 export const recogerCompraAlexa = (cliente: Cliente, hogarId: string) =>
   cliente.rpc("recoger_compra_alexa", { p_hogar_id: hogarId });
+
+/** Todo lo pedido a Conchi (compra, pendientes, citas, tareas hechas), recogido una sola vez (D-215). */
+export const recogerEntradasAlexa = (cliente: Cliente, hogarId: string) =>
+  cliente.rpc("recoger_entradas_alexa", { p_hogar_id: hogarId });

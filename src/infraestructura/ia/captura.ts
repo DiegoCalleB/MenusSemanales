@@ -74,13 +74,14 @@ export function cuerpoDeCaptura(e: EntradaCaptura, conAjustes = true) {
 export async function leerCaptura(
   e: EntradaCaptura,
   llamar: typeof fetch = fetch,
+  plazos: { plazoMs: number; porIntentoMs: number } = { plazoMs: 45_000, porIntentoMs: 25_000 },
 ): Promise<{ items: ItemCaptura[]; pasados: number }> {
   const clave = process.env.GEMINI_API_KEY;
   if (!clave) throw new IaNoConfigurada();
   const r = await llamarGemini(clave, cuerpoDeCaptura(e), {
     sinAjustes: cuerpoDeCaptura(e, false),
-    plazoMs: 45_000,
-    porIntentoMs: 25_000,
+    plazoMs: plazos.plazoMs,
+    porIntentoMs: plazos.porIntentoMs,
     llamar,
   });
   const texto = textoDeRespuestaGemini(await r.json());

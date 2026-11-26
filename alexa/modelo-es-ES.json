@@ -1,15 +1,11 @@
 {
   "interactionModel": {
     "languageModel": {
-      "invocationName": "hecho",
+      "invocationName": "conchi",
       "intents": [
         {
           "name": "AMAZON.CancelIntent",
           "samples": []
-        },
-        {
-          "name": "AMAZON.HelpIntent",
-          "samples": ["ayuda", "qué puedo decir", "qué sabes hacer", "qué puedes hacer"]
         },
         {
           "name": "AMAZON.StopIntent",
@@ -24,13 +20,19 @@
           "samples": []
         },
         {
+          "name": "AMAZON.YesIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.NoIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.HelpIntent",
+          "samples": ["ayuda", "qué puedo decir", "qué sabes hacer", "qué puedes hacer"]
+        },
+        {
           "name": "AnadirCompraIntent",
-          "slots": [
-            {
-              "name": "producto",
-              "type": "AMAZON.SearchQuery"
-            }
-          ],
           "samples": [
             "añade {producto}",
             "añade {producto} a la compra",
@@ -39,18 +41,12 @@
             "añádeme {producto}",
             "añadir {producto}",
             "añadir {producto} a la compra",
-            "apunta {producto}",
-            "apunta {producto} en la compra",
-            "apunta {producto} en la lista",
-            "apunta {producto} en la lista de la compra",
-            "apúntame {producto}",
             "pon {producto} en la compra",
             "pon {producto} en la lista",
             "pon {producto} en la lista de la compra",
             "mete {producto} en la compra",
             "mete {producto} en la lista",
             "necesitamos {producto}",
-            "necesito {producto}",
             "hay que comprar {producto}",
             "tenemos que comprar {producto}",
             "tengo que comprar {producto}",
@@ -62,11 +58,54 @@
             "se han acabado {producto}",
             "nos hemos quedado sin {producto}",
             "compra {producto}"
+          ],
+          "slots": [
+            {
+              "name": "producto",
+              "type": "AMAZON.SearchQuery"
+            }
+          ]
+        },
+        {
+          "name": "ConchiIntent",
+          "samples": [
+            "apunta {frase}",
+            "apúntame {frase}",
+            "anota {frase}",
+            "anótame {frase}",
+            "recuérdame {frase}",
+            "recuerda {frase}",
+            "recuerda que {frase}",
+            "que {frase}",
+            "necesito {frase}"
+          ],
+          "slots": [
+            {
+              "name": "frase",
+              "type": "AMAZON.SearchQuery"
+            }
+          ]
+        },
+        {
+          "name": "HechoIntent",
+          "samples": [
+            "ya he hecho {tarea}",
+            "he hecho {tarea}",
+            "ya he terminado {tarea}",
+            "he terminado {tarea}",
+            "ya hice {tarea}",
+            "marca {tarea} como hecha",
+            "marca {tarea} como hecho"
+          ],
+          "slots": [
+            {
+              "name": "tarea",
+              "type": "AMAZON.SearchQuery"
+            }
           ]
         },
         {
           "name": "CenaIntent",
-          "slots": [],
           "samples": [
             "qué hay de cena",
             "qué hay de cena hoy",
@@ -87,11 +126,11 @@
             "dime la cena",
             "dime la cena de hoy",
             "qué hay de cena esta noche"
-          ]
+          ],
+          "slots": []
         },
         {
           "name": "HoyIntent",
-          "slots": [],
           "samples": [
             "qué tengo hoy",
             "qué tenemos hoy",
@@ -115,7 +154,78 @@
             "dime qué tengo hoy",
             "cuál es la agenda de hoy",
             "qué planes hay hoy"
-          ]
+          ],
+          "slots": []
+        },
+        {
+          "name": "MananaIntent",
+          "samples": [
+            "qué tengo mañana",
+            "qué tenemos mañana",
+            "qué hay mañana",
+            "qué hay apuntado mañana",
+            "qué tengo apuntado mañana",
+            "qué citas tengo mañana",
+            "qué citas tenemos mañana",
+            "tengo algo mañana",
+            "tenemos algo mañana",
+            "dime lo de mañana"
+          ],
+          "slots": []
+        },
+        {
+          "name": "MochilaIntent",
+          "samples": [
+            "qué se lleva mañana al cole",
+            "qué hay que llevar mañana al cole",
+            "qué hay que preparar para el cole",
+            "qué hay que preparar para mañana",
+            "qué llevan los niños mañana",
+            "la mochila de mañana",
+            "qué hay que dejar preparado",
+            "qué toca preparar"
+          ],
+          "slots": []
+        },
+        {
+          "name": "CasaIntent",
+          "samples": [
+            "qué toca hacer en casa",
+            "qué toca en casa",
+            "qué hay que hacer en casa",
+            "qué tareas hay hoy",
+            "qué tareas de casa hay",
+            "qué tareas tenemos"
+          ],
+          "slots": []
+        },
+        {
+          "name": "TiempoIntent",
+          "samples": [
+            "qué tiempo hace",
+            "qué tiempo hace hoy",
+            "qué tiempo va a hacer",
+            "va a llover hoy",
+            "va a llover",
+            "qué abrigo llevo",
+            "hace frío"
+          ],
+          "slots": []
+        },
+        {
+          "name": "AvisosIntent",
+          "samples": [
+            "qué avisos tengo",
+            "qué avisos hay",
+            "qué hay pendiente",
+            "qué hay pendiente hoy",
+            "dame el resumen",
+            "dame el resumen del día",
+            "dime el resumen",
+            "dime el resumen del día",
+            "resumen del día"
+          ],
+          "slots": []
         }
       ],
       "types": []
