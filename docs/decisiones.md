@@ -1861,3 +1861,13 @@ Cada cita pasada, además de las estrellas, tiene **🚫 No fui** (se queda tach
 ## D-213b · Casa, mochila y tiempo, en calendarios aparte
 
 El calendario principal de «¡Hecho!» se llenaba. Ahora lleva solo lo importante (citas, fechas señaladas, cumpleaños, papeles, días sin cole). Aparte, con el mismo enlace y `&solo=…`: **casa** (tareas de casa y mochila), **tiempo** (opcional: ya sale en Hoy), **comidas**, **metropolitano** y **barrio**. Quien ya estaba suscrito al principal deja de ver casa, mochila y tiempo sin tocar nada; para verlos, suscribe su enlace en Más → Enviar. Sin cambios en datos ni migración.
+
+## D-214 · Alexa: compra, cena y citas de hoy
+
+**Qué.** Una skill propia y privada (modo desarrollo, sin publicar en la tienda): «Alexa, dile a Hecho que añada leche» (a la compra), «qué hay de cena» y «qué tengo hoy». Guía en `docs/alexa.md`, modelo de voz en `alexa/modelo-es-ES.json`.
+
+**Cómo.** `POST /api/alexa/<token>` (o `?t=`), con el token del calendario del hogar. Solo contesta si `ALEXA_SKILL_ID` está puesto (si no, 503), a esa skill, y a peticiones con la firma de Amazon: dirección de los certificados, cadena de confianza hasta una raíz, nombre `echo-api.amazon.com`, firma del cuerpo y menos de 150 s (probado con un certificado real de Amazon). La compra va a una cola (`compra_alexa`, migración `20261127000000`): `alexa_anadir_compra(token, texto)` con tope de 40 al día, y el primer móvil que abre la app la recoge con `recoger_compra_alexa` (cada producto lo recibe un solo móvil) y hace `manual/anadir`. La cena y las citas se leen del mismo resumen que el calendario suscrito.
+
+**Privacidad.** Alexa solo habla de compra, cena y citas; nunca Mi día, objetivos, notas, medicación ni Cuidarse. El texto se limpia y se limita (80 caracteres, 5 productos por frase).
+
+**Límites.** Lo apuntado por voz sale en la app cuando se abre con la cuenta conectada (no avisa con notificación). No hay cuenta de Alexa enlazada: la skill es de un solo hogar, con el token en su dirección. Pendiente: crear la skill en la consola y poner `ALEXA_SKILL_ID` en Railway; probarlo en un Echo real.

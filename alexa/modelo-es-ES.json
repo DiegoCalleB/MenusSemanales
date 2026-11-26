@@ -1,0 +1,124 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "hecho",
+      "intents": [
+        {
+          "name": "AMAZON.CancelIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.HelpIntent",
+          "samples": ["ayuda", "qué puedo decir", "qué sabes hacer", "qué puedes hacer"]
+        },
+        {
+          "name": "AMAZON.StopIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.NavigateHomeIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.FallbackIntent",
+          "samples": []
+        },
+        {
+          "name": "AnadirCompraIntent",
+          "slots": [
+            {
+              "name": "producto",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "añade {producto}",
+            "añade {producto} a la compra",
+            "añade {producto} a la lista",
+            "añade {producto} a la lista de la compra",
+            "añádeme {producto}",
+            "añadir {producto}",
+            "añadir {producto} a la compra",
+            "apunta {producto}",
+            "apunta {producto} en la compra",
+            "apunta {producto} en la lista",
+            "apunta {producto} en la lista de la compra",
+            "apúntame {producto}",
+            "pon {producto} en la compra",
+            "pon {producto} en la lista",
+            "pon {producto} en la lista de la compra",
+            "mete {producto} en la compra",
+            "mete {producto} en la lista",
+            "necesitamos {producto}",
+            "necesito {producto}",
+            "hay que comprar {producto}",
+            "tenemos que comprar {producto}",
+            "tengo que comprar {producto}",
+            "me falta {producto}",
+            "nos falta {producto}",
+            "no queda {producto}",
+            "no nos queda {producto}",
+            "se ha acabado {producto}",
+            "se han acabado {producto}",
+            "nos hemos quedado sin {producto}",
+            "compra {producto}"
+          ]
+        },
+        {
+          "name": "CenaIntent",
+          "slots": [],
+          "samples": [
+            "qué hay de cena",
+            "qué hay de cena hoy",
+            "qué hay de cenar",
+            "qué hay para cenar",
+            "qué hay para cenar hoy",
+            "qué cenamos",
+            "qué cenamos hoy",
+            "qué cenamos esta noche",
+            "qué vamos a cenar",
+            "qué vamos a cenar hoy",
+            "qué toca cenar",
+            "qué toca de cena",
+            "qué tenemos de cena",
+            "qué tenemos para cenar",
+            "la cena de hoy",
+            "cuál es la cena de hoy",
+            "dime la cena",
+            "dime la cena de hoy",
+            "qué hay de cena esta noche"
+          ]
+        },
+        {
+          "name": "HoyIntent",
+          "slots": [],
+          "samples": [
+            "qué tengo hoy",
+            "qué tenemos hoy",
+            "qué hay hoy",
+            "qué hay para hoy",
+            "qué hay apuntado hoy",
+            "qué hay apuntado para hoy",
+            "qué tengo apuntado hoy",
+            "qué tengo apuntado para hoy",
+            "qué tenemos apuntado hoy",
+            "qué tengo en la agenda",
+            "qué hay en la agenda",
+            "qué hay en la agenda de hoy",
+            "qué tengo en la agenda de hoy",
+            "qué citas tengo hoy",
+            "qué citas tenemos hoy",
+            "tengo algo hoy",
+            "tenemos algo hoy",
+            "tengo algo apuntado hoy",
+            "dime lo de hoy",
+            "dime qué tengo hoy",
+            "cuál es la agenda de hoy",
+            "qué planes hay hoy"
+          ]
+        }
+      ],
+      "types": []
+    }
+  }
+}
