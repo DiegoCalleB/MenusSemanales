@@ -1871,3 +1871,13 @@ El calendario principal de «¡Hecho!» se llenaba. Ahora lleva solo lo importan
 **Privacidad.** Alexa solo habla de compra, cena y citas; nunca Mi día, objetivos, notas, medicación ni Cuidarse. El texto se limpia y se limita (80 caracteres, 5 productos por frase).
 
 **Límites.** Lo apuntado por voz sale en la app cuando se abre con la cuenta conectada (no avisa con notificación). No hay cuenta de Alexa enlazada: la skill es de un solo hogar, con el token en su dirección. Pendiente: crear la skill en la consola y poner `ALEXA_SKILL_ID` en Railway; probarlo en un Echo real.
+
+## D-215 · Conchi: más inteligente
+
+**Qué.** La skill se llama **Conchi** («Alexa, dile a Conchi que…»; «hecho» sonaba a «echo»). Además de la compra: una frase libre que una IA reparte en compra, pendiente o cita (la cita se confirma en voz alta), «ya he hecho la lavadora» (marca la tarea de casa) y más preguntas: mañana, mochila, casa, tiempo y un resumen. Guía en `docs/alexa.md`; modelo de voz (125 frases) en `alexa/modelo-es-ES.json`, con un test de que ninguna frase está en dos funciones.
+
+**Cómo.** La cola pasa a `alexa_entrada` (migración `20261128000000`) con tipo (compra, pendiente, cita, hecha), día y hora; `alexa_anadir(token, tipo, texto, fecha, hora)` valida y limita a 60 al día, `recoger_entradas_alexa` las entrega a un solo móvil, y `alexa_usar_ia(token)` cuenta las llamadas de IA en el mismo tope diario que la IA de la app. La IA es la de la caja única (`leerCaptura`) con 5,5 s de plazo, porque Alexa corta a los 8. Lo que lee sale de los mismos eventos del calendario suscrito (casa, mochila, tiempo). La app las guarda con las acciones de siempre.
+
+**Privacidad.** Solo compra, cena, citas, casa, mochila y tiempo. No hay notas por voz: son personales y no se sabe quién habla.
+
+**Límites.** Si la IA tarda o falla, Conchi lo dice y pide la forma corta («añade leche»). No hay un «deshacer» por voz: se borra desde la app. Lo apuntado sale en la app al abrirla (sin notificación).

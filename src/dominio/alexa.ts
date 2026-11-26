@@ -17,7 +17,12 @@ const intencion = z.object({
 /** Lo que importa de lo que manda Alexa (el resto se ignora). */
 export const peticionAlexaSchema = z.object({
   version: z.string().optional(),
-  session: z.object({ application: z.object({ applicationId: z.string() }) }).optional(),
+  session: z
+    .object({
+      application: z.object({ applicationId: z.string() }),
+      attributes: z.record(z.string(), z.unknown()).optional(),
+    })
+    .optional(),
   context: z
     .object({ System: z.object({ application: z.object({ applicationId: z.string() }) }) })
     .optional(),
@@ -36,6 +41,7 @@ export const skillDe = (p: PeticionAlexa): string | null =>
 
 export interface RespuestaAlexa {
   version: "1.0";
+  sessionAttributes?: Record<string, unknown>;
   response: {
     outputSpeech: { type: "PlainText"; text: string };
     shouldEndSession: boolean;
@@ -43,8 +49,13 @@ export interface RespuestaAlexa {
   };
 }
 
-export const respuesta = (texto: string, seguir = false): RespuestaAlexa => ({
+export const respuesta = (
+  texto: string,
+  seguir = false,
+  opciones: { atributos?: Record<string, unknown>; repregunta?: string } = {},
+): RespuestaAlexa => ({
   version: "1.0",
+  ...(opciones.atributos ? { sessionAttributes: opciones.atributos } : {}),
   response: {
     outputSpeech: { type: "PlainText", text: texto },
     shouldEndSession: !seguir,
@@ -53,7 +64,9 @@ export const respuesta = (texto: string, seguir = false): RespuestaAlexa => ({
           reprompt: {
             outputSpeech: {
               type: "PlainText",
-              text: "Puedes decir: añade leche, qué hay de cena o qué tengo hoy.",
+              text:
+                opciones.repregunta ??
+                "Puedes decir: añade leche, qué hay de cena o qué tengo hoy.",
             },
           },
         }
@@ -87,7 +100,7 @@ export function productosDe(dicho: string | undefined): string[] {
     .slice(0, MAX_PRODUCTOS);
 }
 
-const lista = (xs: readonly string[]): string =>
+export const lista = (xs: readonly string[]): string =>
   xs.length <= 1 ? (xs[0] ?? "") : `${xs.slice(0, -1).join(", ")} y ${xs[xs.length - 1]}`;
 
 /** Lo que se dice tras intentar apuntar los productos (el resultado de cada uno, en orden). */
@@ -119,23 +132,31 @@ export function hablarDeLaCena(p: ProyeccionCalendario, hoy: FechaIso): string {
 const hablaDeLaHora = (hora: string | null): string =>
   hora ? ` a las ${hora.replace(/^0/, "")}` : "";
 
-/** Las citas de hoy (solo citas y fechas señaladas, nada personal). */
-export function hablarDeHoy(p: ProyeccionCalendario, hoy: FechaIso): string {
+/** Las citas y fechas señaladas de un día (solo eso, nada personal). */
+export function hablarDeDia(
+  p: ProyeccionCalendario,
+  dia: FechaIso,
+  tiene: string,
+  nada: string,
+): string {
   const citas = p.agenda
-    .filter((a) => a.fecha <= hoy && (a.hasta ?? a.fecha) >= hoy)
+    .filter((a) => a.fecha <= dia && (a.hasta ?? a.fecha) >= dia)
     .sort((a, b) => (a.hora ?? "99").localeCompare(b.hora ?? "99"))
     .map((a) => `${a.titulo}${hablaDeLaHora(a.hora)}`);
-  const hoyEs = p.eventos[hoy]?.titulo;
-  const todo = [...(hoyEs ? [hoyEs] : []), ...citas];
-  if (todo.length === 0) return "Hoy no tienes nada apuntado.";
-  return `Hoy tienes ${lista(todo)}.`;
+  const señalada = p.eventos[dia]?.titulo;
+  const todo = [...(señalada ? [señalada] : []), ...citas];
+  return todo.length === 0 ? nada : `${tiene} ${lista(todo)}.`;
 }
+
+/** Las citas de hoy. */
+export const hablarDeHoy = (p: ProyeccionCalendario, hoy: FechaIso): string =>
+  hablarDeDia(p, hoy, "Hoy tienes", "Hoy no tienes nada apuntado.");
 
 /** Mañana, por si se pide («qué tengo mañana»). */
 export const mananaDe = (hoy: FechaIso): FechaIso => sumarDias(hoy, 1);
 
 export const AYUDA =
-  "Puedes decir: añade leche a la compra, qué hay de cena, o qué tengo hoy. ¿Qué quieres?";
-export const BIENVENIDA = "Hola. ¿Qué apunto en la compra, o quieres saber la cena o lo de hoy?";
+  "Puedes decir: añade leche, apunta el jueves a las seis el dentista, ya he hecho la colada, qué hay de cena, qué tengo mañana, qué se lleva al cole o dame el resumen. ¿Qué quieres?";
+export const BIENVENIDA = "Hola, soy Conchi. ¿Qué apunto, o qué quieres saber?";
 export const SIN_DATOS =
   "Ahora mismo no consigo ver los datos de la casa. Inténtalo en un rato o mira la app.";
