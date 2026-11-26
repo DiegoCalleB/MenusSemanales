@@ -82,7 +82,7 @@ export function productosDe(dicho: string | undefined): string[] {
     .trim();
   return limpio
     .split(/\s*,\s*|\s+y\s+/u)
-    .map((x) => x.replace(/^(un|una|unos|unas)\s+/u, "").trim())
+    .map((x) => x.replace(/^(un|una|unos|unas|el|la|los|las|algo de|más)\s+/u, "").trim())
     .filter((x) => x.length > 0 && x.length <= 80)
     .slice(0, MAX_PRODUCTOS);
 }

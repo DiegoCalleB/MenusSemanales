@@ -29,6 +29,8 @@ describe("alexa: lo que se entiende", () => {
     expect(productosDe("leche, pan y huevos")).toEqual(["leche", "pan", "huevos"]);
     expect(productosDe("una barra de pan a la compra")).toEqual(["barra de pan"]);
     expect(productosDe("papel higiénico en la lista de la compra")).toEqual(["papel higiénico"]);
+    expect(productosDe("la leche y los huevos")).toEqual(["leche", "huevos"]);
+    expect(productosDe("más pan")).toEqual(["pan"]);
     expect(productosDe("   ")).toEqual([]);
     expect(productosDe(undefined)).toEqual([]);
     expect(productosDe("a, b, c, d, e, f, g")).toHaveLength(5);
