@@ -9,7 +9,7 @@ import {
   vincularVozDeAlexa,
 } from "./alexa";
 
-const TOKEN = "a".repeat(64);
+const ENLACE = "a".repeat(64);
 let pedido: { url: string; cuerpo: unknown } | null = null;
 const responder = (valor: unknown, status = 200) => {
   pedido = null;
@@ -34,7 +34,7 @@ afterEach(() => {
 describe("llamadas de Conchi a la base de datos (D-215, D-216)", () => {
   it("guarda una entrada con su tipo, día y hora", async () => {
     responder("ok");
-    const r = await anadirEntradaAlexa(TOKEN, {
+    const r = await anadirEntradaAlexa(ENLACE, {
       tipo: "cita",
       texto: "dentista",
       fecha: "2026-12-03",
@@ -44,7 +44,7 @@ describe("llamadas de Conchi a la base de datos (D-215, D-216)", () => {
     expect(pedido).toEqual({
       url: "https://x.supabase.test/rest/v1/rpc/alexa_anadir",
       cuerpo: {
-        p_token: TOKEN,
+        p_token: ENLACE,
         p_tipo: "cita",
         p_texto: "dentista",
         p_fecha: "2026-12-03",
@@ -55,39 +55,39 @@ describe("llamadas de Conchi a la base de datos (D-215, D-216)", () => {
 
   it("cuenta la IA, deshace y lee la compra", async () => {
     responder("tope");
-    expect(await usarIaAlexa(TOKEN)).toBe("tope");
+    expect(await usarIaAlexa(ENLACE)).toBe("tope");
     responder({ tipo: "compra", texto: "leche" });
-    expect(await deshacerLoUltimoDeAlexa(TOKEN)).toEqual({ tipo: "compra", texto: "leche" });
+    expect(await deshacerLoUltimoDeAlexa(ENLACE)).toEqual({ tipo: "compra", texto: "leche" });
     responder(null);
-    expect(await deshacerLoUltimoDeAlexa(TOKEN)).toBeNull();
+    expect(await deshacerLoUltimoDeAlexa(ENLACE)).toBeNull();
     responder(["Leche", 5, "Pan"]);
-    expect(await leerCompraDeAlexa(TOKEN)).toEqual(["Leche", "Pan"]);
+    expect(await leerCompraDeAlexa(ENLACE)).toEqual(["Leche", "Pan"]);
     responder(null);
-    expect(await leerCompraDeAlexa(TOKEN)).toBeNull();
+    expect(await leerCompraDeAlexa(ENLACE)).toBeNull();
   });
 
   it("avisa a la familia y vincula voces", async () => {
     responder(true);
-    expect(await avisarALaFamilia(TOKEN, "leche")).toBe(true);
+    expect(await avisarALaFamilia(ENLACE, "leche")).toBe(true);
     responder(false);
-    expect(await avisarALaFamilia(TOKEN, "leche")).toBe(false);
+    expect(await avisarALaFamilia(ENLACE, "leche")).toBe(false);
     responder("ok");
-    expect(await vincularVozDeAlexa(TOKEN, "amzn1.ask.person.X", "diego")).toBe("ok");
+    expect(await vincularVozDeAlexa(ENLACE, "voz-de-prueba-uno", "diego")).toBe("ok");
     expect(pedido?.cuerpo).toEqual({
-      p_token: TOKEN,
-      p_voz: "amzn1.ask.person.X",
+      p_token: ENLACE,
+      p_voz: "voz-de-prueba-uno",
       p_persona: "diego",
     });
     responder("diego");
-    expect(await personaDeLaVoz(TOKEN, "amzn1.ask.person.X")).toBe("diego");
+    expect(await personaDeLaVoz(ENLACE, "voz-de-prueba-uno")).toBe("diego");
     responder(null);
-    expect(await personaDeLaVoz(TOKEN, "amzn1.ask.person.X")).toBeNull();
+    expect(await personaDeLaVoz(ENLACE, "voz-de-prueba-uno")).toBeNull();
   });
 
   it("si Supabase falla o no está configurado, lanza", async () => {
     responder({}, 500);
-    await expect(usarIaAlexa(TOKEN)).rejects.toThrow("supabase-no-responde");
+    await expect(usarIaAlexa(ENLACE)).rejects.toThrow("supabase-no-responde");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
-    await expect(usarIaAlexa(TOKEN)).rejects.toThrow("supabase-no-configurado");
+    await expect(usarIaAlexa(ENLACE)).rejects.toThrow("supabase-no-configurado");
   });
 });

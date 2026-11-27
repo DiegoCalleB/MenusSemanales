@@ -9,3 +9,8 @@
 # Valor de prueba inventado ("secreto-de-prueba-largo-1234567890") en el test de la ruta de avisos
 # diarios. No es un secreto real. Está en el historial (commit 1898e92) y no se reescribe.
 1898e92474d4ef8f55d78401642babb6b0da0953:src/app/api/avisos/diario/route.test.ts:generic-api-key:17
+
+# Falsos positivos: identificadores de voz de prueba en un test de Alexa (D-216), que no son claves.
+279f0fb073ee497a36c4acd5bef78b9e683b53c1:src/infraestructura/alexa.test.ts:generic-api-key:75
+279f0fb073ee497a36c4acd5bef78b9e683b53c1:src/infraestructura/alexa.test.ts:generic-api-key:82
+279f0fb073ee497a36c4acd5bef78b9e683b53c1:src/infraestructura/alexa.test.ts:generic-api-key:84
