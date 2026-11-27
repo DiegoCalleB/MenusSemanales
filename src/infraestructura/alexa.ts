@@ -58,3 +58,40 @@ export async function usarIaAlexa(token: string): Promise<string | null> {
   const v = await rpc("alexa_usar_ia", { p_token: token });
   return typeof v === "string" ? v : null;
 }
+
+/** «Borra lo último» (D-216): lo que se quitó ({tipo, texto}), o null si no había nada (o el token no vale). */
+export async function deshacerLoUltimoDeAlexa(
+  token: string,
+): Promise<{ tipo: string; texto: string } | null> {
+  const v = await rpc("alexa_deshacer", { p_token: token });
+  if (typeof v !== "object" || v === null) return null;
+  const { tipo, texto } = v as { tipo?: unknown; texto?: unknown };
+  return typeof tipo === "string" && typeof texto === "string" ? { tipo, texto } : null;
+}
+
+/** Lo que hay apuntado a mano en la compra y sin comprar; null si el token no vale. */
+export async function leerCompraDeAlexa(token: string): Promise<string[] | null> {
+  const v = await rpc("alexa_compra", { p_token: token });
+  return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : null;
+}
+
+/** Avisa a los móviles de la familia de lo que ha apuntado Conchi (con tope de una cada 15 s). */
+export async function avisarALaFamilia(token: string, texto: string): Promise<boolean> {
+  return (await rpc("alexa_avisar", { p_token: token, p_texto: texto })) === true;
+}
+
+/** Quién habla: asocia una voz de Alexa con una persona de la familia. 'ok', 'no-valido', 'demasiadas' o null. */
+export async function vincularVozDeAlexa(
+  token: string,
+  voz: string,
+  persona: string,
+): Promise<string | null> {
+  const v = await rpc("alexa_vincular_voz", { p_token: token, p_voz: voz, p_persona: persona });
+  return typeof v === "string" ? v : null;
+}
+
+/** La persona de una voz ya vinculada, o null. */
+export async function personaDeLaVoz(token: string, voz: string): Promise<string | null> {
+  const v = await rpc("alexa_voz_persona", { p_token: token, p_voz: voz });
+  return typeof v === "string" ? v : null;
+}

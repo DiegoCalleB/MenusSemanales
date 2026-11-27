@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { z } from "zod";
-import { type Entrada, entradaSchema, textoDeCita } from "@/dominio/conchi";
+import { type Entrada, entradaSchema, reducirEntradas, textoDeCita } from "@/dominio/conchi";
 import { claveArticulo } from "@/dominio/habituales";
 import { crearClienteNavegador } from "@/infraestructura/supabase/cliente-navegador";
 import { recogerEntradasAlexa } from "@/infraestructura/supabase/cuenta";
@@ -55,6 +55,31 @@ export function AlexaEntradas() {
           const buscada = claveArticulo(e.texto);
           const tarea = ultimo.current.casa.find((t) => claveArticulo(t.titulo) === buscada);
           if (tarea) despachar({ tipo: "casa/hecha", id: tarea.id });
+          return;
+        }
+        // Quitar (D-216): «borra lo último», «quita la leche de la compra».
+        case "quitar_compra": {
+          const buscada = claveArticulo(e.texto);
+          const item = ultimo.current.manuales.find(
+            (m) => !m.comprado && claveArticulo(m.nombre) === buscada,
+          );
+          if (item) despachar({ tipo: "manual/borrar", id: item.id });
+          return;
+        }
+        case "quitar_pendiente": {
+          const buscada = claveArticulo(e.texto);
+          const item = ultimo.current.pendientes.find(
+            (x) => !x.hechoEn && claveArticulo(x.texto) === buscada,
+          );
+          if (item) despachar({ tipo: "pendiente/borrar", id: item.id });
+          return;
+        }
+        case "quitar_cita": {
+          const buscada = claveArticulo(e.texto);
+          const item = ultimo.current.agenda.find(
+            (a) => a.fecha === e.fecha && claveArticulo(a.titulo) === buscada,
+          );
+          if (item) despachar({ tipo: "agenda/borrar", id: item.id });
         }
       }
     }
@@ -66,7 +91,7 @@ export function AlexaEntradas() {
         const r = await recogerEntradasAlexa(crearClienteNavegador(), hogarId);
         const lista = entradas.safeParse(r.data);
         if (r.error || !lista.success) return;
-        for (const e of lista.data) aplicar(e);
+        for (const e of reducirEntradas(lista.data)) aplicar(e);
       } catch {
         // Sin red: se recoge la próxima vez.
       } finally {

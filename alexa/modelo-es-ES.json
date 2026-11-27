@@ -226,6 +226,146 @@
             "resumen del día"
           ],
           "slots": []
+        },
+        {
+          "name": "DeshacerIntent",
+          "slots": [],
+          "samples": [
+            "borra lo último",
+            "deshaz lo último",
+            "deshaz eso",
+            "quita lo último",
+            "me he equivocado",
+            "no era eso",
+            "cancela lo último",
+            "borra eso"
+          ]
+        },
+        {
+          "name": "QuitarCompraIntent",
+          "slots": [
+            {
+              "name": "producto",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "quita {producto} de la compra",
+            "quita {producto} de la lista",
+            "borra {producto} de la compra",
+            "borra {producto} de la lista",
+            "elimina {producto} de la compra",
+            "saca {producto} de la compra"
+          ]
+        },
+        {
+          "name": "CompraIntent",
+          "slots": [],
+          "samples": [
+            "qué hay en la compra",
+            "qué hay en la lista de la compra",
+            "qué falta por comprar",
+            "qué tenemos que comprar",
+            "léeme la compra",
+            "dime la compra",
+            "qué hay apuntado en la compra"
+          ]
+        },
+        {
+          "name": "HayEnCompraIntent",
+          "slots": [
+            {
+              "name": "producto",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "hay {producto} en la compra",
+            "hay {producto} en la lista",
+            "está {producto} en la compra",
+            "tenemos {producto} en la lista"
+          ]
+        },
+        {
+          "name": "PendientesIntent",
+          "slots": [],
+          "samples": [
+            "qué pendientes hay",
+            "qué pendientes tenemos",
+            "qué pendientes tengo",
+            "léeme los pendientes",
+            "dime los pendientes",
+            "qué tenemos pendiente"
+          ]
+        },
+        {
+          "name": "PapelesIntent",
+          "slots": [],
+          "samples": [
+            "qué papeles vencen",
+            "qué vence pronto",
+            "qué caduca pronto",
+            "qué papeles caducan",
+            "qué papeles hay que renovar"
+          ]
+        },
+        {
+          "name": "EstadioIntent",
+          "slots": [],
+          "samples": [
+            "hay partido hoy",
+            "hay partido",
+            "hay algo en el metropolitano",
+            "hay concierto hoy",
+            "hay partido en el metropolitano",
+            "qué hay en el metropolitano"
+          ]
+        },
+        {
+          "name": "QueMeTocaIntent",
+          "slots": [],
+          "samples": [
+            "qué me toca",
+            "qué me toca hoy",
+            "qué me toca hacer",
+            "qué tareas me tocan",
+            "qué me toca en casa"
+          ]
+        },
+        {
+          "name": "SoyIntent",
+          "slots": [
+            {
+              "name": "nombre",
+              "type": "AMAZON.FirstName"
+            }
+          ],
+          "samples": [
+            "soy {nombre}",
+            "me llamo {nombre}",
+            "mi nombre es {nombre}",
+            "esta es la voz de {nombre}"
+          ]
+        },
+        {
+          "name": "PreguntaIntent",
+          "slots": [
+            {
+              "name": "pregunta",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "cuándo {pregunta}",
+            "cuántas {pregunta}",
+            "cuántos {pregunta}",
+            "quién {pregunta}",
+            "dónde {pregunta}",
+            "cuál {pregunta}",
+            "sabes {pregunta}",
+            "quiero saber {pregunta}",
+            "me puedes decir {pregunta}"
+          ]
         }
       ],
       "types": []

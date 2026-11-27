@@ -23,6 +23,7 @@ export function Apuntar() {
   const [yo] = useYo();
   const [texto, setTexto] = useState("");
   const [revisando, setRevisando] = useState(false);
+  const [sorpresa, setSorpresa] = useState(false);
   const [editando, setEditando] = useState<string | null>(null);
   const campo = useRef<HTMLTextAreaElement>(null);
   // El atajo del icono («Apuntar una fecha», D-210) abre Fechas con el campo listo para escribir.
@@ -41,9 +42,10 @@ export function Apuntar() {
     );
 
   function apuntar() {
-    despachar({ tipo: "agenda/anadir", texto, personaId: yo });
+    despachar({ tipo: "agenda/anadir", texto, personaId: yo, secreta: sorpresa });
     setTexto("");
     setRevisando(false);
+    setSorpresa(false);
   }
 
   return (
@@ -66,6 +68,15 @@ export function Apuntar() {
         }}
         rows={3}
       />
+      <label className="text-tinta-suave flex min-h-11 items-center gap-2 text-base">
+        <input
+          type="checkbox"
+          className="size-5"
+          checked={sorpresa}
+          onChange={(e) => setSorpresa(e.target.checked)}
+        />
+        <span>🤫 Es una sorpresa (Conchi no lo dirá en voz alta)</span>
+      </label>
       {revisando ? (
         <div className="bg-suave-1 flex flex-col gap-2 rounded-2xl p-3" role="status">
           <p className="text-base font-bold">
@@ -114,9 +125,30 @@ export function Apuntar() {
                     <span className="text-tinta-suave text-sm font-semibold uppercase">
                       {diaDeLaSemana(a.fecha)}{" "}
                     </span>
-                    <strong>{fechaCorta(a.fecha)}</strong> · {resumenApunte(a)}
+                    <strong>{fechaCorta(a.fecha)}</strong> · {a.secreta ? "🤫 " : ""}
+                    {resumenApunte(a)}
                   </p>
                   <span className="flex shrink-0 gap-1">
+                    <button
+                      type="button"
+                      className="boton-icono"
+                      aria-label={
+                        a.secreta
+                          ? `Quitar la sorpresa de ${a.titulo}`
+                          : `Marcar ${a.titulo} como sorpresa`
+                      }
+                      aria-pressed={a.secreta === true}
+                      title={
+                        a.secreta ? "Es una sorpresa: Conchi no lo dice" : "Marcar como sorpresa"
+                      }
+                      onClick={() =>
+                        despachar({ tipo: "agenda/secreta", id: a.id, secreta: !a.secreta })
+                      }
+                    >
+                      <span aria-hidden="true" className={a.secreta ? "" : "opacity-40 grayscale"}>
+                        🤫
+                      </span>
+                    </button>
                     <BotonEditar nombre={a.titulo} alPulsar={() => setEditando(a.id)} />
                     <button
                       type="button"

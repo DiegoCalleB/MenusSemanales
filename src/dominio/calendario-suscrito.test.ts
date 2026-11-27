@@ -246,6 +246,18 @@ describe("calendarios aparte: casa y tiempo (D-213)", () => {
 });
 
 describe("el resumen que llega de la base de datos", () => {
+  it("las citas sorpresa llegan marcadas (D-217), y sin el campo valen como normales", () => {
+    const p = proyeccionSchema.parse({
+      ...base(),
+      agenda: [
+        { fecha: HOY, hasta: null, hora: null, titulo: "Teatro", secreta: true },
+        { fecha: HOY, hasta: null, hora: null, titulo: "Pediatra" },
+        { fecha: HOY, hasta: null, hora: null, titulo: "Raro", secreta: "sí" },
+      ],
+    });
+    expect(p.agenda.map((a) => a.secreta)).toEqual([true, undefined, false]);
+  });
+
   it("se valida: lo mal formado se rechaza, lo de más se ignora", () => {
     expect(proyeccionSchema.safeParse(base()).success).toBe(true);
     expect(

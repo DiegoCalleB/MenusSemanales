@@ -810,6 +810,16 @@ export function direccionesDeAvisos(valor: string | undefined): string[] {
 }
 
 /** La notificación de una circular recibida por correo (D-147). */
+/** Conchi (Alexa) ha apuntado algo (D-216): se avisa a los móviles de la familia. */
+export function notificacionDeConchi(c: { texto: string }) {
+  return {
+    titulo: "🗣️ Conchi ha apuntado",
+    cuerpo: c.texto.replace(/\s+/g, " ").trim().slice(0, 180),
+    url: "/compra",
+    tag: "conchi",
+  };
+}
+
 export function notificacionDeCircular(c: { asunto: string; cosas: number }) {
   const que =
     c.cosas === 0

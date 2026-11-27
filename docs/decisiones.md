@@ -1881,3 +1881,23 @@ El calendario principal de «¡Hecho!» se llenaba. Ahora lleva solo lo importan
 **Privacidad.** Solo compra, cena, citas, casa, mochila y tiempo. No hay notas por voz: son personales y no se sabe quién habla.
 
 **Límites.** Si la IA tarda o falla, Conchi lo dice y pide la forma corta («añade leche»). No hay un «deshacer» por voz: se borra desde la app. Lo apuntado sale en la app al abrirla (sin notificación).
+
+## D-216 · Conchi, más completa
+
+**Qué.** Siete mejoras: (1) **recordatorios con hora** que dice el Echo (API de recordatorios de Alexa, con el permiso de quien habla; «las seis» sin más es la próxima vez que llegue esa hora); (2) **aviso a la familia** («🗣️ Conchi ha apuntado…») cuando apunta algo; (3) **quién habla**: una voz de Alexa se vincula a una persona («soy Diego») para saludar por el nombre y para «qué me toca»; (4) **leer y quitar de la compra** («qué hay en la compra», «quita la leche»), y **«borra lo último»**; (5) más lecturas: pendientes, papeles que vencen, Metropolitano; (6) **personalidad**: saludo según la hora y por el nombre, y varias formas de decir lo mismo; (7) **preguntas libres** contestadas por la IA solo con los datos de la casa.
+
+**Cómo.** Migración `20261129000000_conchi_mas`: tipos nuevos en la cola (`quitar_compra`, `quitar_pendiente`, `quitar_cita`), `alexa_deshacer`, `alexa_compra` (lo apuntado a mano y sin comprar), `alexa_avisar` (llama a `/api/avisos/diario`, que manda el push a los móviles; tope de uno cada 15 s), y `alexa_voz`/`alexa_vincular_voz`/`alexa_voz_persona`. La frase libre pasa por una IA propia (`ia-conchi`: compra, pendiente, cita, recordatorio) y el servidor decide: la compra y los pendientes se guardan, las citas se confirman en voz alta, los recordatorios los pone Alexa. Lo apuntado y quitado antes de abrir la app se anula entre sí (`reducirEntradas`). El modelo de voz tiene 185 frases en 27 funciones, sin ninguna repetida.
+
+**Privacidad.** Igual que antes: solo compra, cena, citas, casa, mochila, tiempo, pendientes y papeles. Nada de Mi día, objetivos, notas, medicación ni Cuidarse. La IA de las preguntas solo ve los datos del calendario suscrito.
+
+**Límites.** La compra que se lee es solo la apuntada a mano (no la que sale del menú). La IA puede equivocarse en preguntas raras: está instruida para decir «no lo sé». Los recordatorios y el reconocimiento de voz necesitan dos ajustes en la consola de Alexa y no se han podido probar sin un Echo real. Sin perfil de voz, no hay nombre ni «qué me toca».
+
+## D-217 · Citas sorpresa: Conchi no las cuenta
+
+**Contexto.** Hoy había teatro (Yllana), era una sorpresa, y Conchi lo dijo en voz alta. Un altavoz lo oye cualquiera.
+
+**Decisión.** Cada cita tiene una marca **🤫 Sorpresa**: Conchi no la dice en **ninguna** respuesta (hoy, mañana, resumen, ni en lo que ve la IA para las preguntas libres). En la app se ve igual, con 🤫 en la lista de «Apuntado». Se marca de tres formas: al apuntar (casilla «🤫 Es una sorpresa»), con el botón 🤫 de cada apunte, o en el editor; y **sola** si el título lleva la palabra «sorpresa» o el emoji 🤫 («Cumple sorpresa de Ana»).
+
+**Cómo.** `Apunte.secreta`; acciones `agenda/secreta` y `secreta` en `agenda/anadir` y `agenda/editar`. El resumen del servidor trae `secreta` en cada cita (migración `20261130000000`, copia de la función de 20261126) y Conchi filtra con `sinSorpresas` **antes** de leer nada (un solo punto, `leerResumen`), así que ninguna función presente o futura puede contarla por descuido.
+
+**Límites.** Solo voz: el calendario suscrito, las notificaciones y el correo siguen llevando la cita (van a vuestros móviles, no a un altavoz). Solo citas: las fechas señaladas, los cumpleaños y los papeles no tienen la marca. Conchi, al apuntar una cita que se dice de sorpresa, la deja marcada solo si el título dice «sorpresa».

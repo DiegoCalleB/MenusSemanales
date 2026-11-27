@@ -85,7 +85,7 @@ import {
   MAX_LARGO_ALMUERZO,
   menuDeComidaEnCasa,
 } from "@/dominio/almuerzos";
-import { type Apunte, parsearAgenda, separarHoraDelTitulo } from "@/dominio/agenda";
+import { type Apunte, esSorpresa, parsearAgenda, separarHoraDelTitulo } from "@/dominio/agenda";
 import {
   type ConjuntoCasa,
   PLANTILLAS,
@@ -336,7 +336,16 @@ export type Accion =
       idBase?: string;
     }
   | { tipo: "persona/activar"; id: string; activa: boolean }
-  | { tipo: "agenda/anadir"; texto: string; personaId: string | null; idBase?: string }
+  | {
+      tipo: "agenda/anadir";
+      texto: string;
+      personaId: string | null;
+      idBase?: string;
+      /** Sorpresa (D-217): Conchi no lo cuenta. También se marca sola si el título dice «sorpresa». */
+      secreta?: boolean;
+    }
+  /** Marca o desmarca una cita como sorpresa (D-217). */
+  | { tipo: "agenda/secreta"; id: string; secreta: boolean }
   | {
       tipo: "agenda/cita";
       fecha: FechaIso;
@@ -354,6 +363,7 @@ export type Accion =
       fecha: FechaIso;
       hasta?: string | null;
       hora?: string | null;
+      secreta?: boolean;
     }
   /** Puntúa una cita que ya ha pasado (D-152): de 1 a 5 estrellas; 0 la quita; -1 es «no fui» (D-213). */
   | { tipo: "agenda/valorar"; id: string; estrellas: number }
@@ -1702,6 +1712,7 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
           ...nuevos.map((a, i) => ({
             id: idNuevo(accion.idBase, "agenda", String(i), `a-${e.siguienteId}-${i}`),
             ...a,
+            ...(accion.secreta || esSorpresa(a.titulo) ? { secreta: true } : {}),
           })),
         ],
         tareas: [
@@ -2060,11 +2071,35 @@ export function reducir(e: EstadoHogar, accion: Accion): EstadoHogar {
       return {
         ...e,
         puntuacionesCitas,
-        agenda: e.agenda.map((a) =>
-          a.id === accion.id ? { ...a, titulo, fecha: accion.fecha, hasta, hora } : a,
-        ),
+        agenda: e.agenda.map((a) => {
+          if (a.id !== accion.id) return a;
+          const resto: Apunte = { ...a };
+          delete resto.secreta;
+          const secreta = accion.secreta ?? a.secreta ?? false;
+          return {
+            ...resto,
+            titulo,
+            fecha: accion.fecha,
+            hasta,
+            hora,
+            ...(secreta ? { secreta } : {}),
+          };
+        }),
         siguienteId: e.siguienteId + 1,
         aviso: ok(e, `Cambiado: ${titulo}.`),
+      };
+    }
+
+    case "agenda/secreta": {
+      if (!e.agenda.some((a) => a.id === accion.id)) return e;
+      return {
+        ...e,
+        agenda: e.agenda.map((a) => {
+          if (a.id !== accion.id) return a;
+          const resto: Apunte = { ...a };
+          delete resto.secreta;
+          return accion.secreta ? { ...resto, secreta: true } : resto;
+        }),
       };
     }
 

@@ -29,12 +29,46 @@ Siempre con «dile a Conchi…» o «pregúntale a Conchi…» (o «Alexa, abre 
 
 **Privacidad:** Conchi solo habla de compra, cena, citas, casa, mochila y tiempo. Nunca de Mi día, objetivos, notas, medicación ni Cuidarse. Tampoco guarda notas: eso es personal y no se sabe quién habla.
 
+**Recordatorios con hora (D-216)**
+
+| Dices                                         | Pasa                                                                                                                                                                                                       |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| «…que me recuerde a las seis sacar la basura» | Alexa pone un recordatorio y **el Echo lo dice en voz alta a esa hora**. Sin «de la mañana/tarde», las seis son las 18:00 (de 1 a 7 tarde, de 8 a 11 mañana; sin día, la próxima vez que llegue esa hora). |
+| «…que me avise en media hora de…»             | Igual, con la hora calculada.                                                                                                                                                                              |
+
+La primera vez, Conchi pide permiso con una tarjeta en la app de Alexa: se acepta una vez y se vuelve a pedir.
+
+**Quitar y deshacer**
+
+| Dices                                  | Pasa                                                                                       |
+| -------------------------------------- | ------------------------------------------------------------------------------------------ |
+| «borra lo último» / «me he equivocado» | Quita lo último que se apuntó por voz (compra, pendiente o cita) en las dos últimas horas. |
+| «quita la leche de la compra»          | La quita de la lista.                                                                      |
+
+**Leer más cosas**
+
+| Dices                                                                                                      | Contesta                                                                                                                                          |
+| ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| «qué hay en la compra» / «hay leche en la compra»                                                          | Lo apuntado a mano en la compra y sin comprar (no incluye lo que sale del menú).                                                                  |
+| «qué pendientes tenemos»                                                                                   | Los pendientes sin fecha.                                                                                                                         |
+| «qué vence pronto»                                                                                         | Los papeles que vencen en dos meses.                                                                                                              |
+| «hay partido hoy»                                                                                          | El Metropolitano.                                                                                                                                 |
+| «cuándo fue la última vez que cambiamos las sábanas», «cuándo es el cumple de Ana», «quién saca la basura» | Una IA contesta **solo con los datos de la casa** (citas, cumples, casa, comidas, mochila, pendientes, papeles). Si no está, dice que no lo sabe. |
+
+**Quién habla**
+
+Con un perfil de voz en la app de Alexa, di una vez «soy Diego» y Conchi recuerda tu voz: te saluda por tu nombre y «qué me toca» lee tus tareas de casa de hoy. Sin perfil de voz, todo funciona igual pero sin nombre.
+
+**Sorpresas 🤫:** una cita marcada como sorpresa (casilla al apuntarla, botón 🤫 en «Apuntado», o el título con «sorpresa») no la dice Conchi nunca, ni en el resumen ni en las preguntas libres. En la app se ve igual.
+
+**Notificación a la familia:** cada vez que Conchi apunta algo (compra, pendiente, cita confirmada, tarea hecha), los móviles de la casa reciben «🗣️ Conchi ha apuntado…» (como mucho una cada 15 segundos).
+
 ## Cómo funciona
 
 - Alexa llama a `POST https://<la app>/api/alexa/<token>`. El token es el del calendario del hogar (el de «Más → Enviar»); la dirección completa se copia de ahí: «Copiar la dirección para Alexa».
 - La app comprueba que la petición viene de Amazon (firma y certificado) y de **vuestra skill** (`ALEXA_SKILL_ID`). Sin eso, no contesta.
 - Lo que se pide para guardar va a una cola (`alexa_entrada`) y el primer móvil que abre la app con la cuenta conectada lo recoge y lo guarda donde toca; cada cosa la recibe un solo móvil. Tope: 60 cosas al día.
-- Las frases libres las reparte la IA de la app (Gemini), con límite de tiempo (Alexa corta a los 8 s) y dentro del mismo tope diario que la IA de la app (40 al día por hogar).
+- Las frases libres y las preguntas las resuelve la IA de la app (Gemini), con límite de tiempo (Alexa corta a los 8 s) y dentro del mismo tope diario que la IA de la app (40 al día por hogar).
 - Si falta `ALEXA_SKILL_ID`, el endpoint está apagado (503).
 
 ## Puesta en marcha (una vez, ~10 minutos)
@@ -46,6 +80,11 @@ Siempre con «dile a Conchi…» o «pregúntale a Conchi…» (o «Alexa, abre 
 5. Copia el **Skill ID** y ponlo como variable `ALEXA_SKILL_ID` en Railway (no es secreto).
 6. **Test → Development** y escribe «abre conchi», y luego «añade leche».
 7. En el Echo: «Alexa, dile a Conchi que añada leche».
+
+### Dos ajustes más en la consola (para los recordatorios y la voz)
+
+- **Permisos:** en **Build → Permissions** activa **Reminders** (recordatorios). Sin esto, «recuérdame a las seis…» pide un permiso que la skill no tiene.
+- **Voz de cada persona:** en la app de Alexa, **Más → Ajustes → Cuenta → Reconocimiento de voz** (o «Voice ID»), cada persona crea su perfil de voz. Después, una vez: «Alexa, dile a Conchi que soy Diego».
 
 ## El nombre de la skill
 
