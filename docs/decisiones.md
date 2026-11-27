@@ -1891,3 +1891,13 @@ El calendario principal de «¡Hecho!» se llenaba. Ahora lleva solo lo importan
 **Privacidad.** Igual que antes: solo compra, cena, citas, casa, mochila, tiempo, pendientes y papeles. Nada de Mi día, objetivos, notas, medicación ni Cuidarse. La IA de las preguntas solo ve los datos del calendario suscrito.
 
 **Límites.** La compra que se lee es solo la apuntada a mano (no la que sale del menú). La IA puede equivocarse en preguntas raras: está instruida para decir «no lo sé». Los recordatorios y el reconocimiento de voz necesitan dos ajustes en la consola de Alexa y no se han podido probar sin un Echo real. Sin perfil de voz, no hay nombre ni «qué me toca».
+
+## D-217 · Citas sorpresa: Conchi no las cuenta
+
+**Contexto.** Hoy había teatro (Yllana), era una sorpresa, y Conchi lo dijo en voz alta. Un altavoz lo oye cualquiera.
+
+**Decisión.** Cada cita tiene una marca **🤫 Sorpresa**: Conchi no la dice en **ninguna** respuesta (hoy, mañana, resumen, ni en lo que ve la IA para las preguntas libres). En la app se ve igual, con 🤫 en la lista de «Apuntado». Se marca de tres formas: al apuntar (casilla «🤫 Es una sorpresa»), con el botón 🤫 de cada apunte, o en el editor; y **sola** si el título lleva la palabra «sorpresa» o el emoji 🤫 («Cumple sorpresa de Ana»).
+
+**Cómo.** `Apunte.secreta`; acciones `agenda/secreta` y `secreta` en `agenda/anadir` y `agenda/editar`. El resumen del servidor trae `secreta` en cada cita (migración `20261130000000`, copia de la función de 20261126) y Conchi filtra con `sinSorpresas` **antes** de leer nada (un solo punto, `leerResumen`), así que ninguna función presente o futura puede contarla por descuido.
+
+**Límites.** Solo voz: el calendario suscrito, las notificaciones y el correo siguen llevando la cita (van a vuestros móviles, no a un altavoz). Solo citas: las fechas señaladas, los cumpleaños y los papeles no tienen la marca. Conchi, al apuntar una cita que se dice de sorpresa, la deja marcada solo si el título dice «sorpresa».

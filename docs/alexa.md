@@ -59,6 +59,8 @@ La primera vez, Conchi pide permiso con una tarjeta en la app de Alexa: se acept
 
 Con un perfil de voz en la app de Alexa, di una vez «soy Diego» y Conchi recuerda tu voz: te saluda por tu nombre y «qué me toca» lee tus tareas de casa de hoy. Sin perfil de voz, todo funciona igual pero sin nombre.
 
+**Sorpresas 🤫:** una cita marcada como sorpresa (casilla al apuntarla, botón 🤫 en «Apuntado», o el título con «sorpresa») no la dice Conchi nunca, ni en el resumen ni en las preguntas libres. En la app se ve igual.
+
 **Notificación a la familia:** cada vez que Conchi apunta algo (compra, pendiente, cita confirmada, tarea hecha), los móviles de la casa reciben «🗣️ Conchi ha apuntado…» (como mucho una cada 15 segundos).
 
 ## Cómo funciona

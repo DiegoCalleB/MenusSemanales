@@ -16,7 +16,12 @@ export interface Apunte {
   /** «18:15», o null si no hay hora. */
   hora: string | null;
   titulo: string;
+  /** Sorpresa (D-217): Conchi y lo que se dice en voz alta no lo cuentan. Solo se ve en la app. */
+  secreta?: boolean;
 }
+
+/** ¿El título lo dice? («Cumple sorpresa de Ana», «🤫 Teatro»): se marca como sorpresa al apuntarlo. */
+export const esSorpresa = (titulo: string): boolean => /\bsorpresa\b|🤫/iu.test(titulo);
 
 export interface ApunteLeido {
   fecha: FechaIso;

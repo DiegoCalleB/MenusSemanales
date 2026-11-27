@@ -112,7 +112,10 @@ const RESUMEN = {
   cenas: [{ fecha: "2026-11-27", nombre: "Pisto" }],
   almuerzos: [],
   eventos: {},
-  agenda: [{ fecha: "2026-11-28", hasta: null, hora: null, titulo: "Pediatra" }],
+  agenda: [
+    { fecha: "2026-11-28", hasta: null, hora: null, titulo: "Pediatra" },
+    { fecha: "2026-11-27", hasta: null, hora: "20:00", titulo: "Teatro Yllana", secreta: true },
+  ],
   casa: [tarea("Poner la lavadora", { responsableId: "diego" }), tarea("Sacar la basura")],
   cumples: [],
   pendientes: [
@@ -442,6 +445,14 @@ describe("POST /api/alexa", () => {
   });
 
   describe("lo que lee", () => {
+    it("las sorpresas no las dice nunca (D-217)", async () => {
+      expect(await di({ name: "HoyIntent" })).toBe("Hoy no tienes nada apuntado.");
+      expect(await di({ name: "AvisosIntent" })).not.toContain("Teatro");
+      t.pregunta.mockResolvedValue("Eso no lo tengo apuntado.");
+      await di({ name: "PreguntaIntent", slots: slot("pregunta", "qué hacemos esta noche") });
+      const datos = (t.pregunta.mock.calls[0]?.[0] as { datos: string }).datos;
+      expect(datos).not.toContain("Teatro");
+    });
     it("la cena y lo de hoy y mañana", async () => {
       expect(await di({ name: "CenaIntent" })).toBe("Hoy de cena: Pisto.");
       expect(await di({ name: "HoyIntent" })).toBe("Hoy no tienes nada apuntado.");

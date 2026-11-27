@@ -466,3 +466,11 @@ export function reducirEntradas(lista: readonly Entrada[]): Entrada[] {
   });
   return salida.filter((x): x is Entrada => x !== null);
 }
+
+/**
+ * El resumen sin las citas sorpresa (D-217): Conchi habla en voz alta y puede oírla cualquiera, así
+ * que lo marcado como sorpresa no entra en nada de lo que dice (ni en lo que ve la IA).
+ */
+export function sinSorpresas(p: ProyeccionCalendario): ProyeccionCalendario {
+  return p.agenda.some((a) => a.secreta) ? { ...p, agenda: p.agenda.filter((a) => !a.secreta) } : p;
+}

@@ -33,6 +33,7 @@ import {
   pendientesDeSesion,
   personaPorNombre,
   planDeFrase,
+  sinSorpresas,
   preguntaDeCita,
   saludoDeLaHora,
 } from "@/dominio/conchi";
@@ -113,6 +114,12 @@ export async function manejar(request: Request, token: string) {
 type Peticion = ReturnType<typeof peticionAlexaSchema.parse>;
 type Resumen = NonNullable<Awaited<ReturnType<typeof leerResumenDelCalendario>>>;
 
+/** El resumen del hogar sin las citas sorpresa: lo que Conchi dice en voz alta (D-217). */
+const leerResumen = async (token: string) => {
+  const r = await leerResumenDelCalendario(token);
+  return r ? sinSorpresas(r) : null;
+};
+
 const NO_CASA = "No encuentro vuestra casa. Revisa el enlace de la skill en la app.";
 const SIN_CUPO =
   "Hoy ya he gastado todo mi cupo de inteligencia. Dime «añade leche» o apúntalo en la app.";
@@ -189,7 +196,7 @@ async function bienvenida(token: string, peticion: Peticion) {
   const voz = vozDe(peticion);
   let nombre = "";
   if (voz) {
-    const resumen = await leerResumenDelCalendario(token).catch(() => null);
+    const resumen = await leerResumen(token).catch(() => null);
     nombre = (await quienHabla(c, resumen))?.nombre ?? "";
   }
   const saludo = saludoDeLaHora(ahoraEnMadrid().minutos);
@@ -218,10 +225,7 @@ async function anadirCompra(c: Contexto) {
 async function conchi(c: Contexto) {
   const texto = (c.dicho("frase") ?? "").trim();
   if (texto.length < 3) return respuesta("¿Qué quieres que apunte?", true);
-  const [uso, resumen] = await Promise.all([
-    usarIaAlexa(c.token),
-    leerResumenDelCalendario(c.token),
-  ]);
+  const [uso, resumen] = await Promise.all([usarIaAlexa(c.token), leerResumen(c.token)]);
   if (uso === null || !resumen) return respuesta(NO_CASA);
   if (uso === "tope") return respuesta(SIN_CUPO);
   const ahora = ahoraEnMadrid();
@@ -312,7 +316,7 @@ async function confirmar(c: Contexto, si: boolean) {
 
 /** «Ya he hecho la colada»: se busca entre las tareas de casa y se marca desde la app. */
 async function hecho(c: Contexto) {
-  const resumen = await leerResumenDelCalendario(c.token);
+  const resumen = await leerResumen(c.token);
   if (!resumen) return respuesta(NO_CASA);
   const titulo = buscarTareaDeCasa(resumen, c.dicho("tarea"));
   if (!titulo) {
@@ -383,7 +387,7 @@ async function soy(c: Contexto) {
       "Todavía no reconozco tu voz. Crea tu perfil de voz en la app de Alexa y activa la personalización para esta skill; luego dímelo otra vez.",
     );
   }
-  const resumen = await leerResumenDelCalendario(c.token);
+  const resumen = await leerResumen(c.token);
   if (!resumen) return respuesta(NO_CASA);
   const p = personaPorNombre(resumen, c.dicho("nombre"));
   if (!p)
@@ -399,7 +403,7 @@ async function soy(c: Contexto) {
 
 /** «Qué me toca»: las tareas de casa de hoy de quien habla. */
 async function queMeToca(c: Contexto) {
-  const resumen = await leerResumenDelCalendario(c.token);
+  const resumen = await leerResumen(c.token);
   if (!resumen) return respuesta(NO_CASA);
   const yo = await quienHabla(c, resumen);
   if (!yo)
@@ -411,10 +415,7 @@ async function queMeToca(c: Contexto) {
 async function preguntar(c: Contexto) {
   const pregunta = (c.dicho("pregunta") ?? "").trim();
   if (pregunta.length < 3) return respuesta("¿Qué quieres saber?", true);
-  const [uso, resumen] = await Promise.all([
-    usarIaAlexa(c.token),
-    leerResumenDelCalendario(c.token),
-  ]);
+  const [uso, resumen] = await Promise.all([usarIaAlexa(c.token), leerResumen(c.token)]);
   if (uso === null || !resumen) return respuesta(NO_CASA);
   if (uso === "tope") return respuesta(SIN_CUPO);
   const hoy = hoyParaAlexa();
@@ -433,7 +434,7 @@ async function preguntar(c: Contexto) {
 
 /** Lo que Conchi lee: sale del mismo resumen del hogar que el calendario suscrito. */
 async function leer(c: Contexto, intencion: string) {
-  const resumen = await leerResumenDelCalendario(c.token);
+  const resumen = await leerResumen(c.token);
   if (!resumen) return respuesta(NO_CASA);
   const hoy = hoyParaAlexa();
   const tiempo = () => leerPrevision().catch(() => []);

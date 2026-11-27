@@ -47,6 +47,8 @@ export const proyeccionSchema = z.object({
         .regex(/^\d{2}:\d{2}$/)
         .nullable(),
       titulo: texto,
+      /** Sorpresa (D-217): no se dice en voz alta. Opcional: la SQL anterior no lo manda. */
+      secreta: z.boolean().catch(false).optional(),
     }),
   ),
   casa: z.array(

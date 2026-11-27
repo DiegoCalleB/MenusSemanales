@@ -2593,3 +2593,56 @@ describe("fechas que se repiten (D-211)", () => {
   });
 });
 const e0Hoy = (e: EstadoHogar) => e.hoy;
+
+describe("citas sorpresa (D-217)", () => {
+  const hoy = "2026-11-27";
+  const base = { ...estadoInicialDemo(), hoy, agenda: [] as EstadoHogar["agenda"] };
+
+  it("se marcan solas si el título dice «sorpresa» o lleva 🤫, o a mano", () => {
+    const e = reducir(base, {
+      tipo: "agenda/anadir",
+      texto:
+        "30 noviembre Cumple sorpresa de Ana\n1 diciembre 🤫 Teatro Yllana\n2 diciembre Pediatra",
+      personaId: null,
+    });
+    expect(e.agenda.map((a) => [a.titulo, a.secreta === true])).toEqual([
+      ["Cumple sorpresa de Ana", true],
+      ["🤫 Teatro Yllana", true],
+      ["Pediatra", false],
+    ]);
+    const a = reducir(base, {
+      tipo: "agenda/anadir",
+      texto: "3 diciembre Teatro Yllana",
+      personaId: null,
+      secreta: true,
+    });
+    expect(a.agenda[0]?.secreta).toBe(true);
+  });
+
+  it("se marca y se desmarca, y editar la cita respeta la marca", () => {
+    let e = reducir(base, {
+      tipo: "agenda/anadir",
+      texto: "3 diciembre Teatro Yllana",
+      personaId: null,
+    });
+    const id = e.agenda[0]!.id;
+    expect(e.agenda[0]?.secreta).toBeUndefined();
+    e = reducir(e, { tipo: "agenda/secreta", id, secreta: true });
+    expect(e.agenda[0]?.secreta).toBe(true);
+    // Editar sin tocar la marca la conserva; con la marca a false, la quita.
+    e = reducir(e, { tipo: "agenda/editar", id, titulo: "Teatro", fecha: "2026-12-03" });
+    expect(e.agenda[0]).toMatchObject({ titulo: "Teatro", secreta: true });
+    e = reducir(e, {
+      tipo: "agenda/editar",
+      id,
+      titulo: "Teatro",
+      fecha: "2026-12-03",
+      secreta: false,
+    });
+    expect(e.agenda[0]?.secreta).toBeUndefined();
+    e = reducir(e, { tipo: "agenda/secreta", id, secreta: true });
+    e = reducir(e, { tipo: "agenda/secreta", id, secreta: false });
+    expect("secreta" in (e.agenda[0] ?? {})).toBe(false);
+    expect(reducir(e, { tipo: "agenda/secreta", id: "no-existe", secreta: true })).toBe(e);
+  });
+});

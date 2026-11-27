@@ -109,6 +109,7 @@ export function EditarCita({ cita, alCerrar }: { cita: Apunte; alCerrar: () => v
   const [fecha, setFecha] = useState(cita.fecha);
   const [hasta, setHasta] = useState(cita.hasta ?? "");
   const [hora, setHora] = useState(cita.hora ?? "");
+  const [secreta, setSecreta] = useState(cita.secreta === true);
   return (
     <Formulario
       nombre={`Editar ${cita.titulo}`}
@@ -121,6 +122,7 @@ export function EditarCita({ cita, alCerrar }: { cita: Apunte; alCerrar: () => v
           fecha,
           hasta: hasta === "" ? null : hasta,
           hora: hora === "" ? null : hora,
+          secreta,
         })
       }
     >
@@ -157,6 +159,20 @@ export function EditarCita({ cita, alCerrar }: { cita: Apunte; alCerrar: () => v
           onChange={(e) => setHora(e.target.value)}
         />
       </Campo>
+      <label className="flex items-start gap-3 text-base font-semibold">
+        <input
+          type="checkbox"
+          className="mt-1 size-6"
+          checked={secreta}
+          onChange={(e) => setSecreta(e.target.checked)}
+        />
+        <span>
+          🤫 Es una sorpresa
+          <span className="text-tinta-suave block text-sm font-normal">
+            Conchi no lo dirá en voz alta. En la app se ve igual.
+          </span>
+        </span>
+      </label>
     </Formulario>
   );
 }

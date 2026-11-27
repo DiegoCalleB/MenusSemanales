@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parsearAgenda } from "./agenda";
+import { hablarDeDia } from "./alexa";
 import type { ProyeccionCalendario } from "./calendario-suscrito";
 import {
   buscarTareaDeCasa,
@@ -192,6 +193,7 @@ describe("conchi: «ya he hecho…»", () => {
 });
 
 import {
+  sinSorpresas,
   type Entrada,
   reducirEntradas,
   buscarEnLaCompra,
@@ -375,5 +377,27 @@ describe("conchi: lo apuntado y quitado antes de abrir la app", () => {
       e("quitar_compra", "Leche"),
     ]);
     expect(r.map((x) => x.tipo)).toEqual(["compra"]);
+  });
+});
+
+describe("conchi: las sorpresas no se dicen (D-217)", () => {
+  const p = base({
+    agenda: [
+      { fecha: HOY, hasta: null, hora: "20:00", titulo: "Teatro Yllana", secreta: true },
+      { fecha: HOY, hasta: null, hora: "09:00", titulo: "Pediatra" },
+      { fecha: "2026-11-03", hasta: null, hora: null, titulo: "Cumple sorpresa", secreta: true },
+    ],
+  });
+  it("sin las sorpresas, Conchi no las lee ni en hoy, ni en mañana, ni en el resumen", () => {
+    const limpio = sinSorpresas(p);
+    expect(hablarDeDia(limpio, HOY, "Hoy tienes", "Nada.")).toBe("Hoy tienes Pediatra a las 9:00.");
+    expect(hablarDeManana(limpio, HOY)).toBe("Mañana no tienes nada apuntado.");
+    expect(hablarDeLosAvisos(limpio, HOY, [])).not.toContain("Teatro");
+    expect(datosParaPreguntar(limpio, HOY)).not.toContain("Teatro");
+    expect(datosParaPreguntar(limpio, HOY)).not.toContain("sorpresa");
+  });
+  it("sin sorpresas no toca nada", () => {
+    const sin = base({ agenda: [{ fecha: HOY, hasta: null, hora: null, titulo: "Pediatra" }] });
+    expect(sinSorpresas(sin)).toBe(sin);
   });
 });
