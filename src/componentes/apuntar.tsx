@@ -68,7 +68,7 @@ export function Apuntar() {
         }}
         rows={3}
       />
-      <label className="text-tinta-suave flex items-center gap-2 text-base">
+      <label className="text-tinta-suave flex min-h-11 items-center gap-2 text-base">
         <input
           type="checkbox"
           className="size-5"

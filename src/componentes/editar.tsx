@@ -159,7 +159,7 @@ export function EditarCita({ cita, alCerrar }: { cita: Apunte; alCerrar: () => v
           onChange={(e) => setHora(e.target.value)}
         />
       </Campo>
-      <label className="flex items-start gap-3 text-base font-semibold">
+      <label className="flex min-h-11 items-start gap-3 text-base font-semibold">
         <input
           type="checkbox"
           className="mt-1 size-6"
