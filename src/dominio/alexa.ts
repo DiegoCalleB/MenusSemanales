@@ -24,7 +24,19 @@ export const peticionAlexaSchema = z.object({
     })
     .optional(),
   context: z
-    .object({ System: z.object({ application: z.object({ applicationId: z.string() }) }) })
+    .object({
+      System: z.object({
+        application: z.object({ applicationId: z.string() }),
+        /** Para llamar a las API de Alexa (recordatorios) en nombre de quien habla. */
+        apiAccessToken: z.string().optional(),
+        apiEndpoint: z.string().optional(),
+        /** Quién habla, si tiene perfil de voz en Alexa. */
+        person: z.object({ personId: z.string() }).optional(),
+        user: z
+          .object({ permissions: z.object({ consentToken: z.string().optional() }).optional() })
+          .optional(),
+      }),
+    })
     .optional(),
   request: z.object({
     type: z.string(),
@@ -39,12 +51,26 @@ export type PeticionAlexa = z.infer<typeof peticionAlexaSchema>;
 export const skillDe = (p: PeticionAlexa): string | null =>
   p.context?.System.application.applicationId ?? p.session?.application.applicationId ?? null;
 
+/** La voz de quien habla (su identificador de persona en Alexa), si tiene perfil de voz. */
+export const vozDe = (p: PeticionAlexa): string | null =>
+  p.context?.System.person?.personId ?? null;
+
+/** Lo necesario para poner un recordatorio: dónde llamar y con qué permiso; null si no se dio permiso. */
+export function accesoARecordatorios(p: PeticionAlexa): { token: string; endpoint: string } | null {
+  const s = p.context?.System;
+  const token = s?.apiAccessToken;
+  const endpoint = s?.apiEndpoint;
+  if (!token || !endpoint || !s?.user?.permissions?.consentToken) return null;
+  return { token, endpoint };
+}
+
 export interface RespuestaAlexa {
   version: "1.0";
   sessionAttributes?: Record<string, unknown>;
   response: {
     outputSpeech: { type: "PlainText"; text: string };
     shouldEndSession: boolean;
+    card?: { type: "AskForPermissionsConsent"; permissions: string[] };
     reprompt?: { outputSpeech: { type: "PlainText"; text: string } };
   };
 }
@@ -52,13 +78,21 @@ export interface RespuestaAlexa {
 export const respuesta = (
   texto: string,
   seguir = false,
-  opciones: { atributos?: Record<string, unknown>; repregunta?: string } = {},
+  opciones: {
+    atributos?: Record<string, unknown>;
+    repregunta?: string;
+    /** Pide permisos al usuario con una tarjeta en la app de Alexa. */
+    pedirPermisos?: string[];
+  } = {},
 ): RespuestaAlexa => ({
   version: "1.0",
   ...(opciones.atributos ? { sessionAttributes: opciones.atributos } : {}),
   response: {
     outputSpeech: { type: "PlainText", text: texto },
     shouldEndSession: !seguir,
+    ...(opciones.pedirPermisos
+      ? { card: { type: "AskForPermissionsConsent" as const, permissions: opciones.pedirPermisos } }
+      : {}),
     ...(seguir
       ? {
           reprompt: {
@@ -100,6 +134,10 @@ export function productosDe(dicho: string | undefined): string[] {
     .slice(0, MAX_PRODUCTOS);
 }
 
+/** Una de varias formas de decir lo mismo, para no sonar a robot. */
+const elegir = <T>(opciones: readonly T[], azar: number = Math.random()): T =>
+  opciones[Math.min(opciones.length - 1, Math.floor(azar * opciones.length))] as T;
+
 export const lista = (xs: readonly string[]): string =>
   xs.length <= 1 ? (xs[0] ?? "") : `${xs.slice(0, -1).join(", ")} y ${xs[xs.length - 1]}`;
 
@@ -115,7 +153,7 @@ export function hablarDeLaCompra(
       : "Hoy ya has pedido muchas cosas por voz. El resto, apúntalo desde la app.";
   }
   if (hechos.length === 0) return "No he podido apuntarlo. Prueba otra vez o hazlo desde la app.";
-  return `Apuntado en la compra: ${lista(hechos)}.`;
+  return `${elegir(["Apuntado", "Anotado", "Listo", "Hecho"])} en la compra: ${lista(hechos)}.`;
 }
 
 /** La cena de hoy, y la comida del cole si hay. */
@@ -157,6 +195,6 @@ export const mananaDe = (hoy: FechaIso): FechaIso => sumarDias(hoy, 1);
 
 export const AYUDA =
   "Puedes decir: añade leche, apunta el jueves a las seis el dentista, ya he hecho la colada, qué hay de cena, qué tengo mañana, qué se lleva al cole o dame el resumen. ¿Qué quieres?";
-export const BIENVENIDA = "Hola, soy Conchi. ¿Qué apunto, o qué quieres saber?";
+export const BIENVENIDA = "Soy Conchi. ¿Qué apunto, o qué quieres saber?";
 export const SIN_DATOS =
   "Ahora mismo no consigo ver los datos de la casa. Inténtalo en un rato o mira la app.";

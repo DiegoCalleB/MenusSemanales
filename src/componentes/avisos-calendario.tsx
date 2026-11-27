@@ -207,10 +207,11 @@ export function AvisosCalendario() {
             <p className="text-base">
               <span aria-hidden="true">🗣️ </span>
               <strong>Conchi, en Alexa</strong>: «Alexa, dile a Conchi que añada leche», «que apunte
-              el jueves a las seis el dentista», «ya he hecho la colada», «qué hay de cena», «qué
-              tengo mañana» o «dame el resumen». Solo habla de la compra, la cena, las citas, la
-              casa, la mochila y el tiempo. Para activarla hay que crear la skill en la consola de
-              Alexa y pegar esta dirección (los pasos están en docs/alexa.md).
+              el jueves a las seis el dentista», «que me recuerde a las seis sacar la basura», «ya
+              he hecho la colada», «qué hay de cena», «qué tengo mañana» o «dame el resumen». Solo
+              habla de la compra, la cena, las citas, la casa, la mochila y el tiempo. Para
+              activarla hay que crear la skill en la consola de Alexa y pegar esta dirección (los
+              pasos están en docs/alexa.md).
             </p>
             <div className="flex flex-wrap gap-2">
               <button

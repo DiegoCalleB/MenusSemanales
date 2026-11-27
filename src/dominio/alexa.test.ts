@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  accesoARecordatorios,
+  vozDe,
   hablarDeHoy,
   hablarDeLaCena,
   hablarDeLaCompra,
@@ -61,9 +63,11 @@ describe("alexa: lo que se entiende", () => {
 
 describe("alexa: lo que contesta", () => {
   it("la compra: apuntado, o por qué no", () => {
-    expect(hablarDeLaCompra(["leche"], ["ok"])).toBe("Apuntado en la compra: leche.");
-    expect(hablarDeLaCompra(["leche", "pan"], ["ok", "ok"])).toBe(
-      "Apuntado en la compra: leche y pan.",
+    expect(hablarDeLaCompra(["leche"], ["ok"])).toMatch(
+      /^(Apuntado|Anotado|Listo|Hecho) en la compra: leche\.$/,
+    );
+    expect(hablarDeLaCompra(["leche", "pan"], ["ok", "ok"])).toMatch(
+      /en la compra: leche y pan\.$/,
     );
     expect(hablarDeLaCompra(["leche"], ["demasiadas"])).toContain("muchas cosas");
     expect(hablarDeLaCompra(["leche", "pan"], ["ok", "demasiadas"])).toContain("He apuntado leche");
@@ -114,5 +118,41 @@ describe("alexa: lo que contesta", () => {
     const con = respuesta("¿Apunto?", true, { atributos: { a: 1 }, repregunta: "¿Sí o no?" });
     expect(con.sessionAttributes).toEqual({ a: 1 });
     expect(con.response.reprompt?.outputSpeech.text).toBe("¿Sí o no?");
+  });
+});
+
+describe("alexa: quién habla y el permiso de recordatorios (D-216)", () => {
+  const con = (system: object) =>
+    peticionAlexaSchema.parse({
+      context: { System: { application: { applicationId: "amzn1.ask.skill.1" }, ...system } },
+      request: { type: "IntentRequest" },
+    });
+  it("lee la voz de quien habla, si la hay", () => {
+    expect(vozDe(con({ person: { personId: "amzn1.ask.person.A" } }))).toBe("amzn1.ask.person.A");
+    expect(vozDe(con({}))).toBeNull();
+  });
+  it("solo hay acceso a recordatorios con el permiso concedido", () => {
+    const completo = {
+      apiAccessToken: "tok",
+      apiEndpoint: "https://api.eu.amazonalexa.com",
+      user: { permissions: { consentToken: "c" } },
+    };
+    expect(accesoARecordatorios(con(completo))).toEqual({
+      token: "tok",
+      endpoint: "https://api.eu.amazonalexa.com",
+    });
+    expect(accesoARecordatorios(con({ ...completo, user: { permissions: {} } }))).toBeNull();
+    expect(accesoARecordatorios(con({ ...completo, apiAccessToken: undefined }))).toBeNull();
+    expect(accesoARecordatorios(con({}))).toBeNull();
+  });
+  it("la tarjeta de permisos va en la respuesta", () => {
+    const r = respuesta("Necesito permiso", false, {
+      pedirPermisos: ["alexa::alerts:reminders:skill:readwrite"],
+    });
+    expect(r.response.card).toEqual({
+      type: "AskForPermissionsConsent",
+      permissions: ["alexa::alerts:reminders:skill:readwrite"],
+    });
+    expect(respuesta("x").response.card).toBeUndefined();
   });
 });
