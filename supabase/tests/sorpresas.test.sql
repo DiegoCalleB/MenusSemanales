@@ -27,4 +27,19 @@ select pg_temp.igual('Y el título sigue (la app decide qué decir)',
   ((public.estado_para_calendario((select v from _s where clave = 'token'))->'agenda'->0->>'titulo') = 'Teatro Yllana')::int, 1);
 select pg_temp.fin();
 
+-- El mismo hogar, ya con sus datos en tablas: la marca se sigue viendo (se lee del documento).
+insert into public.persona (hogar_id, nombre, tipo)
+  values ((select v from _s where clave = 'hogar')::uuid, 'Diego', 'adulto');
+insert into public.apunte (hogar_id, fecha, hora, titulo) values
+  ((select v from _s where clave = 'hogar')::uuid, '2026-11-27', '20:00', 'Teatro Yllana'),
+  ((select v from _s where clave = 'hogar')::uuid, '2026-11-28', null, 'Pediatra');
+select pg_temp.como(null);
+select pg_temp.igual('Con datos en tablas, la sorpresa llega marcada',
+  ((public.estado_para_calendario((select v from _s where clave = 'token'))->'agenda'->0->>'secreta') = 'true')::int, 1);
+select pg_temp.igual('Con datos en tablas, la normal no',
+  ((public.estado_para_calendario((select v from _s where clave = 'token'))->'agenda'->1->>'secreta') = 'false')::int, 1);
+select pg_temp.igual('Con datos en tablas, y el título sigue',
+  ((public.estado_para_calendario((select v from _s where clave = 'token'))->'agenda'->0->>'titulo') = 'Teatro Yllana')::int, 1);
+select pg_temp.fin();
+
 rollback;
