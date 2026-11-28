@@ -346,6 +346,11 @@ if (typeof self !== "undefined" && typeof self.addEventListener === "function") 
         silent: true,
         data: { url: ruta },
       });
+      // La confirmación solo sirve para saber que ha ido bien: se retira sola a los 4 s para que no se
+      // quede ocupando la bandeja.
+      await new Promise((r) => setTimeout(r, 4000));
+      const quedan = await self.registration.getNotifications({ tag: "avisos-diarios" });
+      for (const n of quedan) n.close();
     } catch {
       // Sin conexión o el código ya no vale: se abre la pantalla para marcarlo a mano.
       await abrirApp(ruta);
